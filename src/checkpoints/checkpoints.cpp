@@ -228,6 +228,9 @@ namespace cryptonote
 						ADD_CHECKPOINT(5301, "cb5abc765b137cc7ca938e17a3bfdab67677f37c72521d7adada98a54bf56307");
 						ADD_CHECKPOINT(5401, "373b942eb3058768feedd6e606365c9aaab7a49e642ccf15d2e385b11ad18ff0");
 						ADD_CHECKPOINT(5501, "3df674086d717f5811d96d9f584eac421cda8ce28e4738a6214c88b98af0fe8f");
+						ADD_CHECKPOINT(6000, "7a484c09c956105890f147001d329b40af70756558a425dbd837fecd3d3c70b4");
+						ADD_CHECKPOINT(6500, "3592d98ddf9ecc50eeec339074984ac2c3526c5e2d35bf76018277f81550a1ba");
+
     return true;
   }
 
@@ -272,10 +275,11 @@ namespace cryptonote
     std::vector<std::string> records;
 
     // All four ArQ-Net domains have DNSSEC on and valid
-    static const std::vector<std::string> dns_urls = { "arqma.com"
-																       , "myarqma.com"
-																	   , "supportarqma.com"
-																	   , "supportarqma.eu"
+    static const std::vector<std::string> dns_urls = {
+        "checkpoints.arqma.com",
+        "checkpoints.myarqma.com",
+        "checkpoints.supportarqma.com",
+        "checkpoints.supportarqma.eu"
 	};
 
     static const std::vector<std::string> testnet_dns_urls = {
