@@ -783,14 +783,11 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
   std::vector<difficulty_type> difficulties;
   auto height = m_db->height();
   
-  size_t difficulty_blocks_count;
   uint8_t version = get_current_hard_fork_version();
-  if (version >= 7) {
-    difficulty_blocks_count = DIFFICULTY_BLOCKS_COUNT_V2;
-  } else {
-    difficulty_blocks_count = DIFFICULTY_BLOCKS_COUNT;
-  }
-
+  size_t difficulty_blocks_count =
+      version >= 9 ? DIFFICULTY_BLOCKS_COUNT_V3 :
+      version >= 7 ? DIFFICULTY_BLOCKS_COUNT_V2 :
+                     DIFFICULTY_BLOCKS_COUNT;
 
   if (m_timestamps_and_difficulties_height != 0 && ((height - m_timestamps_and_difficulties_height) == 1) && m_timestamps.size() >= difficulty_blocks_count)
   {
@@ -825,12 +822,11 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
     m_timestamps = timestamps;
     m_difficulties = difficulties;
   }
-  size_t target = DIFFICULTY_TARGET_V2;
   if (version >= 7) {
-        return next_difficulty_v2(timestamps, difficulties, target);
-   } else {
-        return next_difficulty(timestamps, difficulties, target);
-   }
+    return next_difficulty_lwma(timestamps, difficulties, version);
+  } else {
+    return next_difficulty(timestamps, difficulties, DIFFICULTY_TARGET_V2);
+  }
 
   
   //return next_difficulty_v2(timestamps, difficulties, target);
@@ -987,13 +983,11 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   LOG_PRINT_L3("Blockchain::" << __func__);
   std::vector<uint64_t> timestamps;
   std::vector<difficulty_type> cumulative_difficulties;
-  size_t difficulty_blocks_count;
   uint8_t version = get_current_hard_fork_version();
-  if (version >= 7) {
-    difficulty_blocks_count = DIFFICULTY_BLOCKS_COUNT_V2;
-  } else {
-    difficulty_blocks_count = DIFFICULTY_BLOCKS_COUNT;
-  }
+  size_t difficulty_blocks_count =
+      version >= 9 ? DIFFICULTY_BLOCKS_COUNT_V3 :
+      version >= 7 ? DIFFICULTY_BLOCKS_COUNT_V2 :
+                     DIFFICULTY_BLOCKS_COUNT;
 
   // if the alt chain isn't long enough to calculate the difficulty target
   // based on its blocks alone, need to get more blocks from the main chain
@@ -1046,11 +1040,10 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   }
 
   // FIXME: This will fail if fork activation heights are subject to voting
-  size_t target = DIFFICULTY_TARGET_V2;
- if (version >= 7) {
-  return next_difficulty_v2(timestamps, cumulative_difficulties, target);
+  if (version >= 7) {
+    return next_difficulty_lwma(timestamps, cumulative_difficulties, version);
   } else {
-  return next_difficulty(timestamps, cumulative_difficulties, target);
+    return next_difficulty(timestamps, cumulative_difficulties, DIFFICULTY_TARGET_V2);
   }
 
   // calculate the difficulty target for the block and return it
