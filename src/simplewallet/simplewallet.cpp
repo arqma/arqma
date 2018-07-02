@@ -3161,17 +3161,20 @@ bool simple_wallet::handle_command_line(const boost::program_options::variables_
   m_generate_from_spend_key       = command_line::get_arg(vm, arg_generate_from_spend_key);
   m_generate_from_keys            = command_line::get_arg(vm, arg_generate_from_keys);
   //m_generate_from_multisig_keys   = command_line::get_arg(vm, arg_generate_from_multisig_keys);
+  m_generate_from_multisig_keys   = "";
   m_generate_from_json            = command_line::get_arg(vm, arg_generate_from_json);
   m_mnemonic_language             = command_line::get_arg(vm, arg_mnemonic_language);
   m_electrum_seed                 = command_line::get_arg(vm, arg_electrum_seed);
   m_restore_deterministic_wallet  = command_line::get_arg(vm, arg_restore_deterministic_wallet);
   //m_restore_multisig_wallet       = command_line::get_arg(vm, arg_restore_multisig_wallet);
+  m_restore_multisig_wallet       = false;
   m_non_deterministic             = command_line::get_arg(vm, arg_non_deterministic);
   if (!command_line::is_arg_defaulted(vm, arg_trusted_daemon) || !command_line::is_arg_defaulted(vm, arg_untrusted_daemon))
     m_trusted_daemon = command_line::get_arg(vm, arg_trusted_daemon) && !command_line::get_arg(vm, arg_untrusted_daemon);
   if (!command_line::is_arg_defaulted(vm, arg_trusted_daemon) && !command_line::is_arg_defaulted(vm, arg_untrusted_daemon))
     message_writer() << tr("--trusted-daemon and --untrusted-daemon are both seen, assuming untrusted");
   //m_allow_mismatched_daemon_version = command_line::get_arg(vm, arg_allow_mismatched_daemon_version);
+  m_allow_mismatched_daemon_version = false;
   m_restore_height                = command_line::get_arg(vm, arg_restore_height);
   m_do_not_relay                  = command_line::get_arg(vm, arg_do_not_relay);
   m_subaddress_lookahead          = command_line::get_arg(vm, arg_subaddress_lookahead);
