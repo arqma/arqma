@@ -190,11 +190,26 @@ namespace cryptonote {
 // Cryptonote clones:  #define DIFFICULTY_BLOCKS_COUNT_V2 DIFFICULTY_WINDOW_V2 + 1
 
 
-  difficulty_type next_difficulty_v2(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, size_t target_seconds) {
+  difficulty_type next_difficulty_lwma(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, const uint8_t version) {
+    int64_t T; // the target block time
+    int64_t FTL; // future time limit
+    size_t N; // the size of the block window to use for diff calculation
+    double adjust; // To get an average solvetime to within +/- ~0.1%, use an adjustment factor.  adjust=0.999 for 80 < N < 120(?)
 
-    const int64_t T = static_cast<int64_t>(target_seconds);
-    size_t N = DIFFICULTY_WINDOW_V3;
-        int64_t FTL = static_cast<int64_t>(CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3);
+    // LWMA parameters, which are crucially hardfork version dependent.  Any other changes in this
+    // algorithm must similarly be version protected so that they only apply at the correct fork
+    // height
+    if (version >= 9) {
+      T = DIFFICULTY_TARGET_V3;
+      N = DIFFICULTY_WINDOW_V3;
+      FTL = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3;
+      adjust = 0.998;
+    } else {
+      T = DIFFICULTY_TARGET_V2;
+      N = DIFFICULTY_WINDOW_V2;
+      FTL = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2;
+      adjust = 0.998;
+    }
 
     // Return a difficulty of 1 for first 3 blocks if it's the start of the chain.
     if (timestamps.size() < 4) {
@@ -209,9 +224,6 @@ namespace cryptonote {
       timestamps.resize(N+1);
       cumulative_difficulties.resize(N+1);
     }
-    // To get an average solvetime to within +/- ~0.1%, use an adjustment factor.
-    // adjust=0.999 for 80 < N < 120(?)
-    const double adjust = 0.998;
     // The divisor k normalizes the LWMA sum to a standard LWMA.
     const double k = N * (N + 1) / 2;
 
