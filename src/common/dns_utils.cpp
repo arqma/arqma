@@ -102,7 +102,7 @@ static const char*
 get_builtin_ds(void)
 {
   return
-". IN DS 2371 13 2 621406a46770f34fd7db1f8a4d47c5c727b54cece23aba69e59d2f645ad2db64\n";
+". IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5\n";
 }
 
 /************************************************************
