@@ -46,10 +46,10 @@ namespace tools
 
     // All four ArQ-Net domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
-        "checkpoints.arqma.com",
-        "checkpoints.myarqma.com",
-        "checkpoints.supportarqma.com",
-        "checkpoints.supportarqma.eu"
+//        "updates.arqma.com",
+//        "updates.myarqma.com",
+//        "updates.supportarqma.com",
+//        "updates.supportarqma.eu"
     };
 
     if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls))
