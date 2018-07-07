@@ -381,21 +381,10 @@ namespace
 
   boost::optional<std::pair<uint32_t, uint32_t>> parse_subaddress_lookahead(const std::string& str)
   {
-    auto pos = str.find(":");
-    bool r = pos != std::string::npos;
-    uint32_t major;
-    r = r && epee::string_tools::get_xtype_from_string(major, str.substr(0, pos));
-    uint32_t minor;
-    r = r && epee::string_tools::get_xtype_from_string(minor, str.substr(pos + 1));
-    if (r)
-    {
-      return std::make_pair(major, minor);
-    }
-    else
-    {
+    auto r = tools::parse_subaddress_lookahead(str);
+    if (!r)
       fail_msg_writer() << tr("invalid format for subaddress lookahead; must be <major>:<minor>");
-      return {};
-    }
+    return r;
   }
 
   void handle_transfer_exception(const std::exception_ptr &e, bool trusted_daemon)
@@ -2027,7 +2016,7 @@ simple_wallet::simple_wallet()
                            tr("Stop mining in the daemon."));
   m_cmd_binder.set_handler("set_daemon",
                            boost::bind(&simple_wallet::set_daemon, this, _1),
-                           tr("set_daemon <host>[:<port>]"),
+                           tr("set_daemon <host>[:<port>] [trusted|untrusted]"),
                            tr("Set another daemon to connect to."));
   m_cmd_binder.set_handler("save_bc",
                            boost::bind(&simple_wallet::save_bc, this, _1),
@@ -3124,6 +3113,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
   {
     try
     {
+      m_trusted_daemon = false;
       if (tools::is_local_address(m_wallet->get_daemon_address()))
       {
         MINFO(tr("Daemon is local, assuming trusted"));
@@ -3782,6 +3772,33 @@ bool simple_wallet::set_daemon(const std::vector<std::string>& args)
     }
     LOCK_IDLE_SCOPE();
     m_wallet->init(daemon_url);
+
+    if (args.size() == 2)
+    {
+      if (args[1] == "trusted")
+        m_trusted_daemon = true;
+      else if (args[1] == "untrusted")
+        m_trusted_daemon = false;
+      else
+      {
+        fail_msg_writer() << tr("Expected trusted or untrusted, got ") << args[1] << ": assuming untrusted";
+        m_trusted_daemon = false;
+      }
+    }
+    else
+    {
+      m_trusted_daemon = false;
+      try
+      {
+        if (tools::is_local_address(m_wallet->get_daemon_address()))
+        {
+          MINFO(tr("Daemon is local, assuming trusted"));
+          m_trusted_daemon = true;
+        }
+      }
+      catch (const std::exception &e) { }
+    }
+    success_msg_writer() << boost::format("Daemon set to %s, %s") % daemon_url % (*m_trusted_daemon ? tr("trusted") : tr("untrusted"));
   } else {
     fail_msg_writer() << tr("This does not seem to be a valid daemon URL.");
   }
@@ -4441,6 +4458,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
   }
 
   vector<cryptonote::tx_destination_entry> dsts;
+  size_t num_subaddresses = 0;
   for (size_t i = 0; i < local_args.size(); i += 2)
   {
     cryptonote::address_parse_info info;
@@ -4452,6 +4470,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     }
     de.addr = info.address;
     de.is_subaddress = info.is_subaddress;
+    num_subaddresses += info.is_subaddress;
 
     if (info.has_payment_id)
     {
@@ -4484,7 +4503,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
   }
 
   // prompt is there is no payment id and confirmation is required
-  if (!payment_id_seen && m_wallet->confirm_missing_payment_id())
+  if (!payment_id_seen && m_wallet->confirm_missing_payment_id() && dsts.size() > num_subaddresses)
   {
      std::string accepted = input_line(tr("No payment id is included with this transaction. Is this okay?  (Y/Yes/N/No): "));
      if (std::cin.eof())
@@ -4951,7 +4970,7 @@ bool simple_wallet::sweep_main(uint64_t below, const std::vector<std::string> &a
   }
 
   // prompt is there is no payment id and confirmation is required
-  if (!payment_id_seen && m_wallet->confirm_missing_payment_id())
+  if (!payment_id_seen && m_wallet->confirm_missing_payment_id() && !info.is_subaddress)
   {
      std::string accepted = input_line(tr("No payment id is included with this transaction. Is this okay?  (Y/Yes/N/No): "));
      if (std::cin.eof())
@@ -5164,7 +5183,7 @@ bool simple_wallet::sweep_single(const std::vector<std::string> &args_)
   }
 
   // prompt if there is no payment id and confirmation is required
-  if (!payment_id_seen && m_wallet->confirm_missing_payment_id())
+  if (!payment_id_seen && m_wallet->confirm_missing_payment_id() && !info.is_subaddress)
   {
      std::string accepted = input_line(tr("No payment id is included with this transaction. Is this okay?  (Y/Yes/N/No): "));
      if (std::cin.eof())

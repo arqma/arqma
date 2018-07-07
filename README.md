@@ -75,6 +75,7 @@ library archives (`.a`).
 | GTest        | 1.5           | YES      | `libgtest-dev`^    | `gtest`      | `gtest-devel`     | YES      | Test suite     |
 | Doxygen      | any           | NO       | `doxygen`          | `doxygen`    | `doxygen`         | YES      | Documentation  |
 | Graphviz     | any           | NO       | `graphviz`         | `graphviz`   | `graphviz`        | YES      | Documentation  |
+| pcsclite     | ?             | NO       | `libpcsclite-dev`  | ?            | `pcsc-lite pcsc-lite-devel` | NO | Ledger     |          
 
 
 [^] On Debian/Ubuntu `libgtest-dev` only includes sources and headers. You must
@@ -445,6 +446,8 @@ setting the following configuration parameters and environment variables:
    as well.
 * Do NOT pass `--detach` when running through torsocks with systemd, (see
   [utils/systemd/arqmad.service](utils/systemd/arqmad.service) for details).
+* If you use the wallet with a Tor daemon via the loopback IP (eg, 127.0.0.1:9050),
+  then use `--untrusted-daemon` unless it is your own hidden service.
 
 Example command line to start arqmad through Tor:
 
