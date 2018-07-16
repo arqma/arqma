@@ -39,15 +39,15 @@ debug: cmake-debug
 #  * libwallet_api_tests fail (Issue #895)
 debug-test:
 	mkdir -p build/debug
-	cd build/debug && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Debug ../.. &&  $(MAKE) && $(MAKE) ARGS="-E libwallet_api_tests" test
+	cd build/debug && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Debug -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../.. &&  $(MAKE) && $(MAKE) ARGS="-E libwallet_api_tests" test
 
 debug-all:
 	mkdir -p build/debug
-	cd build/debug && cmake -D BUILD_TESTS=OFF -D BUILD_SHARED_LIBS=OFF -D CMAKE_BUILD_TYPE=Debug ../.. && $(MAKE)
+	cd build/debug && cmake -D BUILD_TESTS=OFF -D BUILD_SHARED_LIBS=OFF -D CMAKE_BUILD_TYPE=Debug -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../.. && $(MAKE)
 
 debug-static-all:
 	mkdir -p build/debug
-	cd build/debug && cmake -D BUILD_TESTS=OFF -D STATIC=ON -D CMAKE_BUILD_TYPE=Debug ../.. && $(MAKE)
+	cd build/debug && cmake -D BUILD_TESTS=OFF -D STATIC=ON -D CMAKE_BUILD_TYPE=Debug -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../.. && $(MAKE)
 
 debug-static-win64:
 	mkdir -p build/debug
@@ -59,7 +59,7 @@ debug-static-win32:
  
 cmake-release:
 	mkdir -p build/release
-	cd build/release && cmake -D CMAKE_BUILD_TYPE=Release ../..
+	cd build/release && cmake -D CMAKE_BUILD_TYPE=Release -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../..
 
 release: cmake-release
 	cd build/release && $(MAKE)
@@ -70,15 +70,15 @@ release-test:
 
 release-all:
 	mkdir -p build/release
-	cd build/release && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=release ../.. && $(MAKE)
+	cd build/release && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=release -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../.. && $(MAKE)
 
 release-static:
 	mkdir -p build/release
-	cd build/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=release ../.. && $(MAKE)
+	cd build/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=release -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../.. && $(MAKE)
 
 coverage:
 	mkdir -p build/debug
-	cd build/debug && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Debug -D COVERAGE=ON ../.. && $(MAKE) && $(MAKE) test
+	cd build/debug && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Debug -D COVERAGE=ON -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../.. && $(MAKE) && $(MAKE) test
 
 # Targets for specific prebuilt builds which will be advertised for updates by their build tag
 
@@ -100,7 +100,7 @@ release-static-linux-armv8:
 
 release-static-linux-x86_64:
 	mkdir -p build/release
-	cd build/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=release -D BUILD_TAG="linux-x64" ../.. && $(MAKE)
+	cd build/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=release -D BUILD_TAG="linux-x64" -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../.. && $(MAKE)
 
 release-static-freebsd-x86_64:
 	mkdir -p build/release
@@ -112,7 +112,7 @@ release-static-mac-x86_64:
 
 release-static-linux-i686:
 	mkdir -p build/release
-	cd build/release && cmake -D STATIC=ON -D ARCH="i686" -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=release -D BUILD_TAG="linux-x86" ../.. && $(MAKE)
+	cd build/release && cmake -D STATIC=ON -D ARCH="i686" -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=release -D BUILD_TAG="linux-x86" -DBOOST_INCLUDEDIR=/usr/local/src/boost -DBOOST_LIBRARYDIR=/usr/local/src/boost ../.. && $(MAKE)
 
 release-static-win64:
 	mkdir -p build/release
