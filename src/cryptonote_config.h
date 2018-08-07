@@ -38,7 +38,7 @@
 
 #define CRYPTONOTE_MAX_BLOCK_NUMBER                     500000000
 #define CRYPTONOTE_MAX_BLOCK_SIZE                       500000000  // block header blob limit, never used!
-#define CRYPTONOTE_GETBLOCKTEMPLATE_MAX_BLOCK_SIZE	196608 //size of block (bytes) that is the maximum that miners will produce
+#define CRYPTONOTE_GETBLOCKTEMPLATE_MAX_BLOCK_SIZE	    196608 //size of block (bytes) that is the maximum that miners will produce
 #define CRYPTONOTE_MAX_TX_SIZE                          1000000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
 #define CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW            18
@@ -47,7 +47,7 @@
 #define CURRENT_BLOCK_MINOR_VERSION                     1
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2           300*2
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3           100*3
-#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V4		CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3
+#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V4		        CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT              60*60*2
 #define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             4
 
@@ -57,7 +57,7 @@
 
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define MONEY_PREMINE					((uint64_t)7500000000000000)
+#define MONEY_PREMINE					                          ((uint64_t)7500000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
@@ -72,10 +72,10 @@
 #define COIN                                            ((uint64_t)1000000000)
 
 #define FEE_PER_KB_OLD                                  ((uint64_t)(COIN) / 100)
-#define FEE_PER_KB                                      ((uint64_t)2 * (COIN) / 1000)
-#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)2 * (COIN) / 1000)
+#define FEE_PER_KB                                      ((uint64_t)2 * (COIN) / 100000)
+#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)2 * (COIN) / 100000)
 #define DYNAMIC_FEE_PER_KB_BASE_BLOCK_REWARD            ((uint64_t)10000000000)
-#define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)2000000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
+#define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)20000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
@@ -84,7 +84,7 @@
 #define DIFFICULTY_TARGET_V2                            240  // seconds
 #define DIFFICULTY_TARGET_V1                            120  // seconds - before first fork
 #define DIFFICULTY_WINDOW                               720 // blocks
-#define DIFFICULTY_WINDOW_V2			        30
+#define DIFFICULTY_WINDOW_V2			                      30
 #define DIFFICULTY_WINDOW_V3                            17
 #define DIFFICULTY_LAG                                  15  // !!!
 #define DIFFICULTY_CUT                                  60  // timestamps to cut after sorting
@@ -103,7 +103,7 @@
 
 #define BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT          10000  //by default, blocks ids count in synchronizing
 #define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT_PRE_V4       100    //by default, blocks count in blocks downloading
-#define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT              20     //by default, blocks count in blocks downloading
+#define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT              40     //by default, blocks count in blocks downloading
 
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 //seconds, one week
@@ -148,7 +148,7 @@
 #define HF_VERSION_MIN_MIXIN_6                  7
 #define HF_VERSION_ENFORCE_RCT                  6
 
-#define PER_KB_FEE_QUANTIZATION_DECIMALS        9
+#define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
 #define HASH_OF_HASHES_STEP                     256
 
@@ -159,8 +159,8 @@ namespace config
 {
   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder!  Change me!
   uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
-  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)2000000); // 2 * pow(10, 9)
-  uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000); // pow(10, 8)
+  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000); 
+  uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
   std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca;
