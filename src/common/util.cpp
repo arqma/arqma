@@ -939,4 +939,3 @@ std::string get_nix_version_display_string()
     return newval;
   }
  }
-}
