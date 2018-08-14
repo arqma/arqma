@@ -194,6 +194,73 @@ namespace tools
     }
     catch (...) {}
   }
+  
+    file_locker::file_locker(const std::string &filename)
+  {
+#ifdef WIN32
+    m_fd = INVALID_HANDLE_VALUE;
+    std::wstring filename_wide;
+    try
+    {
+      filename_wide = string_tools::utf8_to_utf16(filename);
+    }
+    catch (const std::exception &e)
+    {
+      MERROR("Failed to convert path \"" << filename << "\" to UTF-16: " << e.what());
+      return;
+    }
+    m_fd = CreateFileW(filename_wide.c_str(), GENERIC_READ, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (m_fd != INVALID_HANDLE_VALUE)
+    {
+      OVERLAPPED ov;
+      memset(&ov, 0, sizeof(ov));
+      if (!LockFileEx(m_fd, LOCKFILE_FAIL_IMMEDIATELY | LOCKFILE_EXCLUSIVE_LOCK, 0, 1, 0, &ov))
+      {
+        MERROR("Failed to lock " << filename << ": " << std::error_code(GetLastError(), std::system_category()));
+        CloseHandle(m_fd);
+        m_fd = INVALID_HANDLE_VALUE;
+      }
+    }
+    else
+    {
+      MERROR("Failed to open " << filename << ": " << std::error_code(GetLastError(), std::system_category()));
+    }
+#else
+    m_fd = open(filename.c_str(), O_RDONLY | O_CREAT, 0666);
+    if (m_fd != -1)
+    {
+      if (flock(m_fd, LOCK_EX | LOCK_NB) == -1)
+      {
+        MERROR("Failed to lock " << filename << ": " << std::strerror(errno));
+        close(m_fd);
+        m_fd = -1;
+      }
+    }
+    else
+    {
+      MERROR("Failed to open " << filename << ": " << std::strerror(errno));
+    }
+#endif
+  }
+  file_locker::~file_locker()
+  {
+    if (locked())
+    {
+#ifdef WIN32
+      CloseHandle(m_fd);
+#else
+      close(m_fd);
+#endif
+    }
+  }
+  bool file_locker::locked() const
+  {
+#ifdef WIN32
+    return m_fd != INVALID_HANDLE_VALUE;
+#else
+    return m_fd != -1;
+#endif
+  }
 
 #ifdef WIN32
   std::string get_windows_version_display_string()
@@ -852,4 +919,24 @@ std::string get_nix_version_display_string()
       return {};
     }
   }
+  
+  std::string glob_to_regex(const std::string &val)
+  {
+    std::string newval;
+
+    bool escape = false;
+    for (char c: val)
+    {
+      if (c == '*')
+        newval += escape ? "*" : ".*";
+      else if (c == '?')
+        newval += escape ? "?" : ".";
+      else if (c == '\\')
+        newval += '\\', escape = !escape;
+      else
+        newval += c;
+    }
+    return newval;
+  }
+ }
 }
