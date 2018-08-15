@@ -220,7 +220,7 @@ application.
 **Preparing the build environment**
 
 * Download and install the [MSYS2 installer](http://msys2.github.io), either the 64-bit or the 32-bit package, depending on your system.
-* Open the MSYS shell via the `MSYS2 Shell` shortcut
+* Open the MSYS shell via the `MSYS2 Shell` shortcut (Arqma-GUI-Wallet supporting only 64-bit OS)
 * Update packages using pacman:  
 
         pacman -Syuu  
@@ -231,8 +231,20 @@ application.
 
         pacman -Syuu  
 
+2. Install dependencies
 
-* Install dependencies:
+	
+    ```
+    pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-qt-creator mingw-w64-x86_64-qt5-static
+    ```
+3. Exit Msys2
+
+
+4. Download MinGW-w64 GCC 7.3 posix from: ```https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/7.3.0/threads-posix/seh/x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z```
+
+
+5. Decompress it and replace all catalogue at c:\msys64\mingw64
+
 
     To build for 64-bit Windows:
 
@@ -241,10 +253,6 @@ application.
     To build for 32-bit Windows:
  
         pacman -S git mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium
-
-* Open the MingW shell via `MinGW-w64-Win64 Shell` shortcut on 64-bit Windows
-  or `MinGW-w64-Win64 Shell` shortcut on 32-bit Windows. Note that if you are
-  running 64-bit Windows, you will have both 64-bit and 32-bit MinGW shells.
 
 **Building**
 
