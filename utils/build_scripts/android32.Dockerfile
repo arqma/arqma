@@ -9,7 +9,7 @@ RUN curl -s -O http://dl.google.com/android/android-sdk_r24.4.1-linux.tgz \
     && rm -f android-sdk_r24.4.1-linux.tgz
 
 ## INSTALL ANDROID NDK
-ENV ANDROID_NDK_REVISION 14
+ENV ANDROID_NDK_REVISION 16b
 RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
     && unzip android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
     && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
@@ -30,7 +30,7 @@ RUN curl -s -L -o  boost_${BOOST_VERSION}.tar.bz2 https://sourceforge.net/projec
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
 RUN ${ANDROID_NDK_ROOT}/build/tools/make_standalone_toolchain.py \
          --arch arm \
-         --api 21 \
+         --api 25 \
          --install-dir $TOOLCHAIN_DIR \
          --stl=libc++
 ENV PATH $TOOLCHAIN_DIR/arm-linux-androideabi/bin:$TOOLCHAIN_DIR/bin:$PATH
