@@ -63,7 +63,7 @@ RUN curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz 
     && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
     && rm openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ssed -i -e "s/mandroid/target\ armv7\-none\-linux\-androideabi/" Configure \
+    && sed -i -e "s/mandroid/target\ armv7\-none\-linux\-androideabi/" Configure \
     && CC=clang CXX=clang++ \
            ./Configure android-armv7 \
            no-asm \
