@@ -82,7 +82,7 @@ RUN git clone https://github.com/zeromq/zeromq4-1.git -b v4.2.5 \
 
 RUN ln -s /opt/android/openssl/libcrypto.a /opt/android/openssl/libssl.a ${TOOLCHAIN_DIR}/arm-linux-androideabi/lib/armv7-a
 
-RUN git clone https://github.com/arqma/arqma.git \
+RUN git clone --recursive https://github.com/arqma/arqma.git \
     && cd arqma \
     && mkdir -p build/release \
     && CC=clang CXX=clang++ \
