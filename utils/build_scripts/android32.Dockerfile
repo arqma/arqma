@@ -58,7 +58,7 @@ RUN curl -s -O http://zlib.net/zlib-${ZLIB_VERSION}.tar.gz \
     && cd zlib && CC=clang CXX=clang++ ./configure --static \
     && make
 # open ssl
-ENV OPENSSL_VERSION 1.1.0h
+ENV OPENSSL_VERSION 1.0.2j
 RUN curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
     && rm openssl-${OPENSSL_VERSION}.tar.gz \
