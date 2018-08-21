@@ -63,7 +63,7 @@ RUN curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz 
     && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
     && rm openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && sed -i -e "s/mandroid/target\ armv7\-linux\-androideabi/" Configure \
+    && ssed -i -e "s/mandroid/target\ armv7\-none\-linux\-androideabi/" Configure \
     && CC=clang CXX=clang++ \
            ./Configure android-armv7 \
            no-asm \
@@ -73,11 +73,11 @@ RUN curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz 
     && cd .. && mv openssl-${OPENSSL_VERSION}  openssl
 
 # ZMQ
-RUN git clone https://github.com/zeromq/zeromq4-1.git -b v4.2.5 \
-    && git clone https://github.com/zeromq/cppzmq.git -b v4.2.3 \
+RUN git clone https://github.com/zeromq/zeromq4-1.git \
+    && git clone https://github.com/zeromq/cppzmq.git \
     && cd zeromq4-1 \
     && ./autogen.sh \
-    && CC=clang CXX=clang++ ./configure --host=arm-linux-androideabi \
+    && CC=clang CXX=clang++ ./configure --host=arm-none-linux-gnueabi \
     && make
 
 RUN ln -s /opt/android/openssl/libcrypto.a /opt/android/openssl/libssl.a ${TOOLCHAIN_DIR}/arm-linux-androideabi/lib/armv7-a
