@@ -126,9 +126,9 @@ namespace
  // const command_line::arg_descriptor<std::string> arg_generate_from_multisig_keys = {"generate-from-multisig-keys", sw::tr("Generate a master wallet from multisig wallet keys"), ""};
   const auto arg_generate_from_json = wallet_args::arg_generate_from_json();
   const command_line::arg_descriptor<std::string> arg_mnemonic_language = {"mnemonic-language", sw::tr("Language for mnemonic"), ""};
-  const command_line::arg_descriptor<std::string> arg_electrum_seed = {"electrum-seed", sw::tr("Specify Electrum seed for wallet recovery/creation"), ""};
-  const command_line::arg_descriptor<bool> arg_restore_deterministic_wallet = {"restore-deterministic-wallet", sw::tr("Recover wallet using Electrum-style mnemonic seed"), false};
- // const command_line::arg_descriptor<bool> arg_restore_multisig_wallet = {"restore-multisig-wallet", sw::tr("Recover multisig wallet using Electrum-style mnemonic seed"), false};
+  const command_line::arg_descriptor<std::string> arg_electrum_seed = {"25 word mnemonic", sw::tr("Specify 25 word mnemonic seed for wallet recovery/creation"), ""};
+  const command_line::arg_descriptor<bool> arg_restore_deterministic_wallet = {"restore-deterministic-wallet", sw::tr("Recover wallet using 25 word mnemonic seed"), false};
+ // const command_line::arg_descriptor<bool> arg_restore_multisig_wallet = {"restore-multisig-wallet", sw::tr("Recover multisig wallet using 25 word mnemonic seed"), false};
   const command_line::arg_descriptor<bool> arg_non_deterministic = {"non-deterministic", sw::tr("Generate non-deterministic view and spend keys"), false};
   const command_line::arg_descriptor<bool> arg_trusted_daemon = {"trusted-daemon", sw::tr("Enable commands which rely on a trusted daemon"), false};
   const command_line::arg_descriptor<bool> arg_untrusted_daemon = {"untrusted-daemon", sw::tr("Disable commands which rely on a trusted daemon"), false};
@@ -2121,7 +2121,7 @@ simple_wallet::simple_wallet()
                            tr("Display the private spend key."));
   m_cmd_binder.set_handler("seed",
                            boost::bind(&simple_wallet::seed, this, _1),
-                           tr("Display the Electrum-style mnemonic seed"));
+                           tr("Display the 25 word mnemonic seed"));
   m_cmd_binder.set_handler("set",
                            boost::bind(&simple_wallet::set_variable, this, _1),
                            tr("set <option> [<value>]"),
@@ -2171,7 +2171,7 @@ simple_wallet::simple_wallet()
                                   "  Set to the height of a key reusing fork you want to use, 0 to use default."));
   m_cmd_binder.set_handler("encrypted_seed",
                            boost::bind(&simple_wallet::encrypted_seed, this, _1),
-                           tr("Display the encrypted Electrum-style mnemonic seed."));
+                           tr("Display the encrypted 25 word mnemonic seed."));
   m_cmd_binder.set_handler("rescan_spent",
                            boost::bind(&simple_wallet::rescan_spent, this, _1),
                            tr("Rescan the blockchain for spent outputs."));
@@ -2623,13 +2623,13 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
           m_electrum_seed = "";
           do
           {
-            const char *prompt = m_electrum_seed.empty() ? "Specify Electrum seed: " : "Electrum seed continued: ";
+            const char *prompt = m_electrum_seed.empty() ? "Specify mnemonic 25 word seed: " : "Mnemonic word seed continued: ";
             std::string electrum_seed = input_line(prompt);
             if (std::cin.eof())
               return false;
             if (electrum_seed.empty())
             {
-              fail_msg_writer() << tr("specify a recovery parameter with the --electrum-seed=\"words list here\"");
+              fail_msg_writer() << tr("specify a recovery parameter with the --25 word mnemonic seed=\"words list here\"");
               return false;
             }
             m_electrum_seed += electrum_seed + " ";
@@ -2649,12 +2649,12 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       {
         if (!crypto::ElectrumWords::words_to_bytes(m_electrum_seed, m_recovery_key, old_language))
         {
-          fail_msg_writer() << tr("Electrum-style word list failed verification");
+          fail_msg_writer() << tr("25 word mnemonic style word list failed verification");
           return false;
         }
       }
 
-      auto pwd_container = password_prompter(tr("Enter seed encryption passphrase, empty if none"), false);
+      auto pwd_container = password_prompter(tr("Enter additional seed encryption passphrase, empty if none"), false);
       if (std::cin.eof() || !pwd_container)
         return false;
       epee::wipeable_string seed_pass = pwd_container->password();
@@ -3216,7 +3216,7 @@ std::string simple_wallet::get_mnemonic_language()
   std::string language_choice;
   int language_number = -1;
   crypto::ElectrumWords::get_language_list(language_list, m_use_english_language_names);
-  std::cout << tr("List of available languages for your wallet's seed:") << std::endl;
+  std::cout << tr("List of available languages for your wallet's 25 word mnemonic seed:") << std::endl;
   std::cout << tr("If your display freezes, exit blind with ^C, then run again with --use-english-language-names") << std::endl;
   int ii;
   std::vector<std::string>::iterator it;
