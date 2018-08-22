@@ -1,3 +1,9 @@
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -13,7 +19,7 @@
 
 
   <link crossorigin="anonymous" media="all" integrity="sha512-Z0JAar9+DkI1NjGVdZr3GivARUgJtA0o2eHlTv7Ou2gshR5awWVf8QGsq11Ns9ZxQLEs+G5/SuARmvpOLMzulw==" rel="stylesheet" href="https://assets-cdn.github.com/assets/frameworks-95aff0b550d3fe338b645a4deebdcb1b.css" />
-  <link crossorigin="anonymous" media="all" integrity="sha512-CKx3km+/sreL8TQnawck172wM/RpBNE60XhV8wwDbn+VZlleFETFHPsSnAdaNOUySA6yFi7Xc8vX6U9P0eNhXA==" rel="stylesheet" href="https://assets-cdn.github.com/assets/github-2e6b414f4a46ee13365df9e7fbfadb35.css" />
+  <link crossorigin="anonymous" media="all" integrity="sha512-R8lobtuM/C8EiHy3KulStJrdAXYuNPnw5AxaKTMvIFxUhDAHcvZaRsUZ+8XyeXu9Cg+py0KMKjRXfLnPSqU4bA==" rel="stylesheet" href="https://assets-cdn.github.com/assets/github-fad664e4a16e56be99eebdec91867e7d.css" />
   
   
   
@@ -31,10 +37,10 @@
     <meta property="og:image" content="https://avatars2.githubusercontent.com/u/39504166?s=400&amp;v=4" /><meta property="og:site_name" content="GitHub" /><meta property="og:type" content="object" /><meta property="og:title" content="arqma/arqma" /><meta property="og:url" content="https://github.com/arqma/arqma" /><meta property="og:description" content="ArQmA Devils Touch Security Rebase // Dev-Pool: https://pool.arqma.com" />
 
   <link rel="assets" href="https://assets-cdn.github.com/">
-  <link rel="web-socket" href="wss://live.github.com/_sockets/VjI6MzA5MDg0NTYyOjc3MzI2MTEwMjhjNjFiYzkxYWM2MTgzODAzMDUzZTQyNTNlNGZkOGNlMjkyNGQ2ZGEwNGQ5NzkwYjU1YjY0YTM=--6caf128cc3ea8dc6d0f1c8ca513ced1e5cf63e98">
+  <link rel="web-socket" href="wss://live.github.com/_sockets/VjI6MzA5MzA3MTM4OmYzYTUwMWNkNGQzN2EzODdmYTBiNTZhYzhjMDgzMzJmZTVlM2E4NTY3NWE5ODNmNmQzM2I4ZmI3ZDIwZmY4YTE=--4fd6fda851386e25ab4143d4028fe1dc4e1d0a57">
   <meta name="pjax-timeout" content="1000">
   <link rel="sudo-modal" href="/sessions/sudo_modal">
-  <meta name="request-id" content="D479:02F3:CCB7D:1351C8:5B7D2807" data-pjax-transient>
+  <meta name="request-id" content="DD1F:57D4:E8096:167981:5B7DE02C" data-pjax-transient>
 
 
   
@@ -46,7 +52,7 @@
   <meta name="google-site-verification" content="GXs5KoUUkNCoaAZn7wPN-t01Pywp9M3sEjnt_3_ZWPc">
     <meta name="google-analytics" content="UA-3769691-2">
 
-<meta name="octolytics-host" content="collector.githubapp.com" /><meta name="octolytics-app-id" content="github" /><meta name="octolytics-event-url" content="https://collector.githubapp.com/github-external/browser_event" /><meta name="octolytics-dimension-request_id" content="D479:02F3:CCB7D:1351C8:5B7D2807" /><meta name="octolytics-dimension-region_edge" content="sea" /><meta name="octolytics-dimension-region_render" content="iad" /><meta name="octolytics-actor-id" content="40085316" /><meta name="octolytics-actor-login" content="mechanator" /><meta name="octolytics-actor-hash" content="74d071998606535f2eee9df6a4433c5ce0d0df7f49ef5e85b48c16f22656bb49" />
+<meta name="octolytics-host" content="collector.githubapp.com" /><meta name="octolytics-app-id" content="github" /><meta name="octolytics-event-url" content="https://collector.githubapp.com/github-external/browser_event" /><meta name="octolytics-dimension-request_id" content="DD1F:57D4:E8096:167981:5B7DE02C" /><meta name="octolytics-dimension-region_edge" content="sea" /><meta name="octolytics-dimension-region_render" content="iad" /><meta name="octolytics-actor-id" content="40085316" /><meta name="octolytics-actor-login" content="mechanator" /><meta name="octolytics-actor-hash" content="74d071998606535f2eee9df6a4433c5ce0d0df7f49ef5e85b48c16f22656bb49" />
 <meta name="analytics-location" content="/&lt;user-name&gt;/&lt;repo-name&gt;/blob/show" data-pjax-transient="true" />
 
 
@@ -62,13 +68,13 @@
     <meta name="user-login" content="mechanator">
 
       <meta name="expected-hostname" content="github.com">
-    <meta name="js-proxy-site-detection-payload" content="MGE0OGIwMWYxZDI5MjhlODJkOTFlNmM4YWM2YTYyNzIyNzcyNmMxNjk0N2IxMzc1MWU0YjY4NTAwNDI4NGE1ZHx7InJlbW90ZV9hZGRyZXNzIjoiOTguMjQ2LjY5LjYzIiwicmVxdWVzdF9pZCI6IkQ0Nzk6MDJGMzpDQ0I3RDoxMzUxQzg6NUI3RDI4MDciLCJ0aW1lc3RhbXAiOjE1MzQ5Mjg5NDUsImhvc3QiOiJnaXRodWIuY29tIn0=">
+    <meta name="js-proxy-site-detection-payload" content="NGIxZTIzNTFjZjYwNDBmYzg0YTU3NmEzMzEwMzNjNGQzMmY2YTY4ODQwNDQyMzdkZjI2NGNkZmQwMTExOTBlZXx7InJlbW90ZV9hZGRyZXNzIjoiOTguMjQ2LjY5LjYzIiwicmVxdWVzdF9pZCI6IkREMUY6NTdENDpFODA5NjoxNjc5ODE6NUI3REUwMkMiLCJ0aW1lc3RhbXAiOjE1MzQ5NzYwNDQsImhvc3QiOiJnaXRodWIuY29tIn0=">
 
     <meta name="enabled-features" content="DASHBOARD_V2_LAYOUT_OPT_IN,EXPLORE_DISCOVER_REPOSITORIES,UNIVERSE_BANNER,FREE_TRIALS,MARKETPLACE_INSIGHTS,MARKETPLACE_DOCKERFILE_CI_CTA,MARKETPLACE_PLAN_RESTRICTION_EDITOR,MARKETPLACE_SEARCH,MARKETPLACE_INSIGHTS_CONVERSION_PERCENTAGES,MARKETPLACE_RETARGETING">
 
-  <meta name="html-safe-nonce" content="7c9e1e7cf80d957c4d8f7f9eb96b41a144592790">
+  <meta name="html-safe-nonce" content="e7ce2afde0568f9ebc982351e1253eec95fa0491">
 
-  <meta http-equiv="x-pjax-version" content="b24ec49392aa5017ecfa586af1ca99b9">
+  <meta http-equiv="x-pjax-version" content="8d2dbd2bdfefd82313e2c424903063e4">
   
 
       <link href="https://github.com/arqma/arqma/commits/mechanator-patch-1.atom" rel="alternate" title="Recent Commits to arqma:mechanator-patch-1" type="application/atom+xml">
@@ -147,7 +153,7 @@
           autocapitalize="off"
           aria-autocomplete="list"
           aria-controls="jump-to-results"
-          data-jump-to-suggestions-path="/_graphql/GetSuggestedNavigationDestinations#csrf-token=HuopouUwuqzyfIwQysmcq7SujMJ690kpFD0ZJJCrVwTWxh2vsJYiao/NxNWrYK2g4NPWcOA9hi0wYwIWilqfWg=="
+          data-jump-to-suggestions-path="/_graphql/GetSuggestedNavigationDestinations#csrf-token=0OQDFwdBjHw+YgH4uETRDaeq9tiAOVlTNqUx7/CB74iwEpkBU9/jkZ44IpQGnQ7UJjRsi4zRnO+XIFCaw2OQyQ=="
           spellcheck="false"
           autocomplete="off"
           >
@@ -295,7 +301,7 @@
           <li><a role="menuitem" class="dropdown-item" href="https://help.github.com" data-ga-click="Header, go to help, text:help">Help</a></li>
           <li><a role="menuitem" class="dropdown-item" href="/settings/profile" data-ga-click="Header, go to settings, icon:settings">Settings</a></li>
           <li>
-            <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="logout-form" action="/logout" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="N4I4rg/mYmkHtJcNEcMVNePq0TjRtKEbngaOxFHHOld9z2Bepy/0MpCQrOtW+4j5Ix8mCWuX9UV+E245x7lYNw==" />
+            <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="logout-form" action="/logout" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="9yaVQItsp2wwmWA9KytVdYeLMMwjYBmJa5XeR6SCdfEw5R5wQK0EUQpx3NfeQEvLIiwzuSoeKZaOE6BjE9lycw==" />
               <button type="submit" class="dropdown-item dropdown-signout" data-ga-click="Header, sign out, icon:logout" role="menuitem">
                 Sign out
               </button>
@@ -308,7 +314,7 @@
 
 
 
-        <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="sr-only right-0" action="/logout" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="613OQkSZij15L62KXCsz3/VZ2/OQHMvOAfS0n0rqiH6hEJay7FAcZu4LlmwbE64TNawswio/n5Dh4VRi3JTqHg==" />
+        <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="sr-only right-0" action="/logout" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="mif9NQ75tVkS/w2Jw4VREzzAQiPW82pq0i5eNGpjyiZd5HYFxTgWZCgXsWM27k+tmWdBVt+NWnU3qCAQ3TjNpA==" />
           <button type="submit" class="dropdown-item dropdown-signout" data-ga-click="Header, sign out, icon:logout">
             Sign out
           </button>
@@ -348,7 +354,7 @@
 
       <ul class="pagehead-actions">
   <li>
-        <!-- '"` --><!-- </textarea></xmp> --></option></form><form data-autosubmit="true" data-remote="true" class="js-social-container" action="/notifications/subscribe" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="jqdrWpIyZOSizrTnNErTULy8RztD9moeR3/K1Bd1rtfFJGkJs+Cma0dsulTXGRkzhOZw2PjqHkuacID/rxLrMQ==" />      <input type="hidden" name="repository_id" id="repository_id" value="139352635" class="form-control" />
+        <!-- '"` --><!-- </textarea></xmp> --></option></form><form data-autosubmit="true" data-remote="true" class="js-social-container" action="/notifications/subscribe" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="394FTl5BPvUIM9JClMPo+ysHQsLc71Cmd9NQR8pP91NLrk64kQPPWbRgPQAzQeqo2Vhozoy+/U4ucMTfbVlX2A==" />      <input type="hidden" name="repository_id" id="repository_id" value="139352635" class="form-control" />
 
         <div class="select-menu js-menu-container js-select-menu">
           <a href="/arqma/arqma/subscription"
@@ -428,7 +434,7 @@
   <li>
     
   <div class="js-toggler-container js-social-container starring-container ">
-    <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="starred js-social-form" action="/arqma/arqma/unstar" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="snmRcZpmE+/Burj0I1ode/TN51MpXCnNZ86GVv+a0O2CuzIJaY3SX3Clb1/PQ46EVbdTWMX17tsMPEUpTWflww==" />
+    <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="starred js-social-form" action="/arqma/arqma/unstar" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="dqCdh6sphFENCg4qPJzkyJ0XLZUXkdV27M9ETfYIK1mIzfDO3yPFuRBYvlUGmq4/lIRUIuxE8qRcum9FXwfjLA==" />
       <input type="hidden" name="context" value="repository"></input>
       <button
         type="submit"
@@ -443,7 +449,7 @@
           2
         </a>
 </form>
-    <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="unstarred js-social-form" action="/arqma/arqma/star" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="+Qx+yXlJ8yj7dLKbNcx4oaCjTXCpQwEm6RjbE14lTp5LLvr5Te9Csky0ciS4OV8srKHJRu+SoCc3qcikk8BJTg==" />
+    <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="unstarred js-social-form" action="/arqma/arqma/star" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="BpNfuwU9/wCa3f9FqOm+cvG3ehIvzW4PdJABSGAHtCl2Q2cOsKf0t2Ss8iGow2D8+kD0vN5QXa/LAQkAaoZqHw==" />
       <input type="hidden" name="context" value="repository"></input>
       <button
         type="submit"
@@ -560,9 +566,9 @@
   <div class="repository-content ">
 
     
-  <a class="d-none js-permalink-shortcut" data-hotkey="y" href="/arqma/arqma/blob/fa22e32379a19766aebed1574d4b9981122290f4/README.md">Permalink</a>
+  <a class="d-none js-permalink-shortcut" data-hotkey="y" href="/arqma/arqma/blob/4ec3fad8965e45f419ed1bd6884a321d909e4e71/README.md">Permalink</a>
 
-  <!-- blob contrib key: blob_contributors:v21:604bb555ec7059fae4137f6d15d7a337 -->
+  <!-- blob contrib key: blob_contributors:v21:41fffa05c345bbffdd3a930e9f49bf26 -->
 
   
 
@@ -687,7 +693,7 @@
             </a>
         </div>
 
-          <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="js-create-branch select-menu-item select-menu-new-item-form js-navigation-item js-new-item-form" action="/arqma/arqma/branches" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="Cvx3dtAsij5sB+rQIQa1KVh6yOye6nmkvIMGvmgZ1yoTyIo3dKdb7bla20eh6SKdkP2d/10hGxAxgdkPhyWKRw==" />
+          <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="js-create-branch select-menu-item select-menu-new-item-form js-navigation-item js-new-item-form" action="/arqma/arqma/branches" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="7FwdbC85drj7yWlapEcFd5zXSAddjFjBUIMS5DYo0FoVGw/gaLEAN1aSLHJ6xJy3HXmxKSwoUMFY++6pBJo+Hw==" />
           <svg class="octicon octicon-git-branch select-menu-item-icon" viewBox="0 0 10 16" version="1.1" width="10" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M10 5c0-1.11-.89-2-2-2a1.993 1.993 0 0 0-1 3.72v.3c-.02.52-.23.98-.63 1.38-.4.4-.86.61-1.38.63-.83.02-1.48.16-2 .45V4.72a1.993 1.993 0 0 0-1-3.72C.88 1 0 1.89 0 3a2 2 0 0 0 1 1.72v6.56c-.59.35-1 .99-1 1.72 0 1.11.89 2 2 2 1.11 0 2-.89 2-2 0-.53-.2-1-.53-1.36.09-.06.48-.41.59-.47.25-.11.56-.17.94-.17 1.05-.05 1.95-.45 2.75-1.25S8.95 7.77 9 6.73h-.02C9.59 6.37 10 5.73 10 5zM2 1.8c.66 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2C1.35 4.2.8 3.65.8 3c0-.65.55-1.2 1.2-1.2zm0 12.41c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm6-8c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2z"/></svg>
             <div class="select-menu-item-text">
               <span class="select-menu-item-heading">Create branch: <span class="js-new-item-name"></span></span>
@@ -818,13 +824,13 @@
             <svg class="octicon octicon-device-desktop" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M15 2H1c-.55 0-1 .45-1 1v9c0 .55.45 1 1 1h5.34c-.25.61-.86 1.39-2.34 2h8c-1.48-.61-2.09-1.39-2.34-2H15c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1zm0 9H1V3h14v8z"/></svg>
         </a>
 
-          <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="inline-form js-update-url-with-hash" action="/arqma/arqma/edit/mechanator-patch-1/README.md" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="PAn3ryhAFFMpHpWcEr2C3zn33P/ANhT1eDnI4s0EordecbNX0gTLSNPPddpJgiUhlSf/KCoiE9ZPB8e8xUnkuQ==" />
+          <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="inline-form js-update-url-with-hash" action="/arqma/arqma/edit/mechanator-patch-1/README.md" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="22wWfXlsZKN1nUdMS35zzAFMYMDypubT3+qDZY/SzrBVH+jgO49aiR54KT2oTxXilkI27exd68/iIZvdrrUqhg==" />
             <button class="btn-octicon tooltipped tooltipped-nw" type="submit"
               aria-label="Edit this file" data-hotkey="e" data-disable-with>
               <svg class="octicon octicon-pencil" viewBox="0 0 14 16" version="1.1" width="14" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M0 12v3h3l8-8-3-3-8 8zm3 2H1v-2h1v1h1v1zm10.3-9.3L12 6 9 3l1.3-1.3a.996.996 0 0 1 1.41 0l1.59 1.59c.39.39.39 1.02 0 1.41z"/></svg>
             </button>
 </form>
-        <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="inline-form" action="/arqma/arqma/delete/mechanator-patch-1/README.md" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="dy9sGoljnvpWM6+hdl6M1rp/1eI4fLPnT9ynWCWEqqJYZZSPwP4s1VFzQzFy73ekJufl3W+38E8fNrUKU1Ep4g==" />
+        <!-- '"` --><!-- </textarea></xmp> --></option></form><form class="inline-form" action="/arqma/arqma/delete/mechanator-patch-1/README.md" accept-charset="UTF-8" method="post"><input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="FsK/HjMQJq/kQFM6uP678RaBDNrUYHK3MW5WtBEGuujPgCjHnkb8TF1sPy8wkve6OwyZeYmQpGGyd/9x6j5mrQ==" />
           <button class="btn-octicon btn-octicon-danger tooltipped tooltipped-nw" type="submit"
             aria-label="Delete this file" data-disable-with>
             <svg class="octicon octicon-trashcan" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M11 2H9c0-.55-.45-1-1-1H5c-.55 0-1 .45-1 1H2c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1v9c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V5c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1zm-1 12H3V5h1v8h1V5h1v8h1V5h1v8h1V5h1v9zm1-10H2V3h9v1z"/></svg>
@@ -832,42 +838,741 @@
 </form>  </div>
 
   <div class="file-info">
-      540 lines (349 sloc)
+      1610 lines (1412 sloc)
       <span class="file-info-divider"></span>
-    25.5 KB
+    112 KB
   </div>
 </div>
 
     
   <div id="readme" class="readme blob instapaper_body">
-    <article class="markdown-body entry-content" itemprop="text"><h1><a id="user-content-arqma" class="anchor" aria-hidden="true" href="#arqma"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>ArQmA</h1>
+    <article class="markdown-body entry-content" itemprop="text">
+
+  
+    
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  &lt;title&gt;arqma/README.md at mechanator-patch-1 · arqma/arqma&lt;/title&gt;
+    
+    
+  
+  
+<pre><code>&lt;meta property="og:image" content="https://avatars2.githubusercontent.com/u/39504166?s=400&amp;amp;v=4" /&gt;&lt;meta property="og:site_name" content="GitHub" /&gt;&lt;meta property="og:type" content="object" /&gt;&lt;meta property="og:title" content="arqma/arqma" /&gt;&lt;meta property="og:url" content="https://github.com/arqma/arqma" /&gt;&lt;meta property="og:description" content="ArQmA Devils Touch Security Rebase // Dev-Pool: https://pool.arqma.com" /&gt;
+</code></pre>
+  
+  
+  
+  
+  
+  
+<pre><code>&lt;meta name="google-site-verification" content="KT5gs8h0wvaagLKAVWq8bbeNwnZZK1r1XQysX3xurLU"&gt;
+</code></pre>
+  
+  
+    
+<p>
+</p>
+<p>&lt;meta class="js-ga-set" name="userId" content="a4f1a0baaf2a4171d452277a3d485f3a" %&gt;</p>
+
+<pre><code>  &lt;meta name="hostname" content="github.com"&gt;
+&lt;meta name="user-login" content="mechanator"&gt;
+
+  &lt;meta name="expected-hostname" content="github.com"&gt;
+&lt;meta name="js-proxy-site-detection-payload" content="MGE0OGIwMWYxZDI5MjhlODJkOTFlNmM4YWM2YTYyNzIyNzcyNmMxNjk0N2IxMzc1MWU0YjY4NTAwNDI4NGE1ZHx7InJlbW90ZV9hZGRyZXNzIjoiOTguMjQ2LjY5LjYzIiwicmVxdWVzdF9pZCI6IkQ0Nzk6MDJGMzpDQ0I3RDoxMzUxQzg6NUI3RDI4MDciLCJ0aW1lc3RhbXAiOjE1MzQ5Mjg5NDUsImhvc3QiOiJnaXRodWIuY29tIn0="&gt;
+
+&lt;meta name="enabled-features" content="DASHBOARD_V2_LAYOUT_OPT_IN,EXPLORE_DISCOVER_REPOSITORIES,UNIVERSE_BANNER,FREE_TRIALS,MARKETPLACE_INSIGHTS,MARKETPLACE_DOCKERFILE_CI_CTA,MARKETPLACE_PLAN_RESTRICTION_EDITOR,MARKETPLACE_SEARCH,MARKETPLACE_INSIGHTS_CONVERSION_PERCENTAGES,MARKETPLACE_RETARGETING"&gt;
+</code></pre>
+  
+  
+<pre><code>  &lt;link href="https://github.com/arqma/arqma/commits/mechanator-patch-1.atom" rel="alternate" title="Recent Commits to arqma:mechanator-patch-1" type="application/atom+xml"&gt;
+</code></pre>
+  
+<p></p>
+<pre><code>&lt;link rel="canonical" href="https://github.com/arqma/arqma/blob/mechanator-patch-1/README.md" data-pjax-transient&gt;
+</code></pre>
+  
+  
+  
+  
+
+  
+  
+  
+  
+  <div>
+    <a href="#start-of-content" tabindex="1">Skip to content</a>
+    <div id="user-content-js-pjax-loader-bar"><div></div></div>
+
+  <div>
+    <div>
+      <div>
+        <a href="https://github.com/">
+  
+</a>
+<pre><code>  &lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;div class="HeaderMenu d-flex flex-justify-between flex-auto"&gt;
+  &lt;div class="d-flex"&gt;
+        &lt;div class=""&gt;
+          &lt;div class="header-search scoped-search site-scoped-search js-site-search position-relative js-jump-to"
+</code></pre>
+<p>role="search combobox"
+aria-owns="jump-to-results"
+aria-label="Search or jump to"
+aria-haspopup="listbox"
+aria-expanded="true"</p>
+<blockquote>
+</blockquote>
+  <div>
+    
+      
+        
+          
+            <a target="_blank" rel="noopener noreferrer" href="https://camo.githubusercontent.com/14fc2ecec410b8f53ffee6a45a7242dc75c6691d/68747470733a2f2f6173736574732d63646e2e6769746875622e636f6d2f696d616765732f7365617263682d73686f72746375742d68696e742e737667"><img src="https://camo.githubusercontent.com/14fc2ecec410b8f53ffee6a45a7242dc75c6691d/68747470733a2f2f6173736574732d63646e2e6769746875622e636f6d2f696d616765732f7365617263682d73686f72746375742d68696e742e737667" alt="" data-canonical-src="https://assets-cdn.github.com/images/search-shortcut-hint.svg" style="max-width:100%;"></a>
+<pre><code>        &lt;div class="Box position-absolute overflow-hidden d-none jump-to-suggestions js-jump-to-suggestions-container"&gt;
+          &lt;ul class="d-none js-jump-to-suggestions-template-container"&gt;
+            &lt;li class="d-flex flex-justify-start flex-items-center p-0 f5 navigation-item js-navigation-item"&gt;
+              &lt;a tabindex="-1" class="no-underline d-flex flex-auto flex-items-center p-2 jump-to-suggestions-path js-jump-to-suggestion-path js-navigation-open" href=""&gt;
+                &lt;div class="jump-to-octicon js-jump-to-octicon mr-2 text-center d-none"&gt;&lt;/div&gt;
+                &lt;img class="avatar mr-2 flex-shrink-0 js-jump-to-suggestion-avatar" alt="" aria-label="Team" src="" width="28" height="28"&gt;
+
+                &lt;div class="jump-to-suggestion-name js-jump-to-suggestion-name flex-auto overflow-hidden text-left no-wrap css-truncate css-truncate-target"&gt;
+                &lt;/div&gt;
+
+                &lt;div class="border rounded-1 flex-shrink-0 bg-gray px-1 text-gray-light ml-1 f6 d-none js-jump-to-badge-search"&gt;
+                  &lt;span class="js-jump-to-badge-search-text-default d-none" aria-label="in this repository"&gt;
+                    In this repository
+                  &lt;/span&gt;
+                  &lt;span class="js-jump-to-badge-search-text-global d-none" aria-label="in all of GitHub"&gt;
+                    All GitHub
+                  &lt;/span&gt;
+                  &lt;span aria-hidden="true" class="d-inline-block ml-1 v-align-middle"&gt;↵&lt;/span&gt;
+                &lt;/div&gt;
+
+                &lt;div aria-hidden="true" class="border rounded-1 flex-shrink-0 bg-gray px-1 text-gray-light ml-1 f6 d-none d-on-nav-focus js-jump-to-badge-jump"&gt;
+                  Jump to
+                  &lt;span class="d-inline-block ml-1 v-align-middle"&gt;↵&lt;/span&gt;
+                &lt;/div&gt;
+              &lt;/a&gt;
+            &lt;/li&gt;
+            &lt;svg height="16" width="16" class="octicon octicon-repo flex-shrink-0 js-jump-to-repo-octicon-template" title="Repository" aria-label="Repository" viewBox="0 0 12 16" version="1.1" role="img"&gt;&lt;path fill-rule="evenodd" d="M4 9H3V8h1v1zm0-3H3v1h1V6zm0-2H3v1h1V4zm0-2H3v1h1V2zm8-1v12c0 .55-.45 1-1 1H6v2l-1.5-1.5L3 16v-2H1c-.55 0-1-.45-1-1V1c0-.55.45-1 1-1h10c.55 0 1 .45 1 1zm-1 10H1v2h2v-1h3v1h5v-2zm0-10H2v9h9V1z"/&gt;&lt;/svg&gt;
+            &lt;svg height="16" width="16" class="octicon octicon-project flex-shrink-0 js-jump-to-project-octicon-template" title="Project" aria-label="Project" viewBox="0 0 15 16" version="1.1" role="img"&gt;&lt;path fill-rule="evenodd" d="M10 12h3V2h-3v10zm-4-2h3V2H6v8zm-4 4h3V2H2v12zm-1 1h13V1H1v14zM14 0H1a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1z"/&gt;&lt;/svg&gt;
+            &lt;svg height="16" width="16" class="octicon octicon-search flex-shrink-0 js-jump-to-search-octicon-template" title="Search" aria-label="Search" viewBox="0 0 16 16" version="1.1" role="img"&gt;&lt;path fill-rule="evenodd" d="M15.7 13.3l-3.81-3.83A5.93 5.93 0 0 0 13 6c0-3.31-2.69-6-6-6S1 2.69 1 6s2.69 6 6 6c1.3 0 2.48-.41 3.47-1.11l3.83 3.81c.19.2.45.3.7.3.25 0 .52-.09.7-.3a.996.996 0 0 0 0-1.41v.01zM7 10.7c-2.59 0-4.7-2.11-4.7-4.7 0-2.59 2.11-4.7 4.7-4.7 2.59 0 4.7 2.11 4.7 4.7 0 2.59-2.11 4.7-4.7 4.7z"/&gt;&lt;/svg&gt;
+          &lt;/ul&gt;
+          &lt;ul class="d-none js-jump-to-no-results-template-container"&gt;
+            &lt;li class="d-flex flex-justify-center flex-items-center p-3 f5 d-none"&gt;
+              &lt;span class="text-gray"&gt;No suggested jump to results&lt;/span&gt;
+            &lt;/li&gt;
+          &lt;/ul&gt;
+
+          &lt;ul id="jump-to-results" class="js-navigation-container jump-to-suggestions-results-container js-jump-to-suggestions-results-container" &gt;
+            &lt;li class="d-flex flex-justify-center flex-items-center p-0 f5"&gt;
+              &lt;img src="https://assets-cdn.github.com/images/spinners/octocat-spinner-128.gif" alt="Octocat Spinner Icon" class="m-2" width="28"&gt;
+            &lt;/li&gt;
+          &lt;/ul&gt;
+        &lt;/div&gt;
+  &lt;/label&gt;
+</code></pre>
+  </div>
+</div>
+<pre><code>        &lt;/div&gt;
+
+      &lt;ul class="d-flex pl-2 flex-items-center text-bold list-style-none" role="navigation"&gt;
+        &lt;li&gt;
+          &lt;a class="js-selected-navigation-item HeaderNavlink px-2" data-hotkey="g p" data-ga-click="Header, click, Nav menu - item:pulls context:user" aria-label="Pull requests you created" data-selected-links="/pulls /pulls/assigned /pulls/mentioned /pulls" href="/pulls"&gt;
+            Pull requests
+</code></pre>
+<p>            
+</p><li>
+<a href="/arqma/arqma/blob/mechanator-patch-1/issues">
+Issues
+</a>            </li>
+<li>
+<a href="/arqma/arqma/blob/mechanator-patch-1/marketplace">
+Marketplace
+</a>              </li>
+<li>
+<a href="/arqma/arqma/blob/mechanator-patch-1/explore">
+Explore
+</a>            </li>
+
+</div><p></p>
+<pre><code>  &lt;div class="d-flex"&gt;
+</code></pre>
+<ul id="user-content-user-links">
+  <li>
+    
+<pre><code>&lt;a aria-label="You have no unread notifications" class="notification-indicator tooltipped tooltipped-s  js-socket-channel js-notification-indicator" data-hotkey="g n" data-ga-click="Header, go to notifications, icon:read" data-channel="notification-changed:40085316" href="/notifications"&gt;
+    &lt;span class="mail-status "&gt;&lt;/span&gt;
+    &lt;svg class="octicon octicon-bell" viewBox="0 0 14 16" version="1.1" width="14" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M13.99 11.991v1H0v-1l.73-.58c.769-.769.809-2.547 1.189-4.416.77-3.767 4.077-4.996 4.077-4.996 0-.55.45-1 .999-1 .55 0 1 .45 1 1 0 0 3.387 1.229 4.156 4.996.38 1.879.42 3.657 1.19 4.417l.659.58h-.01zM6.995 15.99c1.11 0 1.999-.89 1.999-1.999H4.996c0 1.11.89 1.999 1.999 1.999z"/&gt;&lt;/svg&gt;
+</code></pre>
+
+    
+  </li>
+  <li>
+    <details>
+      <summary>
+        
+        
+      </summary>
+      
+<a href="/arqma/arqma/blob/mechanator-patch-1/new">
+  New repository
+</a>
+  <a href="/arqma/arqma/blob/mechanator-patch-1/new/import">
+    Import repository
+  </a>
+<a href="https://gist.github.com/">
+  New gist
+</a>
+  <a href="/arqma/arqma/blob/mechanator-patch-1/organizations/new">
+    New organization
+  </a>
+  <div></div>
+  <div>
+    This repository
+  </div>
+    <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/issues/new">
+      New issue
+    </a>
+<pre><code>  &lt;/details-menu&gt;
+&lt;/details&gt;
+</code></pre>
+  </details></li>
+  <li>
+<pre><code>&lt;details class="details-overlay details-reset d-flex pl-2 flex-items-center"&gt;
+  &lt;summary class="HeaderNavlink name mt-1"
+    aria-label="View profile and more"
+    data-ga-click="Header, show menu, icon:avatar"&gt;
+    &lt;img alt="@mechanator" class="avatar float-left mr-1" src="https://avatars0.githubusercontent.com/u/40085316?s=40&amp;amp;v=4" height="20" width="20"&gt;
+    &lt;span class="dropdown-caret"&gt;&lt;/span&gt;
+  &lt;/summary&gt;
+  &lt;details-menu class="dropdown-menu dropdown-menu-sw"&gt;
+    &lt;ul&gt;
+      &lt;li class="header-nav-current-user css-truncate"&gt;&lt;a role="menuitem" class="no-underline user-profile-link px-3 pt-2 pb-2 mb-n2 mt-n1 d-block" href="/mechanator" data-ga-click="Header, go to profile, text:Signed in as"&gt;Signed in as &lt;strong class="css-truncate-target"&gt;mechanator&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+      &lt;li class="dropdown-divider"&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a role="menuitem" class="dropdown-item" href="/mechanator" data-ga-click="Header, go to profile, text:your profile"&gt;Your profile&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a role="menuitem" class="dropdown-item" href="/mechanator?tab=repositories" data-ga-click="Header, go to repositories, text:your repositories"&gt;Your repositories&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a role="menuitem" class="dropdown-item" href="/mechanator?tab=stars" data-ga-click="Header, go to starred repos, text:your stars"&gt;Your stars&lt;/a&gt;&lt;/li&gt;
+        &lt;li&gt;&lt;a role="menuitem" class="dropdown-item" href="https://gist.github.com/" data-ga-click="Header, your gists, text:your gists"&gt;Your gists&lt;/a&gt;&lt;/li&gt;
+      &lt;li class="dropdown-divider"&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a role="menuitem" class="dropdown-item" href="https://help.github.com" data-ga-click="Header, go to help, text:help"&gt;Help&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a role="menuitem" class="dropdown-item" href="/settings/profile" data-ga-click="Header, go to settings, icon:settings"&gt;Settings&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;
+        &lt;!-- '"` --&gt;&lt;!-- &lt;/textarea&gt;&lt;/xmp&gt; --&gt;&lt;/option&gt;&lt;/form&gt;&lt;form class="logout-form" action="/logout" accept-charset="UTF-8" method="post"&gt;&lt;input name="utf8" type="hidden" value="&amp;#x2713;" /&gt;&lt;input type="hidden" name="authenticity_token" value="N4I4rg/mYmkHtJcNEcMVNePq0TjRtKEbngaOxFHHOld9z2Bepy/0MpCQrOtW+4j5Ix8mCWuX9UV+E245x7lYNw==" /&gt;
+          &lt;button type="submit" class="dropdown-item dropdown-signout" data-ga-click="Header, sign out, icon:logout" role="menuitem"&gt;
+            Sign out
+          &lt;/button&gt;
+</code></pre>
+          </li>
+        </ul>
+      
+    
+  
+
+<pre><code>    &lt;!-- '"` --&gt;&lt;!-- &lt;/textarea&gt;&lt;/xmp&gt; --&gt;&lt;/option&gt;&lt;/form&gt;&lt;form class="sr-only right-0" action="/logout" accept-charset="UTF-8" method="post"&gt;&lt;input name="utf8" type="hidden" value="&amp;#x2713;" /&gt;&lt;input type="hidden" name="authenticity_token" value="613OQkSZij15L62KXCsz3/VZ2/OQHMvOAfS0n0rqiH6hEJay7FAcZu4LlmwbE64TNawswio/n5Dh4VRi3JTqHg==" /&gt;
+      &lt;button type="submit" class="dropdown-item dropdown-signout" data-ga-click="Header, sign out, icon:logout"&gt;
+        Sign out
+      &lt;/button&gt;
+</code></pre>
+      </div>
+    </div>
+  
+
+  
+  <div id="user-content-start-of-content"></div>
+<pre><code>&lt;div id="js-flash-container"&gt;
+</code></pre>
+
+  <div>
+        <div itemscope="" itemtype="http://schema.org/SoftwareSourceCode">
+    <div id="user-content-js-repo-pjax-container">
+  <div>
+    <div>
+<pre><code>  &lt;ul class="pagehead-actions"&gt;
+</code></pre>
+  <li>
+              
+<pre><code>    &lt;div class="select-menu js-menu-container js-select-menu"&gt;
+      &lt;a href="/arqma/arqma/subscription"
+        class="btn btn-sm btn-with-count select-menu-button js-menu-target"
+        role="button"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-label="Toggle repository notifications menu"
+        data-ga-click="Repository, click Watch settings, action:blob#show"&gt;
+        &lt;span class="js-select-button"&gt;
+            &lt;svg class="octicon octicon-eye v-align-text-bottom" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M8.06 2C3 2 0 8 0 8s3 6 8.06 6C13 14 16 8 16 8s-3-6-7.94-6zM8 12c-2.2 0-4-1.78-4-4 0-2.2 1.8-4 4-4 2.22 0 4 1.8 4 4 0 2.22-1.78 4-4 4zm2-4c0 1.11-.89 2-2 2-1.11 0-2-.89-2-2 0-1.11.89-2 2-2 1.11 0 2 .89 2 2z"/&gt;&lt;/svg&gt;
+            Watch
+        &lt;/span&gt;
+      &lt;/a&gt;
+      &lt;a class="social-count js-social-count"
+        href="/arqma/arqma/watchers"
+        aria-label="3 users are watching this repository"&gt;
+        3
+      &lt;/a&gt;
+
+    &lt;div class="select-menu-modal-holder"&gt;
+      &lt;div class="select-menu-modal subscription-menu-modal js-menu-content"&gt;
+        &lt;div class="select-menu-header js-navigation-enable" tabindex="-1"&gt;
+          &lt;svg class="octicon octicon-x js-menu-close" role="img" aria-label="Close" viewBox="0 0 12 16" version="1.1" width="12" height="16"&gt;&lt;path fill-rule="evenodd" d="M7.48 8l3.75 3.75-1.48 1.48L6 9.48l-3.75 3.75-1.48-1.48L4.52 8 .77 4.25l1.48-1.48L6 6.52l3.75-3.75 1.48 1.48L7.48 8z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-title"&gt;Notifications&lt;/span&gt;
+        &lt;/div&gt;
+
+          &lt;div class="select-menu-list js-navigation-container" role="menu"&gt;
+
+            &lt;div class="select-menu-item js-navigation-item selected" role="menuitem" tabindex="0"&gt;
+              &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+              &lt;div class="select-menu-item-text"&gt;
+                &lt;input type="radio" name="do" id="do_included" value="included" checked="checked" /&gt;
+                &lt;span class="select-menu-item-heading"&gt;Not watching&lt;/span&gt;
+                &lt;span class="description"&gt;Be notified when participating or @mentioned.&lt;/span&gt;
+                &lt;span class="js-select-button-text hidden-select-button-text"&gt;
+                  &lt;svg class="octicon octicon-eye v-align-text-bottom" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M8.06 2C3 2 0 8 0 8s3 6 8.06 6C13 14 16 8 16 8s-3-6-7.94-6zM8 12c-2.2 0-4-1.78-4-4 0-2.2 1.8-4 4-4 2.22 0 4 1.8 4 4 0 2.22-1.78 4-4 4zm2-4c0 1.11-.89 2-2 2-1.11 0-2-.89-2-2 0-1.11.89-2 2-2 1.11 0 2 .89 2 2z"/&gt;&lt;/svg&gt;
+                  Watch
+                &lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;div class="select-menu-item js-navigation-item " role="menuitem" tabindex="0"&gt;
+              &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+              &lt;div class="select-menu-item-text"&gt;
+                &lt;input type="radio" name="do" id="do_subscribed" value="subscribed" /&gt;
+                &lt;span class="select-menu-item-heading"&gt;Watching&lt;/span&gt;
+                &lt;span class="description"&gt;Be notified of all conversations.&lt;/span&gt;
+                &lt;span class="js-select-button-text hidden-select-button-text"&gt;
+                  &lt;svg class="octicon octicon-eye v-align-text-bottom" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M8.06 2C3 2 0 8 0 8s3 6 8.06 6C13 14 16 8 16 8s-3-6-7.94-6zM8 12c-2.2 0-4-1.78-4-4 0-2.2 1.8-4 4-4 2.22 0 4 1.8 4 4 0 2.22-1.78 4-4 4zm2-4c0 1.11-.89 2-2 2-1.11 0-2-.89-2-2 0-1.11.89-2 2-2 1.11 0 2 .89 2 2z"/&gt;&lt;/svg&gt;
+                    Unwatch
+                &lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;div class="select-menu-item js-navigation-item " role="menuitem" tabindex="0"&gt;
+              &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+              &lt;div class="select-menu-item-text"&gt;
+                &lt;input type="radio" name="do" id="do_ignore" value="ignore" /&gt;
+                &lt;span class="select-menu-item-heading"&gt;Ignoring&lt;/span&gt;
+                &lt;span class="description"&gt;Never be notified.&lt;/span&gt;
+                &lt;span class="js-select-button-text hidden-select-button-text"&gt;
+                  &lt;svg class="octicon octicon-mute v-align-text-bottom" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M8 2.81v10.38c0 .67-.81 1-1.28.53L3 10H1c-.55 0-1-.45-1-1V7c0-.55.45-1 1-1h2l3.72-3.72C7.19 1.81 8 2.14 8 2.81zm7.53 3.22l-1.06-1.06-1.97 1.97-1.97-1.97-1.06 1.06L11.44 8 9.47 9.97l1.06 1.06 1.97-1.97 1.97 1.97 1.06-1.06L13.56 8l1.97-1.97z"/&gt;&lt;/svg&gt;
+                    Stop ignoring
+                &lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+</code></pre>
+
+  </li>
+  <li>
+  <div>
+    
+      
+      
+        
+        Unstar
+      
+        <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/stargazers">
+          2
+        </a>
+
+    
+      
+      
+        
+        Star
+      
+        <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/stargazers">
+          2
+        </a>
+  </div>
+  </li>
+  <li>
+          <details>
+            <summary title="Fork your own copy of arqma/arqma to your account">
+              
+              Fork
+            </summary>
+            
+              <div>
+                
+                  
+                
+                <h3><a id="user-content-where-should-we-fork-this-repository" class="anchor" aria-hidden="true" href="#where-should-we-fork-this-repository"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Where should we fork this repository?</h3>
+              </div>
+              <div>
+                
+                  <div></div>
+                  <p>If this dialog fails to load, you can visit <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/fork">the fork page</a> directly.</p>
+                
+              </div>
+            
+          </details>
+<pre><code>&lt;a href="/arqma/arqma/network/members" class="social-count"
+   aria-label="3 users forked this repository"&gt;
+  3
+&lt;/a&gt;
+</code></pre>
+  </li>
+
+<pre><code>  &lt;h1 class="public "&gt;
+</code></pre>
+<p>
+<a href="/arqma/arqma/blob/mechanator-patch-1/arqma">arqma</a>/<strong itemprop="name"><a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma">arqma</a></strong></p>
+
+<pre><code>&lt;/div&gt;
+</code></pre>
+
+  
+    <a itemprop="url" href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/tree/mechanator-patch-1">
+      
+      Code
+      
+</a>  
+<pre><code>&lt;span itemscope itemtype="http://schema.org/ListItem" itemprop="itemListElement"&gt;
+  &lt;a itemprop="url" data-hotkey="g i" class="js-selected-navigation-item reponav-item" data-selected-links="repo_issues repo_labels repo_milestones /arqma/arqma/issues" href="/arqma/arqma/issues"&gt;
+    &lt;svg class="octicon octicon-issue-opened" viewBox="0 0 14 16" version="1.1" width="14" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"/&gt;&lt;/svg&gt;
+    &lt;span itemprop="name"&gt;Issues&lt;/span&gt;
+    &lt;span class="Counter"&gt;0&lt;/span&gt;
+    &lt;meta itemprop="position" content="2"&gt;
+</code></pre>
+<p>    </p>
+  
+    <a itemprop="url" href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/pulls">
+      
+      Pull requests
+      0
+      
+</a>  
+<pre><code>&lt;a data-hotkey="g b" class="js-selected-navigation-item reponav-item" data-selected-links="repo_projects new_repo_project repo_project /arqma/arqma/projects" href="/arqma/arqma/projects"&gt;
+  &lt;svg class="octicon octicon-project" viewBox="0 0 15 16" version="1.1" width="15" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M10 12h3V2h-3v10zm-4-2h3V2H6v8zm-4 4h3V2H2v12zm-1 1h13V1H1v14zM14 0H1a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1z"/&gt;&lt;/svg&gt;
+  Projects
+  &lt;span class="Counter" &gt;0&lt;/span&gt;
+</code></pre>
+
+<pre><code>&lt;a class="js-selected-navigation-item reponav-item" data-hotkey="g w" data-selected-links="repo_wiki /arqma/arqma/wiki" href="/arqma/arqma/wiki"&gt;
+  &lt;svg class="octicon octicon-book" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M3 5h4v1H3V5zm0 3h4V7H3v1zm0 2h4V9H3v1zm11-5h-4v1h4V5zm0 2h-4v1h4V7zm0 2h-4v1h4V9zm2-6v9c0 .55-.45 1-1 1H9.5l-1 1-1-1H2c-.55 0-1-.45-1-1V3c0-.55.45-1 1-1h5.5l1 1 1-1H15c.55 0 1 .45 1 1zm-8 .5L7.5 3H2v9h6V3.5zm7-.5H9.5l-.5.5V12h6V3z"/&gt;&lt;/svg&gt;
+  Wiki
+</code></pre>
+
+  <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/pulse">
+    
+    Insights
+</a>
+    <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/settings">
+      
+      Settings
+</a>
+
+  </div>
+<div>
+  <div>
+<p><a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/fa22e32379a19766aebed1574d4b9981122290f4/README.md">Permalink</a></p>
+  
+  <div>
+<div>
+  
+      <i>Branch:</i>
+      mechanator-pat…
+  
+  <div>
+<pre><code>&lt;div class="select-menu-modal"&gt;
+  &lt;div class="select-menu-header"&gt;
+    &lt;svg class="octicon octicon-x js-menu-close" role="img" aria-label="Close" viewBox="0 0 12 16" version="1.1" width="12" height="16"&gt;&lt;path fill-rule="evenodd" d="M7.48 8l3.75 3.75-1.48 1.48L6 9.48l-3.75 3.75-1.48-1.48L4.52 8 .77 4.25l1.48-1.48L6 6.52l3.75-3.75 1.48 1.48L7.48 8z"/&gt;&lt;/svg&gt;
+    &lt;span class="select-menu-title"&gt;Switch branches/tags&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class="select-menu-filters"&gt;
+    &lt;div class="select-menu-text-filter"&gt;
+      &lt;input type="text" aria-label="Find or create a branch…" id="context-commitish-filter-field" class="form-control js-filterable-field js-navigation-enable" placeholder="Find or create a branch…"&gt;
+    &lt;/div&gt;
+    &lt;div class="select-menu-tabs"&gt;
+      &lt;ul&gt;
+        &lt;li class="select-menu-tab"&gt;
+          &lt;a href="#" data-tab-filter="branches" data-filter-placeholder="Find or create a branch…" class="js-select-menu-tab" role="tab"&gt;Branches&lt;/a&gt;
+        &lt;/li&gt;
+        &lt;li class="select-menu-tab"&gt;
+          &lt;a href="#" data-tab-filter="tags" data-filter-placeholder="Find a tag…" class="js-select-menu-tab" role="tab"&gt;Tags&lt;/a&gt;
+        &lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class="select-menu-list select-menu-tab-bucket js-select-menu-tab-bucket" data-tab-filter="branches" role="menu"&gt;
+
+    &lt;div data-filterable-for="context-commitish-filter-field" data-filterable-type="substring"&gt;
+
+
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+           href="/arqma/arqma/blob/Dev/README.md"
+           data-name="Dev"
+           data-skip-pjax="true"
+           rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target js-select-menu-filter-text"&gt;
+            Dev
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+           href="/arqma/arqma/blob/android-arq/README.md"
+           data-name="android-arq"
+           data-skip-pjax="true"
+           rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target js-select-menu-filter-text"&gt;
+            android-arq
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+           href="/arqma/arqma/blob/android/README.md"
+           data-name="android"
+           data-skip-pjax="true"
+           rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target js-select-menu-filter-text"&gt;
+            android
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+           href="/arqma/arqma/blob/master/README.md"
+           data-name="master"
+           data-skip-pjax="true"
+           rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target js-select-menu-filter-text"&gt;
+            master
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open selected"
+           href="/arqma/arqma/blob/mechanator-patch-1/README.md"
+           data-name="mechanator-patch-1"
+           data-skip-pjax="true"
+           rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target js-select-menu-filter-text"&gt;
+            mechanator-patch-1
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+           href="/arqma/arqma/blob/release-v0.1.2/README.md"
+           data-name="release-v0.1.2"
+           data-skip-pjax="true"
+           rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target js-select-menu-filter-text"&gt;
+            release-v0.1.2
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+           href="/arqma/arqma/blob/test/README.md"
+           data-name="test"
+           data-skip-pjax="true"
+           rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target js-select-menu-filter-text"&gt;
+            test
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+           href="/arqma/arqma/blob/web_wallet/README.md"
+           data-name="web_wallet"
+           data-skip-pjax="true"
+           rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target js-select-menu-filter-text"&gt;
+            web_wallet
+          &lt;/span&gt;
+        &lt;/a&gt;
+    &lt;/div&gt;
+
+      &lt;!-- '"` --&gt;&lt;!-- &lt;/textarea&gt;&lt;/xmp&gt; --&gt;&lt;/option&gt;&lt;/form&gt;&lt;form class="js-create-branch select-menu-item select-menu-new-item-form js-navigation-item js-new-item-form" action="/arqma/arqma/branches" accept-charset="UTF-8" method="post"&gt;&lt;input name="utf8" type="hidden" value="&amp;#x2713;" /&gt;&lt;input type="hidden" name="authenticity_token" value="Cvx3dtAsij5sB+rQIQa1KVh6yOye6nmkvIMGvmgZ1yoTyIo3dKdb7bla20eh6SKdkP2d/10hGxAxgdkPhyWKRw==" /&gt;
+      &lt;svg class="octicon octicon-git-branch select-menu-item-icon" viewBox="0 0 10 16" version="1.1" width="10" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M10 5c0-1.11-.89-2-2-2a1.993 1.993 0 0 0-1 3.72v.3c-.02.52-.23.98-.63 1.38-.4.4-.86.61-1.38.63-.83.02-1.48.16-2 .45V4.72a1.993 1.993 0 0 0-1-3.72C.88 1 0 1.89 0 3a2 2 0 0 0 1 1.72v6.56c-.59.35-1 .99-1 1.72 0 1.11.89 2 2 2 1.11 0 2-.89 2-2 0-.53-.2-1-.53-1.36.09-.06.48-.41.59-.47.25-.11.56-.17.94-.17 1.05-.05 1.95-.45 2.75-1.25S8.95 7.77 9 6.73h-.02C9.59 6.37 10 5.73 10 5zM2 1.8c.66 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2C1.35 4.2.8 3.65.8 3c0-.65.55-1.2 1.2-1.2zm0 12.41c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm6-8c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2z"/&gt;&lt;/svg&gt;
+        &lt;div class="select-menu-item-text"&gt;
+          &lt;span class="select-menu-item-heading"&gt;Create branch: &lt;span class="js-new-item-name"&gt;&lt;/span&gt;&lt;/span&gt;
+          &lt;span class="description"&gt;from ‘mechanator-patch-1’&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;input type="hidden" name="name" id="name" class="js-new-item-value"&gt;
+        &lt;input type="hidden" name="branch" id="branch" value="mechanator-patch-1"&gt;
+        &lt;input type="hidden" name="path" id="path" value="README.md"&gt;
+</code></pre>
+
+      </div>
+<pre><code>  &lt;div class="select-menu-list select-menu-tab-bucket js-select-menu-tab-bucket" data-tab-filter="tags"&gt;
+    &lt;div data-filterable-for="context-commitish-filter-field" data-filterable-type="substring"&gt;
+
+
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+          href="/arqma/arqma/tree/v0.1.2.6/README.md"
+          data-name="v0.1.2.6"
+          data-skip-pjax="true"
+          rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target" title="v0.1.2.6"&gt;
+            v0.1.2.6
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+          href="/arqma/arqma/tree/v0.1.2.5/README.md"
+          data-name="v0.1.2.5"
+          data-skip-pjax="true"
+          rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target" title="v0.1.2.5"&gt;
+            v0.1.2.5
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+          href="/arqma/arqma/tree/v0.1.2.4/README.md"
+          data-name="v0.1.2.4"
+          data-skip-pjax="true"
+          rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target" title="v0.1.2.4"&gt;
+            v0.1.2.4
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+          href="/arqma/arqma/tree/v0.1.2.4-latest/README.md"
+          data-name="v0.1.2.4-latest"
+          data-skip-pjax="true"
+          rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target" title="v0.1.2.4-latest"&gt;
+            v0.1.2.4-latest
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+          href="/arqma/arqma/tree/v0.1.2.3/README.md"
+          data-name="v0.1.2.3"
+          data-skip-pjax="true"
+          rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target" title="v0.1.2.3"&gt;
+            v0.1.2.3
+          &lt;/span&gt;
+        &lt;/a&gt;
+        &lt;a class="select-menu-item js-navigation-item js-navigation-open "
+          href="/arqma/arqma/tree/v0.1.2.2/README.md"
+          data-name="v0.1.2.2"
+          data-skip-pjax="true"
+          rel="nofollow"&gt;
+          &lt;svg class="octicon octicon-check select-menu-item-icon" viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M12 5l-8 8-4-4 1.5-1.5L4 10l6.5-6.5L12 5z"/&gt;&lt;/svg&gt;
+          &lt;span class="select-menu-item-text css-truncate-target" title="v0.1.2.2"&gt;
+            v0.1.2.2
+          &lt;/span&gt;
+        &lt;/a&gt;
+    &lt;/div&gt;
+
+    &lt;div class="select-menu-no-results"&gt;Nothing to show&lt;/div&gt;
+  &lt;/div&gt;
+
+&lt;/div&gt;
+</code></pre>
+  </div>
+</div>
+<pre><code>&lt;div class="BtnGroup float-right"&gt;
+  &lt;a href="/arqma/arqma/find/mechanator-patch-1"
+        class="js-pjax-capture-input btn btn-sm BtnGroup-item"
+        data-pjax
+        data-hotkey="t"&gt;
+    Find file
+  &lt;/a&gt;
+  &lt;clipboard-copy for="blob-path" class="btn btn-sm BtnGroup-item"&gt;
+    Copy path
+  &lt;/clipboard-copy&gt;
+&lt;/div&gt;
+&lt;div id="blob-path" class="breadcrumb"&gt;
+  &lt;span class="repo-root js-repo-root"&gt;&lt;span class="js-path-segment"&gt;&lt;a data-pjax="true" href="/arqma/arqma/tree/mechanator-patch-1"&gt;&lt;span&gt;arqma&lt;/span&gt;&lt;/a&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="separator"&gt;/&lt;/span&gt;&lt;strong class="final-path"&gt;README.md&lt;/strong&gt;
+&lt;/div&gt;
+</code></pre>
+  </div>
+  
+    <div>
+      Fetching contributors…
+    </div>
+<pre><code>&lt;div class="commit-tease-contributors"&gt;
+    &lt;img alt="" class="loader-loading float-left" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32-EAF2F5.gif" width="16" height="16" /&gt;
+  &lt;span class="loader-error"&gt;Cannot retrieve contributors at this time&lt;/span&gt;
+&lt;/div&gt;
+</code></pre>
+
+  <div>
+    <div>
+  <div>
+<pre><code>&lt;div class="BtnGroup"&gt;
+  &lt;a id="raw-url" class="btn btn-sm BtnGroup-item" href="/arqma/arqma/raw/mechanator-patch-1/README.md"&gt;Raw&lt;/a&gt;
+    &lt;a class="btn btn-sm js-update-url-with-hash BtnGroup-item" data-hotkey="b" href="/arqma/arqma/blame/mechanator-patch-1/README.md"&gt;Blame&lt;/a&gt;
+  &lt;a rel="nofollow" class="btn btn-sm BtnGroup-item" href="/arqma/arqma/commits/mechanator-patch-1/README.md"&gt;History&lt;/a&gt;
+&lt;/div&gt;
+
+    &lt;a class="btn-octicon tooltipped tooltipped-nw"
+       href="https://desktop.github.com"
+       aria-label="Open this file in GitHub Desktop"
+       data-ga-click="Repository, open with desktop, type:windows"&gt;
+        &lt;svg class="octicon octicon-device-desktop" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M15 2H1c-.55 0-1 .45-1 1v9c0 .55.45 1 1 1h5.34c-.25.61-.86 1.39-2.34 2h8c-1.48-.61-2.09-1.39-2.34-2H15c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1zm0 9H1V3h14v8z"/&gt;&lt;/svg&gt;
+    &lt;/a&gt;
+
+      &lt;!-- '"` --&gt;&lt;!-- &lt;/textarea&gt;&lt;/xmp&gt; --&gt;&lt;/option&gt;&lt;/form&gt;&lt;form class="inline-form js-update-url-with-hash" action="/arqma/arqma/edit/mechanator-patch-1/README.md" accept-charset="UTF-8" method="post"&gt;&lt;input name="utf8" type="hidden" value="&amp;#x2713;" /&gt;&lt;input type="hidden" name="authenticity_token" value="PAn3ryhAFFMpHpWcEr2C3zn33P/ANhT1eDnI4s0EordecbNX0gTLSNPPddpJgiUhlSf/KCoiE9ZPB8e8xUnkuQ==" /&gt;
+        &lt;button class="btn-octicon tooltipped tooltipped-nw" type="submit"
+          aria-label="Edit this file" data-hotkey="e" data-disable-with&gt;
+          &lt;svg class="octicon octicon-pencil" viewBox="0 0 14 16" version="1.1" width="14" height="16" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M0 12v3h3l8-8-3-3-8 8zm3 2H1v-2h1v1h1v1zm10.3-9.3L12 6 9 3l1.3-1.3a.996.996 0 0 1 1.41 0l1.59 1.59c.39.39.39 1.02 0 1.41z"/&gt;&lt;/svg&gt;
+        &lt;/button&gt;
+</code></pre>
+
+        
+          
+            
+          
+  </div>
+  <div>
+      540 lines (349 sloc)
+      
+    25.5 KB
+  </div>
+</div>
+  <div id="user-content-readme">
+    <h1><a id="user-content-arqma" class="anchor" aria-hidden="true" href="#arqma"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-arqma" href="#arqma"></a>ArQmA</h1>
 <p>Copyright (c) 2018 The ArQmA Project.
 Copyright (c) 2014-2018 The Monero Project.<br>
 Portions Copyright (c) 2012-2013 The Cryptonote developers.</p>
-<h2><a id="user-content-development-resources" class="anchor" aria-hidden="true" href="#development-resources"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Development resources</h2>
+<h2><a id="user-content-development-resources" class="anchor" aria-hidden="true" href="#development-resources"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-development-resources" href="#development-resources"></a>Development resources</h2>
 <ul>
 <li>Web: <a href="https://arqma.com" rel="nofollow">arqma.com</a></li>
 <li>Mail: <a href="mailto:support@arqma.com">support@arqma.com</a></li>
 <li>GitHub: <a href="https://github.com/arqma/arqma">https://github.com/arqma/arqma</a></li>
 </ul>
-<h2><a id="user-content-introduction" class="anchor" aria-hidden="true" href="#introduction"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Introduction</h2>
+<h2><a id="user-content-introduction" class="anchor" aria-hidden="true" href="#introduction"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-introduction" href="#introduction"></a>Introduction</h2>
 <p>ArQmA is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.</p>
 <p><strong>Privacy:</strong> ArQmA uses a cryptographically sound system to allow you to send and receive funds without your transactions being easily revealed on the blockchain (the ledger of transactions that everyone has). This ensures that your purchases, receipts, and all transfers remain absolutely private by default.</p>
 <p><strong>Security:</strong> Using the power of a distributed peer-to-peer consensus network, every transaction on the network is cryptographically secured. Individual wallets have a 25 word mnemonic seed that is only displayed once, and can be written down to backup the wallet. Wallet files are encrypted with a passphrase to ensure they are useless if stolen.</p>
 <p><strong>Untraceability:</strong> By taking advantage of ring signatures, a special property of a certain type of cryptography, ArQmA is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.</p>
-<h2><a id="user-content-about-this-project" class="anchor" aria-hidden="true" href="#about-this-project"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>About this project</h2>
+<h2><a id="user-content-about-this-project" class="anchor" aria-hidden="true" href="#about-this-project"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-about-this-project" href="#about-this-project"></a>About this project</h2>
 <p>This is the core implementation of ArQmA. It is open source and completely free to use without restrictions, except for those specified in the license agreement below. There are no restrictions on anyone creating an alternative implementation of ArQmA that uses the protocol and network in a compatible manner.</p>
 <p>As with many development projects, the repository on Github is considered to be the "staging" area for the latest changes. Before changes are merged into that branch on the main repository, they are tested by individual developers in their own branches, submitted as a pull request, and then subsequently tested by contributors who focus on testing and code reviews. That having been said, the repository should be carefully considered before using it in a production environment, unless there is a patch in the repository for a particular show-stopping issue you are experiencing. It is generally a better idea to use a tagged release for stability.</p>
 <p><strong>Anyone is welcome to contribute to ArQmA's codebase!</strong> If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.</p>
-<h2><a id="user-content-supporting-the-project" class="anchor" aria-hidden="true" href="#supporting-the-project"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Supporting the project</h2>
+<h2><a id="user-content-supporting-the-project" class="anchor" aria-hidden="true" href="#supporting-the-project"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-supporting-the-project" href="#supporting-the-project"></a>Supporting the project</h2>
 <p>ArQmA is a 100% community-sponsored endeavor. If you want to join our efforts, the easiest thing you can do is support the project financially. You can send ARQ to the ArQmA donation address via the <code>donate</code> command (type <code>help</code> in the command-line wallet for details).</p>
 <p>The ArQmA donation address is: <code>ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3</code> (viewkey: <code>4e5373dfd5ba67fa2988107a605bc960575c465bd07aba624915d3f660b73d62</code>)</p>
-<h2><a id="user-content-license" class="anchor" aria-hidden="true" href="#license"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>License</h2>
-<p>See <a href="/arqma/arqma/blob/mechanator-patch-1/LICENSE">LICENSE</a>.</p>
-<h2><a id="user-content-contributing" class="anchor" aria-hidden="true" href="#contributing"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributing</h2>
-<p>If you want to help out, see <a href="/arqma/arqma/blob/mechanator-patch-1/CONTRIBUTING.md">CONTRIBUTING</a> for a set of guidelines.</p>
-<h2><a id="user-content-compiling-arqma-from-source" class="anchor" aria-hidden="true" href="#compiling-arqma-from-source"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Compiling ArQmA from source</h2>
-<h3><a id="user-content-dependencies" class="anchor" aria-hidden="true" href="#dependencies"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependencies</h3>
+<h2><a id="user-content-license" class="anchor" aria-hidden="true" href="#license"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-license" href="#license"></a>License</h2>
+<p>See <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/LICENSE">LICENSE</a>.</p>
+<h2><a id="user-content-contributing" class="anchor" aria-hidden="true" href="#contributing"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-contributing" href="#contributing"></a>Contributing</h2>
+<p>If you want to help out, see <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/CONTRIBUTING.md">CONTRIBUTING</a> for a set of guidelines.</p>
+<h2><a id="user-content-compiling-arqma-from-source" class="anchor" aria-hidden="true" href="#compiling-arqma-from-source"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-compiling-arqma-from-source" href="#compiling-arqma-from-source"></a>Compiling ArQmA from source</h2>
+<h3><a id="user-content-dependencies" class="anchor" aria-hidden="true" href="#dependencies"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-dependencies" href="#dependencies"></a>Dependencies</h3>
 <p>The following table summarizes the tools and libraries required to build. A
 few of the libraries are also included in this repository (marked as
 "Vendored"). By default, the build uses the library installed on the system,
@@ -1074,15 +1779,15 @@ library archives (<code>.a</code>).</p>
 build the library binary manually. This can be done with the following command <code>sudo apt-get install libgtest-dev &amp;&amp; cd /usr/src/gtest &amp;&amp; sudo cmake . &amp;&amp; sudo make &amp;&amp; sudo mv libg* /usr/lib/</code></p>
 <p>Debian / Ubuntu one liner for all dependencies<br>
 <code>sudo apt update &amp;&amp; sudo apt install build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libminiupnpc-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpcsclite-dev</code></p>
-<h3><a id="user-content-cloning-the-repository" class="anchor" aria-hidden="true" href="#cloning-the-repository"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cloning the repository</h3>
+<h3><a id="user-content-cloning-the-repository" class="anchor" aria-hidden="true" href="#cloning-the-repository"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-cloning-the-repository" href="#cloning-the-repository"></a>Cloning the repository</h3>
 <p>Clone recursively to pull-in needed submodule(s):</p>
 <p><code>$ git clone --recursive https://github.com/arqma/arqma</code></p>
 <p>If you already have a repo cloned, initialize and update:</p>
 <p><code>$ cd arqma &amp;&amp; git submodule init &amp;&amp; git submodule update</code></p>
-<h3><a id="user-content-build-instructions" class="anchor" aria-hidden="true" href="#build-instructions"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build instructions</h3>
-<p>ArQmA uses the CMake build system and a top-level <a href="/arqma/arqma/blob/mechanator-patch-1/Makefile">Makefile</a> that
+<h3><a id="user-content-build-instructions" class="anchor" aria-hidden="true" href="#build-instructions"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-build-instructions" href="#build-instructions"></a>Build instructions</h3>
+<p>ArQmA uses the CMake build system and a top-level <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/Makefile">Makefile</a> that
 invokes cmake commands as needed.</p>
-<h4><a id="user-content-on-linux-and-os-x" class="anchor" aria-hidden="true" href="#on-linux-and-os-x"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>On Linux and OS X</h4>
+<h4><a id="user-content-on-linux-and-os-x" class="anchor" aria-hidden="true" href="#on-linux-and-os-x"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-on-linux-and-os-x" href="#on-linux-and-os-x"></a>On Linux and OS X</h4>
 <ul>
 <li>
 <p>Install the dependencies</p>
@@ -1133,7 +1838,7 @@ available per thread.</p>
 </code></pre>
 </li>
 </ul>
-<h4><a id="user-content-on-the-raspberry-pi" class="anchor" aria-hidden="true" href="#on-the-raspberry-pi"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>On the Raspberry Pi</h4>
+<h4><a id="user-content-on-the-raspberry-pi" class="anchor" aria-hidden="true" href="#on-the-raspberry-pi"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-on-the-raspberry-pi" href="#on-the-raspberry-pi"></a>On the Raspberry Pi</h4>
 <p>Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (2017-09-07 or later) from <a href="https://www.raspberrypi.org/downloads/raspbian/" rel="nofollow">https://www.raspberrypi.org/downloads/raspbian/</a>. If you are using Raspian Jessie, <a href="#note-for-raspbian-jessie-users">please see note in the following section</a>.</p>
 <ul>
 <li>
@@ -1180,7 +1885,7 @@ available per thread.</p>
 <p>You may wish to reduce the size of the swap file after the build has finished, and delete the boost directory from your home directory</p>
 </li>
 </ul>
-<h4><a id="user-content-note-for-raspbian-jessie-users" class="anchor" aria-hidden="true" href="#note-for-raspbian-jessie-users"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><em>Note for Raspbian Jessie users:</em></h4>
+<h4><a id="user-content-note-for-raspbian-jessie-users" class="anchor" aria-hidden="true" href="#note-for-raspbian-jessie-users"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-note-for-raspbian-jessie-users" href="#note-for-raspbian-jessie-users"></a><em>Note for Raspbian Jessie users:</em></h4>
 <p>If you are using the older Raspbian Jessie image, compiling ArQmA is a bit more complicated. The version of Boost available in the Debian Jessie repositories is too old to use with ArQmA, and thus you must compile a newer version yourself. The following explains the extra steps, and has been tested on a Raspberry Pi 2 with a clean install of minimal Raspbian Jessie.</p>
 <ul>
 <li>As before, <code>apt-get update &amp;&amp; apt-get upgrade</code> to install all of the latest software, and increase the system swap size</li>
@@ -1218,7 +1923,7 @@ available per thread.</p>
 <p>From here, follow the <a href="#on-the-raspberry-pi">general Raspberry Pi instructions</a> from the "Clone arqma and checkout most recent release version" step.</p>
 </li>
 </ul>
-<h4><a id="user-content-on-windows" class="anchor" aria-hidden="true" href="#on-windows"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>On Windows:</h4>
+<h4><a id="user-content-on-windows" class="anchor" aria-hidden="true" href="#on-windows"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-on-windows" href="#on-windows"></a>On Windows:</h4>
 <p>Binaries for Windows are built on Windows using the MinGW toolchain within
 <a href="http://msys2.github.io" rel="nofollow">MSYS2 environment</a>. The MSYS2 environment emulates a
 POSIX system. The toolchain runs within the environment and <em>cross-compiles</em>
@@ -1227,7 +1932,7 @@ application.</p>
 <p><strong>Preparing the build environment</strong></p>
 <ul>
 <li>
-<p>Download and install the <a href="http://msys2.github.io" rel="nofollow">MSYS2 installer</a>, either the 64-bit or the 32-bit package, depending on your system. Currently, as of 8/20/2018, the correct version that works is msys2-x86_64-20161025.exe . Obtainable from: http://repo.msys2.org/distrib/x86_64/ . </p>
+<p>Download and install the <a href="http://msys2.github.io" rel="nofollow">MSYS2 installer</a>, either the 64-bit or the 32-bit package, depending on your system. Currently, as of 8/20/2018, the correct version that works is msys2-x86_64-20161025.exe . Obtainable from: <a href="http://repo.msys2.org/distrib/x86_64/" rel="nofollow">http://repo.msys2.org/distrib/x86_64/</a> . </p>
 </li>
 <li>
 <p>Open the MSYS shell via the <code>MSYS2 Shell</code> shortcut (Arqma-GUI-Wallet supporting only 64-bit OS)</p>
@@ -1269,9 +1974,8 @@ application.</p>
 <p>To build for 32-bit Windows:</p>
 <pre><code>  $ git clone --recursive https://github.com/arqma/arqma
 </code></pre>
-<pre><code>  $ cd arqma && git submodule init && git submodule update
+<pre><code>  $ cd arqma &amp;&amp; git submodule init &amp;&amp; git submodule update
 </code></pre>
-
 </li>
 </ol>
 <p><strong>Building</strong></p>
@@ -1280,7 +1984,7 @@ application.</p>
 <p>If you are on a 64-bit system, run:</p>
 <pre><code>  make release-static-win64
 </code></pre>
-<li>
+</li><li>
 <p>If you are on a 32-bit system, run:</p>
 <pre><code>  make release-static-win32
 </code></pre>
@@ -1302,11 +2006,11 @@ application.</p>
 <p>The resulting executables can be found in <code>build/debug/bin</code></p>
 </li>
 </ul>
-<h3><a id="user-content-on-freebsd" class="anchor" aria-hidden="true" href="#on-freebsd"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>On FreeBSD:</h3>
+<h3><a id="user-content-on-freebsd" class="anchor" aria-hidden="true" href="#on-freebsd"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-on-freebsd" href="#on-freebsd"></a>On FreeBSD:</h3>
 <p>The project can be built from scratch by following instructions for Linux above. If you are running arqma in a jail you need to add the flag: <code>allow.sysvipc=1</code> to your jail configuration, otherwise lmdb will throw the error message: <code>Failed to open lmdb environment: Function not implemented</code>.</p>
 <p>We expect to add ArQmA into the ports tree in the near future, which will aid in managing installations using ports or packages.</p>
-<h3><a id="user-content-on-openbsd" class="anchor" aria-hidden="true" href="#on-openbsd"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>On OpenBSD:</h3>
-<h4><a id="user-content-openbsd--62" class="anchor" aria-hidden="true" href="#openbsd--62"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>OpenBSD &lt; 6.2</h4>
+<h3><a id="user-content-on-openbsd" class="anchor" aria-hidden="true" href="#on-openbsd"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-on-openbsd" href="#on-openbsd"></a>On OpenBSD:</h3>
+<h4><a id="user-content-openbsd--62" class="anchor" aria-hidden="true" href="#openbsd--62"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-openbsd--62" href="#openbsd--62"></a>OpenBSD &lt; 6.2</h4>
 <p>This has been tested on OpenBSD 5.8.</p>
 <p>You will need to add a few packages to your system. <code>pkg_add db cmake gcc gcc-libs g++ miniupnpc gtest</code>.</p>
 <p>The doxygen and graphviz packages are optional and require the xbase set.</p>
@@ -1314,7 +2018,7 @@ application.</p>
 <a href="https://github.com/bitcoin/bitcoin/blob/master/doc/build-openbsd.md">https://github.com/bitcoin/bitcoin/blob/master/doc/build-openbsd.md</a></p>
 <p>You will have to add the serialization, date_time, and regex modules to Boost when building as they are needed by ArQmA.</p>
 <p>To build: <code>env CC=egcc CXX=eg++ CPP=ecpp DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/path/to/the/boost/you/built make release-static-64</code></p>
-<h4><a id="user-content-openbsd--62-1" class="anchor" aria-hidden="true" href="#openbsd--62-1"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>OpenBSD &gt;= 6.2</h4>
+<h4><a id="user-content-openbsd--62-1" class="anchor" aria-hidden="true" href="#openbsd--62-1"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-openbsd--62-1" href="#openbsd--62-1"></a>OpenBSD &gt;= 6.2</h4>
 <p>You will need to add a few packages to your system. <code>pkg_add cmake miniupnpc zeromq libiconv</code>.</p>
 <p>The doxygen and graphviz packages are optional and require the xbase set.</p>
 <p>Build the Boost library using clang. This guide is derived from: <a href="https://github.com/bitcoin/bitcoin/blob/master/doc/build-openbsd.md">https://github.com/bitcoin/bitcoin/blob/master/doc/build-openbsd.md</a></p>
@@ -1323,56 +2027,47 @@ application.</p>
 <pre><code># Create boost building directory
 mkdir ~/boost
 cd ~/boost
-
-# Fetch boost source
-ftp -o boost_1_64_0.tar.bz2 https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2 
-
-# MUST output: (SHA256) boost_1_64_0.tar.bz2: OK
-echo "7bcc5caace97baa948931d712ea5f37038dbb1c5d89b43ad4def4ed7cb683332 boost_1_64_0.tar.bz2" | sha256 -c
-tar xfj boost_1_64_0.tar.bz2
-
-# Fetch and apply boost patches, required for OpenBSD
-ftp -o boost_test_impl_execution_monitor_ipp.patch https://raw.githubusercontent.com/openbsd/ports/bee9e6df517077a7269ff0dfd57995f5c6a10379/devel/boost/patches/patch-boost_test_impl_execution_monitor_ipp
-ftp -o boost_config_platform_bsd_hpp.patch https://raw.githubusercontent.com/openbsd/ports/90658284fb786f5a60dd9d6e8d14500c167bdaa0/devel/boost/patches/patch-boost_config_platform_bsd_hpp
-
-# MUST output: (SHA256) boost_config_platform_bsd_hpp.patch: OK
-echo "1f5e59d1154f16ee1e0cc169395f30d5e7d22a5bd9f86358f738b0ccaea5e51d boost_config_platform_bsd_hpp.patch" | sha256 -c
-# MUST output: (SHA256) boost_test_impl_execution_monitor_ipp.patch: OK
-echo "30cec182a1437d40c3e0bd9a866ab5ddc1400a56185b7e671bb3782634ed0206 boost_test_impl_execution_monitor_ipp.patch" | sha256 -c
-
-cd boost_1_64_0
+<h1><a id="user-content-fetch-boost-source" class="anchor" aria-hidden="true" href="#fetch-boost-source"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fetch boost source</h1>
+<p>ftp -o boost_1_64_0.tar.bz2 <a href="https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2" rel="nofollow">https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2</a></p>
+<h1><a id="user-content-must-output-sha256-boost_1_64_0tarbz2-ok" class="anchor" aria-hidden="true" href="#must-output-sha256-boost_1_64_0tarbz2-ok"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MUST output: (SHA256) boost_1_64_0.tar.bz2: OK</h1>
+<p>echo "7bcc5caace97baa948931d712ea5f37038dbb1c5d89b43ad4def4ed7cb683332 boost_1_64_0.tar.bz2" | sha256 -c
+tar xfj boost_1_64_0.tar.bz2</p>
+<h1><a id="user-content-fetch-and-apply-boost-patches-required-for-openbsd" class="anchor" aria-hidden="true" href="#fetch-and-apply-boost-patches-required-for-openbsd"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fetch and apply boost patches, required for OpenBSD</h1>
+<p>ftp -o boost_test_impl_execution_monitor_ipp.patch <a href="https://raw.githubusercontent.com/openbsd/ports/bee9e6df517077a7269ff0dfd57995f5c6a10379/devel/boost/patches/patch-boost_test_impl_execution_monitor_ipp" rel="nofollow">https://raw.githubusercontent.com/openbsd/ports/bee9e6df517077a7269ff0dfd57995f5c6a10379/devel/boost/patches/patch-boost_test_impl_execution_monitor_ipp</a>
+ftp -o boost_config_platform_bsd_hpp.patch <a href="https://raw.githubusercontent.com/openbsd/ports/90658284fb786f5a60dd9d6e8d14500c167bdaa0/devel/boost/patches/patch-boost_config_platform_bsd_hpp" rel="nofollow">https://raw.githubusercontent.com/openbsd/ports/90658284fb786f5a60dd9d6e8d14500c167bdaa0/devel/boost/patches/patch-boost_config_platform_bsd_hpp</a></p>
+<h1><a id="user-content-must-output-sha256-boost_config_platform_bsd_hpppatch-ok" class="anchor" aria-hidden="true" href="#must-output-sha256-boost_config_platform_bsd_hpppatch-ok"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MUST output: (SHA256) boost_config_platform_bsd_hpp.patch: OK</h1>
+<p>echo "1f5e59d1154f16ee1e0cc169395f30d5e7d22a5bd9f86358f738b0ccaea5e51d boost_config_platform_bsd_hpp.patch" | sha256 -c</p>
+<h1><a id="user-content-must-output-sha256-boost_test_impl_execution_monitor_ipppatch-ok" class="anchor" aria-hidden="true" href="#must-output-sha256-boost_test_impl_execution_monitor_ipppatch-ok"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MUST output: (SHA256) boost_test_impl_execution_monitor_ipp.patch: OK</h1>
+<p>echo "30cec182a1437d40c3e0bd9a866ab5ddc1400a56185b7e671bb3782634ed0206 boost_test_impl_execution_monitor_ipp.patch" | sha256 -c</p>
+<p>cd boost_1_64_0
 patch -p0 &lt; ../boost_test_impl_execution_monitor_ipp.patch
-patch -p0 &lt; ../boost_config_platform_bsd_hpp.patch
-
-# Start building boost
-echo 'using clang : : c++ : &lt;cxxflags&gt;"-fvisibility=hidden -fPIC" &lt;linkflags&gt;"" &lt;archiver&gt;"ar" &lt;striper&gt;"strip"  &lt;ranlib&gt;"ranlib" &lt;rc&gt;"" : ;' &gt; user-config.jam
+patch -p0 &lt; ../boost_config_platform_bsd_hpp.patch</p>
+<h1><a id="user-content-start-building-boost" class="anchor" aria-hidden="true" href="#start-building-boost"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start building boost</h1>
+</code><p><code>echo 'using clang : : c++ : &lt;cxxflags&gt;"-fvisibility=hidden -fPIC" &lt;linkflags&gt;"" &lt;archiver&gt;"ar" &lt;striper&gt;"strip"  &lt;ranlib&gt;"ranlib" &lt;rc&gt;"" : ;' &gt; user-config.jam
 ./bootstrap.sh --without-icu --with-libraries=chrono,filesystem,program_options,system,thread,test,date_time,regex,serialization,locale --with-toolset=clang
 ./b2 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" -sICONV_PATH=/usr/local
 doas ./b2 -d0 runtime-link=shared threadapi=pthread threading=multi link=static variant=release --layout=tagged --build-type=complete --user-config=user-config.jam -sNO_BZIP2=1 -sICONV_PATH=/usr/local --prefix=/usr/local install
-</code></pre>
+</code></p></pre><p></p>
 <p>Build cppzmq</p>
 <p>Build the cppzmq bindings.</p>
 <p>We assume you are compiling with a non-root user and you have <code>doas</code> enabled.</p>
 <pre><code># Create cppzmq building directory
 mkdir ~/cppzmq
 cd ~/cppzmq
-
-# Fetch cppzmq source
-ftp -o cppzmq-4.2.3.tar.gz https://github.com/zeromq/cppzmq/archive/v4.2.3.tar.gz
-
-# MUST output: (SHA256) cppzmq-4.2.3.tar.gz: OK
-echo "3e6b57bf49115f4ae893b1ff7848ead7267013087dc7be1ab27636a97144d373 cppzmq-4.2.3.tar.gz" | sha256 -c
-tar xfz cppzmq-4.2.3.tar.gz
-
-# Start building cppzmq
-cd cppzmq-4.2.3
+<h1><a id="user-content-fetch-cppzmq-source" class="anchor" aria-hidden="true" href="#fetch-cppzmq-source"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fetch cppzmq source</h1>
+<p>ftp -o cppzmq-4.2.3.tar.gz <a href="https://github.com/zeromq/cppzmq/archive/v4.2.3.tar.gz">https://github.com/zeromq/cppzmq/archive/v4.2.3.tar.gz</a></p>
+<h1><a id="user-content-must-output-sha256-cppzmq-423targz-ok" class="anchor" aria-hidden="true" href="#must-output-sha256-cppzmq-423targz-ok"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MUST output: (SHA256) cppzmq-4.2.3.tar.gz: OK</h1>
+<p>echo "3e6b57bf49115f4ae893b1ff7848ead7267013087dc7be1ab27636a97144d373 cppzmq-4.2.3.tar.gz" | sha256 -c
+tar xfz cppzmq-4.2.3.tar.gz</p>
+<h1><a id="user-content-start-building-cppzmq" class="anchor" aria-hidden="true" href="#start-building-cppzmq"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start building cppzmq</h1>
+</code><p><code>cd cppzmq-4.2.3
 mkdir build
 cd build
 cmake ..
 doas make install
-</code></pre>
+</code></p></pre><p></p>
 <p>Build arqma: <code>env DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/usr/local make release-static</code></p>
-<h3><a id="user-content-on-solaris" class="anchor" aria-hidden="true" href="#on-solaris"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>On Solaris:</h3>
+<h3><a id="user-content-on-solaris" class="anchor" aria-hidden="true" href="#on-solaris"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-on-solaris" href="#on-solaris"></a>On Solaris:</h3>
 <p>The default Solaris linker can't be used, you have to install GNU ld, then run cmake manually with the path to your copy of GNU ld:</p>
 <pre><code>    mkdir -p build/release
     cd build/release
@@ -1380,7 +2075,7 @@ doas make install
     cd ../..
 </code></pre>
 <p>Then you can run make as usual.</p>
-<h3><a id="user-content-on-linux-for-android-using-docker" class="anchor" aria-hidden="true" href="#on-linux-for-android-using-docker"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>On Linux for Android (using docker):</h3>
+<h3><a id="user-content-on-linux-for-android-using-docker" class="anchor" aria-hidden="true" href="#on-linux-for-android-using-docker"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-on-linux-for-android-using-docker" href="#on-linux-for-android-using-docker"></a>On Linux for Android (using docker):</h3>
 <pre><code>    # Build image (select android64.Dockerfile for aarch64)
     cd utils/build_scripts/ &amp;&amp; docker build -f android32.Dockerfile -t arqma-android .
     # Create container
@@ -1388,7 +2083,7 @@ doas make install
     # Get binaries
     docker cp arqma-android:/opt/android/arqma/build/release/bin .
 </code></pre>
-<h3><a id="user-content-building-portable-statically-linked-binaries" class="anchor" aria-hidden="true" href="#building-portable-statically-linked-binaries"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Building portable statically linked binaries</h3>
+<h3><a id="user-content-building-portable-statically-linked-binaries" class="anchor" aria-hidden="true" href="#building-portable-statically-linked-binaries"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-building-portable-statically-linked-binaries" href="#building-portable-statically-linked-binaries"></a>Building portable statically linked binaries</h3>
 <p>By default, in either dynamically or statically linked builds, binaries target the specific host processor on which the build happens and are not portable to other processors. Portable binaries can be built using the following targets:</p>
 <ul>
 <li><code>make release-static-linux-x86_64</code> builds binaries on Linux on x86_64 portable across POSIX systems on x86_64 processors</li>
@@ -1399,7 +2094,7 @@ doas make install
 <li><code>make release-static-win64</code> builds binaries on 64-bit Windows portable across 64-bit Windows systems</li>
 <li><code>make release-static-win32</code> builds binaries on 64-bit or 32-bit Windows portable across 32-bit Windows systems</li>
 </ul>
-<h2><a id="user-content-running-arqmad" class="anchor" aria-hidden="true" href="#running-arqmad"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Running arqmad</h2>
+<h2><a id="user-content-running-arqmad" class="anchor" aria-hidden="true" href="#running-arqmad"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-running-arqmad" href="#running-arqmad"></a>Running arqmad</h2>
 <p>The build places the binary in <code>bin/</code> sub-directory within the build directory
 from which cmake was invoked (repository root by default). To run in
 foreground:</p>
@@ -1414,16 +2109,16 @@ of the argument without the leading dashes, for example <code>log-level=1</code>
 <pre><code>./bin/arqmad --log-file arqmad.log --detach
 </code></pre>
 <p>To run as a systemd service, copy
-<a href="/arqma/arqma/blob/mechanator-patch-1/utils/systemd/arqmad.service">arqmad.service</a> to <code>/etc/systemd/system/</code> and
-<a href="/arqma/arqma/blob/mechanator-patch-1/utils/conf/arqmad.conf">arqmad.conf</a> to <code>/etc/</code>. The <a href="/arqma/arqma/blob/mechanator-patch-1/utils/systemd/arqmad.service">example
+<a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/utils/systemd/arqmad.service">arqmad.service</a> to <code>/etc/systemd/system/</code> and
+<a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/utils/conf/arqmad.conf">arqmad.conf</a> to <code>/etc/</code>. The <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/utils/systemd/arqmad.service">example
 service</a> assumes that the user <code>arqma</code> exists
-and its home is the data directory specified in the <a href="/arqma/arqma/blob/mechanator-patch-1/utils/conf/arqmad.conf">example
+and its home is the data directory specified in the <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/utils/conf/arqmad.conf">example
 config</a>.</p>
 <p>If you're on Mac, you may need to add the <code>--max-concurrency 1</code> option to
 arqma-wallet-cli, and possibly arqmad, if you get crashes refreshing.</p>
-<h2><a id="user-content-internationalization" class="anchor" aria-hidden="true" href="#internationalization"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Internationalization</h2>
-<p>See <a href="/arqma/arqma/blob/mechanator-patch-1/README.i18n.md">README.i18n.md</a>.</p>
-<h2><a id="user-content-using-tor" class="anchor" aria-hidden="true" href="#using-tor"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using Tor</h2>
+<h2><a id="user-content-internationalization" class="anchor" aria-hidden="true" href="#internationalization"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-internationalization" href="#internationalization"></a>Internationalization</h2>
+<p>See <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/README.i18n.md">README.i18n.md</a>.</p>
+<h2><a id="user-content-using-tor" class="anchor" aria-hidden="true" href="#using-tor"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-using-tor" href="#using-tor"></a>Using Tor</h2>
 <p>While ArQmA isn't made to integrate with Tor, it can be used wrapped with torsocks, by
 setting the following configuration parameters and environment variables:</p>
 <ul>
@@ -1434,7 +2129,7 @@ arqmad.conf to disable listening for connections on external interfaces.</li>
 <li><code>DNS_PUBLIC=tcp</code> or <code>DNS_PUBLIC=tcp://x.x.x.x</code> where x.x.x.x is the IP of the
 desired DNS server, for DNS requests to go over TCP, so that they are routed
 through Tor. When IP is not specified, arqmad uses the default list of
-servers defined in <a href="/arqma/arqma/blob/mechanator-patch-1/src/common/dns_utils.cpp">src/common/dns_utils.cpp</a>.</li>
+servers defined in <a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/src/common/dns_utils.cpp">src/common/dns_utils.cpp</a>.</li>
 <li><code>TORSOCKS_ALLOW_INBOUND=1</code> to tell torsocks to allow arqmad to bind to interfaces
 to accept connections from the wallet. On some Linux systems, torsocks
 allows binding to localhost by default, so setting this variable is only
@@ -1442,14 +2137,14 @@ necessary to allow binding to local LAN/VPN interfaces to allow wallets to
 connect from remote hosts. On other systems, it may be needed for local wallets
 as well.</li>
 <li>Do NOT pass <code>--detach</code> when running through torsocks with systemd, (see
-<a href="/arqma/arqma/blob/mechanator-patch-1/utils/systemd/arqmad.service">utils/systemd/arqmad.service</a> for details).</li>
+<a href="/arqma/arqma/blob/mechanator-patch-1/arqma/arqma/blob/mechanator-patch-1/utils/systemd/arqmad.service">utils/systemd/arqmad.service</a> for details).</li>
 <li>If you use the wallet with a Tor daemon via the loopback IP (eg, 127.0.0.1:9050),
 then use <code>--untrusted-daemon</code> unless it is your own hidden service.</li>
 </ul>
 <p>Example command line to start arqmad through Tor:</p>
 <pre><code>DNS_PUBLIC=tcp torsocks arqmad --p2p-bind-ip 127.0.0.1 --no-igd
 </code></pre>
-<h3><a id="user-content-using-tor-on-tails" class="anchor" aria-hidden="true" href="#using-tor-on-tails"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using Tor on Tails</h3>
+<h3><a id="user-content-using-tor-on-tails" class="anchor" aria-hidden="true" href="#using-tor-on-tails"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-using-tor-on-tails" href="#using-tor-on-tails"></a>Using Tor on Tails</h3>
 <p>TAILS ships with a very restrictive set of firewall rules. Therefore, you need
 to add a rule to allow this connection too, in addition to telling torsocks to
 allow inbound connections. Full example:</p>
@@ -1457,9 +2152,9 @@ allow inbound connections. Full example:</p>
 DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
     --data-dir /home/amnesia/Persistent/your/directory/to/the/blockchain
 </code></pre>
-<h2><a id="user-content-debugging" class="anchor" aria-hidden="true" href="#debugging"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Debugging</h2>
+<h2><a id="user-content-debugging" class="anchor" aria-hidden="true" href="#debugging"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-debugging" href="#debugging"></a>Debugging</h2>
 <p>This section contains general instructions for debugging failed installs or problems encountered with ArQmA. First ensure you are running the latest version built from the Github repo.</p>
-<h3><a id="user-content-obtaining-stack-traces-and-core-dumps-on-unix-systems" class="anchor" aria-hidden="true" href="#obtaining-stack-traces-and-core-dumps-on-unix-systems"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Obtaining stack traces and core dumps on Unix systems</h3>
+<h3><a id="user-content-obtaining-stack-traces-and-core-dumps-on-unix-systems" class="anchor" aria-hidden="true" href="#obtaining-stack-traces-and-core-dumps-on-unix-systems"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-obtaining-stack-traces-and-core-dumps-on-unix-systems" href="#obtaining-stack-traces-and-core-dumps-on-unix-systems"></a>Obtaining stack traces and core dumps on Unix systems</h3>
 <p>We generally use the tool <code>gdb</code> (GNU debugger) to provide stack trace functionality, and <code>ulimit</code> to provide core dumps in builds which crash or segfault.</p>
 <ul>
 <li>To use gdb in order to obtain a stack trace for a build that has stalled:</li>
@@ -1485,17 +2180,108 @@ DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 
 <p>Type <code>gdb /path/to/arqmad</code></p>
 <p>Pass command-line options with <code>--args</code> followed by the relevant arguments</p>
 <p>Type <code>run</code> to run arqmad</p>
-<h3><a id="user-content-analysing-memory-corruption" class="anchor" aria-hidden="true" href="#analysing-memory-corruption"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Analysing memory corruption</h3>
+<h3><a id="user-content-analysing-memory-corruption" class="anchor" aria-hidden="true" href="#analysing-memory-corruption"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-analysing-memory-corruption" href="#analysing-memory-corruption"></a>Analysing memory corruption</h3>
 <p>We use the tool <code>valgrind</code> for this.</p>
 <p>Run with <code>valgrind /path/to/arqmad</code>. It will be slow.</p>
-<h3><a id="user-content-lmdb" class="anchor" aria-hidden="true" href="#lmdb"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>LMDB</h3>
+<h3><a id="user-content-lmdb" class="anchor" aria-hidden="true" href="#lmdb"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a id="user-content-lmdb" href="#lmdb"></a>LMDB</h3>
 <p>Instructions for debugging suspected blockchain corruption as per @HYC</p>
 <p>There is an <code>mdb_stat</code> command in the LMDB source that can print statistics about the database but it's not routinely built. This can be built with the following command:</p>
 <p><code>cd ~/arqma/external/db_drivers/liblmdb &amp;&amp; make</code></p>
 <p>The output of <code>mdb_stat -ea &lt;path to blockchain dir&gt;</code> will indicate inconsistencies in the blocks, block_heights and block_info table.</p>
 <p>The output of <code>mdb_dump -s blocks &lt;path to blockchain dir&gt;</code> and <code>mdb_dump -s block_info &lt;path to blockchain dir&gt;</code> is useful for indicating whether blocks and block_info contain the same keys.</p>
 <p>These records are dumped as hex data, where the first line is the key and the second line is the data.</p>
-</article>
+
+  </div>
+  </div>
+  <details>
+    <summary></summary>
+    
+      
+        
+        Go
+    
+  </details>
+  </div>
+  <div></div>
+</div>
+<pre><code>&lt;/div&gt;
+</code></pre>
+  </div>
+  </div>
+<div>
+  <div>
+    <ul>
+      <li>© 2018 GitHub, Inc.</li>
+        <li><a href="https://github.com/site/terms">Terms</a></li>
+        <li><a href="https://github.com/site/privacy">Privacy</a></li>
+        <li><a href="https://help.github.com/articles/github-security/">Security</a></li>
+        <li><a href="https://status.github.com/">Status</a></li>
+        <li><a href="https://help.github.com">Help</a></li>
+    </ul>
+<pre><code>&lt;a aria-label="Homepage" title="GitHub" class="footer-octicon" href="https://github.com"&gt;
+  &lt;svg height="24" class="octicon octicon-mark-github" viewBox="0 0 16 16" version="1.1" width="24" aria-hidden="true"&gt;&lt;path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/&gt;&lt;/svg&gt;
+</code></pre>
+
+   <ul>
+        <li><a href="https://github.com/contact">Contact GitHub</a></li>
+        <li><a href="https://github.com/pricing">Pricing</a></li>
+      <li><a href="https://developer.github.com">API</a></li>
+      <li><a href="https://training.github.com">Training</a></li>
+        <li><a href="https://blog.github.com">Blog</a></li>
+        <li><a href="https://github.com/about">About</a></li>
+<pre><code>&lt;/ul&gt;
+</code></pre>
+  </ul></div>
+  <div>
+    
+  </div>
+</div>
+  <div id="user-content-ajax-error-message">
+    
+    
+      
+    
+    You can’t perform that action at this time.
+  </div>
+<pre><code>&lt;script crossorigin="anonymous" integrity="sha512-xY0/FVA4OIId4Rg/UZwnuRt3NDzYfohwWB8mPrflYnyu+RSIdK8VxsCY3VkctCpeCW5BSB331jAUlVEbupUlGQ==" type="application/javascript" src="https://assets-cdn.github.com/assets/frameworks-caa0bdcb0cd0270ade93e4f0358e158e.js"&gt;&lt;/script&gt;
+
+&lt;script crossorigin="anonymous" async="async" integrity="sha512-hcpjwBDbQBXCfpy8e1+bPmdioI6ORf1kjCU9/m/vi6GKxv+dcwKpHrZ6KhV+WybF6Sqi6nvKsjaKAFczajm1KQ==" type="application/javascript" src="https://assets-cdn.github.com/assets/github-30182bf56069521e823448d5533ab55c.js"&gt;&lt;/script&gt;
+</code></pre>
+  <div>
+    
+    You signed in with another tab or window. <a href="/arqma/arqma/blob/mechanator-patch-1">Reload</a> to refresh your session.
+    You signed out in another tab or window. <a href="/arqma/arqma/blob/mechanator-patch-1">Reload</a> to refresh your session.
+  </div>
+  <div id="user-content-facebox">
+  <div>
+    <div>
+    </div>
+    
+      
+    
+  </div>
+</div>
+  
+  <details open="">
+    <summary></summary>
+    
+      
+        
+      
+      <div></div>
+    
+  </details>
+
+  <div tabindex="0">
+  <div>
+  </div>
+</div>
+<div id="user-content-hovercard-aria-description">
+  Press h to open a hovercard with more details.
+</div>
+  
+
+</div></article>
   </div>
 
   </div>
@@ -1523,7 +2309,7 @@ DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 
 <div class="footer container-lg px-3" role="contentinfo">
   <div class="position-relative d-flex flex-justify-between pt-6 pb-2 mt-6 f6 text-gray border-top border-gray-light ">
     <ul class="list-style-none d-flex flex-wrap ">
-      <li class="mr-3">&copy; 2018 <span title="0.34979s from unicorn-6b5896dff7-hqt6k">GitHub</span>, Inc.</li>
+      <li class="mr-3">&copy; 2018 <span title="0.32654s from unicorn-c669c74d7-2jvr4">GitHub</span>, Inc.</li>
         <li class="mr-3"><a data-ga-click="Footer, go to terms, text:terms" href="https://github.com/site/terms">Terms</a></li>
         <li class="mr-3"><a data-ga-click="Footer, go to privacy, text:privacy" href="https://github.com/site/privacy">Privacy</a></li>
         <li class="mr-3"><a href="https://help.github.com/articles/github-security/" data-ga-click="Footer, go to security, text:security">Security</a></li>
@@ -1563,7 +2349,7 @@ DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 
     
     <script crossorigin="anonymous" integrity="sha512-xY0/FVA4OIId4Rg/UZwnuRt3NDzYfohwWB8mPrflYnyu+RSIdK8VxsCY3VkctCpeCW5BSB331jAUlVEbupUlGQ==" type="application/javascript" src="https://assets-cdn.github.com/assets/frameworks-caa0bdcb0cd0270ade93e4f0358e158e.js"></script>
     
-    <script crossorigin="anonymous" async="async" integrity="sha512-hcpjwBDbQBXCfpy8e1+bPmdioI6ORf1kjCU9/m/vi6GKxv+dcwKpHrZ6KhV+WybF6Sqi6nvKsjaKAFczajm1KQ==" type="application/javascript" src="https://assets-cdn.github.com/assets/github-30182bf56069521e823448d5533ab55c.js"></script>
+    <script crossorigin="anonymous" async="async" integrity="sha512-Gg7+uvk91U39pM9rwRrAOe+VxTWpOrL3zU0ZX8/Xtud1lyea1AKX0c6vV7HP5AL883nyQ7FY0dRPsUrX2Oeg5w==" type="application/javascript" src="https://assets-cdn.github.com/assets/github-9504de649d6efef50b0800a065fcda7c.js"></script>
     
     
     
