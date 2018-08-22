@@ -219,15 +219,16 @@ application.
 
 **Preparing the build environment**
 
-* Download and install the [MSYS2 installer](http://msys2.github.io), either the 64-bit or the 32-bit package, depending on your system.
-* Open the MSYS shell via the `MSYS2 Shell` shortcut (Arqma-GUI-Wallet supporting only 64-bit OS)
-* Update packages using pacman:  
+Download and install the MSYS2 installer, either the 64-bit or the 32-bit package, depending on your system. Currently, as of 8/20/2018, the correct version that works is msys2-x86_64-20161025.exe . Obtainable from: http://repo.msys2.org/distrib/x86_64/ .
+
+Open the MSYS shell via the MSYS2 Shell shortcut (Arqma-GUI-Wallet supporting only 64-bit OS)
+
+Update packages using pacman:
 
         pacman -Syuu  
 
-* Exit the MSYS shell using Alt+F4  
-* Edit the properties for the `MSYS2 Shell` shortcut changing "msys2_shell.bat" to "msys2_shell.cmd -mingw64" for 64-bit builds or "msys2_shell.cmd -mingw32" for 32-bit builds
-* Restart MSYS shell via modified shortcut and update packages again using pacman:  
+* Exit the MSYS shell using Alt+F4 or end task it with Task Manager in Windows if you have to. 
+* Restart MSYS ming64w shell from the start menu after doing the previous pacman update.:
 
         pacman -Syuu  
 
@@ -243,7 +244,7 @@ application.
 4. Download MinGW-w64 GCC 7.3 posix from: ```https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/7.3.0/threads-posix/seh/x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z```
 
 
-5. Decompress it and replace all catalogue at c:\msys64\mingw64
+5. Decompress it and overwrite all files at c:\msys64\mingw64 . Winrar will extract .7z files just fine. This keeps the updates from the previous step also.
 
 
     To build for 64-bit Windows:
