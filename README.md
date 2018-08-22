@@ -1,9 +1,3 @@
-
-
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -1286,10 +1280,6 @@ application.</p>
 <p>If you are on a 64-bit system, run:</p>
 <pre><code>  make release-static-win64
 </code></pre>
-
-<pre><code>  make release-static-win64
-</code></pre>
-</li>
 <li>
 <p>If you are on a 32-bit system, run:</p>
 <pre><code>  make release-static-win32
