@@ -144,6 +144,4 @@ if(PER_BLOCK_CHECKPOINT)
   add_subdirectory(blocks)
 endif()
 
-if(NOT ANDROID)
-  add_subdirectory(device)
-endif()
+add_subdirectory(device)
