@@ -114,7 +114,7 @@ ARG CPPZMQ_HASH=6aa3ab686e916cb0e62df7fa7d12e0b13ae9fae6
 RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && cd cppzmq \
     && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1
-    
+
 # libsodium
 ENV ANDROID_NDK_HOME ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 ARG NDK_PLATFORM="android-21"
@@ -127,7 +127,7 @@ ADD . /src
 RUN cd /src \
     && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
          OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ \
-         CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include:${WORKDIR}/libsodium/libsodium-android-armv7-a/lib/include/ \
+         CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include:${WORKDIR}/libsodium/libsodium-android-armv7-a/lib/include/" \
          CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib:${WORKDIR}/libsodium/libsodium-android-armv7-a/lib \
          ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
          CXXFLAGS="-I ${WORKDIR}/libzmq/prebuilt/include/" \
