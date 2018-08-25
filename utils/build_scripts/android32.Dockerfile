@@ -2,7 +2,7 @@ FROM debian:stable
 
 RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libpcsclite-dev libsodium-dev
 
-ARG NPROC=1
+ARG NPROC=4
 
 WORKDIR /opt/android
 ## INSTALL ANDROID SDK
@@ -131,4 +131,5 @@ RUN cd /src \
          CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib:${WORKDIR}/libsodium/libsodium-android-armv7-a/lib \
          ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
          CXXFLAGS="-I ${WORKDIR}/libzmq/prebuilt/include/" \
+         CFLAGS="-I ${WORKDIR}/libsodium/libsodium-android-armv7-a/include/" \
     PATH=${HOST_PATH} make release-static-android -j${NPROC}
