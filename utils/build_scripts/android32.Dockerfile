@@ -125,7 +125,7 @@ RUN git clone https://github.com/jedisct1/libsodium.git -b stable \
 
 ADD . /src
 RUN cd /src/external/miniupnp/miniupnpc \
-    && CC=arm-linux-androideabi-gcc CXX=arm-linux-androideabi-g++ red makepkg --noextract --syncdeps --skipinteg --skippgpcheck --skipchecksums --noconfirm --nocolor --log --noprogressbar --nocheck
+    && CC=arm-linux-androideabi-gcc CXX=arm-linux-androideabi-g++ ./updateminiupnpcstrings.sh
 RUN cd /src \
     && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
          OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ SODIUM_ROOT_DIR=${WORKDIR}/libsodium/libsodium-android-armv7-a/include/ \
