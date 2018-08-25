@@ -422,11 +422,7 @@ add_definition_if_function_found(strptime HAVE_STRPTIME)
 add_definitions(-DAUTO_INITIALIZE_EASYLOGGINGPP)
 
 # Generate header for embedded translations
-include(ExternalProject)
-ExternalProject_Add(generate_translations_header
-  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/translations"
-  BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/translations"
-  INSTALL_COMMAND cmake -E echo "")
+add_subdirectory(translations)
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/translations")
 
 add_subdirectory(external)
@@ -452,7 +448,7 @@ include_directories(${LIBUNWIND_INCLUDE})
 link_directories(${LIBUNWIND_LIBRARY_DIRS})
 
 # Final setup for libpcsc
-if (PCSC_FOUND) 
+if (PCSC_FOUND)
   add_definitions(-DHAVE_PCSC)
   include_directories(${PCSC_INCLUDE_DIR})
   link_directories(${LIBPCSC_LIBRARY_DIRS})
@@ -694,7 +690,7 @@ else()
   endif(ARM)
 
   if(ANDROID AND NOT BUILD_GUI_DEPS STREQUAL "ON" OR IOS)
-    #From Android 5: "only position independent executables (PIE) are supported" 
+    #From Android 5: "only position independent executables (PIE) are supported"
     message(STATUS "Enabling PIE executable")
     set(PIC_FLAG "-fPIC")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE")
@@ -828,6 +824,7 @@ endif()
 
 if(ANDROID)
   set(ATOMIC libatomic.a)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=user-defined-warnings")
 endif()
 if(CMAKE_C_COMPILER_ID STREQUAL "Clang" AND ARCH_WIDTH EQUAL "32" AND NOT IOS AND NOT FREEBSD)
   find_library(ATOMIC atomic)

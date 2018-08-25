@@ -106,7 +106,7 @@ invokes cmake commands as needed.
 
         cd arqma
         make cmake-release && cd build/release && make
-	
+
 
     *Optional*: If your machine has several cores and enough memory, enable
     parallel build by running `make -j<number of threads>` instead of `make`. For
@@ -144,14 +144,14 @@ Dependencies need to be built with -fPIC. Static libraries usually aren't, so yo
 
 #### On the Raspberry Pi
 
-Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (2017-09-07 or later) from https://www.raspberrypi.org/downloads/raspbian/. If you are using Raspian Jessie, [please see note in the following section](#note-for-raspbian-jessie-users). 
+Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (2017-09-07 or later) from https://www.raspberrypi.org/downloads/raspbian/. If you are using Raspian Jessie, [please see note in the following section](#note-for-raspbian-jessie-users).
 
 * `apt-get update && apt-get upgrade` to install all of the latest software
 
 * Install the dependencies for ArQmA from the 'Debian' column in the table above.
 
 * Increase the system swap size:
-```	
+```
 	sudo /etc/init.d/dphys-swapfile stop  
 	sudo nano /etc/dphys-swapfile  
 	CONF_SWAPSIZE=1024  
@@ -183,7 +183,7 @@ If you are using the older Raspbian Jessie image, compiling ArQmA is a bit more 
 
 * As before, `apt-get update && apt-get upgrade` to install all of the latest software, and increase the system swap size
 
-```	
+```
 	sudo /etc/init.d/dphys-swapfile stop  
 	sudo nano /etc/dphys-swapfile  
 	CONF_SWAPSIZE=1024  
@@ -233,7 +233,7 @@ application.
 
 2. Install dependencies
 
-	
+
     ```
     pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-qt-creator mingw-w64-x86_64-qt5-static
     ```
@@ -251,7 +251,7 @@ application.
         pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium
 
     To build for 32-bit Windows:
- 
+
         pacman -S git mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium
 
 **Building**
@@ -269,7 +269,7 @@ application.
 * **Optional**: to build Windows binaries suitable for debugging on a 64-bit system, run:
 
         make debug-static-win64
-	
+
 * **Optional**: to build Windows binaries suitable for debugging on a 32-bit system, run:
 
         make debug-static-win32
@@ -318,7 +318,7 @@ mkdir ~/boost
 cd ~/boost
 
 # Fetch boost source
-ftp -o boost_1_64_0.tar.bz2 https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2 
+ftp -o boost_1_64_0.tar.bz2 https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2
 
 # MUST output: (SHA256) boost_1_64_0.tar.bz2: OK
 echo "7bcc5caace97baa948931d712ea5f37038dbb1c5d89b43ad4def4ed7cb683332 boost_1_64_0.tar.bz2" | sha256 -c
@@ -385,8 +385,8 @@ Then you can run make as usual.
 
 ### On Linux for Android (using docker):
 
-        # Build image (select android64.Dockerfile for aarch64)
-        cd utils/build_scripts/ && docker build -f android32.Dockerfile -t arqma-android .
+        # Build image
+        docker build -f utils/build_scripts/android32.Dockerfile -t arqma-android .
         # Create container
         docker create -it --name arqma-android arqma-android bash
         # Get binaries
@@ -489,7 +489,7 @@ Run the build.
 Once it stalls, enter the following command:
 
 ```
-gdb /path/to/arqmad `pidof arqmad` 
+gdb /path/to/arqmad `pidof arqmad`
 ```
 
 Type `thread apply all bt` within gdb in order to obtain the stack trace
