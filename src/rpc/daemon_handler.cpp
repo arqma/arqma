@@ -1,21 +1,21 @@
 // Copyright (c) 2017-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -89,11 +89,27 @@ namespace rpc
           res.error_details = "incorrect number of transactions retrieved for block";
           return;
       }
-      std::list<transaction> txs;
+
+      cryptonote::rpc::block_output_indices& indices = res.output_indices[block_count];
+
+      // miner tx output indices
+      {
+        cryptonote::rpc::tx_output_indices tx_indices;
+        if (!m_core.get_tx_outputs_gindexs(get_transaction_hash(bwt.block.miner_tx), tx_indices))
+        {
+          res.status = Message::STATUS_FAILED;
+          res.error_details = "core::get_tx_outputs_gindexs() returned false";
+          return;
+        }
+        indices.push_back(std::move(tx_indices));
+      }
+
+      auto hash_it = bwt.block.tx_hashes.begin();
+      bwt.transactions.reserve(it->second.size());
       for (const auto& blob : it->second)
       {
-        txs.resize(txs.size() + 1);
-        if (!parse_and_validate_tx_from_blob(blob, txs.back()))
+        bwt.transactions.emplace_back();
+        if (!parse_and_validate_tx_from_blob(blob.second, bwt.transactions.back()))
         {
           res.blocks.clear();
           res.output_indices.clear();
@@ -101,41 +117,17 @@ namespace rpc
           res.error_details = "failed retrieving a requested transaction";
           return;
         }
-      }
-
-      cryptonote::rpc::block_output_indices& indices = res.output_indices[block_count];
-
-      // miner tx output indices
-      {
-        cryptonote::rpc::tx_output_indices tx_indices;
-        bool r = m_core.get_tx_outputs_gindexs(get_transaction_hash(bwt.block.miner_tx), tx_indices);
-        if (!r)
-        {
-          res.status = Message::STATUS_FAILED;
-          res.error_details = "core::get_tx_outputs_gindexs() returned false";
-          return;
-        }
-        indices.push_back(tx_indices);
-      }
-
-      // assume each block returned is returned with all its transactions
-      // in the correct order.
-      auto tx_it = txs.begin();
-      for (const crypto::hash& h : bwt.block.tx_hashes)
-      {
-        bwt.transactions.emplace(h, *tx_it);
-        tx_it++;
 
         cryptonote::rpc::tx_output_indices tx_indices;
-        bool r = m_core.get_tx_outputs_gindexs(h, tx_indices);
-        if (!r)
+        if (!m_core.get_tx_outputs_gindexs(*hash_it, tx_indices))
         {
           res.status = Message::STATUS_FAILED;
           res.error_details = "core::get_tx_outputs_gindexs() returned false";
           return;
         }
 
-        indices.push_back(tx_indices);
+        indices.push_back(std::move(tx_indices));
+        ++hash_it;
       }
 
       it++;
@@ -234,7 +226,7 @@ namespace rpc
 
       res.txs.emplace(found_hashes[i], std::move(info));
     }
-                                      
+
     res.missed_hashes = std::move(missed_vec);
     res.status = Message::STATUS_OK;
   }
@@ -522,7 +514,7 @@ namespace rpc
     const cryptonote::miner& lMiner = m_core.get_miner();
     res.active = lMiner.is_mining();
     res.is_background_mining_enabled = lMiner.get_is_background_mining_enabled();
-    
+
     if ( lMiner.is_mining() ) {
       res.speed = lMiner.get_speed();
       res.threads_count = lMiner.get_threads_count();

@@ -143,12 +143,12 @@ namespace rct {
         key64 s1;
         key ee;
     };
-  
+
     //Container for precomp
     struct geDsmp {
         ge_dsmp k;
     };
-    
+
     //just contains the necessary keys to represent MLSAG sigs
     //c.f. http://eprint.iacr.org/2015/1098
     struct mgSig {
@@ -403,6 +403,16 @@ namespace rct {
     };
     struct rctSig: public rctSigBase {
         rctSigPrunable p;
+
+        keyV& get_pseudo_outs()
+        {
+          return type == RCTTypeSimpleBulletproof ? p.pseudoOuts : pseudoOuts;
+        }
+
+        keyV const& get_pseudo_outs() const
+        {
+          return type == RCTTypeSimpleBulletproof ? p.pseudoOuts : pseudoOuts;
+        }
     };
 
     //other basepoint H = toPoint(cn_fast_hash(G)), G the basepoint
