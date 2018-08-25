@@ -1,8 +1,8 @@
 FROM debian:stable
 
-RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libpcsclite-dev libsodium-dev
+RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libhidapi-dev libhidapi-libusb0 libsodium-dev
 
-ARG NPROC=1
+ARG NPROC=6
 
 WORKDIR /opt/android
 ## INSTALL ANDROID SDK
@@ -124,12 +124,14 @@ RUN git clone https://github.com/jedisct1/libsodium.git -b stable \
     && ldconfig
 
 ADD . /src
+RUN cd /src/external/miniupnp/miniupnpc \
+    && CC=arm-linux-androideabi-gcc CXX=arm-linux-androideabi-g++ red makepkg --noextract --syncdeps --skipinteg --skippgpcheck --skipchecksums --noconfirm --nocolor --log --noprogressbar --nocheck
 RUN cd /src \
     && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
          OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ SODIUM_ROOT_DIR=${WORKDIR}/libsodium/libsodium-android-armv7-a/include/ \
          CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
          CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib:${WORKDIR}/libsodium/libsodium-android-armv7-a/lib \
-         ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
+         ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} HIDAPI_INCLUDE_DIRS="./include/hidapi_arm" \
          CXXFLAGS="-I${WORKDIR}/libzmq/prebuilt/include/" \
          CFLAGS="-I${WORKDIR}/libsodium/libsodium-android-armv7-a/include/" \
          PATH=${HOST_PATH} make release-static-android -j${NPROC}
