@@ -116,6 +116,7 @@ RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1
     
 # libsodium
+ENV ANDROID_NDK_HOME ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 RUN git clone https://github.com/jedisct1/libsodium.git -b stable \
     && cd libsodium/dist-build \
     && ./android-armv7-a.sh
