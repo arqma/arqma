@@ -1,21 +1,21 @@
 // Copyright (c) 2014-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -25,10 +25,10 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#include <assert.h>
+/* #include <assert.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -41,9 +41,9 @@ static void generate_system_random_bytes(size_t n, void *result);
 #if defined(_WIN32)
 
 #include <windows.h>
-#include <wincrypt.h>
+#include <wincrypt.h> */
 #include <stdio.h>
-
+/*
 static void generate_system_random_bytes(size_t n, void *result) {
   HCRYPTPROV prov;
 #ifdef NDEBUG
@@ -61,13 +61,16 @@ static void generate_system_random_bytes(size_t n, void *result) {
 
 #include <err.h>
 #include <errno.h>
-#include <fcntl.h>
+#include <fcntl.h> */
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+/* #include <sys/stat.h>
+#include <sys/types.h> */
 #include <unistd.h>
+#include <sodium/core.h>
+#include <sodium/randombytes.h>
+#include "random.h"
 
-static void generate_system_random_bytes(size_t n, void *result) {
+/* static void generate_system_random_bytes(size_t n, void *result) {
   int fd;
   if ((fd = open("/dev/urandom", O_RDONLY | O_NOCTTY | O_CLOEXEC)) < 0) {
     err(EXIT_FAILURE, "open /dev/urandom");
@@ -98,27 +101,39 @@ static void generate_system_random_bytes(size_t n, void *result) {
 static union hash_state state;
 
 #if !defined(NDEBUG)
-static volatile int curstate; /* To catch thread safety problems. */
+static volatile int curstate;
 #endif
 
 FINALIZER(deinit_random) {
 #if !defined(NDEBUG)
   assert(curstate == 1);
-  curstate = 0;
+  curstate = 0; */
+static void local_abort(const char *msg)
+{
+  fprintf(stderr, "%s\n", msg);
+#ifdef NDEBUG
+  _exit(1);
+#else
+  abort();
 #endif
-  memset(&state, 0, sizeof(union hash_state));
+//  memset(&state, 0, sizeof(union hash_state));
 }
 
-INITIALIZER(init_random) {
+/* INITIALIZER(init_random) {
   generate_system_random_bytes(32, &state);
   REGISTER_FINALIZER(deinit_random);
 #if !defined(NDEBUG)
   assert(curstate == 0);
   curstate = 1;
-#endif
+#endif */
+void generate_random_bytes_not_thread_safe(size_t n, void *result)
+{
+  if (sodium_init() == -1)
+    local_abort("sodium_init failed");
+  randombytes_buf(result, n);
 }
 
-void generate_random_bytes_not_thread_safe(size_t n, void *result) {
+/* void generate_random_bytes_not_thread_safe(size_t n, void *result) {
 #if !defined(NDEBUG)
   assert(curstate == 1);
   curstate = 2;
@@ -145,4 +160,4 @@ void generate_random_bytes_not_thread_safe(size_t n, void *result) {
       n -= HASH_DATA_AREA;
     }
   }
-}
+} */
