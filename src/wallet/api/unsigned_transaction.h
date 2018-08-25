@@ -43,24 +43,24 @@ class UnsignedTransactionImpl : public UnsignedTransaction
 public:
     UnsignedTransactionImpl(WalletImpl &wallet);
     ~UnsignedTransactionImpl();
-    int status() const;
-    std::string errorString() const;
-    std::vector<uint64_t> amount() const;
-    std::vector<uint64_t> dust() const;
-    std::vector<uint64_t> fee() const;
-    std::vector<uint64_t> mixin() const;
-    std::vector<std::string> paymentId() const;
-    std::vector<std::string> recipientAddress() const;
-    uint64_t txCount() const;
+    int status() const override;
+    std::string errorString() const override;
+    std::vector<uint64_t> amount() const override;
+    std::vector<uint64_t> dust() const override;
+    std::vector<uint64_t> fee() const override;
+    std::vector<uint64_t> mixin() const override;
+    std::vector<std::string> paymentId() const override;
+    std::vector<std::string> recipientAddress() const override;
+    uint64_t txCount() const override;
     // sign txs and save to file
-    bool sign(const std::string &signedFileName);
-    std::string confirmationMessage() const {return m_confirmationMessage;}
-    uint64_t minMixinCount() const;
+    bool sign(const std::string &signedFileName) override;
+    std::string confirmationMessage() const override {return m_confirmationMessage;}
+    uint64_t minMixinCount() const override;
 
 private:
     // Callback function to check all loaded tx's and generate confirmationMessage
     bool checkLoadedTx(const std::function<size_t()> get_num_txes, const std::function<const tools::wallet2::tx_construction_data&(size_t)> &get_tx, const std::string &extra_message);
-    
+
     friend class WalletImpl;
     WalletImpl &m_wallet;
 
