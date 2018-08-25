@@ -1,6 +1,6 @@
 FROM debian:stable
 
-RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libpcsclite-dev libsodium-dev	
+RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libpcsclite-dev	
 
 ARG NPROC=1
 
@@ -52,7 +52,8 @@ RUN set -ex \
     && ./bootstrap.sh
  ENV HOST_PATH $PATH
 ENV PATH $TOOLCHAIN_DIR/arm-linux-androideabi/bin:$TOOLCHAIN_DIR/bin:$PATH
- # Build iconv for lib boost locale
+
+# Build iconv for lib boost locale
 ENV ICONV_VERSION 1.15
 ENV ICONV_HASH  ccf536620a45458d26ba83887a983b96827001e92a13847b45e4925cc8913178
 RUN curl -s -O http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${ICONV_VERSION}.tar.gz \
@@ -113,6 +114,11 @@ ARG CPPZMQ_HASH=6aa3ab686e916cb0e62df7fa7d12e0b13ae9fae6
 RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && cd cppzmq \
     && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1
+    
+# libsodium
+RUN git clone https://github.com/jedisct1/libsodium.git -b stable \
+    && cd libsodium/dist-build \
+    && ./android-armv7-a.sh
 
 ADD . /src
 RUN cd /src \
