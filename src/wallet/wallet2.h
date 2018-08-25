@@ -167,7 +167,7 @@ namespace tools
 
     static bool verify_password(const std::string& keys_file_name, const epee::wipeable_string& password, bool no_spend_key, hw::device &hwdev);
 
-    wallet2(cryptonote::network_type nettype = cryptonote::MAINNET, bool rpc = false);
+    wallet2(cryptonote::network_type nettype = cryptonote::MAINNET);
     ~wallet2();
 
     struct multisig_info
@@ -624,6 +624,7 @@ namespace tools
     // Subaddress scheme
     cryptonote::account_public_address get_subaddress(const cryptonote::subaddress_index& index) const;
     cryptonote::account_public_address get_address() const { return get_subaddress({0,0}); }
+    boost::optional<cryptonote::subaddress_index> get_subaddress_index(const cryptonote::account_public_address& address) const;
     crypto::public_key get_subaddress_spend_public_key(const cryptonote::subaddress_index& index) const;
     std::vector<crypto::public_key> get_subaddress_spend_public_keys(uint32_t account, uint32_t begin, uint32_t end) const;
     std::string get_subaddress_as_str(const cryptonote::subaddress_index& index) const;
@@ -651,7 +652,6 @@ namespace tools
     RefreshType get_refresh_type() const { return m_refresh_type; }
 
     cryptonote::network_type nettype() const { return m_nettype; }
-    bool restricted() const { return m_restricted; }
     bool watch_only() const { return m_watch_only; }
     bool multisig(bool *ready = NULL, uint32_t *threshold = NULL, uint32_t *total = NULL) const;
     bool has_multisig_partial_key_images() const;
@@ -707,7 +707,7 @@ namespace tools
     bool sign_multisig_tx(multisig_tx_set &exported_txs, std::vector<crypto::hash> &txids);
     bool sign_multisig_tx_to_file(multisig_tx_set &exported_txs, const std::string &filename, std::vector<crypto::hash> &txids);
     std::vector<pending_tx> create_unmixable_sweep_transactions(bool trusted_daemon);
-	void discard_unmixable_outputs(bool trusted_daemon);
+	  void discard_unmixable_outputs(bool trusted_daemon);
     bool check_connection(uint32_t *version = NULL, uint32_t timeout = 200000);
     void get_transfers(wallet2::transfer_container& incoming_transfers) const;
     void get_payments(const crypto::hash& payment_id, std::list<wallet2::payment_details>& payments, uint64_t min_height = 0, const boost::optional<uint32_t>& subaddr_account = boost::none, const std::set<uint32_t>& subaddr_indices = {}) const;
@@ -1022,7 +1022,6 @@ namespace tools
     uint64_t adjust_mixin(uint64_t mixin) const;
     uint32_t adjust_priority(uint32_t priority);
 
-    bool is_rpc() const { return m_rpc; }
 
     // Light wallet specific functions
     // fetch unspent outs from lw node and store in m_transfers
@@ -1200,7 +1199,6 @@ namespace tools
     i_wallet2_callback* m_callback;
     bool m_key_on_device;
     cryptonote::network_type m_nettype;
-    bool m_restricted;
     std::string seed_language; /*!< Language of the mnemonics (seed). */
     bool is_old_file_format; /*!< Whether the wallet file is of an old file format */
     bool m_watch_only; /*!< no spend key */
@@ -1254,7 +1252,6 @@ namespace tools
     bool m_ring_history_saved;
     std::unique_ptr<ringdb> m_ringdb;
 
-    bool m_rpc;
   };
 }
 BOOST_CLASS_VERSION(tools::wallet2, 25)
