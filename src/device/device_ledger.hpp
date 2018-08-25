@@ -1,21 +1,21 @@
 // Copyright (c) 2017-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -33,8 +33,8 @@
 #include <cstddef>
 #include <string>
 #include "device.hpp"
-#include <PCSC/winscard.h>
-#include <PCSC/wintypes.h>
+#include "../../external/PCSC/winscard.h"
+#include "../../external/PCSC/wintypes.h"
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
@@ -84,7 +84,7 @@ namespace hw {
         mutable boost::recursive_mutex   device_locker;
         mutable boost::mutex   command_locker;
 
-        //PCSC management 
+        //PCSC management
         std::string  full_name;
         SCARDCONTEXT hContext;
         SCARDHANDLE  hCard;
@@ -106,7 +106,7 @@ namespace hw {
         // To speed up blockchain parsing the view key maybe handle here.
         crypto::secret_key viewkey;
         bool has_view_key;
-        
+
         //extra debug
         #ifdef DEBUG_HWDEVICE
         device *controle_device;
@@ -138,7 +138,7 @@ namespace hw {
 
         /* ======================================================================= */
         /*  LOCKER                                                                 */
-        /* ======================================================================= */ 
+        /* ======================================================================= */
         void lock(void)  override;
         void unlock(void) override;
         bool try_lock(void) override;
@@ -211,4 +211,3 @@ namespace hw {
   }
 
 }
-
