@@ -1,6 +1,6 @@
 FROM debian:stable
 
-RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool
+RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libpcsclite-dev libsodium-dev	
 
 ARG NPROC=1
 
