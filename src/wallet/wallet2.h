@@ -1,21 +1,21 @@
 // Copyright (c) 2014-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -25,7 +25,7 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
@@ -167,7 +167,7 @@ namespace tools
 
     static bool verify_password(const std::string& keys_file_name, const epee::wipeable_string& password, bool no_spend_key, hw::device &hwdev);
 
-    wallet2(cryptonote::network_type nettype = cryptonote::MAINNET, bool restricted = false);
+    wallet2(cryptonote::network_type nettype = cryptonote::MAINNET, bool rpc = false);
     ~wallet2();
 
     struct multisig_info
@@ -430,13 +430,13 @@ namespace tools
         FIELD(cache_data)
       END_SERIALIZE()
     };
-    
+
     // GUI Address book
     struct address_book_row
     {
       cryptonote::account_public_address m_address;
       crypto::hash m_payment_id;
-      std::string m_description;   
+      std::string m_description;
       bool m_is_subaddress;
     };
 
@@ -460,7 +460,7 @@ namespace tools
      * \param  create_address_file  Whether to create an address file
      */
     void generate(const std::string& wallet_, const epee::wipeable_string& password,
-      const std::string& multisig_data, bool create_address_file = false);
+      const std::string& multisig_data, bool create_address_file = true);
 
     /*!
      * \brief Generates a wallet or restores one.
@@ -474,7 +474,7 @@ namespace tools
      */
     crypto::secret_key generate(const std::string& wallet, const epee::wipeable_string& password,
       const crypto::secret_key& recovery_param = crypto::secret_key(), bool recover = false,
-      bool two_random = false, bool create_address_file = false);
+      bool two_random = false, bool create_address_file = true);
     /*!
      * \brief Creates a wallet from a public address and a spend/view secret key pair.
      * \param  wallet_                 Name of wallet file
@@ -486,7 +486,7 @@ namespace tools
      */
     void generate(const std::string& wallet, const epee::wipeable_string& password,
       const cryptonote::account_public_address &account_public_address,
-      const crypto::secret_key& spendkey, const crypto::secret_key& viewkey, bool create_address_file = false);
+      const crypto::secret_key& spendkey, const crypto::secret_key& viewkey, bool create_address_file = true);
     /*!
      * \brief Creates a watch only wallet from a public address and a view secret key.
      * \param  wallet_                 Name of wallet file
@@ -497,7 +497,7 @@ namespace tools
      */
     void generate(const std::string& wallet, const epee::wipeable_string& password,
       const cryptonote::account_public_address &account_public_address,
-      const crypto::secret_key& viewkey = crypto::secret_key(), bool create_address_file = false);
+      const crypto::secret_key& viewkey = crypto::secret_key(), bool create_address_file = true);
     /*!
      * \brief Restore a wallet hold by an HW.
      * \param  wallet_        Name of wallet file
@@ -584,7 +584,7 @@ namespace tools
     void explicit_refresh_from_block_height(bool expl) {m_explicit_refresh_from_block_height = expl;}
     bool explicit_refresh_from_block_height() const {return m_explicit_refresh_from_block_height;}
 
-    // upper_transaction_size_limit as defined below is set to 
+    // upper_transaction_size_limit as defined below is set to
     // approximately 125% of the fixed minimum allowable penalty
     // free block size. TODO: fix this so that it actually takes
     // into account the current median block size rather than
@@ -693,7 +693,7 @@ namespace tools
     bool sign_tx(const std::string &unsigned_filename, const std::string &signed_filename, std::vector<wallet2::pending_tx> &ptx, std::function<bool(const unsigned_tx_set&)> accept_func = NULL, bool export_raw = false);
     // sign unsigned tx. Takes unsigned_tx_set as argument. Used by GUI
     bool sign_tx(unsigned_tx_set &exported_txs, const std::string &signed_filename, std::vector<wallet2::pending_tx> &ptx, bool export_raw = false);
-    // load unsigned_tx_set from file. 
+    // load unsigned_tx_set from file.
     bool load_unsigned_tx(const std::string &unsigned_filename, unsigned_tx_set &exported_txs) const;
     bool load_tx(const std::string &signed_filename, std::vector<tools::wallet2::pending_tx> &ptx, std::function<bool(const signed_tx_set&)> accept_func = NULL);
     std::vector<pending_tx> create_transactions(std::vector<cryptonote::tx_destination_entry> dsts, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra, bool trusted_daemon);
@@ -915,7 +915,7 @@ namespace tools
     std::vector<address_book_row> get_address_book() const { return m_address_book; }
     bool add_address_book_row(const cryptonote::account_public_address &address, const crypto::hash &payment_id, const std::string &description, bool is_subaddress);
     bool delete_address_book_row(std::size_t row_id);
-        
+
     uint64_t get_num_rct_outputs();
     size_t get_num_transfer_details() const { return m_transfers.size(); }
     const transfer_details &get_transfer_details(size_t idx) const;
@@ -950,7 +950,7 @@ namespace tools
     std::string get_description() const;
 
     /*!
-     * \brief  Get the list of registered account tags. 
+     * \brief  Get the list of registered account tags.
      * \return first.Key=(tag's name), first.Value=(tag's label), second[i]=(i-th account's tag)
      */
     const std::pair<std::map<std::string, std::string>, std::vector<std::string>>& get_account_tags();
@@ -1021,6 +1021,8 @@ namespace tools
     uint64_t get_per_kb_fee() const;
     uint64_t adjust_mixin(uint64_t mixin) const;
     uint32_t adjust_priority(uint32_t priority);
+
+    bool is_rpc() const { return m_rpc; }
 
     // Light wallet specific functions
     // fetch unspent outs from lw node and store in m_transfers
@@ -1251,14 +1253,16 @@ namespace tools
     std::string m_ring_database;
     bool m_ring_history_saved;
     std::unique_ptr<ringdb> m_ringdb;
+
+    bool m_rpc;
   };
 }
-BOOST_CLASS_VERSION(tools::wallet2, 24)
+BOOST_CLASS_VERSION(tools::wallet2, 25)
 BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 9)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info, 1)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info::LR, 0)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_tx_set, 1)
-BOOST_CLASS_VERSION(tools::wallet2::payment_details, 3)
+BOOST_CLASS_VERSION(tools::wallet2::payment_details, 4)
 BOOST_CLASS_VERSION(tools::wallet2::pool_payment_details, 1)
 BOOST_CLASS_VERSION(tools::wallet2::unconfirmed_transfer_details, 8)
 BOOST_CLASS_VERSION(tools::wallet2::confirmed_transfer_details, 6)
@@ -1266,7 +1270,7 @@ BOOST_CLASS_VERSION(tools::wallet2::address_book_row, 17)
 BOOST_CLASS_VERSION(tools::wallet2::reserve_proof_entry, 0)
 BOOST_CLASS_VERSION(tools::wallet2::unsigned_tx_set, 0)
 BOOST_CLASS_VERSION(tools::wallet2::signed_tx_set, 0)
-BOOST_CLASS_VERSION(tools::wallet2::tx_construction_data, 2)
+BOOST_CLASS_VERSION(tools::wallet2::tx_construction_data, 3)
 BOOST_CLASS_VERSION(tools::wallet2::pending_tx, 3)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_sig, 0)
 
@@ -1875,9 +1879,9 @@ namespace tools
       return true;
     });
     THROW_WALLET_EXCEPTION_IF(!all_are_txin_to_key, error::unexpected_txin_type, tx);
-    
+
     bool dust_sent_elsewhere = (dust_policy.addr_for_dust.m_view_public_key != change_dts.addr.m_view_public_key
-                                || dust_policy.addr_for_dust.m_spend_public_key != change_dts.addr.m_spend_public_key);      
+                                || dust_policy.addr_for_dust.m_spend_public_key != change_dts.addr.m_spend_public_key);
 
     if (dust_policy.add_to_fee || dust_sent_elsewhere) change_dts.amount -= dust;
 
