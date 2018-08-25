@@ -80,7 +80,7 @@ RUN curl -s -O http://zlib.net/zlib-${ZLIB_VERSION}.tar.gz \
     && make -j${NPROC}
 
 # open ssl
-ARG OPENSSL_VERSION 1.0.2p
+ARG OPENSSL_VERSION=1.0.2p
 ARG OPENSSL_HASH=50a98e07b1a89eb8f6a99477f262df71c6fa7bef77df4dc83025a2845c827d00
 RUN curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && echo "${OPENSSL_HASH}  openssl-${OPENSSL_VERSION}.tar.gz" | sha256sum -c \
