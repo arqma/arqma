@@ -778,14 +778,7 @@ if(STATIC)
   set(Boost_USE_STATIC_RUNTIME ON)
 endif()
 
-set(BOOST_LIBRARIES system filesystem thread date_time chrono regex serialization program_options)
-if(WIN32)
-   set(BOOST_LIBRARIES ${BOOST_LIBRARIES} locale)
-endif()
-
-find_package(Boost 1.58 QUIET REQUIRED COMPONENTS ${BOOST_LIBRARIES})
-
-
+find_package(Boost 1.58 QUIET REQUIRED COMPONENTS system filesystem thread date_time chrono regex serialization program_options locale)
 
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_LIB_SUFFIXES})
 if(NOT Boost_FOUND)
