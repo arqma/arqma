@@ -132,4 +132,4 @@ RUN cd /src \
          ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} HIDAPI_INCLUDE_DIRS="./include/hidapi_arm" \
          CXXFLAGS="-I${WORKDIR}/libzmq/prebuilt/include/" \
          CFLAGS="-I${WORKDIR}/libsodium/libsodium-android-armv7-a/include/" \
-         PATH=${HOST_PATH} make release-static-android -j${NPROC}
+         PATH=${HOST_PATH} ./build-all-arch.sh -j${NPROC}
