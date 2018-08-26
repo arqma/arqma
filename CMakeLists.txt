@@ -846,10 +846,8 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Clang" AND ARCH_WIDTH EQUAL "32" AND NOT IOS AN
   list(APPEND EXTRA_LIBRARIES ${ATOMIC})
 endif()
 
-if(ANDROID)
+
 include_directories(SYSTEM /opt/android/libsodium/libsodium-android-armv7-a/include)
-else()
-endif()
 
 find_path(ZMQ_INCLUDE_PATH zmq.hpp)
 find_library(ZMQ_LIB zmq)
