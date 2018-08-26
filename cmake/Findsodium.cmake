@@ -79,6 +79,7 @@ if (UNIX)
 
     find_path(sodium_INCLUDE_DIR sodium.h
         HINTS ${${XPREFIX}_INCLUDE_DIRS}
+    /usr/include /usr/local/include /opt/local/include /opt/android/libsodium/libsodium-android-armv7-a/include
     )
     find_library(sodium_LIBRARY_DEBUG NAMES ${${XPREFIX}_LIBRARIES}
         HINTS ${${XPREFIX}_LIBRARY_DIRS}
