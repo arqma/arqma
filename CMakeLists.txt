@@ -197,7 +197,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 enable_testing()
 
 option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
-option(sodium_USE_STATIC_LIBS "enable to statically link against sodium" ON)
 option(BUILD_TESTS "Build tests." OFF)
 
 # Check whether we're on a 32-bit or 64-bit system
