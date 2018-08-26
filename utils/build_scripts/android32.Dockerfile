@@ -1,6 +1,6 @@
 FROM debian:stable
 
-RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libhidapi-dev libhidapi-libusb0 libsodium-dev
+RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libhidapi-dev libhidapi-libusb0
 
 ARG NPROC=1
 
@@ -115,21 +115,10 @@ RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && cd cppzmq \
     && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1
 
-# libsodium
-ENV ANDROID_NDK_HOME ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
-ARG NDK_PLATFORM="android-21"
-RUN git clone https://github.com/jedisct1/libsodium.git -b stable \
-    && cd libsodium \
-    && ./dist-build/android-armv7-a.sh \
-    && ldconfig
-
 RUN git clone --recursive -b android-build https://github.com/arqma/arqma.git \
-         && cd arqma && CFLAGS=$(pkg-config --cflags libsodium) && LDFLAGS=$(pkg-config --libs libsodium) \
+         && cd arqma \
          && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
-         OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ sodium_INCLUDE_DIR=${WORKDIR}/libsodium/libsodium-android-armv7-a/include \
-         CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
-         CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib sodium_INCLUDE_DIR=${WORKDIR}/libsodium/libsodium-android-armv7-a/lib \
-         ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
+         OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
+         CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
          CXXFLAGS="-I${WORKDIR}/libzmq/prebuilt/include/" \
-         CFLAGS="-I${WORKDIR}/libsodium/libsodium-android-armv7-a/include/" \
     PATH=${HOST_PATH} make release-static-android -j${NPROC}
