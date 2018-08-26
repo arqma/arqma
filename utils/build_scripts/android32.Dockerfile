@@ -123,9 +123,9 @@ RUN git clone https://github.com/jedisct1/libsodium.git -b stable \
     && ./dist-build/android-armv7-a.sh \
     && ldconfig
 
-ADD . /src
-RUN cd /src \
-    &&   BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
+RUN git clone --recursive -b android-build https://github.com/arqma/arqma.git \
+         && cd arqma \
+         && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
          OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ sodium_INCLUDE_DIR=${WORKDIR}/libsodium/libsodium-android-armv7-a/include \
          CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
          CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib sodium_INCLUDE_DIR=${WORKDIR}/libsodium/libsodium-android-armv7-a/lib \
