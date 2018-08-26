@@ -28,7 +28,7 @@
 //
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-/* #include <assert.h>
+#include <assert.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -41,9 +41,9 @@ static void generate_system_random_bytes(size_t n, void *result);
 #if defined(_WIN32)
 
 #include <windows.h>
-#include <wincrypt.h> */
+#include <wincrypt.h>
 #include <stdio.h>
-/*
+
 static void generate_system_random_bytes(size_t n, void *result) {
   HCRYPTPROV prov;
 #ifdef NDEBUG
@@ -61,16 +61,13 @@ static void generate_system_random_bytes(size_t n, void *result) {
 
 #include <err.h>
 #include <errno.h>
-#include <fcntl.h> */
+#include <fcntl.h>
 #include <stdlib.h>
-/* #include <sys/stat.h>
-#include <sys/types.h> */
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <sodium/core.h>
-#include <sodium/randombytes.h>
-#include "random.h"
 
-/* static void generate_system_random_bytes(size_t n, void *result) {
+static void generate_system_random_bytes(size_t n, void *result) {
   int fd;
   if ((fd = open("/dev/urandom", O_RDONLY | O_NOCTTY | O_CLOEXEC)) < 0) {
     err(EXIT_FAILURE, "open /dev/urandom");
@@ -107,33 +104,20 @@ static volatile int curstate;
 FINALIZER(deinit_random) {
 #if !defined(NDEBUG)
   assert(curstate == 1);
-  curstate = 0; */
-static void local_abort(const char *msg)
-{
-  fprintf(stderr, "%s\n", msg);
-#ifdef NDEBUG
-  _exit(1);
-#else
-  abort();
-#endif
-//  memset(&state, 0, sizeof(union hash_state));
+  curstate = 0;
+memset(&state, 0, sizeof(union hash_state));
 }
 
-/* INITIALIZER(init_random) {
+INITIALIZER(init_random) {
   generate_system_random_bytes(32, &state);
   REGISTER_FINALIZER(deinit_random);
 #if !defined(NDEBUG)
   assert(curstate == 0);
   curstate = 1;
-#endif */
-void generate_random_bytes_not_thread_safe(size_t n, void *result)
-{
-  if (sodium_init() == -1)
-    local_abort("sodium_init failed");
-  randombytes_buf(result, n);
+#endif
 }
 
-/* void generate_random_bytes_not_thread_safe(size_t n, void *result) {
+void generate_random_bytes_not_thread_safe(size_t n, void *result) {
 #if !defined(NDEBUG)
   assert(curstate == 1);
   curstate = 2;
@@ -160,4 +144,4 @@ void generate_random_bytes_not_thread_safe(size_t n, void *result)
       n -= HASH_DATA_AREA;
     }
   }
-} */
+} 
