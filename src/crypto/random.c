@@ -105,6 +105,7 @@ FINALIZER(deinit_random) {
 #if !defined(NDEBUG)
   assert(curstate == 1);
   curstate = 0;
+#endif
 memset(&state, 0, sizeof(union hash_state));
 }
 
@@ -144,4 +145,4 @@ void generate_random_bytes_not_thread_safe(size_t n, void *result) {
       n -= HASH_DATA_AREA;
     }
   }
-} 
+}
