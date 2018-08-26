@@ -125,11 +125,12 @@ RUN git clone https://github.com/jedisct1/libsodium.git -b stable \
 
 ADD . /src
 RUN cd /src \
-    && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
+    && CC=arm-linux-androideabi-clang CXX=arm-linux-androideabi-clang++ \
+         BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
          OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ SODIUM_INCLUDE_DIR=${WORKDIR}/libsodium/libsodium-android-armv7-a/include \
          CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
          CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib SODIUM_INCLUDE_DIR=${WORKDIR}/libsodium/libsodium-android-armv7-a/lib \
          ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
-         CXXFLAGS="-I ${WORKDIR}/libzmq/prebuilt/include/" \
-         CFLAGS="-I ${WORKDIR}/libsodium/libsodium-android-armv7-a/include/" \
+         CXXFLAGS="-I${WORKDIR}/libzmq/prebuilt/include/" \
+         CFLAGS="-I${WORKDIR}/libsodium/libsodium-android-armv7-a/include/" \
          PATH=${HOST_PATH} make release-static-android -j${NPROC}
