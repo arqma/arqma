@@ -2651,7 +2651,7 @@ namespace tools
   bool wallet_rpc_server::on_import_multisig(const wallet_rpc::COMMAND_RPC_IMPORT_MULTISIG::request& req, wallet_rpc::COMMAND_RPC_IMPORT_MULTISIG::response& res, epee::json_rpc::error& er)
   {
     if (!m_wallet) return not_open(er);
-    if (m_wallet->restricted())
+    if (m_restricted)
     {
       er.code = WALLET_RPC_ERROR_CODE_DENIED;
       er.message = "Command unavailable in restricted mode.";
