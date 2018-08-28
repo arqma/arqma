@@ -118,6 +118,7 @@ RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
 RUN git clone --recursive -b android-build https://github.com/arqma/arqma.git \
          && cd arqma \
          && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
+         OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ \
          CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
          CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib \
          ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
