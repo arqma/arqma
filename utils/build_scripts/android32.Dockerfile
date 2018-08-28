@@ -1,6 +1,6 @@
 FROM debian:stable
 
-RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libhidapi-dev libhidapi-libusb0
+RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libusb-1.0-0-dev libudev-dev
 
 ARG NPROC=1
 
@@ -118,7 +118,8 @@ RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
 RUN git clone --recursive -b android-build https://github.com/arqma/arqma.git \
          && cd arqma \
          && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
-         OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
-         CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
-         CXXFLAGS="-I${WORKDIR}/libzmq/prebuilt/include/" \
-    PATH=${HOST_PATH} make release-static-android -j${NPROC}
+         CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
+         CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib \
+         ANDROID_STANDALONE_TOOLCHAIN_PATH=${TOOLCHAIN_DIR} \
+         CXXFLAGS="-I ${WORKDIR}/libzmq/prebuilt/include/" \
+     PATH=${HOST_PATH} make release-static-android -j${NPROC}
