@@ -44,7 +44,7 @@ namespace rpc
   struct block_with_transactions
   {
     cryptonote::block block;
-    std::vector<cryptonote::transaction> transactions;
+    std::unordered_map<crypto::hash, cryptonote::transaction> transactions;
   };
 
   typedef std::vector<uint64_t> tx_output_indices;
