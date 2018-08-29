@@ -28,7 +28,7 @@ ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
 RUN ${ANDROID_NDK_ROOT}/build/tools/make_standalone_toolchain.py \
          --arch arm \
-         --api 21 \
+         --api 28 \
          --install-dir ${TOOLCHAIN_DIR} \
          --stl=libc++
 
