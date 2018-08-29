@@ -35,7 +35,9 @@ if(ANDROID AND CMAKE_CROSSCOMPILING)
   message(WARNING "CrossCompiling")
   SET(IMPORT_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/ImportExecutables.cmake" CACHE FILEPATH "Point it to the export file from a native build")
   INCLUDE(${IMPORT_EXECUTABLES})
-else(NOT ANDROID AND NOT CMAKE_CROSSCOMPILING)
+endif(ANDROID AND CMAKE_CROSSCOMPILING)
+
+if(NOT ANDROID AND NOT CMAKE_CROSSCOMPILING)
   # only build the generator if not crosscompiling
   add_executable(generate_translations_header generate_translations_header.c)
 endif(NOT ANDROID AND NOT CMAKE_CROSSCOMPILING)
