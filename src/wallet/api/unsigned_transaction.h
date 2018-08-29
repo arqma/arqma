@@ -46,7 +46,6 @@ public:
     int status() const override;
     std::string errorString() const override;
     std::vector<uint64_t> amount() const override;
-    std::vector<uint64_t> dust() const override;
     std::vector<uint64_t> fee() const override;
     std::vector<uint64_t> mixin() const override;
     std::vector<std::string> paymentId() const override;

@@ -106,9 +106,9 @@ struct binary_archive<false> : public binary_archive_base<std::istream, false>
   }
 
   template <class T>
-  void serialize_int(T &v)
+  void serialize_int32_t(T &v)
   {
-    serialize_uint(*(typename boost::make_unsigned<T>::type *)&v);
+    serialize_uint32_t(*(typename boost::make_unsigned<T>::type *)&v);
   }
 
   /*! \fn serialize_uint
@@ -116,7 +116,7 @@ struct binary_archive<false> : public binary_archive_base<std::istream, false>
    * \brief serializes an unsigned integer
    */
   template <class T>
-  void serialize_uint(T &v, size_t width = sizeof(T))
+  void serialize_uint32_t(T &v, size_t width = sizeof(T))
   {
     T ret = 0;
     unsigned shift = 0;
@@ -162,7 +162,7 @@ struct binary_archive<false> : public binary_archive_base<std::istream, false>
   void end_string(const char *delimiter   /*="\""*/) { }
 
   void read_variant_tag(variant_tag_type &t) {
-    serialize_int(t);
+    serialize_int32_t(t);
   }
 
   size_t remaining_bytes() {
@@ -182,12 +182,12 @@ struct binary_archive<true> : public binary_archive_base<std::ostream, true>
   explicit binary_archive(stream_type &s) : base_type(s) { }
 
   template <class T>
-  void serialize_int(T v)
+  void serialize_int32_t(T v)
   {
-    serialize_uint(static_cast<typename boost::make_unsigned<T>::type>(v));
+    serialize_uint32_t(static_cast<typename boost::make_unsigned<T>::type>(v));
   }
   template <class T>
-  void serialize_uint(T v)
+  void serialize_uint32_t(T v)
   {
     for (size_t i = 0; i < sizeof(T); i++) {
       stream_.put((char)(v & 0xff));
@@ -226,7 +226,7 @@ struct binary_archive<true> : public binary_archive_base<std::ostream, true>
   void end_string(const char *delimiter="\"") { }
 
   void write_variant_tag(variant_tag_type t) {
-    serialize_int(t);
+    serialize_int32_t(t);
   }
 };
 
