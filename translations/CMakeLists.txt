@@ -31,15 +31,14 @@ cmake_minimum_required(VERSION 2.8.7)
 project(translations)
 
 # when crosscompiling import the executable targets from a file
-if(ANDROID)
+if(ANDROID AND CMAKE_CROSSCOMPILING)
   message(WARNING "CrossCompiling")
   SET(IMPORT_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/ImportExecutables.cmake" CACHE FILEPATH "Point it to the export file from a native build")
   INCLUDE(${IMPORT_EXECUTABLES})
-endif(ANDROID)
+else(NOT ANDROID AND NOT CMAKE_CROSSCOMPILING)
   # only build the generator if not crosscompiling
-if(NOT ANDROID)
   add_executable(generate_translations_header generate_translations_header.c)
-endif(NOT ANDROID)
+endif(NOT ANDROID AND NOT CMAKE_CROSSCOMPILING)
 
 find_program(LRELEASE lrelease)
 if(LRELEASE STREQUAL "LRELEASE-NOTFOUND")
@@ -72,6 +71,6 @@ add_custom_command(TARGET generate_translations_header
   COMMENT "Generating embedded translations header")
 
 # export the generator target to a file, so it can be imported (see above) by another build
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT CMAKE_CROSSCOMPILING)
   EXPORT(TARGETS generate_translations_header FILE ${CMAKE_CURRENT_BINARY_DIR}/ImportExecutables.cmake )
-endif(NOT ANDROID)
+endif(NOT ANDROID AND NOT CMAKE_CROSSCOMPILING)

@@ -422,7 +422,7 @@ add_definition_if_function_found(strptime HAVE_STRPTIME)
 add_definitions(-DAUTO_INITIALIZE_EASYLOGGINGPP)
 
 # Generate header for embedded translations
-if(ANDROID)
+if(ANDROID AND CMAKE_CROSSCOMPILING)
   add_subdirectory(translations)
   include_directories("${CMAKE_CURRENT_BINARY_DIR}/translations")
 else()
