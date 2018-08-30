@@ -37,6 +37,7 @@ if(ANDROID)
     SET(IMPORT_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/ImportExecutables.cmake" CACHE FILEPATH "Point it to the export file from a native build")
     INCLUDE(${IMPORT_EXECUTABLES})
   else()
+  endif(NOT BUILD_GUI_DEPS)
 endif(ANDROID)
 
 if(NOT ANDROID)
