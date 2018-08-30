@@ -7,7 +7,7 @@ ARG NPROC=4
 WORKDIR /opt/android
 ## INSTALL ANDROID SDK
 ENV ANDROID_SDK_REVISION 26.1.1
-RUN curl -s -O https://dl.google.com/android/repository/tools_r${ANDROID_SDK_REVISION}-linux.zip \
+RUN curl -s -O http://dl-ssl.google.com/android/repository/tools_r${ANDROID_SDK_REVISION}-linux.zip \
     && unzip tools_r${ANDROID_SDK_REVISION}-linux.zip \
     && rm -f tools_r${ANDROID_SDK_REVISION}-linux.zip
 
