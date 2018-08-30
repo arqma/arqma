@@ -2,11 +2,11 @@ FROM debian:stable
 
 RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libusb-1.0-0-dev libudev-dev
 
-ARG NPROC=1
+ARG NPROC=4
 
 WORKDIR /opt/android
 ## INSTALL ANDROID SDK
-ENV ANDROID_SDK_REVISION 25.2.5
+ENV ANDROID_SDK_REVISION 26.1.1
 RUN curl -s -O http://dl-ssl.google.com/android/repository/tools_r${ANDROID_SDK_REVISION}-linux.zip \
     && unzip tools_r${ANDROID_SDK_REVISION}-linux.zip \
     && rm -f tools_r${ANDROID_SDK_REVISION}-linux.zip
