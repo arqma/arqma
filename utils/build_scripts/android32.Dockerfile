@@ -6,10 +6,10 @@ ARG NPROC=4
 
 WORKDIR /opt/android
 ## INSTALL ANDROID SDK
-ENV ANDROID_SDK_REVISION 28.0.0
-RUN curl -s -O https://dl.google.com/android/repository/platform-tools-${ANDROID_SDK_REVISION}-linux.zip \
-    && unzip platform-tools-${ANDROID_SDK_REVISION}-linux.zip \
-    && rm -f platform-tools-${ANDROID_SDK_REVISION}-linux.zip
+ENV ANDROID_SDK_REVISION 26.1.1
+RUN curl -s -O https://dl.google.com/android/repository/tools_r${ANDROID_SDK_REVISION}-linux.zip \
+    && unzip tools_r${ANDROID_SDK_REVISION}-linux.zip \
+    && rm -f tools_r${ANDROID_SDK_REVISION}-linux.zip
 
 ## INSTALL ANDROID NDK
 ENV ANDROID_NDK_REVISION 17b
@@ -20,7 +20,7 @@ RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_N
     && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
 
 ENV WORKDIR /opt/android
-ENV ANDROID_SDK_ROOT ${WORKDIR}/platform-tools
+ENV ANDROID_SDK_ROOT ${WORKDIR}/tools
 ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
