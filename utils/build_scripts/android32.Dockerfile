@@ -26,7 +26,7 @@ ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
 RUN ${ANDROID_NDK_ROOT}/build/tools/make_standalone_toolchain.py \
          --arch arm \
-         --api 28 \
+         --api 21 \
          --install-dir ${TOOLCHAIN_DIR} \
          --stl=libc++
 
@@ -48,7 +48,8 @@ RUN set -ex \
     && rm -f boost_${BOOST_VERSION}.tar.bz2 \
     && cd boost_${BOOST_VERSION} \
     && ./bootstrap.sh
- ENV HOST_PATH $PATH
+
+ENV HOST_PATH $PATH
 ENV PATH $TOOLCHAIN_DIR/arm-linux-androideabi/bin:$TOOLCHAIN_DIR/bin:$PATH
 
 # Build iconv for lib boost locale
