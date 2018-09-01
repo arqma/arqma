@@ -7,28 +7,19 @@ ARG NPROC=4
 WORKDIR /opt/android
 
 ## INSTALL ANDROID SDK
-#ENV ANDROID_SDK_REVISION 25.2.5
-#RUN curl -s -O https://dl.google.com/android/repository/tools_r${ANDROID_SDK_REVISION}-linux.zip \
-#    && unzip tools_r${ANDROID_SDK_REVISION}-linux.zip \
-#    && rm -f tools_r${ANDROID_SDK_REVISION}-linux.zip
-
-ENV ANDROID_SDK_REVISION 4333796
-ENV ANDROID_SDK_HASH 92ffee5a1d98d856634e8b71132e8a95d96c83a63fde1099be3d86df3106def9
-RUN curl -s -O https://dl.google.com/android/repository/sdk-tools-linux-${ANDROID_SDK_REVISION}.zip \
-    && echo "${ANDROID_SDK_HASH}  sdk-tools-linux-${ANDROID_SDK_REVISION}.zip" | sha256sum -c \
-    && unzip sdk-tools-linux-${ANDROID_SDK_REVISION}.zip \
-    && rm -f sdk-tools-linux-${ANDROID_SDK_REVISION}.zip
+ENV ANDROID_SDK_REVISION 24.4.1
+RUN curl -s -O https://dl.google.com/android/repository/tools_r${ANDROID_SDK_REVISION}-linux.zip \
+    && unzip tools_r${ANDROID_SDK_REVISION}-linux.zip \
+    && rm -f tools_r${ANDROID_SDK_REVISION}-linux.zip
 
 ## INSTALL ANDROID NDK
-ENV ANDROID_NDK_REVISION 17b
-ENV ANDROID_NDK_HASH 5dfbbdc2d3ba859fed90d0e978af87c71a91a5be1f6e1c40ba697503d48ccecd
+ENV ANDROID_NDK_REVISION 16b
 RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
-    && echo "${ANDROID_NDK_HASH}  android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip" | sha256sum -c \
     && unzip android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
     && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
 
 ENV WORKDIR /opt/android
-ENV ANDROID_SDK_ROOT ${WORKDIR}/tools
+ENV ANDROID_SDK_ROOT ${WORKDIR}/android-sdk-linux
 ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
