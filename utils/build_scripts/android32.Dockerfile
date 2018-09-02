@@ -1,27 +1,23 @@
-FROM ubuntu:xenial
+FROM debian:jessie
 
-RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libwayland-dev libwayland-egl1-mesa libwayland-egl1-mesa-lts-xenial
-
-ARG NPROC=4
+RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool
 
 WORKDIR /opt/android
-
 ## INSTALL ANDROID SDK
-RUN curl -s -O https://dl.google.com/android/repository/tools_r25.2.3-linux.zip \
-    && unzip tools_r25.2.3-linux.zip \
-    && rm -f tools_r25.2.3-linux.zip
+RUN curl -s -O http://dl.google.com/android/android-sdk_r24.4.1-linux.tgz \
+    && tar --no-same-owner -xzf android-sdk_r24.4.1-linux.tgz \
+    && rm -f android-sdk_r24.4.1-linux.tgz \
+    && mv android-sdk-linux tools
 
-## INSTALL ANDROID NDK
-ENV ANDROID_NDK_REVISION 17b
-ENV ANDROID_NDK_HASH 5dfbbdc2d3ba859fed90d0e978af87c71a91a5be1f6e1c40ba697503d48ccecd
-RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
-    && echo "${ANDROID_NDK_HASH}  android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip" | sha256sum -c \
-    && unzip android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
-    && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
+    ## INSTALL ANDROID NDK
+    ENV ANDROID_NDK_REVISION 14
+    RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
+        && unzip android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
+        && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
 
-ENV WORKDIR /opt/android
-ENV ANDROID_SDK_ROOT ${WORKDIR}/tools
-ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
+    ENV WORKDIR /opt/android
+    ENV ANDROID_SDK_ROOT ${WORKDIR}/tools
+    ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
 RUN ${ANDROID_NDK_ROOT}/build/tools/make-standalone-toolchain.sh \
