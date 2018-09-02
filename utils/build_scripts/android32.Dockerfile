@@ -1,18 +1,15 @@
-FROM debian:stable
+FROM ubuntu:xenial
 
-RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool
+RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool libwayland-dev libwayland-egl1-mesa libwayland-egl1-mesa-lts-xenial
 
 ARG NPROC=4
 
 WORKDIR /opt/android
 
 ## INSTALL ANDROID SDK
-ENV ANDROID_SDK_REVISION 4333796
-ENV ANDROID_SDK_HASH 92ffee5a1d98d856634e8b71132e8a95d96c83a63fde1099be3d86df3106def9
-RUN curl -s -O https://dl.google.com/android/repository/sdk-tools-linux-${ANDROID_SDK_REVISION}.zip \
-    && echo "${ANDROID_SDK_HASH}  sdk-tools-linux-${ANDROID_SDK_REVISION}.zip" | sha256sum -c \
-    && unzip sdk-tools-linux-${ANDROID_SDK_REVISION}.zip \
-    && rm -f sdk-tools-linux-${ANDROID_SDK_REVISION}.zip
+RUN curl -s -O https://dl.google.com/android/repository/tools_r25.2.3-linux.zip \
+    && unzip tools_r25.2.3-linux.zip \
+    && rm -f tools_r25.2.3-linux.zip
 
 ## INSTALL ANDROID NDK
 ENV ANDROID_NDK_REVISION 17b
