@@ -119,8 +119,8 @@ RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && cd cppzmq \
     && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1
 
-ADD . /src
-RUN cd /src \
+RUN git clone --recursive -b android-build https://github.com/arqma/arqma.git \
+    && cd arqma \
     && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
          OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ \
          CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
