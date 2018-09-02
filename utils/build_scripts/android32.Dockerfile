@@ -7,19 +7,23 @@ ARG NPROC=4
 WORKDIR /opt/android
 
 ## INSTALL ANDROID SDK
-ENV ANDROID_SDK_REVISION 24.4.1
-RUN curl -s -O https://dl.google.com/android/repository/tools_r${ANDROID_SDK_REVISION}-linux.zip \
-    && unzip tools_r${ANDROID_SDK_REVISION}-linux.zip \
-    && rm -f tools_r${ANDROID_SDK_REVISION}-linux.zip
+ENV ANDROID_SDK_REVISION 4333796
+ENV ANDROID_SDK_HASH 92ffee5a1d98d856634e8b71132e8a95d96c83a63fde1099be3d86df3106def9
+RUN curl -s -O https://dl.google.com/android/repository/sdk-tools-linux-${ANDROID_SDK_REVISION}.zip \
+    && echo "${ANDROID_SDK_HASH}  sdk-tools-linux-${ANDROID_SDK_REVISION}.zip" | sha256sum -c \
+    && unzip sdk-tools-linux-${ANDROID_SDK_REVISION}.zip \
+    && rm -f sdk-tools-linux-${ANDROID_SDK_REVISION}.zip
 
 ## INSTALL ANDROID NDK
-ENV ANDROID_NDK_REVISION 16b
+ENV ANDROID_NDK_REVISION 17b
+ENV ANDROID_NDK_HASH 5dfbbdc2d3ba859fed90d0e978af87c71a91a5be1f6e1c40ba697503d48ccecd
 RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
+    && echo "${ANDROID_NDK_HASH}  android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip" | sha256sum -c \
     && unzip android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
     && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
 
 ENV WORKDIR /opt/android
-ENV ANDROID_SDK_ROOT ${WORKDIR}/android-sdk-linux
+ENV ANDROID_SDK_ROOT ${WORKDIR}/tools
 ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
@@ -29,6 +33,7 @@ RUN ${ANDROID_NDK_ROOT}/build/tools/make_standalone_toolchain.py \
          --install-dir ${TOOLCHAIN_DIR} \
          --stl=libc++
 
+#INSTALL cmake
 ENV CMAKE_VERSION 3.12.1
 RUN cd /usr \
     && curl -s -O https://cmake.org/files/v3.12/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz \
@@ -61,7 +66,8 @@ RUN curl -s -O http://ftp.gnu.org/pub/gnu/libiconv/libiconv-${ICONV_VERSION}.tar
     && cd libiconv-${ICONV_VERSION} \
     && CC=arm-linux-androideabi-clang CXX=arm-linux-androideabi-clang++ ./configure --build=x86_64-linux-gnu --host=arm-eabi --prefix=${WORKDIR}/libiconv --disable-rpath \
     && make -j${NPROC} && make install
- ## Build BOOST
+
+## Build BOOST
 RUN cd boost_${BOOST_VERSION} \
     && ./b2 --build-type=minimal link=static runtime-link=static --with-chrono --with-date_time --with-filesystem --with-program_options --with-regex --with-serialization --with-system --with-thread --with-locale --build-dir=android32 --stagedir=android32 toolset=clang threading=multi threadapi=pthread target-os=android -sICONV_PATH=${WORKDIR}/libiconv  stage -j${NPROC}
 
@@ -70,7 +76,7 @@ RUN cd boost_${BOOST_VERSION} \
 # download, configure and make Zlib
 ENV ZLIB_VERSION 1.2.11
 ENV ZLIB_HASH c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1
-RUN curl -s -O http://zlib.net/zlib-${ZLIB_VERSION}.tar.gz \
+RUN curl -s -O https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz \
     && echo "${ZLIB_HASH}  zlib-${ZLIB_VERSION}.tar.gz" | sha256sum -c \
     && tar -xzf zlib-${ZLIB_VERSION}.tar.gz \
     && rm zlib-${ZLIB_VERSION}.tar.gz \
@@ -79,8 +85,10 @@ RUN curl -s -O http://zlib.net/zlib-${ZLIB_VERSION}.tar.gz \
     && make -j${NPROC}
 
 # open ssl
-ENV OPENSSL_VERSION 1.0.2j
+ARG OPENSSL_VERSION=1.0.2p
+ARG OPENSSL_HASH=50a98e07b1a89eb8f6a99477f262df71c6fa7bef77df4dc83025a2845c827d00
 RUN curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
+    && echo "${OPENSSL_HASH}  openssl-${OPENSSL_VERSION}.tar.gz" | sha256sum -c \
     && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
     && rm openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
@@ -90,7 +98,7 @@ RUN curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz 
            no-asm \
            no-shared --static \
            --with-zlib-include=${WORKDIR}/zlib/include --with-zlib-lib=${WORKDIR}/zlib/lib \
-    && make build_crypto build_ssl \
+    && make -j${NPROC} \
     && cd .. && mv openssl-${OPENSSL_VERSION}  openssl
 
 # ZMQ
@@ -111,11 +119,9 @@ RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && cd cppzmq \
     && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1
 
-RUN ln -s /opt/android/openssl/libcrypto.a /opt/android/openssl/libssl.a ${TOOLCHAIN_DIR}/arm-linux-androideabi/lib/armv7-a
-
-RUN git clone --recursive -b android-build https://github.com/arqma/arqma.git \
-         && cd arqma \
-         && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
+ADD . /src
+RUN cd /src \
+    && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
          OPENSSL_ROOT_DIR=${WORKDIR}/openssl/ \
          CMAKE_INCLUDE_PATH="${WORKDIR}/cppzmq:${WORKDIR}/libzmq/prebuilt/include" \
          CMAKE_LIBRARY_PATH=${WORKDIR}/libzmq/prebuilt/lib \
