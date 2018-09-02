@@ -2,28 +2,34 @@ FROM debian:jessie
 
 RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool
 
+ARG NPROC=1
+
 WORKDIR /opt/android
 ## INSTALL ANDROID SDK
-RUN curl -s -O http://dl.google.com/android/android-sdk_r24.4.1-linux.tgz \
-    && tar --no-same-owner -xzf android-sdk_r24.4.1-linux.tgz \
-    && rm -f android-sdk_r24.4.1-linux.tgz \
-    && mv android-sdk-linux tools
+ENV ANDROID_SDK_REVISION 4333796
+ENV ANDROID_SDK_HASH 92ffee5a1d98d856634e8b71132e8a95d96c83a63fde1099be3d86df3106def9
+RUN curl -s -O https://dl.google.com/android/repository/sdk-tools-linux-${ANDROID_SDK_REVISION}.zip \
+    && echo "${ANDROID_SDK_HASH}  sdk-tools-linux-${ANDROID_SDK_REVISION}.zip" | sha256sum -c \
+    && unzip sdk-tools-linux-${ANDROID_SDK_REVISION}.zip \
+    && rm -f sdk-tools-linux-${ANDROID_SDK_REVISION}.zip
 
-    ## INSTALL ANDROID NDK
-    ENV ANDROID_NDK_REVISION 14
-    RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
-        && unzip android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
-        && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
+## INSTALL ANDROID NDK
+ENV ANDROID_NDK_REVISION 17b
+ENV ANDROID_NDK_HASH 5dfbbdc2d3ba859fed90d0e978af87c71a91a5be1f6e1c40ba697503d48ccecd
+RUN curl -s -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
+    && echo "${ANDROID_NDK_HASH}  android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip" | sha256sum -c \
+    && unzip android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip \
+    && rm -f android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip
 
-    ENV WORKDIR /opt/android
-    ENV ANDROID_SDK_ROOT ${WORKDIR}/tools
-    ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
+ENV WORKDIR /opt/android
+ENV ANDROID_SDK_ROOT ${WORKDIR}/tools
+ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
-RUN ${ANDROID_NDK_ROOT}/build/tools/make-standalone-toolchain.sh \
-         --arch=arm \
-         --platform=android-21 \
-         --install-dir=${TOOLCHAIN_DIR} \
+RUN ${ANDROID_NDK_ROOT}/build/tools/make_standalone_toolchain.py \
+         --arch arm \
+         --api 21 \
+         --install-dir ${TOOLCHAIN_DIR} \
          --stl=libc++
 
 #INSTALL cmake
@@ -112,6 +118,7 @@ RUN git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && cd cppzmq \
     && test `git rev-parse HEAD` = ${CPPZMQ_HASH} || exit 1
 
+# Build Arqma
 RUN git clone --recursive -b android-build https://github.com/arqma/arqma.git \
     && cd arqma \
     && BOOST_ROOT=${WORKDIR}/boost_${BOOST_VERSION} BOOST_LIBRARYDIR=${WORKDIR}/boost_${BOOST_VERSION}/android32/lib/ \
