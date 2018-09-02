@@ -27,7 +27,7 @@ ENV ANDROID_SDK_ROOT ${WORKDIR}/tools
 ENV ANDROID_NDK_ROOT ${WORKDIR}/android-ndk-r${ANDROID_NDK_REVISION}
 
 ENV TOOLCHAIN_DIR ${WORKDIR}/toolchain-arm
-RUN ${ANDROID_NDK_ROOT}/build/tools/make_standalone_toolchain.sh \
+RUN ${ANDROID_NDK_ROOT}/build/tools/make-standalone-toolchain.sh \
          --arch=arm \
          --platform=android-21 \
          --install-dir=${TOOLCHAIN_DIR} \
