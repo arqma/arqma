@@ -414,7 +414,18 @@ if(STATIC AND NOT IOS)
   endif()
 endif()
 
-find_package(PCSC)
+if (NOT IOS)
+  find_package(PCSC)
+endif()
+# Final setup for libpcsc
+if (PCSC_FOUND) 
+  message(STATUS "Using PCSC include dir at ${PCSC_INCLUDE_DIR}")
+  add_definitions(-DHAVE_PCSC)
+  include_directories(${PCSC_INCLUDE_DIR})
+  link_directories(${LIBPCSC_LIBRARY_DIRS})
+else (PCSC_FOUND)
+  message(STATUS "Could not find PCSC")
+endif()
 
 add_definition_if_library_exists(c memset_s "string.h" HAVE_MEMSET_S)
 add_definition_if_library_exists(c explicit_bzero "strings.h" HAVE_EXPLICIT_BZERO)
@@ -451,13 +462,6 @@ endif()
 # Final setup for libunwind
 include_directories(${LIBUNWIND_INCLUDE})
 link_directories(${LIBUNWIND_LIBRARY_DIRS})
-
-# Final setup for libpcsc
-if (PCSC_FOUND) 
-  add_definitions(-DHAVE_PCSC)
-  include_directories(${PCSC_INCLUDE_DIR})
-  link_directories(${LIBPCSC_LIBRARY_DIRS})
-endif()
 
 if(MSVC)
   add_definitions("/bigobj /MP /W3 /GS- /D_CRT_SECURE_NO_WARNINGS /wd4996 /wd4345 /D_WIN32_WINNT=0x0600 /DWIN32_LEAN_AND_MEAN /DGTEST_HAS_TR1_TUPLE=0 /FIinline_c.h /D__SSE4_1__")
