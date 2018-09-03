@@ -38,6 +38,7 @@ include(CheckFunctionExists)
 
 if (IOS)
     INCLUDE(CmakeLists_IOS.txt)
+    include_directories("${CMAKE_SOURCE_DIR}/ios-headers")
 endif()
 
 cmake_minimum_required(VERSION 2.8.7)
