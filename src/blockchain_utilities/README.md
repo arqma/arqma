@@ -1,5 +1,6 @@
-# Monero Blockchain Utilities
+# ArQmA Blockchain Utilities
 
+Copyright (c) 2018, The ArQmA Project
 Copyright (c) 2014-2018, The Monero Project
 
 ## Introduction
@@ -12,16 +13,16 @@ See also each utility's "--help" option.
 
 ### Export an existing blockchain database
 
-`$ monero-blockchain-export`
+`$ arqma-blockchain-export`
 
 This loads the existing blockchain and exports it to `$MONERO_DATA_DIR/export/blockchain.raw`
 
 ### Import the exported file
 
-`$ monero-blockchain-import`
+`$ arqma-blockchain-import`
 
 This imports blocks from `$MONERO_DATA_DIR/export/blockchain.raw` (exported using the
-`monero-blockchain-export` tool as described above) into the current database.
+`arqma-blockchain-export` tool as described above) into the current database.
 
 Defaults: `--batch on`, `--batch size 20000`, `--verify on`
 
@@ -80,9 +81,9 @@ LMDB flags (more than one may be specified):
 ## Examples:
 
 ```
-$ monero-blockchain-import --database lmdb#fastest
+$ arqma-blockchain-import --database lmdb#fastest
 
-$ monero-blockchain-import --database lmdb#nosync
+$ arqma-blockchain-import --database lmdb#nosync
 
-$ monero-blockchain-import --database lmdb#nosync,nometasync
+$ arqma-blockchain-import --database lmdb#nosync,nometasync
 ```
