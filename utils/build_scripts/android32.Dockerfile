@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The ArQmA Project
 FROM debian:jessie
 
 RUN apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python libtool
