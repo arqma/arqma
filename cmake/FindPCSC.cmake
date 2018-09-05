@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The ArQmA Project
 # - Find PCSC
 # Find the native PCSC includes and library
 #
