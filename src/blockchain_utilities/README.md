@@ -1,6 +1,7 @@
 # ArQmA Blockchain Utilities
 
 Copyright (c) 2018, The ArQmA Project
+
 Copyright (c) 2014-2018, The Monero Project
 
 ## Introduction
