@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The ArQmA Project
 # Copyright (c) 2014-2018, The Monero Project
 # 
 # All rights reserved.
@@ -27,7 +28,7 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
-
+# Follow the white rabbit Neo.
 # The docs say this only affects grouping in IDEs
 set(folder "tests")
 set(TEST_DATA_DIR "${CMAKE_CURRENT_LIST_DIR}/data")
