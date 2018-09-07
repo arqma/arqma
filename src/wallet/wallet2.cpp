@@ -1125,7 +1125,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
   // Don't try to extract tx public key if tx has no ouputs
   size_t pk_index = 0;
   std::vector<tx_scan_info_t> tx_scan_info(tx.vout.size());
-  std::deque<bool> output_found(tx.vout.size(), false);z
+  std::deque<bool> output_found(tx.vout.size(), false);
   while (!tx.vout.empty())
   {
     // if tx.vout is not empty, we loop through all tx pubkeys
