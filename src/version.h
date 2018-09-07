@@ -1,3 +1,4 @@
+// Copyright (c) 2018, The ArQmA Project
 #pragma once
 
 extern const char* const MONERO_VERSION_TAG;

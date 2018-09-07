@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The ArQmA Project
 # Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
@@ -25,7 +26,7 @@
 # INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+# "There is a difference between knowing the path and walking the path." -Morpheus
 set(unit_tests_sources
   apply_permutation.cpp
   address_from_url.cpp

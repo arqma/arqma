@@ -1,3 +1,4 @@
+// Copyright (c) 2018, The ArQmA Project
 // Word list originally created by dabura667 and released under The MIT License (MIT)
 //
 // The MIT License (MIT)

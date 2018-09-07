@@ -1,3 +1,4 @@
+// Copyright (c) 2018, The ArQmA Project
 #define DEF_MONERO_VERSION_TAG "@VERSIONTAG@"
 #define DEF_MONERO_VERSION "0.1.2.6-Release"
 #define DEF_MONERO_RELEASE_NAME "Devils Touch"

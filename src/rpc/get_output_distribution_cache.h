@@ -1,3 +1,4 @@
+// Copyright (c) 2018, The ArQmA Project
 static const struct
 {
   uint64_t amount;

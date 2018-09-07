@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The ArQmA Project
 # - Try to find readline include dirs and libraries 
 #
 # Usage of this module as follows:

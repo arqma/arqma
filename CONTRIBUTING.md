@@ -1,3 +1,4 @@
+# Contributing to ArQmA
 # Contributing to Monero
 
 A good way to help is to test, and report bugs. See
@@ -53,7 +54,7 @@ the previous paragraph is here.
 # [Code of Conduct (22/C4.1)](http://rfc.zeromq.org/spec:22)
 
 ## License
-
+Copyright (c) 2018, The ArQmA Project
 Copyright (c) 2009-2015 Pieter Hintjens.
 Copyright (c) 2017-2018 The Monero Project.
 
