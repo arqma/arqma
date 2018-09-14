@@ -414,18 +414,7 @@ if(STATIC AND NOT IOS)
   endif()
 endif()
 
-if (NOT IOS)
-  find_package(PCSC)
-endif()
-# Final setup for libpcsc
-if (PCSC_FOUND) 
-  message(STATUS "Using PCSC include dir at ${PCSC_INCLUDE_DIR}")
-  add_definitions(-DHAVE_PCSC)
-  include_directories(${PCSC_INCLUDE_DIR})
-  link_directories(${LIBPCSC_LIBRARY_DIRS})
-else (PCSC_FOUND)
-  message(STATUS "Could not find PCSC")
-endif()
+find_package(PCSC)
 
 add_definition_if_library_exists(c memset_s "string.h" HAVE_MEMSET_S)
 add_definition_if_library_exists(c explicit_bzero "strings.h" HAVE_EXPLICIT_BZERO)
@@ -462,6 +451,16 @@ endif()
 # Final setup for libunwind
 include_directories(${LIBUNWIND_INCLUDE})
 link_directories(${LIBUNWIND_LIBRARY_DIRS})
+
+# Final setup for libpcsc
+if (PCSC_FOUND)
+  message(STATUS "Using PCSC include dir at ${PCSC_INCLUDE_DIR}")
+  add_definitions(-DHAVE_PCSC)
+  include_directories(${PCSC_INCLUDE_DIR})
+  link_directories(${LIBPCSC_LIBRARY_DIRS})
+else (PCSC_FOUND)
+  message(STATUS "Could not find PCSC")
+endif()
 
 if(MSVC)
   add_definitions("/bigobj /MP /W3 /GS- /D_CRT_SECURE_NO_WARNINGS /wd4996 /wd4345 /D_WIN32_WINNT=0x0600 /DWIN32_LEAN_AND_MEAN /DGTEST_HAS_TR1_TUPLE=0 /FIinline_c.h /D__SSE4_1__")
@@ -551,10 +550,12 @@ else()
   add_cxx_flag_if_supported(-Wformat-security CXX_SECURITY_FLAGS)
 
   # -fstack-protector
-  add_c_flag_if_supported(-fstack-protector C_SECURITY_FLAGS)
-  add_cxx_flag_if_supported(-fstack-protector CXX_SECURITY_FLAGS)
-  add_c_flag_if_supported(-fstack-protector-strong C_SECURITY_FLAGS)
-  add_cxx_flag_if_supported(-fstack-protector-strong CXX_SECURITY_FLAGS)
+    if (NOT WIN32)
+      add_c_flag_if_supported(-fstack-protector C_SECURITY_FLAGS)
+      add_cxx_flag_if_supported(-fstack-protector CXX_SECURITY_FLAGS)
+      add_c_flag_if_supported(-fstack-protector-strong C_SECURITY_FLAGS)
+      add_cxx_flag_if_supported(-fstack-protector-strong CXX_SECURITY_FLAGS)
+    endif()
 
   # linker
   if (NOT WIN32)
@@ -699,7 +700,7 @@ else()
   endif(ARM)
 
   if(ANDROID AND NOT BUILD_GUI_DEPS STREQUAL "ON" OR IOS)
-    #From Android 5: "only position independent executables (PIE) are supported" 
+    #From Android 5: "only position independent executables (PIE) are supported"
     message(STATUS "Enabling PIE executable")
     set(PIC_FLAG "-fPIC")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE")
@@ -837,6 +838,7 @@ endif()
 
 if(ANDROID)
   set(ATOMIC libatomic.a)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=user-defined-warnings")
 endif()
 if(CMAKE_C_COMPILER_ID STREQUAL "Clang" AND ARCH_WIDTH EQUAL "32" AND NOT IOS AND NOT FREEBSD)
   find_library(ATOMIC atomic)
