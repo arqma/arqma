@@ -10,6 +10,14 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Mail: [support@arqma.com](mailto:support@arqma.com)
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
 
+## Build status
+
+[![Build Status](https://travis-ci.org/malbit/arqma.svg?branch=master)](https://travis-ci.org/malbit/arqma)
+
+## IMPORTANT
+
+These builds are of the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
+
 
 ## Introduction
 
