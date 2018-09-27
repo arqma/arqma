@@ -1,10 +1,9 @@
-language: cpp
 sudo: required
+dist: xenial
+language: cpp
 
 cache:
   apt: true
-
-os: linux
 
 addons:
   apt:
@@ -27,6 +26,9 @@ matrix:
         packages:
           - build-essential 
           - cmake 
+          - g++
+          - gcc
+          - clang
           - pkg-config 
           - libssl-dev 
           - libzmq3-dev 
@@ -42,12 +44,11 @@ matrix:
           - graphviz 
           - libpcsclite-dev 
           - libpgm-dev
-      sources:
+    sources:
         - ubuntu-toolchain-r-test
-    before_install:
+    install:
       - sudo add-apt-repository -y ppa:mhier/libboost-latest
       - sudo apt-get update
-    install:
       - sudo apt-get -y install libboost1.67-dev
     script:
       - make -j2
@@ -62,6 +63,9 @@ matrix:
         packages:
           - build-essential
           - cmake
+          - g++
+          - gcc
+          - clang
           - pkg-config
           - libssl-dev
           - libzmq3-dev
@@ -79,10 +83,9 @@ matrix:
           - libpgm-dev
       sources:
         - ubuntu-toolchain-r-test
-    before_install:
+    install:
       - sudo add-apt-repository -y ppa:mhier/libboost-latest
       - sudo apt-get update
-    install:
       - sudo apt-get -y install libboost1.67-dev
     script:
       - make -j2
