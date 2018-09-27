@@ -1,6 +1,10 @@
-sudo: required
-dist: stable
 language: cpp
+sudo: required
+
+cache:
+  apt: true
+
+os: linux
 
 addons:
   apt:
