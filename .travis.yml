@@ -46,7 +46,7 @@ install:
 before_script:
     - mkdir -p contrib/depends/SDKs contrib/depends
     - if [[ $HOST = *-mingw32 ]]; then $DOCKER_EXEC bash -c "update-alternatives --set $HOST-g++ \$(which $HOST-g++-posix)"; fi
-    - $DOCKER_EXEC bash -c "CONFIG_SHELL= make $MAKEJOBS -C contrib/depends HOST=$HOST $DEP_OPTS"; fi
+    - $DOCKER_EXEC bash -c "CONFIG_SHELL= make $MAKEJOBS -C contrib/depends HOST=$HOST $DEP_OPTS";
 script:
     - git submodule init && git submodule update
     - export TRAVIS_COMMIT_LOG=`git log --format=fuller -1`
