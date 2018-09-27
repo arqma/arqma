@@ -108,5 +108,5 @@ install:
 
 script:
   - eval "${COMPILERS}"
-  - cd $HOME
+  - cd $TRAVIS_BUILD_DIR
   - make -j "$NUMBER_OF_CPUS"
