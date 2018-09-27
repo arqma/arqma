@@ -17,7 +17,7 @@ env:
     - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
     - PYTHON_DEBUG=1
     - WINEDEBUG=fixme-all
-    - DOCKER_PACKAGES="build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache
+    - DOCKER_PACKAGES="build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache"
   matrix:
 # ARM v7
     - HOST=arm-linux-gnueabihf PACKAGES="gperf g++-arm-linux-gnueabihf"
@@ -47,7 +47,7 @@ script:
     - export TRAVIS_COMMIT_LOG=`git log --format=fuller -1`
     - OUTDIR=$BASE_OUTDIR/$TRAVIS_PULL_REQUEST/$TRAVIS_JOB_NUMBER-$HOST
     - $DOCKER_EXEC ccache --max-size=$CCACHE_SIZE
-    - $DOCKER_EXEC bash -c "CONFIG_SHELL= make $MAKEJOBS -C contrib/depends HOST=$HOST $DEP_OPTS"
+    - $DOCKER_EXEC bash -c "CONFIG_SHELL= make $MAKEJOBS HOST=$HOST $DEP_OPTS"
 after_script:
     - echo $TRAVIS_COMMIT_RANGE
     - echo $TRAVIS_COMMIT_LOG
