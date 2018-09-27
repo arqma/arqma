@@ -1,53 +1,112 @@
+language: cpp
 sudo: required
-dist: trusty
-os: linux
-language: minimal
-cache:
-  directories:
-  - $HOME/.ccache
-env:
-  global:
-    - MAKEJOBS=-j3
-    - RUN_TESTS=false
-    - BOOST_TEST_RANDOM=1$TRAVIS_BUILD_ID
-    - CCACHE_SIZE=100M
-    - CCACHE_TEMPDIR=/tmp/.ccache-temp
-    - CCACHE_COMPRESS=1
-    - CCACHE_DIR=$HOME/.ccache
-    - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
-    - PYTHON_DEBUG=1
-    - WINEDEBUG=fixme-all
-    - DOCKER_PACKAGES="build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache"
-  matrix:
-# ARM v7
-    - HOST=arm-linux-gnueabihf PACKAGES="gperf g++-arm-linux-gnueabihf"
-# ARM v8
-    - HOST=aarch64-linux-gnu PACKAGES="gperf g++-aarch64-linux-gnu"
-# i686 Linux
-    - HOST=i686-pc-linux-gnu PACKAGES="gperf cmake g++-multilib bc python3-zmq"
-# Win64
-    - HOST=x86_64-w64-mingw32 PACKAGES="cmake python3 nsis g++-mingw-w64-x86-64 wine-binfmt wine64 bc"
-# x86_64 Linux
-    - HOST=x86_64-unknown-linux-gnu PACKAGES="gperf cmake python3-zmq protobuf-compiler libdbus-1-dev libharfbuzz-dev libprotobuf-dev"
 
-before_install:
-    - export PATH=$(echo $PATH | tr ':' "\n" | sed '/\/opt\/python/d' | tr "\n" ":" | sed "s|::|:|g")
+cache:
+  apt: true
+
+os: linux
+
+addons:
+  apt:
+    update: true
+    sources:
+      - sourceline: 'ppa:mhier/libboost-latest'
+    packages:
+      - libboost1.67-dev
+
+matrix:
+  include:
+    - name: g++-4.9
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env: 
+        - COMPILERS="CC=gcc-4.9 CXX=g++-4.9"
+
+    - name: g++-5
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+        - COMPILERS="CC=gcc-5 CXX=g++-5"
+
+    - name: g++-6
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+        - COMPILERS="CC=gcc-6 CXX=g++-6"
+        
+    - name: g++-7
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+        - COMPILERS="CC=gcc-7 CXX=g++-7"
+        
+    - name: g++-8
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+      env:
+        - COMPILERS="CC=gcc-8 CXX=g++-8"
+        
+    - name: clang-3.9
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-precise-3.9
+          packages:
+            - clang-3.9
+      env:
+        - COMPILERS="CC=clang-3.9 CXX=clang++-3.9"
+        
+    - name: clang-5.0
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+      env:
+        - COMPILERS="CC=clang-5.0 CXX=clang++-5.0"
+        
 install:
-    - env | grep -E '^(CCACHE_|WINEDEBUG|DISPLAY|BOOST_TEST_RANDOM|CONFIG_SHELL)' | tee /tmp/env
-    - if [[ $HOST = *-mingw32 ]]; then DOCKER_ADMIN="--cap-add SYS_ADMIN"; fi
-    - DOCKER_ID=$(docker run $DOCKER_ADMIN -idt --mount type=bind,src=$TRAVIS_BUILD_DIR,dst=$TRAVIS_BUILD_DIR --mount type=bind,src=$CCACHE_DIR,dst=$CCACHE_DIR -w $TRAVIS_BUILD_DIR --env-file /tmp/env ubuntu:18.04)
-    - DOCKER_EXEC="docker exec $DOCKER_ID"
-    - if [ -n "$DPKG_ADD_ARCH" ]; then $DOCKER_EXEC dpkg --add-architecture "$DPKG_ADD_ARCH" ; fi
-    - travis_retry $DOCKER_EXEC apt-get update
-    - travis_retry $DOCKER_EXEC apt-get install --no-install-recommends --no-upgrade -qq $PACKAGES $DOCKER_PACKAGES
-before_script:
-    - if [[ $HOST = *-mingw32 ]]; then $DOCKER_EXEC bash -c "update-alternatives --set $HOST-g++ \$(which $HOST-g++-posix)"; fi
+  - eval "${COMPILERS}"
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
+      export NUMBER_OF_CPUS="$(grep -c '^processor' /proc/cpuinfo)";
+    elif [ "$TRAVIS_OS_NAME" == "osx" ] ; then
+      export NUMBER_OF_CPUS="$(sysctl -n hw.logicalcpu_max)";
+    fi
+  - if [ $TRAVIS_OS_NAME = linux ] ; then
+      sudo add-apt-repository ppa:ondrej/php -y;
+      sudo add-apt-repository ppa:mhier/libboost-latest -y;
+      sudo apt-get update;
+      sudo apt-get install -y libboost1.67-dev build-essential cmake pkg-config libssl-dev libzmq3-dev libunbound-dev;
+      sudo apt-get install -y --allow-unauthenticated libsodium-dev libminiupnpc-dev libunwind8-dev liblzma-dev libreadline6-dev;
+      sudo apt-get install -y libldns-dev libgtest-dev libunwind8-dev;
+    fi
+  # clang 5.0 ships libunwind in own  lib folder
+  - if [ "$CC" == "clang-5.0" ] ; then
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/clang-5.0.0/lib;
+    fi
+
 script:
-    - git submodule init && git submodule update
-    - export TRAVIS_COMMIT_LOG=`git log --format=fuller -1`
-    - OUTDIR=$BASE_OUTDIR/$TRAVIS_PULL_REQUEST/$TRAVIS_JOB_NUMBER-$HOST
-    - $DOCKER_EXEC ccache --max-size=$CCACHE_SIZE
-    - $DOCKER_EXEC bash -c "CONFIG_SHELL= make $MAKEJOBS HOST=$HOST $DEP_OPTS"
-after_script:
-    - echo $TRAVIS_COMMIT_RANGE
-    - echo $TRAVIS_COMMIT_LOG
+  - eval "${COMPILERS}"
+  - cd $HOME
+  - make -j "$NUMBER_OF_CPUS"
