@@ -133,8 +133,7 @@ RUN set -ex \
     && make  -j${NPROC} \
     && make install
 
-ARG ARQMA_BRANCH=android
-RUN git clone https://github.com/arqma/arqma.git -b ${ARQMA_BRANCH} \
+RUN git clone -b android https://github.com/arqma/arqma.git \
     && cd arqma && git submodule init && git submodule update \
     && CMAKE_INCLUDE_PATH="${PREFIX}/include" \
        CMAKE_LIBRARY_PATH="${PREFIX}/lib" \
