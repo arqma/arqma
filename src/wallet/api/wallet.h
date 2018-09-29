@@ -107,8 +107,8 @@ public:
     bool trustedDaemon() const override;
     uint64_t balance(uint32_t accountIndex = 0) const override;
     uint64_t unlockedBalance(uint32_t accountIndex = 0) const override;
-    uint64_t blockChainHeight() const override override;
-    uint64_t approximateBlockChainHeight() const override override;
+    uint64_t blockChainHeight() const override;
+    uint64_t approximateBlockChainHeight() const override;
     uint64_t daemonBlockChainHeight() const override;
     uint64_t daemonBlockChainTargetHeight() const override;
     bool synchronized() const override;
