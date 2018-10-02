@@ -9,3 +9,5 @@
 [submodule "external/rapidjson"]
 	path = external/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
+[submodule "unbound"]
+	commit = 7f23967954736dcaa366806b9eaba7e2bdfede11
