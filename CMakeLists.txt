@@ -849,18 +849,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Clang" AND ARCH_WIDTH EQUAL "32" AND NOT IOS AN
   list(APPEND EXTRA_LIBRARIES ${ATOMIC})
 endif()
 
-find_path(ZMQ_INCLUDE_PATH zmq.hpp)
-find_library(ZMQ_LIB zmq)
 find_library(PGM_LIBRARY pgm)
 find_library(NORM_LIBRARY norm)
 find_library(SODIUM_LIBRARY sodium)
 
-if(NOT ZMQ_INCLUDE_PATH)
-  message(FATAL_ERROR "Could not find required header zmq.hpp")
-endif()
-if(NOT ZMQ_LIB)
-  message(FATAL_ERROR "Could not find required libzmq")
-endif()
 if(PGM_LIBRARY)
   set(ZMQ_LIB "${ZMQ_LIB};${PGM_LIBRARY}")
 endif()
