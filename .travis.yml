@@ -1,0 +1,112 @@
+language: cpp
+sudo: required
+
+cache:
+  apt: true
+
+os: linux
+
+addons:
+  apt:
+    update: true
+    sources:
+      - sourceline: 'ppa:mhier/libboost-latest'
+    packages:
+      - libboost1.67-dev
+
+matrix:
+  include:
+    - name: g++-4.9
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env: 
+        - COMPILERS="CC=gcc-4.9 CXX=g++-4.9"
+
+    - name: g++-5
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+        - COMPILERS="CC=gcc-5 CXX=g++-5"
+
+    - name: g++-6
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+        - COMPILERS="CC=gcc-6 CXX=g++-6"
+        
+    - name: g++-7
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+        - COMPILERS="CC=gcc-7 CXX=g++-7"
+        
+    - name: g++-8
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+      env:
+        - COMPILERS="CC=gcc-8 CXX=g++-8"
+        
+    - name: clang-3.9
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-precise-3.9
+          packages:
+            - clang-3.9
+      env:
+        - COMPILERS="CC=clang-3.9 CXX=clang++-3.9"
+        
+    - name: clang-5.0
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+      env:
+        - COMPILERS="CC=clang-5.0 CXX=clang++-5.0"
+        
+install:
+  - eval "${COMPILERS}"
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]] ; then
+      export NUMBER_OF_CPUS="$(grep -c '^processor' /proc/cpuinfo)";
+    elif [ "$TRAVIS_OS_NAME" == "osx" ] ; then
+      export NUMBER_OF_CPUS="$(sysctl -n hw.logicalcpu_max)";
+    fi
+  - if [ $TRAVIS_OS_NAME = linux ] ; then
+      sudo add-apt-repository ppa:ondrej/php -y;
+      sudo add-apt-repository ppa:mhier/libboost-latest -y;
+      sudo apt-get update;
+      sudo apt-get install -y libboost1.67-dev build-essential cmake pkg-config libssl-dev libzmq3-dev libunbound-dev;
+      sudo apt-get install -y --allow-unauthenticated libsodium-dev libminiupnpc-dev libunwind8-dev liblzma-dev libreadline6-dev;
+      sudo apt-get install -y libldns-dev libgtest-dev libunwind8-dev;
+    fi
+  # clang 5.0 ships libunwind in own  lib folder
+  - if [ "$CC" == "clang-5.0" ] ; then
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/clang-5.0.0/lib;
+    fi
+
+script:
+  - eval "${COMPILERS}"
+  - cd $TRAVIS_BUILD_DIR
+  - make -j "$NUMBER_OF_CPUS"

@@ -88,6 +88,7 @@ if(IOS)
 else()
     set(lib_folder lib)
 endif()
+  set(WARNINGS "-Wall -Wextra -Wpointer-arith -Wundef -Wvla -Wwrite-strings -Wno-error=extra -Wno-error=deprecated-declarations -Wno-unused-parameter -Wno-unused-variable -Wno-error=unused-variable -Wno-error=undef -Wno-error=uninitialized -Wno-error=inconsistent-missing-override")
 
 install(FILES ${wallet_api_headers}
     DESTINATION include/wallet/api)

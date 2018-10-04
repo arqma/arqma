@@ -1,11 +1,13 @@
 [submodule "external/unbound"]
 	path = external/unbound
-	url = https://github.com/monero-project/unbound
+	url = https://github.com/monero-project/unbound.git
 	branch = monero
 [submodule "external/miniupnp"]
 	path = external/miniupnp
-	url = https://github.com/monero-project/miniupnp
+	url = https://github.com/monero-project/miniupnp.git
 	branch = monero
 [submodule "external/rapidjson"]
 	path = external/rapidjson
-	url = https://github.com/Tencent/rapidjson
+	url = https://github.com/Tencent/rapidjson.git
+[submodule "unbound"]
+	commit = 7f23967954736dcaa366806b9eaba7e2bdfede11
