@@ -395,7 +395,7 @@ Then you can run make as usual.
 ### On Linux for Android (using docker):
 
         # Build image (select android64.Dockerfile for aarch64)
-        cd utils/build_scripts/ && docker build -f android32.Dockerfile -t arqma-android .
+        docker build -f utils/build_scripts/android32.Dockerfile -t arqma-android .
         # Create container
         docker create -it --name arqma-android arqma-android bash
         # Get binaries
