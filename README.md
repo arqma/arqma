@@ -399,7 +399,7 @@ Then you can run make as usual.
         # Create container
         docker create -it --name arqma-android arqma-android bash
         # Get binaries
-        docker cp arqma-android:/opt/android/arqma/build/release/bin .
+        docker cp arqma-android:/src/build/release/bin .
 
 ### Building portable statically linked binaries
 
