@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The ArQmA Project
 # Running all tests
 
 To run all tests, run:

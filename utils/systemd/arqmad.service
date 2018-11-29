@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The ArQmA Project
 [Unit]
 Description=Arqma Full Node
 After=network.target

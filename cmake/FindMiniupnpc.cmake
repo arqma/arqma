@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The ArQmA Project
 # --------------------------------- FindMiniupnpc Start ---------------------------------
 # Locate miniupnp library
 # This module defines

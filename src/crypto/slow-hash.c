@@ -1,3 +1,4 @@
+// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -1025,6 +1026,10 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
     aligned_free(hp_state);
 #endif
 }
+
+#ifdef FORCE_USE_HEAP
+    aligned_free(hp_state);
+#endif
 #else /* aarch64 && crypto */
 
 // ND: Some minor optimizations for ARMv7 (raspberrry pi 2), effect seems to be ~40-50% faster.

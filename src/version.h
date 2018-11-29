@@ -1,3 +1,4 @@
+// Copyright (c) 2018, The ArQmA Project
 #pragma once
 
 extern const char* const ARQMA_VERSION_TAG;

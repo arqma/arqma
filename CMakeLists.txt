@@ -38,6 +38,7 @@ include(CheckFunctionExists)
 
 if (IOS)
     INCLUDE(CmakeLists_IOS.txt)
+    include_directories("${CMAKE_SOURCE_DIR}/ios-headers")
 endif()
 
 cmake_minimum_required(VERSION 2.8.7)
@@ -478,7 +479,7 @@ ExternalProject_Add(generate_translations_header
   STAMP_DIR ${LRELEASE_PATH}
   CMAKE_ARGS -DLRELEASE_PATH=${LRELEASE_PATH}
   INSTALL_COMMAND cmake -E echo "")
-include_directories("${CMAKE_CURRENT_BINARY_DIR}/translations")
+  include_directories("${CMAKE_CURRENT_BINARY_DIR}/translations")
 
 add_subdirectory(external)
 

@@ -1,3 +1,4 @@
+// Copyright (c) 2018, The ArQmA Project
 //#define DBG
 // Copyright (c) 2016, Monero Research Labs
 //
