@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -1944,4 +1943,3 @@ bool t_rpc_command_executor::sync_info()
 }
 
 }// namespace daemonize
-// fix build with GCC 8.1.0

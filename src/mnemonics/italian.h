@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Word list created by Monero contributor Shrikez
 // 
 // Copyright (c) 2014-2018, The Monero Project

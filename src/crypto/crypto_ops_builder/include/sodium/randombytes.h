@@ -1,4 +1,4 @@
-// Copyright (c) 2018, The ArQmA Project
+
 #ifndef randombytes_H
 #define randombytes_H
 

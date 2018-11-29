@@ -1,5 +1,5 @@
-# Copyright (c) 2018, The ArQmA Project
 # Copyright (c) 2014-2018, The Monero Project
+#
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification, are
@@ -115,10 +115,14 @@ add_subdirectory(checkpoints)
 add_subdirectory(cryptonote_basic)
 add_subdirectory(cryptonote_core)
 add_subdirectory(multisig)
-add_subdirectory(blockchain_db)
+if(NOT IOS)
+  add_subdirectory(blockchain_db)
+endif()
 add_subdirectory(mnemonics)
-add_subdirectory(serialization)
-add_subdirectory(rpc)
+if(NOT IOS)
+  add_subdirectory(rpc)
+  add_subdirectory(serialization)
+endif()
 add_subdirectory(wallet)
 if(NOT IOS)
   add_subdirectory(p2p)

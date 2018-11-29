@@ -1,4 +1,3 @@
-# Copyright (c) 2018, The ArQmA Project
 # Multistage docker build, requires docker 17.05
 
 # builder stage

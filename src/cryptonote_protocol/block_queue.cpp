@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.

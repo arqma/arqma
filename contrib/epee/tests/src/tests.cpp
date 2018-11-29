@@ -1,4 +1,4 @@
-// Copyright (c) 2018, The ArQmA Project
+
 #include "include_base_utils.h"
 #include "storages/storage_tests.h"
 #include "misc/test_math.h"

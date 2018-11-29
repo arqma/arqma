@@ -1,4 +1,4 @@
-// Copyright (c) 2018, The ArQmA Project
+
 #ifndef sodium_H
 #define sodium_H
 
