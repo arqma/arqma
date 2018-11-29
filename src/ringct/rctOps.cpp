@@ -35,8 +35,8 @@
 using namespace crypto;
 using namespace std;
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "ringct"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "ringct"
 
 #define CHECK_AND_ASSERT_THROW_MES_L1(expr, message) {if(!(expr)) {MWARNING(message); throw std::runtime_error(message);}}
 
@@ -61,16 +61,26 @@ namespace rct {
 
     //Various key generation functions
 
+    bool toPointCheckOrder(ge_p3 *P, const unsigned char *data)
+    {
+        if (ge_frombytes_vartime(P, data))
+            return false;
+        ge_p2 R;
+        ge_scalarmult(&R, curveOrder().bytes, P);
+        key tmp;
+        ge_tobytes(tmp.bytes, &R);
+        return tmp == identity();
+    }
+
     //generates a random scalar which can be used as a secret key or mask
     void skGen(key &sk) {
-        sk = crypto::rand<key>();
-        sc_reduce32(sk.bytes);
+        random32_unbiased(sk.bytes);
     }
 
     //generates a random scalar which can be used as a secret key or mask
     key skGen() {
-        key sk = crypto::rand<key>();
-        sc_reduce32(sk.bytes);
+        key sk;
+        skGen(sk);
         return sk;
     }
 
@@ -80,9 +90,8 @@ namespace rct {
         CHECK_AND_ASSERT_THROW_MES(rows > 0, "0 keys requested");
         keyV rv(rows);
         size_t i = 0;
-        crypto::rand(rows * sizeof(key), (uint8_t*)&rv[0]);
         for (i = 0 ; i < rows ; i++) {
-            sc_reduce32(rv[i].bytes);
+            skGen(rv[i]);
         }
         return rv;
     }
@@ -123,9 +132,9 @@ namespace rct {
         addKeys(pk.mask, pk.mask, bH);
         return make_tuple(sk, pk);
     }
-    
-    
-    //generates a <secret , public> / Pedersen commitment but takes bH as input 
+
+
+    //generates a <secret , public> / Pedersen commitment but takes bH as input
     tuple<ctkey, ctkey> ctskpkGen(const key &bH) {
         ctkey sk, pk;
         skpkGen(sk.dest, pk.dest);
@@ -133,7 +142,7 @@ namespace rct {
         addKeys(pk.mask, pk.mask, bH);
         return make_tuple(sk, pk);
     }
-    
+
     key zeroCommit(xmr_amount amount) {
         key mask = identity();
         mask = scalarmultBase(mask);
@@ -206,6 +215,13 @@ namespace rct {
         key aP;
         ge_tobytes(aP.bytes, &R);
         return aP;
+    }
+
+
+    //Computes aL where L is the curve order
+    bool isInMainSubgroup(const key & a) {
+        ge_p3 p3;
+        return toPointCheckOrder(&p3, a.bytes);
     }
 
     //Curve addition / subtractions
@@ -307,7 +323,7 @@ namespace rct {
     void cn_fast_hash(key &hash, const void * data, const std::size_t l) {
         keccak((const uint8_t *)data, l, hash.bytes, 32);
     }
-    
+
     void hash_to_scalar(key &hash, const void * data, const std::size_t l) {
         cn_fast_hash(hash, data, l);
         sc_reduce32(hash.bytes);
@@ -317,7 +333,7 @@ namespace rct {
     void cn_fast_hash(key & hash, const key & in) {
         keccak((const uint8_t *)in.bytes, 32, hash.bytes, 32);
     }
-    
+
     void hash_to_scalar(key & hash, const key & in) {
         cn_fast_hash(hash, in);
         sc_reduce32(hash.bytes);
@@ -329,26 +345,26 @@ namespace rct {
         keccak((const uint8_t *)in.bytes, 32, hash.bytes, 32);
         return hash;
     }
-    
+
      key hash_to_scalar(const key & in) {
         key hash = cn_fast_hash(in);
         sc_reduce32(hash.bytes);
         return hash;
      }
-    
+
     //cn_fast_hash for a 128 byte unsigned char
     key cn_fast_hash128(const void * in) {
         key hash;
         keccak((const uint8_t *)in, 128, hash.bytes, 32);
         return hash;
     }
-    
+
     key hash_to_scalar128(const void * in) {
         key hash = cn_fast_hash128(in);
         sc_reduce32(hash.bytes);
         return hash;
     }
-    
+
     //cn_fast_hash for multisig purpose
     //This takes the outputs and commitments
     //and hashes them into a 32 byte sized key
@@ -358,13 +374,13 @@ namespace rct {
         cn_fast_hash(rv, &PC[0], 64*PC.size());
         return rv;
     }
-    
+
     key hash_to_scalar(const ctkeyV &PC) {
         key rv = cn_fast_hash(PC);
         sc_reduce32(rv.bytes);
         return rv;
     }
-    
+
    //cn_fast_hash for a key-vector of arbitrary length
    //this is useful since you take a number of keys
    //put them in the key vector and it concatenates them
@@ -376,7 +392,7 @@ namespace rct {
        //dp(rv);
        return rv;
    }
-   
+
    key hash_to_scalar(const keyV &keys) {
        key rv = cn_fast_hash(keys);
        sc_reduce32(rv.bytes);
@@ -401,24 +417,24 @@ namespace rct {
         ge_p1p1 point2;
         ge_p2 point;
         ge_p3 res;
-        key h = cn_fast_hash(hh); 
+        key h = cn_fast_hash(hh);
         CHECK_AND_ASSERT_THROW_MES_L1(ge_frombytes_vartime(&res, h.bytes) == 0, "ge_frombytes_vartime failed at "+boost::lexical_cast<std::string>(__LINE__));
         ge_p3_to_p2(&point, &res);
         ge_mul8(&point2, &point);
         ge_p1p1_to_p3(&res, &point2);
         ge_p3_tobytes(pointk.bytes, &res);
         return pointk;
-    }    
-    
+    }
+
     key hashToPoint(const key & hh) {
         key pointk;
         ge_p2 point;
         ge_p1p1 point2;
         ge_p3 res;
-        key h = cn_fast_hash(hh); 
+        key h = cn_fast_hash(hh);
         ge_fromfe_frombytes_vartime(&point, h.bytes);
         ge_mul8(&point2, &point);
-        ge_p1p1_to_p3(&res, &point2);        
+        ge_p1p1_to_p3(&res, &point2);
         ge_p3_tobytes(pointk.bytes, &res);
         return pointk;
     }
@@ -427,12 +443,12 @@ namespace rct {
         ge_p2 point;
         ge_p1p1 point2;
         ge_p3 res;
-        key h = cn_fast_hash(hh); 
+        key h = cn_fast_hash(hh);
         ge_fromfe_frombytes_vartime(&point, h.bytes);
         ge_mul8(&point2, &point);
-        ge_p1p1_to_p3(&res, &point2);        
+        ge_p1p1_to_p3(&res, &point2);
         ge_p3_tobytes(pointk.bytes, &res);
-    }    
+    }
 
     //sums a vector of curve points (for scalars use sc_add)
     void sumKeys(key & Csum, const keyV &  Cis) {

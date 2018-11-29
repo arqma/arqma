@@ -51,8 +51,8 @@
 #include "common/stack_trace.h"
 #endif // STACK_TRACE
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "daemon"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
@@ -119,16 +119,16 @@ int main(int argc, char const * argv[])
 
     if (command_line::get_arg(vm, command_line::arg_help))
     {
-      std::cout << "ArQmA '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+      std::cout << "Arqma '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL << ENDL;
       std::cout << "Usage: " + std::string{argv[0]} + " [options|settings] [daemon_command...]" << std::endl << std::endl;
       std::cout << visible_options << std::endl;
       return 0;
     }
 
-    // Monero Version
+    // Arqma Version
     if (command_line::get_arg(vm, command_line::arg_version))
     {
-      std::cout << "ArQmA '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL;
+      std::cout << "Arqma '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL;
       return 0;
     }
 
@@ -163,9 +163,10 @@ int main(int argc, char const * argv[])
 
     const bool testnet = command_line::get_arg(vm, cryptonote::arg_testnet_on);
     const bool stagenet = command_line::get_arg(vm, cryptonote::arg_stagenet_on);
-    if (testnet && stagenet)
+    const bool regtest = command_line::get_arg(vm, cryptonote::arg_regtest_on);
+    if (testnet + stagenet + regtest > 1)
     {
-      std::cerr << "Can't specify more than one of --tesnet and --stagenet" << ENDL;
+      std::cerr << "Can't specify more than one of --tesnet and --stagenet and --regtest" << ENDL;
       return 1;
     }
 
@@ -180,7 +181,7 @@ int main(int argc, char const * argv[])
     }
 
     // data_dir
-    //   default: e.g. ~/.bitmonero/ or ~/.bitmonero/testnet
+    //   default: e.g. ~/.arqma/ or ~/.arqma/testnet
     //   if data-dir argument given:
     //     absolute path
     //     relative path: relative to cwd
@@ -238,11 +239,14 @@ int main(int argc, char const * argv[])
           return 1;
         }
 
+        const char *env_rpc_login = nullptr;
+        const bool has_rpc_arg = command_line::has_arg(vm, arg.rpc_login);
+        const bool use_rpc_env = !has_rpc_arg && (env_rpc_login = getenv("RPC_LOGIN")) != nullptr && strlen(env_rpc_login) > 0;
         boost::optional<tools::login> login{};
-        if (command_line::has_arg(vm, arg.rpc_login))
+        if (has_rpc_arg || use_rpc_env)
         {
           login = tools::login::parse(
-            command_line::get_arg(vm, arg.rpc_login), false, [](bool verify) {
+            has_rpc_arg ? command_line::get_arg(vm, arg.rpc_login) : std::string(env_rpc_login), false, [](bool verify) {
 #ifdef HAVE_READLINE
         rdln::suspend_readline pause_readline;
 #endif
@@ -280,7 +284,7 @@ int main(int argc, char const * argv[])
       tools::set_max_concurrency(command_line::get_arg(vm, daemon_args::arg_max_concurrency));
 
     // logging is now set up
-    MGINFO("ArQmA '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")");
+    MGINFO("ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")");
 
     MINFO("Moving from main() into the daemonize now.");
 

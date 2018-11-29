@@ -1,22 +1,22 @@
 // Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2017-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -51,9 +51,9 @@ namespace rpc
 
   void DaemonHandler::handle(const GetBlocksFast::Request& req, GetBlocksFast::Response& res)
   {
-    std::list<std::pair<blobdata, std::list<blobdata> > > blocks;
+    std::vector<std::pair<std::pair<blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, blobdata> > > > blocks;
 
-    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
+    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
     {
       res.status = Message::STATUS_FAILED;
       res.error_details = "core::find_blockchain_supplement() returned false";
@@ -63,9 +63,6 @@ namespace rpc
     res.blocks.resize(blocks.size());
     res.output_indices.resize(blocks.size());
 
-    //TODO: really need to switch uses of std::list to std::vector unless
-    //      it's a huge performance concern
-
     auto it = blocks.begin();
 
     uint64_t block_count = 0;
@@ -73,7 +70,7 @@ namespace rpc
     {
       cryptonote::rpc::block_with_transactions& bwt = res.blocks[block_count];
 
-      if (!parse_and_validate_block_from_blob(it->first, bwt.block))
+      if (!parse_and_validate_block_from_blob(it->first.first, bwt.block))
       {
         res.blocks.clear();
         res.output_indices.clear();
@@ -90,11 +87,27 @@ namespace rpc
           res.error_details = "incorrect number of transactions retrieved for block";
           return;
       }
-      std::list<transaction> txs;
+
+      cryptonote::rpc::block_output_indices& indices = res.output_indices[block_count];
+
+      // miner tx output indices
+      {
+        cryptonote::rpc::tx_output_indices tx_indices;
+        if (!m_core.get_tx_outputs_gindexs(get_transaction_hash(bwt.block.miner_tx), tx_indices))
+        {
+          res.status = Message::STATUS_FAILED;
+          res.error_details = "core::get_tx_outputs_gindexs() returned false";
+          return;
+        }
+        indices.push_back(std::move(tx_indices));
+      }
+
+      auto hash_it = bwt.block.tx_hashes.begin();
+      bwt.transactions.reserve(it->second.size());
       for (const auto& blob : it->second)
       {
-        txs.resize(txs.size() + 1);
-        if (!parse_and_validate_tx_from_blob(blob, txs.back()))
+        bwt.transactions.emplace_back();
+        if (!parse_and_validate_tx_from_blob(blob.second, bwt.transactions.back()))
         {
           res.blocks.clear();
           res.output_indices.clear();
@@ -102,41 +115,17 @@ namespace rpc
           res.error_details = "failed retrieving a requested transaction";
           return;
         }
-      }
-
-      cryptonote::rpc::block_output_indices& indices = res.output_indices[block_count];
-
-      // miner tx output indices
-      {
-        cryptonote::rpc::tx_output_indices tx_indices;
-        bool r = m_core.get_tx_outputs_gindexs(get_transaction_hash(bwt.block.miner_tx), tx_indices);
-        if (!r)
-        {
-          res.status = Message::STATUS_FAILED;
-          res.error_details = "core::get_tx_outputs_gindexs() returned false";
-          return;
-        }
-        indices.push_back(tx_indices);
-      }
-
-      // assume each block returned is returned with all its transactions
-      // in the correct order.
-      auto tx_it = txs.begin();
-      for (const crypto::hash& h : bwt.block.tx_hashes)
-      {
-        bwt.transactions.emplace(h, *tx_it);
-        tx_it++;
 
         cryptonote::rpc::tx_output_indices tx_indices;
-        bool r = m_core.get_tx_outputs_gindexs(h, tx_indices);
-        if (!r)
+        if (!m_core.get_tx_outputs_gindexs(*hash_it, tx_indices))
         {
           res.status = Message::STATUS_FAILED;
           res.error_details = "core::get_tx_outputs_gindexs() returned false";
           return;
         }
 
-        indices.push_back(tx_indices);
+        indices.push_back(std::move(tx_indices));
+        ++hash_it;
       }
 
       it++;
@@ -164,10 +153,10 @@ namespace rpc
 
   void DaemonHandler::handle(const GetTransactions::Request& req, GetTransactions::Response& res)
   {
-    std::list<cryptonote::transaction> found_txs;
-    std::list<crypto::hash> missed_hashes;
+    std::vector<cryptonote::transaction> found_txs_vec;
+    std::vector<crypto::hash> missed_vec;
 
-    bool r = m_core.get_transactions(req.tx_hashes, found_txs, missed_hashes);
+    bool r = m_core.get_transactions(req.tx_hashes, found_txs_vec, missed_vec);
 
     // TODO: consider fixing core::get_transactions to not hide exceptions
     if (!r)
@@ -177,20 +166,7 @@ namespace rpc
       return;
     }
 
-    size_t num_found = found_txs.size();
-
-    // std::list is annoying
-    std::vector<cryptonote::transaction> found_txs_vec
-    {
-      std::make_move_iterator(std::begin(found_txs)),
-      std::make_move_iterator(std::end(found_txs))
-    };
-
-    std::vector<crypto::hash> missed_vec
-    {
-      std::make_move_iterator(std::begin(missed_hashes)),
-      std::make_move_iterator(std::end(missed_hashes))
-    };
+    size_t num_found = found_txs_vec.size();
 
     std::vector<uint64_t> heights(num_found);
     std::vector<bool> in_pool(num_found, false);
@@ -205,7 +181,7 @@ namespace rpc
     // if any missing from blockchain, check in tx pool
     if (!missed_vec.empty())
     {
-      std::list<cryptonote::transaction> pool_txs;
+      std::vector<cryptonote::transaction> pool_txs;
 
       m_core.get_pool_transactions(pool_txs);
 
@@ -235,7 +211,7 @@ namespace rpc
 
       res.txs.emplace(found_hashes[i], std::move(info));
     }
-                                      
+
     res.missed_hashes = std::move(missed_vec);
     res.status = Message::STATUS_OK;
   }
@@ -283,44 +259,6 @@ namespace rpc
 
     res.status = Message::STATUS_OK;
 
-  }
-
-  //TODO: handle "restricted" RPC
-  void DaemonHandler::handle(const GetRandomOutputsForAmounts::Request& req, GetRandomOutputsForAmounts::Response& res)
-  {
-    auto& chain = m_core.get_blockchain_storage();
-
-    try
-    {
-      for (const uint64_t& amount : req.amounts)
-      {
-        std::vector<uint64_t> indices = chain.get_random_outputs(amount, req.count);
-
-        outputs_for_amount ofa;
-
-        ofa.resize(indices.size());
-
-        for (size_t i = 0; i < indices.size(); i++)
-        {
-          crypto::public_key key = chain.get_output_key(amount, indices[i]);
-          ofa[i].amount_index = indices[i];
-          ofa[i].key = key;
-        }
-
-        amount_with_random_outputs amt;
-        amt.amount = amount;
-        amt.outputs = ofa;
-
-        res.amounts_with_outputs.push_back(amt);
-      }
-
-      res.status = Message::STATUS_OK;
-    }
-    catch (const std::exception& e)
-    {
-      res.status = Message::STATUS_FAILED;
-      res.error_details = e.what();
-    }
   }
 
   void DaemonHandler::handle(const SendRawTx::Request& req, SendRawTx::Response& res)
@@ -523,7 +461,7 @@ namespace rpc
     const cryptonote::miner& lMiner = m_core.get_miner();
     res.active = lMiner.is_mining();
     res.is_background_mining_enabled = lMiner.get_is_background_mining_enabled();
-    
+
     if ( lMiner.is_mining() ) {
       res.speed = lMiner.get_speed();
       res.threads_count = lMiner.get_threads_count();
@@ -848,7 +786,6 @@ namespace rpc
       REQ_RESP_TYPES_MACRO(request_type, GetTransactions, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, KeyImagesSpent, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, GetTxGlobalOutputIndices, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetRandomOutputsForAmounts, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, SendRawTx, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, GetInfo, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, StartMining, req_json, resp_message, handle);

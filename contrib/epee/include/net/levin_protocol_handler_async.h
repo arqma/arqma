@@ -1,6 +1,6 @@
 // Copyright (c) 2006-2013, Andrey N. Sabelnikov, www.sabelnikov.net
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 // * Neither the name of the Andrey N. Sabelnikov nor the
 // names of its contributors may be used to endorse or promote products
 // derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -22,7 +22,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 
 #pragma once
 #include <boost/asio/deadline_timer.hpp>
@@ -41,8 +41,8 @@
 #include <random>
 #include <chrono>
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "net"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
 #ifndef MIN_BYTES_WANTED
 #define MIN_BYTES_WANTED	512
@@ -81,7 +81,7 @@ class async_protocol_handler_config
 
 public:
   typedef t_connection_context connection_context;
-  uint64_t m_max_packet_size; 
+  uint64_t m_max_packet_size;
   uint64_t m_invoke_timeout;
 
   int invoke(int command, const std::string& in_buff, std::string& buff_out, boost::uuids::uuid connection_id);
@@ -99,7 +99,7 @@ public:
   size_t get_connections_count();
   void set_handler(levin_commands_handler<t_connection_context>* handler, void (*destroy)(levin_commands_handler<t_connection_context>*) = NULL);
 
-  async_protocol_handler_config():m_pcommands_handler(NULL), m_pcommands_handler_destroy(NULL), m_max_packet_size(LEVIN_DEFAULT_MAX_PACKET_SIZE)
+  async_protocol_handler_config():m_pcommands_handler(NULL), m_pcommands_handler_destroy(NULL), m_max_packet_size(LEVIN_DEFAULT_MAX_PACKET_SIZE), m_invoke_timeout(LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED)
   {}
   ~async_protocol_handler_config() { set_handler(NULL, NULL); }
   void del_out_connections(size_t count);
@@ -138,7 +138,7 @@ public:
   volatile uint32_t m_wait_count;
   volatile uint32_t m_close_called;
   bucket_head2 m_current_head;
-  net_utils::i_service_endpoint* m_pservice_endpoint; 
+  net_utils::i_service_endpoint* m_pservice_endpoint;
   config_type& m_config;
   t_connection_context& m_connection_context;
 
@@ -246,7 +246,7 @@ public:
   };
   critical_section m_invoke_response_handlers_lock;
   std::list<boost::shared_ptr<invoke_response_handler_base> > m_invoke_response_handlers;
-  
+
   template<class callback_t>
   bool add_invoke_response_handler(const callback_t &cb, uint64_t timeout,  async_protocol_handler& con, int command)
   {
@@ -257,13 +257,13 @@ public:
   }
   template<class callback_t> friend struct anvoke_handler;
 public:
-  async_protocol_handler(net_utils::i_service_endpoint* psnd_hndlr, 
-    config_type& config, 
+  async_protocol_handler(net_utils::i_service_endpoint* psnd_hndlr,
+    config_type& config,
     t_connection_context& conn_context):
             m_current_head(bucket_head2()),
-            m_pservice_endpoint(psnd_hndlr), 
-            m_config(config), 
-            m_connection_context(conn_context), 
+            m_pservice_endpoint(psnd_hndlr),
+            m_config(config),
+            m_connection_context(conn_context),
             m_state(stream_state_head)
   {
     m_close_called = 0;
@@ -272,9 +272,14 @@ public:
     m_wait_count = 0;
     m_oponent_protocol_ver = 0;
     m_connection_initialized = false;
+    m_invoke_buf_ready = 0;
+    m_invoke_result_code = LEVIN_ERROR_CONNECTION;
   }
   virtual ~async_protocol_handler()
   {
+    try
+    {
+
     m_deletion_initiated = true;
     if(m_connection_initialized)
     {
@@ -288,6 +293,9 @@ public:
     CHECK_AND_ASSERT_MES_NO_RET(0 == boost::interprocess::ipcdetail::atomic_read32(&m_wait_count), "Failed to wait for operation completion. m_wait_count = " << m_wait_count);
 
     MTRACE(m_connection_context << "~async_protocol_handler()");
+
+    }
+    catch (...) { /* ignore */ }
   }
 
   bool start_outer_call()
@@ -325,9 +333,9 @@ public:
 
     return true;
   }
-  
+
   bool close()
-  {    
+  {
     boost::interprocess::ipcdetail::atomic_inc32(&m_close_called);
 
     m_pservice_endpoint->close();
@@ -347,7 +355,7 @@ public:
     m_pservice_endpoint->request_callback();
   }
 
-  void handle_qued_callback()   
+  void handle_qued_callback()
   {
     m_config.m_pcommands_handler->callback(m_connection_context);
   }
@@ -366,7 +374,7 @@ public:
     if(m_cache_in_buffer.size() +  cb > m_config.m_max_packet_size)
     {
       MWARNING(m_connection_context << "Maximum packet size exceed!, m_max_packet_size = " << m_config.m_max_packet_size
-                          << ", packet received " << m_cache_in_buffer.size() +  cb 
+                          << ", packet received " << m_cache_in_buffer.size() +  cb
                           << ", connection will be closed.");
       return false;
     }
@@ -408,13 +416,13 @@ public:
           bool is_response = (m_oponent_protocol_ver == LEVIN_PROTOCOL_VER_1 && m_current_head.m_flags&LEVIN_PACKET_RESPONSE);
 
           MDEBUG(m_connection_context << "LEVIN_PACKET_RECIEVED. [len=" << m_current_head.m_cb
-            << ", flags" << m_current_head.m_flags 
-            << ", r?=" << m_current_head.m_have_to_return_data 
-            <<", cmd = " << m_current_head.m_command 
+            << ", flags" << m_current_head.m_flags
+            << ", r?=" << m_current_head.m_have_to_return_data
+            <<", cmd = " << m_current_head.m_command
             << ", v=" << m_current_head.m_protocol_version);
 
           if(is_response)
-          {//response to some invoke 
+          {//response to some invoke
 
             epee::critical_region_t<decltype(m_invoke_response_handlers_lock)> invoke_response_handlers_guard(m_invoke_response_handlers_lock);
             if(!m_invoke_response_handlers.empty())
@@ -453,9 +461,9 @@ public:
             {
               std::string return_buff;
               m_current_head.m_return_code = m_config.m_pcommands_handler->invoke(
-                                                                  m_current_head.m_command, 
-                                                                  buff_to_invoke, 
-                                                                  return_buff, 
+                                                                  m_current_head.m_command,
+                                                                  buff_to_invoke,
+                                                                  return_buff,
                                                                   m_connection_context);
               m_current_head.m_cb = return_buff.size();
               m_current_head.m_have_to_return_data = false;
@@ -468,9 +476,9 @@ public:
                 return false;
               CRITICAL_REGION_END();
               MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len=" << m_current_head.m_cb
-                << ", flags" << m_current_head.m_flags 
-                << ", r?=" << m_current_head.m_have_to_return_data 
-                <<", cmd = " << m_current_head.m_command 
+                << ", flags" << m_current_head.m_flags
+                << ", r?=" << m_current_head.m_have_to_return_data
+                <<", cmd = " << m_current_head.m_command
                 << ", ver=" << m_current_head.m_protocol_version);
             }
             else
@@ -505,8 +513,8 @@ public:
           m_oponent_protocol_ver = m_current_head.m_protocol_version;
           if(m_current_head.m_cb > m_config.m_max_packet_size)
           {
-            LOG_ERROR_CC(m_connection_context, "Maximum packet size exceed!, m_max_packet_size = " << m_config.m_max_packet_size 
-              << ", packet header received " << m_current_head.m_cb 
+            LOG_ERROR_CC(m_connection_context, "Maximum packet size exceed!, m_max_packet_size = " << m_config.m_max_packet_size
+              << ", packet header received " << m_current_head.m_cb
               << ", connection will be closed.");
             return false;
           }
@@ -640,9 +648,9 @@ public:
     CRITICAL_REGION_END();
 
     MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len=" << head.m_cb
-                            << ", f=" << head.m_flags 
-                            << ", r?=" << head.m_have_to_return_data 
-                            << ", cmd = " << head.m_command 
+                            << ", f=" << head.m_flags
+                            << ", r?=" << head.m_have_to_return_data
+                            << ", cmd = " << head.m_command
                             << ", ver=" << head.m_protocol_version);
 
     uint64_t ticks_start = misc_utils::get_tick_count();
@@ -711,9 +719,9 @@ public:
     }
     CRITICAL_REGION_END();
     LOG_DEBUG_CC(m_connection_context, "LEVIN_PACKET_SENT. [len=" << head.m_cb <<
-      ", f=" << head.m_flags << 
+      ", f=" << head.m_flags <<
       ", r?=" << head.m_have_to_return_data <<
-      ", cmd = " << head.m_command << 
+      ", cmd = " << head.m_command <<
       ", ver=" << head.m_protocol_version);
 
     return 1;

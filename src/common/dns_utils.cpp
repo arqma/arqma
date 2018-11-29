@@ -41,17 +41,17 @@
 using namespace epee;
 namespace bf = boost::filesystem;
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "net.dns"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "net.dns"
 
 static const char *DEFAULT_DNS_PUBLIC_ADDR[] =
 {
   "1.1.1.1",    				// Cloudflare
-  "8.8.8.8",         			// Google
-  "64.6.64.6",      		 // Verisign
-  "209.244.0.3",      		 // Level3
-  "8.26.56.26",   			// Comodo
-  "77.88.8.8",				// Yandex
+  "8.8.8.8",         		// Google
+  "64.6.64.6",      	  // Verisign
+  "209.244.0.3",        // Level3
+  "8.26.56.26",   		  // Comodo
+  "77.88.8.8",				  // Yandex
 };
 
 static boost::mutex instance_lock;
@@ -356,7 +356,7 @@ namespace dns_utils
 // TODO: parse the string in a less stupid way, probably with regex
 std::string address_from_txt_record(const std::string& s)
 {
-  // make sure the txt record has "oa1:xmr" and find it
+  // make sure the txt record has "oa1:arq" and find it
   auto pos = s.find("oa1:arq");
   if (pos == std::string::npos)
     return {};
@@ -369,12 +369,12 @@ std::string address_from_txt_record(const std::string& s)
   auto pos2 = s.find(";", pos);
   if (pos2 != std::string::npos)
   {
-    // length of address == 95, we can at least validate that much here
+    // length of address == 97, we can at least validate that much here
     if (pos2 - pos == 97)
     {
       return s.substr(pos, 97);
     }
-    else if (pos2 - pos == 109) // length of address == 106 --> integrated address
+    else if (pos2 - pos == 109) // length of address == 109 --> integrated address
     {
       return s.substr(pos, 109);
     }

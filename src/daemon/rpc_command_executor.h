@@ -7,23 +7,23 @@
 */
 // Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -45,8 +45,8 @@
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "rpc/core_rpc_server.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "daemon"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace daemonize {
 
@@ -126,9 +126,9 @@ public:
   bool in_peers(uint64_t limit);
 
   bool start_save_graph();
-  
+
   bool stop_save_graph();
-  
+
   bool hard_fork_info(uint8_t version);
 
   bool print_bans();
@@ -143,7 +143,7 @@ public:
 
   bool print_coinbase_tx_sum(uint64_t height, uint64_t count);
 
-  bool alt_chain_info();
+  bool alt_chain_info(const std::string &tip);
 
   bool print_blockchain_dynamic_stats(uint64_t nblocks);
 

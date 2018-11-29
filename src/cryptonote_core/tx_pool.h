@@ -238,7 +238,7 @@ namespace cryptonote
      * @param include_unrelayed_txes include unrelayed txes in the result
      *
      */
-    void get_transactions(std::list<transaction>& txs, bool include_unrelayed_txes = true) const;
+    void get_transactions(std::vector<transaction>& txs, bool include_unrelayed_txes = true) const;
 
     /**
      * @brief get a list of all transaction hashes in the pool
@@ -325,14 +325,14 @@ namespace cryptonote
      *
      * @return true
      */
-    bool get_relayable_transactions(std::list<std::pair<crypto::hash, cryptonote::blobdata>>& txs) const;
+    bool get_relayable_transactions(std::vector<std::pair<crypto::hash, cryptonote::blobdata>>& txs) const;
 
     /**
      * @brief tell the pool that certain transactions were just relayed
      *
      * @param txs the list of transactions (and their hashes)
      */
-    void set_relayed(const std::list<std::pair<crypto::hash, cryptonote::blobdata>>& txs);
+    void set_relayed(const std::vector<std::pair<crypto::hash, cryptonote::blobdata>>& txs);
 
     /**
      * @brief get the total number of transactions in the pool
@@ -362,6 +362,14 @@ namespace cryptonote
      * @return the number of transactions removed
      */
     size_t validate(uint8_t version);
+
+    /**
+      * @brief return the cookie
+      *
+      * @return the cookie
+      */
+    uint64_t cookie() const { return m_cookie; }
+
 
     /**
      * @brief get the cumulative txpool size in bytes
@@ -395,14 +403,14 @@ namespace cryptonote
       /*! if the transaction was returned to the pool from the blockchain
        *  due to a reorg, then this will be true
        */
-      bool kept_by_block;  
+      bool kept_by_block;
 
       //! the highest block the transaction referenced when last checking it failed
       /*! if verifying a transaction's inputs fails, it's possible this is due
        *  to a reorg since it was created (if it used recently created outputs
        *  as inputs).
        */
-      uint64_t last_failed_height;  
+      uint64_t last_failed_height;
 
       //! the hash of the highest block the transaction referenced when last checking it failed
       /*! if verifying a transaction's inputs fails, it's possible this is due
@@ -427,7 +435,7 @@ namespace cryptonote
      *
      * @return true on success, false on error
      */
-    bool insert_key_images(const transaction &tx, bool kept_by_block);
+    bool insert_key_images(const transaction_prefix &tx, const crypto::hash &txid, bool kept_by_block);
 
     /**
      * @brief remove old transactions from the pool
@@ -471,10 +479,11 @@ namespace cryptonote
      * a transaction from the pool.
      *
      * @param tx the transaction
+     * @param txid the transaction's hash
      *
      * @return false if any key images to be removed cannot be found, otherwise true
      */
-    bool remove_transaction_keyimages(const transaction& tx);
+    bool remove_transaction_keyimages(const transaction_prefix& tx, const crypto::hash &txid);
 
     /**
      * @brief check if any of a transaction's spent key images are present in a given set
@@ -484,7 +493,7 @@ namespace cryptonote
      *
      * @return true if any key images present in the set, otherwise false
      */
-    static bool have_key_images(const std::unordered_set<crypto::key_image>& kic, const transaction& tx);
+    static bool have_key_images(const std::unordered_set<crypto::key_image>& kic, const transaction_prefix& tx);
 
     /**
      * @brief append the key images from a transaction to the given set
@@ -494,16 +503,19 @@ namespace cryptonote
      *
      * @return false if any append fails, otherwise true
      */
-    static bool append_key_images(std::unordered_set<crypto::key_image>& kic, const transaction& tx);
+    static bool append_key_images(std::unordered_set<crypto::key_image>& kic, const transaction_prefix& tx);
 
     /**
      * @brief check if a transaction is a valid candidate for inclusion in a block
      *
      * @param txd the transaction to check (and info about it)
+     * @param txid the txid of the transaction to check
+     * @param txblob the transaction blob to check
+     * @param tx the parsed transaction, if successful
      *
      * @return true if the transaction is good to go, otherwise false
      */
-    bool is_transaction_ready_to_go(txpool_tx_meta_t& txd, transaction &tx) const;
+    bool is_transaction_ready_to_go(txpool_tx_meta_t& txd, const crypto::hash &txid, const cryptonote::blobdata &txblob, transaction&tx) const;
 
     /**
      * @brief mark all transactions double spending the one passed
@@ -537,7 +549,7 @@ private:
 #endif
 
     //! container for spent key images from the transactions in the pool
-    key_images_container m_spent_key_images;  
+    key_images_container m_spent_key_images;
 
     //TODO: this time should be a named constant somewhere, not hard-coded
     //! interval on which to check for stale/"stuck" transactions
@@ -547,6 +559,8 @@ private:
     //!< container for transactions organized by fee per size and receive time
     sorted_tx_container m_txs_by_fee_and_receive_time;
 
+    std::atomic<uint64_t> m_cookie; //!< incremented at each change
+
     /**
      * @brief get an iterator to a transaction in the sorted container
      *
@@ -555,6 +569,9 @@ private:
      * @return an iterator, possibly to the end of the container if not found
      */
     sorted_tx_container::iterator find_tx_in_sorted_container(const crypto::hash& id) const;
+
+    //! cache/call Blockchain::check_tx_inputs results
+    bool check_tx_inputs(const std::function<cryptonote::transaction&(void)> &get_tx, const crypto::hash &txid, uint64_t &max_used_block_height, crypto::hash &max_used_block_id, tx_verification_context &tvc, bool kept_by_block = false) const;
 
     //! transactions which are unlikely to be included in blocks
     /*! These transactions are kept in RAM in case they *are* included
@@ -566,6 +583,8 @@ private:
 
     size_t m_txpool_max_size;
     size_t m_txpool_size;
+
+    mutable std::unordered_map<crypto::hash, std::tuple<bool, tx_verification_context, uint64_t, crypto::hash>> m_input_cache;
   };
 }
 
@@ -597,6 +616,3 @@ namespace boost
 }
 BOOST_CLASS_VERSION(cryptonote::tx_memory_pool, CURRENT_MEMPOOL_ARCHIVE_VER)
 BOOST_CLASS_VERSION(cryptonote::tx_memory_pool::tx_details, CURRENT_MEMPOOL_TX_DETAILS_ARCHIVE_VER)
-
-
-

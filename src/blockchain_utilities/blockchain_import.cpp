@@ -34,6 +34,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <unistd.h>
 #include "misc_log_ex.h"
 #include "bootstrap_file.h"
 #include "bootstrap_serialization.h"
@@ -44,8 +45,8 @@
 #include "blockchain_db/db_types.h"
 #include "cryptonote_core/cryptonote_core.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "bcutil"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "bcutil"
 
 namespace
 {
@@ -165,7 +166,7 @@ int pop_blocks(cryptonote::core& core, int num_blocks)
   return num_blocks;
 }
 
-int check_flush(cryptonote::core &core, std::list<block_complete_entry> &blocks, bool force)
+int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &blocks, bool force)
 {
   if (blocks.empty())
     return 0;
@@ -177,7 +178,7 @@ int check_flush(cryptonote::core &core, std::list<block_complete_entry> &blocks,
   if (!force && new_height % HASH_OF_HASHES_STEP)
     return 0;
 
-  std::list<crypto::hash> hashes;
+  std::vector<crypto::hash> hashes;
   for (const auto &b: blocks)
   {
     cryptonote::block block;
@@ -313,7 +314,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
   MINFO("Reading blockchain from bootstrap file...");
   std::cout << ENDL;
 
-  std::list<block_complete_entry> blocks;
+  std::vector<block_complete_entry> blocks;
 
   // Skip to start_height before we start adding.
   {
@@ -395,7 +396,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
     {
       std::cout << refresh_string << "block " << h-1
         << " / " << block_stop
-        << std::flush;
+        << "\r" << std::flush;
       std::cout << ENDL << ENDL;
       MINFO("Specified block number reached - stopping.  block: " << h-1 << "  total blocks: " << h);
       quit = 1;
@@ -431,14 +432,14 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
         {
           std::cout << refresh_string << "block " << h-1
             << " / " << block_stop
-            << std::flush;
+            << "\r" << std::flush;
         }
 
         if (opt_verify)
         {
           cryptonote::blobdata block;
           cryptonote::block_to_blob(bp.block, block);
-          std::list<cryptonote::blobdata> txs;
+          std::vector<cryptonote::blobdata> txs;
           for (const auto &tx: bp.txs)
           {
             txs.push_back(cryptonote::blobdata());
@@ -642,7 +643,7 @@ int main(int argc, char* argv[])
 
   if (command_line::get_arg(vm, command_line::arg_help))
   {
-    std::cout << "ArQmA '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+    std::cout << "ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL << ENDL;
     std::cout << desc_options << std::endl;
     return 1;
   }

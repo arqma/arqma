@@ -40,25 +40,25 @@
 #include "hash-ops.h"
 #include "oaes_lib.h"
 
-#define MEMORY         (1 << 20) // 2MB scratchpad
-#define ITER           0x40000
-#define MASK 			0xFFFF0
+#define MEMORY 		     (1 << 20) // 1MB scratchpad
+#define ITER         		0x40000
+#define MASK		        0xFFFF0
 #define AES_BLOCK_SIZE  16
 #define AES_KEY_SIZE    32
 #define INIT_SIZE_BLK   8
 #define INIT_SIZE_BYTE (INIT_SIZE_BLK * AES_BLOCK_SIZE)
 
-extern int aesb_single_round(const uint8_t *in, uint8_t*out, const uint8_t *expandedKey);
-extern int aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
+extern void aesb_single_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
+extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 
 #define VARIANT1_1(p) \
-  do if (variant > 0) \
-  { \
-    const uint8_t tmp = ((const uint8_t*)(p))[11]; \
-    static const uint32_t table = 0x75310; \
-    const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1; \
-    ((uint8_t*)(p))[11] = tmp ^ ((table >> index) & 0x30); \
-  } while(0)
+do if (variant > 0) \
+{ \
+  const uint8_t tmp = ((const uint8_t*)(p))[11]; \
+  static const uint32_t table = 0x75310; \
+  const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1; \
+  ((uint8_t*)(p))[11] = tmp ^ ((table >> index) & 0x30); \
+} while(0)
 
 #define VARIANT1_2(p) \
   do if (variant > 0) \
@@ -907,6 +907,7 @@ STATIC INLINE void aes_pseudo_round_xor(const uint8_t *in, uint8_t *out, const u
 	}
 }
 
+#ifdef FORCE_USE_HEAP
 STATIC INLINE void* aligned_malloc(size_t size, size_t align)
 {
     void *result;
@@ -925,6 +926,7 @@ STATIC INLINE void* aligned_malloc(size_t size, size_t align)
     free(ptr);
 #endif
 }
+#endif /* FORCE_USE_HEAP */
 
 void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int prehashed)
 {
@@ -933,7 +935,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 #ifndef FORCE_USE_HEAP
     RDATA_ALIGN16 uint8_t hp_state[MEMORY];
 #else
-        uint8_t *hp_state = (uint8_t *)aligned_malloc(MEMORY,16);
+    uint8_t *hp_state = (uint8_t *)aligned_malloc(MEMORY,16);
 #endif
 
     uint8_t text[INIT_SIZE_BYTE];
@@ -1019,6 +1021,10 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
     memcpy(state.init, text, INIT_SIZE_BYTE);
     hash_permutation(&state.hs);
     extra_hashes[state.hs.b[0] & 3](&state, 200, hash);
+
+#ifdef FORCE_USE_HEAP
+    aligned_free(hp_state);
+#endif
 }
 
 #ifdef FORCE_USE_HEAP
@@ -1157,6 +1163,8 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 #ifndef FORCE_USE_HEAP
     uint8_t long_state[MEMORY];
 #else
+    //uint8_t *long_state = NULL;
+    //long_state = (uint8_t *)malloc(MEMORY);
     uint8_t *long_state = (uint8_t *)malloc(MEMORY);
 #endif
 
@@ -1252,9 +1260,6 @@ static void (*const extra_hashes[4])(const void *, size_t, char *) = {
   hash_extra_blake, hash_extra_groestl, hash_extra_jh, hash_extra_skein
 };
 
-extern int aesb_single_round(const uint8_t *in, uint8_t*out, const uint8_t *expandedKey);
-extern int aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
-
 static size_t e2i(const uint8_t* a, size_t count) { return (*((uint64_t*)a) / AES_BLOCK_SIZE) & (count - 1); }
 
 static void mul(const uint8_t* a, const uint8_t* b, uint8_t* res) {
@@ -1328,6 +1333,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int variant, int 
 #else
   uint8_t *long_state = (uint8_t *)malloc(MEMORY);
 #endif
+
   union cn_slow_hash_state state;
   uint8_t text[INIT_SIZE_BYTE];
   uint8_t a[AES_BLOCK_SIZE];

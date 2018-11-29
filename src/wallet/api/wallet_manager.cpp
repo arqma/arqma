@@ -41,8 +41,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "WalletAPI"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "WalletAPI"
 
 namespace epee {
     unsigned int g_test_dbg_lock_sleep = 0;
@@ -51,19 +51,19 @@ namespace epee {
 namespace Monero {
 
 Wallet *WalletManagerImpl::createWallet(const std::string &path, const std::string &password,
-                                    const std::string &language, NetworkType nettype)
+                                    const std::string &language, NetworkType nettype, uint64_t kdf_rounds)
 {
-    WalletImpl * wallet = new WalletImpl(nettype);
+    WalletImpl * wallet = new WalletImpl(nettype, kdf_rounds);
     wallet->create(path, password, language);
     return wallet;
 }
 
-Wallet *WalletManagerImpl::openWallet(const std::string &path, const std::string &password, NetworkType nettype)
+Wallet *WalletManagerImpl::openWallet(const std::string &path, const std::string &password, NetworkType nettype, uint64_t kdf_rounds)
 {
-    WalletImpl * wallet = new WalletImpl(nettype);
+    WalletImpl * wallet = new WalletImpl(nettype, kdf_rounds);
     wallet->open(path, password);
     //Refresh addressBook
-    wallet->addressBook()->refresh(); 
+    wallet->addressBook()->refresh();
     return wallet;
 }
 
@@ -88,9 +88,10 @@ Wallet *WalletManagerImpl::recoveryWallet(const std::string &path,
                                                 const std::string &password,
                                                 const std::string &mnemonic,
                                                 NetworkType nettype,
-                                                uint64_t restoreHeight)
+                                                uint64_t restoreHeight,
+                                                uint64_t kdf_rounds)
 {
-    WalletImpl * wallet = new WalletImpl(nettype);
+    WalletImpl * wallet = new WalletImpl(nettype, kdf_rounds);
     if(restoreHeight > 0){
         wallet->setRefreshFromBlockHeight(restoreHeight);
     }
@@ -101,13 +102,14 @@ Wallet *WalletManagerImpl::recoveryWallet(const std::string &path,
 Wallet *WalletManagerImpl::createWalletFromKeys(const std::string &path,
                                                 const std::string &password,
                                                 const std::string &language,
-                                                NetworkType nettype, 
+                                                NetworkType nettype,
                                                 uint64_t restoreHeight,
                                                 const std::string &addressString,
                                                 const std::string &viewKeyString,
-                                                const std::string &spendKeyString)
+                                                const std::string &spendKeyString,
+                                                uint64_t kdf_rounds)
 {
-    WalletImpl * wallet = new WalletImpl(nettype);
+    WalletImpl * wallet = new WalletImpl(nettype, kdf_rounds);
     if(restoreHeight > 0){
         wallet->setRefreshFromBlockHeight(restoreHeight);
     }
@@ -120,9 +122,10 @@ Wallet *WalletManagerImpl::createWalletFromDevice(const std::string &path,
                                                   NetworkType nettype,
                                                   const std::string &deviceName,
                                                   uint64_t restoreHeight,
-                                                  const std::string &subaddressLookahead)
+                                                  const std::string &subaddressLookahead,
+                                                  uint64_t kdf_rounds)
 {
-    WalletImpl * wallet = new WalletImpl(nettype);
+    WalletImpl * wallet = new WalletImpl(nettype, kdf_rounds);
     if(restoreHeight > 0){
         wallet->setRefreshFromBlockHeight(restoreHeight);
     }
@@ -160,10 +163,19 @@ bool WalletManagerImpl::walletExists(const std::string &path)
     return false;
 }
 
-bool WalletManagerImpl::verifyWalletPassword(const std::string &keys_file_name, const std::string &password, bool no_spend_key) const
+bool WalletManagerImpl::verifyWalletPassword(const std::string &keys_file_name, const std::string &password, bool no_spend_key, uint64_t kdf_rounds) const
 {
-	    return tools::wallet2::verify_password(keys_file_name, password, no_spend_key, hw::get_device("default"));
+	    return tools::wallet2::verify_password(keys_file_name, password, no_spend_key, hw::get_device("default"), kdf_rounds);
 }
+
+bool WalletManagerImpl::queryWalletDevice(Wallet::Device& device_type, const std::string &keys_file_name, const std::string &password, uint64_t kdf_rounds) const
+{
+    hw::device::device_type type;
+    bool r = tools::wallet2::query_device(type, keys_file_name, password, kdf_rounds);
+    device_type = static_cast<Wallet::Device>(type);
+    return r;
+}
+
 
 std::vector<std::string> WalletManagerImpl::findWallets(const std::string &path)
 {
@@ -336,7 +348,7 @@ std::tuple<bool, std::string, std::string, std::string, std::string> WalletManag
     if (!tools::check_updates(software, buildtag, version, hash))
       return std::make_tuple(false, "", "", "", "");
 
-    if (tools::vercmp(version.c_str(), MONERO_VERSION) > 0)
+    if (tools::vercmp(version.c_str(), ARQMA_VERSION) > 0)
     {
       std::string user_url = tools::get_update_url(software, subdir, buildtag, version, true);
       std::string auto_url = tools::get_update_url(software, subdir, buildtag, version, false);

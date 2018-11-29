@@ -41,8 +41,8 @@
 #include "cryptonote_config.h"
 #include "difficulty.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "difficulty"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "difficulty"
 
 namespace cryptonote {
 
@@ -122,7 +122,7 @@ namespace cryptonote {
   }
 
   difficulty_type next_difficulty(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, size_t target_seconds) {
-	  
+
     if(timestamps.size() > DIFFICULTY_WINDOW)
     {
       timestamps.resize(DIFFICULTY_WINDOW);
@@ -164,7 +164,7 @@ namespace cryptonote {
 
     return (low + time_span - 1) / time_span;
     }
-  
+
 // LWMA difficulty algorithm
 // Background:  https://github.com/zawy12/difficulty-algorithms/issues/3
 // Copyright (c) 2017-2018 Zawy (pseudocode)
@@ -254,4 +254,124 @@ namespace cryptonote {
     next_difficulty = static_cast<uint64_t>(nextDifficulty);
     return next_difficulty;
    }
+
+  // LWMA-3 difficulty algorithm
+  // Copyright (c) 2017-2018 Zawy, MIT License
+  // https://github.com/zawy12/difficulty-algorithms/issues/3
+  // See commented version for required config file changes. Fix your FTL and MTP.
+
+  // difficulty_type should be uint64_t
+  difficulty_type next_difficulty_lwma_3(std::vector<uint64_t> timestamps,
+      std::vector<difficulty_type> cumulative_difficulties) {
+
+      uint64_t  T = DIFFICULTY_TARGET_V10;
+      uint64_t  N = DIFFICULTY_WINDOW_V10; // N=45, 60, and 90 for T=600, 120, 60.
+      uint64_t  L(0), ST, sum_3_ST(0), next_D, prev_D, this_timestamp, previous_timestamp;
+
+      assert(timestamps.size() == cumulative_difficulties.size() &&
+                     timestamps.size() <= N+1 );
+
+      // If it's a new coin, do startup code.
+      // Increase difficulty_guess if it needs to be much higher, but guess lower than lowest guess.
+      uint64_t difficulty_guess = 100000;
+      if (timestamps.size() <= 10 ) {   return difficulty_guess;   }
+      if ( timestamps.size() < N +1 ) { N = timestamps.size()-1;  }
+
+      // If hashrate/difficulty ratio after a fork is < 1/3 prior ratio, hardcode D for N+1 blocks after fork.
+      // difficulty_guess = 100; //  Dev may change.  Guess low.
+      // if (height <= UPGRADE_HEIGHT + N+1 ) { return difficulty_guess;  }
+
+      previous_timestamp = timestamps[0];
+      for ( uint64_t i = 1; i <= N; i++) {
+        if ( timestamps[i] > previous_timestamp  ) {
+            this_timestamp = timestamps[i];
+        } else {  this_timestamp = previous_timestamp+1;   }
+        ST = std::min(6*T ,this_timestamp - previous_timestamp);
+        previous_timestamp = this_timestamp;
+        L +=  ST * i ;
+        if ( i > N-3 ) { sum_3_ST += ST; }
+      }
+
+      next_D = ((cumulative_difficulties[N] - cumulative_difficulties[0])*T*(N+1)*99)/(100*2*L);
+
+      prev_D = cumulative_difficulties[N] - cumulative_difficulties[N-1];
+      next_D = std::max((prev_D*67)/100, std::min(next_D, (prev_D*150)/100));
+
+      if ( sum_3_ST < (8*T)/10) {  next_D = std::max(next_D,(prev_D*108)/100); }
+
+      return next_D;
+  }
+
+  // LWMA-4 difficulty algorithm
+  // Copyright (c) 2017-2018 Zawy, MIT License
+  // https://github.com/zawy12/difficulty-algorithms/issues/3
+  // See commented version for explanations & required config file changes. Fix FTL and MTP!
+
+  difficulty_type next_difficulty_lwma_4(std::vector<uint64_t> timestamps,
+    std::vector<difficulty_type> cumulative_difficulties) {
+
+    uint64_t  T = DIFFICULTY_TARGET_V10;
+    uint64_t  N = DIFFICULTY_WINDOW_V10; // N=45, 60, and 90 for T=600, 120, 60.
+    uint64_t  L(0), ST(0), next_D, prev_D, avg_D, i;
+
+    assert(timestamps.size() == cumulative_difficulties.size() && timestamps.size() <= N+1 );
+
+    // If it's a new coin, do startup code. Do not remove in case other coins copy your code.
+    uint64_t difficulty_guess = 80000;
+    if (timestamps.size() <= 12 ) {   return difficulty_guess;   }
+    if ( timestamps.size()  < N +1 ) { N = timestamps.size()-1;  }
+
+    // If hashrate/difficulty ratio after a fork is < 1/3 prior ratio, hardcode D for N+1 blocks after fork.
+    // This will also cover up a very common type of backwards-incompatible fork.
+    // difficulty_guess = 100000; //  Dev may change.  Guess low than anything expected.
+    // if ( height <= UPGRADE_HEIGHT + 1 + N ) { return difficulty_guess;  }
+
+    // Safely convert out-of-sequence timestamps into > 0 solvetimes.
+    std::vector<uint64_t>TS(N+1);
+    TS[0] = timestamps[0];
+    for ( i = 1; i <= N; i++) {
+      if ( timestamps[i]  > TS[i-1]  ) {   TS[i] = timestamps[i];  }
+      else {  TS[i] = TS[i-1];   }
+    }
+
+    for ( i = 1; i <= N; i++) {
+      // Temper long solvetime drops if they were preceded by 3 or 6 fast solves.
+      if ( i > 4 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-4] < (14*T)/10 ) {   ST = 2*T; }
+      else if ( i > 7 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-7] < 4*T ) {   ST = 2*T; }
+      else { // Assume normal conditions, so get ST.
+        // LWMA drops too much from long ST, so limit drops with a 5*T limit
+        ST = std::min(5*T ,TS[i] - TS[i-1]);
+      }
+      L +=  ST * i ;
+    }
+    if (L < N*N*T/20 ) { L =  N*N*T/20; }
+    avg_D = ( cumulative_difficulties[N] - cumulative_difficulties[0] )/ N;
+
+    // Prevent round off error for small D and overflow for large D.
+    if (avg_D > 2000000*N*N*T) {
+      next_D = (avg_D/(200*L))*(N*(N+1)*T*97);
+    }
+    else {    next_D = (avg_D*N*(N+1)*T*97)/(200*L);    }
+
+    prev_D =  cumulative_difficulties[N] - cumulative_difficulties[N-1] ;
+
+    // Apply 10% jump rule.
+    if (  ( TS[N] - TS[N-1] < (2*T)/10 ) ||
+         ( TS[N] - TS[N-2] < (5*T)/10 ) ||
+         ( TS[N] - TS[N-3] < (8*T)/10 )    )
+    {
+      next_D = std::max( next_D, std::min( (prev_D*110)/100, (105*avg_D)/100 ) );
+    }
+    // Make all insignificant digits zero for easy reading.
+    i = 1000000000;
+    while (i > 1) {
+      if ( next_D > i*100 ) { next_D = ((next_D+i/2)/i)*i; break; }
+      else { i /= 10; }
+    }
+    // Make least 3 digits equal avg of past 10 solvetimes.
+    if ( next_D > 100000 ) {
+      next_D = ((next_D+500)/1000)*1000 + std::min(static_cast<uint64_t>(999), (TS[N]-TS[N-10])/10);
+    }
+    return  next_D;
+  }
 }

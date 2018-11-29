@@ -32,8 +32,8 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include "levin_base.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "net"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
 namespace epee
 {

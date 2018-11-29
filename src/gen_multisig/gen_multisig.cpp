@@ -1,22 +1,22 @@
 // Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2017-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -26,12 +26,12 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 /*!
  * \file gen_multisig.cpp
- * 
+ *
  * \brief Generates a set of multisig wallets
  */
 #include <iostream>
@@ -54,8 +54,8 @@ using namespace cryptonote;
 using boost::lexical_cast;
 namespace po = boost::program_options;
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "wallet.gen_multisig"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "wallet.gen_multisig"
 
 namespace genms
 {
@@ -92,7 +92,7 @@ static bool generate_multisig(uint32_t threshold, uint32_t total, const std::str
     for (size_t n = 0; n < total; ++n)
     {
       std::string name = basename + "-" + std::to_string(n + 1);
-      wallets[n].reset(new tools::wallet2(nettype));
+      wallets[n].reset(new tools::wallet2(nettype, 1, false));
       wallets[n]->init("");
       wallets[n]->generate(name, pwd_container->password(), rct::rct2sk(rct::skGen()), false, false, create_address_file);
     }
@@ -102,11 +102,13 @@ static bool generate_multisig(uint32_t threshold, uint32_t total, const std::str
     std::vector<crypto::public_key> pk(total);
     for (size_t n = 0; n < total; ++n)
     {
+      wallets[n]->decrypt_keys(pwd_container->password());
       if (!tools::wallet2::verify_multisig_info(wallets[n]->get_multisig_info(), sk[n], pk[n]))
       {
-        tools::fail_msg_writer() << tr("Failed to verify multisig info");
+        tools::fail_msg_writer() << genms::tr("Failed to verify multisig info");
         return false;
       }
+      wallets[n]->encrypt_keys(pwd_container->password());
     }
 
     // make the wallets multisig
@@ -166,6 +168,8 @@ static bool generate_multisig(uint32_t threshold, uint32_t total, const std::str
 
 int main(int argc, char* argv[])
 {
+  TRY_ENTRY();
+
   po::options_description desc_params(wallet_args::tr("Wallet options"));
   command_line::add_arg(desc_params, arg_filename_base);
   command_line::add_arg(desc_params, arg_scheme);
@@ -253,5 +257,5 @@ int main(int argc, char* argv[])
     return 1;
 
   return 0;
-  //CATCH_ENTRY_L0("main", 1);
+  CATCH_ENTRY_L0("main", 1);
 }

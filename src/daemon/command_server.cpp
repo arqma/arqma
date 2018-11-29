@@ -1,21 +1,22 @@
 // Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -32,8 +33,8 @@
 #include "string_tools.h"
 #include "daemon/command_server.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "daemon"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace daemonize {
 
@@ -175,19 +176,19 @@ t_command_server::t_command_server(
   m_command_lookup.set_handler(
       "limit"
     , std::bind(&t_command_parser_executor::set_limit, &m_parser, p::_1)
-    , "limit [<kB/s>]"
+    , "limit [<Kbps>]"
     , "Get or set the download and upload limit."
-    );
+  );
   m_command_lookup.set_handler(
       "limit_up"
     , std::bind(&t_command_parser_executor::set_limit_up, &m_parser, p::_1)
-    , "limit_up [<kB/s>]"
+    , "limit_up [<Kbps>]"
     , "Get or set the upload limit."
     );
   m_command_lookup.set_handler(
       "limit_down"
     , std::bind(&t_command_parser_executor::set_limit_down, &m_parser, p::_1)
-    , "limit_down [<kB/s>]"
+    , "limit_down [<Kbps>]"
     , "Get or set the download limit."
     );
     m_command_lookup.set_handler(
@@ -255,6 +256,7 @@ t_command_server::t_command_server(
     m_command_lookup.set_handler(
       "alt_chain_info"
     , std::bind(&t_command_parser_executor::alt_chain_info, &m_parser, p::_1)
+    , "alt_chain_info [blockhash]"
     , "Print the information about alternative chains."
     );
     m_command_lookup.set_handler(
@@ -334,7 +336,7 @@ bool t_command_server::help(const std::vector<std::string>& args)
 std::string t_command_server::get_commands_str()
 {
   std::stringstream ss;
-  ss << "ArQmA '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << std::endl;
+  ss << "ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << std::endl;
   ss << "Commands: " << std::endl;
   std::string usage = m_command_lookup.get_usage();
   boost::replace_all(usage, "\n", "\n  ");

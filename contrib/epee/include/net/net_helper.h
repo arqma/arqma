@@ -1,6 +1,6 @@
 // Copyright (c) 2006-2013, Andrey N. Sabelnikov, www.sabelnikov.net
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 // * Neither the name of the Andrey N. Sabelnikov nor the
 // names of its contributors may be used to endorse or promote products
 // derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -22,7 +22,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 
 
 
@@ -42,8 +42,8 @@
 #include "net/net_utils_base.h"
 #include "misc_language.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "net"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
 #ifndef MAKE_IP
 #define MAKE_IP( a1, a2, a3, a4 )	(a1|(a2<<8)|(a3<<16)|(a4<<24))
@@ -57,8 +57,8 @@ namespace net_utils
 
   class blocked_mode_client
 	{
-		
-		
+
+
 				struct handler_obj
 				{
 					handler_obj(boost::system::error_code& error,	size_t& bytes_transferred):ref_error(error), ref_bytes_transferred(bytes_transferred)
@@ -77,19 +77,19 @@ namespace net_utils
 						ref_bytes_transferred = bytes_transferred;
 					}
 				};
-		
+
 	public:
 		inline
-			blocked_mode_client():m_initialized(false), 
-                            m_connected(false), 
-                            m_deadline(m_io_service), 
+			blocked_mode_client():m_initialized(false),
+                            m_connected(false),
+                            m_deadline(m_io_service),
                             m_shutdowned(0),
                             m_ssl(false),
                             m_ctx(boost::asio::ssl::context::sslv23),
                             m_ssl_socket(m_io_service,m_ctx)
 		{
-			
-			
+
+
 			m_initialized = true;
 
 
@@ -106,7 +106,8 @@ namespace net_utils
 			~blocked_mode_client()
 		{
 			//profile_tools::local_coast lc("~blocked_mode_client()", 3);
-			shutdown();
+      try { shutdown(); }
+			catch(...) { /* ignore */ }
 		}
 
     inline
@@ -130,7 +131,7 @@ namespace net_utils
 				m_ctx.set_default_verify_paths();
 
 				// Get a list of endpoints corresponding to the server name.
-				
+
 
 				//////////////////////////////////////////////////////////////////////////
 
@@ -158,7 +159,7 @@ namespace net_utils
 					m_ssl_socket.next_layer().bind(local_endpoint);
 				}
 
-				
+
 				m_deadline.expires_from_now(timeout);
 
 
@@ -166,10 +167,10 @@ namespace net_utils
 
 				m_ssl_socket.next_layer().async_connect(remote_endpoint, boost::lambda::var(ec) = boost::lambda::_1);
 				while (ec == boost::asio::error::would_block)
-				{	
-					m_io_service.run_one(); 
+				{
+					m_io_service.run_one();
 				}
-				
+
 				if (!ec && m_ssl_socket.next_layer().is_open())
 				{
 					m_connected = true;
@@ -204,11 +205,11 @@ namespace net_utils
 			return true;
 		}
 
-		inline 
+		inline
 		bool disconnect()
 		{
 			try
-			{	
+			{
 				if(m_connected)
 				{
 					m_connected = false;
@@ -217,7 +218,7 @@ namespace net_utils
 					m_ssl_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
 				}
 			}
-			
+
 			catch(const boost::system::system_error& /*er*/)
 			{
 				//LOG_ERROR("Some problems at disconnect, message: " << er.what());
@@ -232,7 +233,7 @@ namespace net_utils
 		}
 
 
-		inline 
+		inline
 		bool send(const std::string& buff, std::chrono::milliseconds timeout)
 		{
 
@@ -256,7 +257,7 @@ namespace net_utils
 				// Block until the asynchronous operation has completed.
 				while (ec == boost::asio::error::would_block)
 				{
-					m_io_service.run_one(); 
+					m_io_service.run_one();
 				}
 
 				if (ec)
@@ -284,7 +285,7 @@ namespace net_utils
 			return true;
 		}
 
-		inline 
+		inline
 			bool send(const void* data, size_t sz)
 		{
 			try
@@ -346,7 +347,7 @@ namespace net_utils
 			return m_connected && m_ssl_socket.next_layer().is_open();
 		}
 
-		inline 
+		inline
 		bool recv(std::string& buff, std::chrono::milliseconds timeout)
 		{
 
@@ -371,17 +372,17 @@ namespace net_utils
 
 				boost::system::error_code ec = boost::asio::error::would_block;
 				size_t bytes_transfered = 0;
-			
+
 				handler_obj hndlr(ec, bytes_transfered);
 
 				char local_buff[10000] = {0};
-				
+
 				async_read(local_buff, sizeof(local_buff), boost::asio::transfer_at_least(1), hndlr);
 
 				// Block until the asynchronous operation has completed.
 				while (ec == boost::asio::error::would_block && !boost::interprocess::ipcdetail::atomic_read32(&m_shutdowned))
 				{
-					m_io_service.run_one(); 
+					m_io_service.run_one();
 				}
 
 
@@ -455,14 +456,14 @@ namespace net_utils
 				boost::system::error_code ec = boost::asio::error::would_block;
 				size_t bytes_transfered = 0;
 
-				
+
 				handler_obj hndlr(ec, bytes_transfered);
 				async_read((char*)buff.data(), buff.size(), boost::asio::transfer_at_least(buff.size()), hndlr);
-				
+
 				// Block until the asynchronous operation has completed.
 				while (ec == boost::asio::error::would_block && !boost::interprocess::ipcdetail::atomic_read32(&m_shutdowned))
 				{
-					m_io_service.run_one(); 
+					m_io_service.run_one();
 				}
 
 				if (ec)
@@ -500,7 +501,7 @@ namespace net_utils
 
 			return false;
 		}
-		
+
 		bool shutdown()
 		{
 			m_deadline.cancel();
@@ -520,7 +521,7 @@ namespace net_utils
       m_connected = false;
 			return true;
 		}
-		
+
 		void set_connected(bool connected)
 		{
 			m_connected = connected;
@@ -534,7 +535,7 @@ namespace net_utils
 		{
 			return m_ssl_socket.next_layer();
 		}
-		
+
 	private:
 
 		void check_deadline()
@@ -580,7 +581,7 @@ namespace net_utils
 			    )
 				MDEBUG("Problems at ssl shutdown: " << ec.message());
 		}
-		
+
 	protected:
 		bool write(const void* data, size_t sz, boost::system::error_code& ec)
 		{
@@ -591,24 +592,24 @@ namespace net_utils
 				success = boost::asio::write(m_ssl_socket.next_layer(), boost::asio::buffer(data, sz), ec);
 			return success;
 		}
-		
-		void async_write(const void* data, size_t sz, boost::system::error_code& ec) 
+
+		void async_write(const void* data, size_t sz, boost::system::error_code& ec)
 		{
 			if(m_ssl)
 				boost::asio::async_write(m_ssl_socket, boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
 			else
 				boost::asio::async_write(m_ssl_socket.next_layer(), boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
 		}
-		
+
 		void async_read(char* buff, size_t sz, boost::asio::detail::transfer_at_least_t transfer_at_least, handler_obj& hndlr)
 		{
 			if(!m_ssl)
 				boost::asio::async_read(m_ssl_socket.next_layer(), boost::asio::buffer(buff, sz), transfer_at_least, hndlr);
 			else
 				boost::asio::async_read(m_ssl_socket, boost::asio::buffer(buff, sz), transfer_at_least, hndlr);
-			
+
 		}
-		
+
 	protected:
 		boost::asio::io_service m_io_service;
 		boost::asio::ssl::context m_ctx;
@@ -642,7 +643,7 @@ namespace net_utils
 		{
 			m_send_deadline.cancel();
 		}
-		
+
 		bool shutdown()
 		{
 			blocked_mode_client::shutdown();
@@ -650,7 +651,7 @@ namespace net_utils
 			return true;
 		}
 
-		inline 
+		inline
 			bool send(const void* data, size_t sz)
 		{
 			try
@@ -676,11 +677,11 @@ namespace net_utils
 				{
 					m_io_service.run_one();
 				}*/
-				
+
 				boost::system::error_code ec;
 
 				size_t writen = write(data, sz, ec);
-				
+
 				if (!writen || ec)
 				{
 					LOG_PRINT_L3("Problems at write: " << ec.message());

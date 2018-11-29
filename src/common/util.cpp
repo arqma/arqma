@@ -1,22 +1,22 @@
 // Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -26,9 +26,10 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
+#include <unistd.h>
 #include <cstdio>
 
 #ifdef __GLIBC__
@@ -38,12 +39,19 @@
 #ifdef __GLIBC__
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <ustat.h>
+#include <sys/resource.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <string.h>
 #include <ctype.h>
 #include <string>
+#endif
+
+//tools::is_hdd
+#ifdef __GLIBC__
+  #include <sstream>
+  #include <sys/sysmacros.h>
+  #include <fstream>
 #endif
 
 #include "unbound.h"
@@ -64,7 +72,7 @@ using namespace epee;
   #include <windows.h>
   #include <shlobj.h>
   #include <strsafe.h>
-#else 
+#else
   #include <sys/file.h>
   #include <sys/utsname.h>
   #include <sys/stat.h>
@@ -195,7 +203,7 @@ namespace tools
     }
     catch (...) {}
   }
-  
+
     file_locker::file_locker(const std::string &filename)
   {
 #ifdef WIN32
@@ -227,7 +235,7 @@ namespace tools
       MERROR("Failed to open " << filename << ": " << std::error_code(GetLastError(), std::system_category()));
     }
 #else
-    m_fd = open(filename.c_str(), O_RDONLY | O_CREAT, 0666);
+    m_fd = open(filename.c_str(), O_RDONLY | O_CREAT | O_CLOEXEC, 0666);
     if (m_fd != -1)
     {
       if (flock(m_fd, LOCK_EX | LOCK_NB) == -1)
@@ -289,22 +297,31 @@ namespace tools
     // Call GetNativeSystemInfo if supported or GetSystemInfo otherwise.
 
     pGNSI = (PGNSI) GetProcAddress(
-      GetModuleHandle(TEXT("kernel32.dll")), 
+      GetModuleHandle(TEXT("kernel32.dll")),
       "GetNativeSystemInfo");
     if(NULL != pGNSI)
       pGNSI(&si);
     else GetSystemInfo(&si);
 
-    if ( VER_PLATFORM_WIN32_NT==osvi.dwPlatformId && 
+    if ( VER_PLATFORM_WIN32_NT==osvi.dwPlatformId &&
       osvi.dwMajorVersion > 4 )
     {
       StringCchCopy(pszOS, BUFSIZE, TEXT("Microsoft "));
 
       // Test for the specific product.
+      if ( osvi.dwMajorVersion == 10 )
+      {
+        if ( osvi.dwMinorVersion == 0 )
+        {
+          if( osvi.wProductType == VER_NT_WORKSTATION )
+            StringCchCat(pszOS, BUFSIZE, TEXT("Windows 10 "));
+          else StringCchCat(pszOS, BUFSIZE, TEXT("Windows Server 2016 " ));
+        }
+      }
 
       if ( osvi.dwMajorVersion == 6 )
       {
-        if( osvi.dwMinorVersion == 0 )
+        if ( osvi.dwMinorVersion == 0 )
         {
           if( osvi.wProductType == VER_NT_WORKSTATION )
             StringCchCat(pszOS, BUFSIZE, TEXT("Windows Vista "));
@@ -318,8 +335,23 @@ namespace tools
           else StringCchCat(pszOS, BUFSIZE, TEXT("Windows Server 2008 R2 " ));
         }
 
+        if ( osvi.dwMinorVersion == 2 )
+        {
+          if( osvi.wProductType == VER_NT_WORKSTATION )
+            StringCchCat(pszOS, BUFSIZE, TEXT("Windows 8 "));
+          else StringCchCat(pszOS, BUFSIZE, TEXT("Windows Server 2012 " ));
+        }
+
+        if ( osvi.dwMinorVersion == 3 )
+        {
+          if( osvi.wProductType == VER_NT_WORKSTATION )
+            StringCchCat(pszOS, BUFSIZE, TEXT("Windows 8.1 "));
+          else StringCchCat(pszOS, BUFSIZE, TEXT("Windows Server 2012 R2 " ));
+        }
+
+
         pGPI = (PGPI) GetProcAddress(
-          GetModuleHandle(TEXT("kernel32.dll")), 
+          GetModuleHandle(TEXT("kernel32.dll")),
           "GetProductInfo");
 
         pGPI( osvi.dwMajorVersion, osvi.dwMinorVersion, 0, 0, &dwType);
@@ -449,7 +481,7 @@ namespace tools
         {
           StringCchCat(pszOS, BUFSIZE, TEXT( "Professional" ));
         }
-        else 
+        else
         {
           if( osvi.wSuiteMask & VER_SUITE_DATACENTER )
             StringCchCat(pszOS, BUFSIZE, TEXT( "Datacenter Server" ));
@@ -480,10 +512,10 @@ namespace tools
           StringCchCat(pszOS, BUFSIZE, TEXT(", 32-bit"));
       }
 
-      return pszOS; 
+      return pszOS;
     }
     else
-    {  
+    {
       printf( "This sample does not support this version of Windows.\n");
       return pszOS;
     }
@@ -534,7 +566,7 @@ std::string get_nix_version_display_string()
     return "";
   }
 #endif
-  
+
   std::string get_default_data_dir()
   {
     /* Please for the love of god refactor  the ifdefs out of this */
@@ -614,10 +646,10 @@ std::string get_nix_version_display_string()
   {
     ub_ctx *ctx = ub_ctx_create();
     if (!ctx) return false; // cheat a bit, should not happen unless OOM
-    char *monero = strdup("monero"), *unbound = strdup("unbound");
-    ub_ctx_zone_add(ctx, monero, unbound); // this calls ub_ctx_finalize first, then errors out with UB_SYNTAX
+    char *arqma = strdup("arqma"), *unbound = strdup("unbound");
+    ub_ctx_zone_add(ctx, arqma, unbound); // this calls ub_ctx_finalize first, then errors out with UB_SYNTAX
     free(unbound);
-    free(monero);
+    free(arqma);
     // if no threads, bails out early with UB_NOERROR, otherwise fails with UB_AFTERFINAL id already finalized
     bool with_threads = ub_ctx_async(ctx, 1) != 0; // UB_AFTERFINAL is not defined in public headers, check any error
     ub_ctx_delete(ctx);
@@ -683,6 +715,21 @@ std::string get_nix_version_display_string()
   static void setup_crash_dump() {}
 #endif
 
+  bool disable_core_dumps()
+  {
+#ifdef __GLIBC__
+  // disable core dumps in release mode
+  struct rlimit rlimit;
+  rlimit.rlim_cur = rlimit.rlim_max = 0;
+  if (setrlimit(RLIMIT_CORE, &rlimit))
+  {
+    MWARNING("Failed to disable core dumps");
+    return false;
+  }
+#endif
+  return true;
+}
+
   bool on_startup()
   {
     mlog_configure("", true);
@@ -718,62 +765,41 @@ std::string get_nix_version_display_string()
 #endif
   }
 
-  bool is_hdd(const char *path)
+  boost::optional<bool> is_hdd(const char *file_path)
   {
 #ifdef __GLIBC__
-    std::string device = "";
-    struct stat st, dst;
-    if (stat(path, &st) < 0)
-      return 0;
-
-    DIR *dir = opendir("/dev/block");
-    if (!dir)
-      return 0;
-    struct dirent *de;
-    while ((de = readdir(dir)))
-    {
-      if (strcmp(de->d_name, ".") && strcmp(de->d_name, ".."))
+struct stat st;
+std::string prefix;
+if(stat(file_path, &st) == 0)
+{
+  std::ostringstream s;
+  s << "/sys/dev/block/" << major(st.st_dev) << ":" << minor(st.st_dev);
+  prefix = s.str();
+}
+else
+{
+  return boost::none;
+}
+std::string attr_path = prefix + "/queue/rotational";
+std::ifstream f(attr_path, std::ios_base::in);
+if(not f.is_open())
+{
+  attr_path = prefix + "/../queue/rotational";
+  f.open(attr_path, std::ios_base::in);
+  if(not f.is_open())
       {
-        std::string dev_path = std::string("/dev/block/") + de->d_name;
-        char resolved[PATH_MAX];
-        if (realpath(dev_path.c_str(), resolved) && !strncmp(resolved, "/dev/", 5))
-        {
-          if (stat(resolved, &dst) == 0)
-          {
-            if (dst.st_rdev == st.st_dev)
-            {
-              // take out trailing digits (eg, sda1 -> sda)
-              char *ptr = resolved;
-              while (*ptr)
-                ++ptr;
-              while (ptr > resolved && isdigit(*--ptr))
-                *ptr = 0;
-              device = resolved + 5;
-              break;
-            }
-          }
-        }
+        return boost::none;
       }
     }
-    closedir(dir);
-
-    if (device.empty())
-      return 0;
-
-    std::string sys_path = "/sys/block/" + device + "/queue/rotational";
-    FILE *f = fopen(sys_path.c_str(), "r");
-    if (!f)
-      return false;
-    char s[8];
-    char *ptr = fgets(s, sizeof(s), f);
-    fclose(f);
-    if (!ptr)
-      return 0;
-    s[sizeof(s) - 1] = 0;
-    int n = atoi(s); // returns 0 on parse error
-    return n == 1;
+    unsigned short val = 0xdead;
+    f >> val;
+    if(not f.fail())
+    {
+      return (val == 1);
+    }
+    return boost::none;
 #else
-    return 0;
+    return boost::none;
 #endif
   }
 
@@ -920,7 +946,7 @@ std::string get_nix_version_display_string()
       return {};
     }
   }
-  
+
   std::string glob_to_regex(const std::string &val)
   {
     std::string newval;
@@ -939,4 +965,51 @@ std::string get_nix_version_display_string()
     }
     return newval;
   }
+
+#ifdef _WIN32
+  std::string input_line_win()
+  {
+    HANDLE hConIn = CreateFileW(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+    DWORD oldMode;
+
+    FlushConsoleInputBuffer(hConIn);
+    GetConsoleMode(hConIn, &oldMode);
+    SetConsoleMode(hConIn, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+
+    wchar_t buffer[1024];
+    DWORD read;
+
+    ReadConsoleW(hConIn, buffer, sizeof(buffer)/sizeof(wchar_t)-1, &read, nullptr);
+    buffer[read] = 0;
+
+    SetConsoleMode(hConIn, oldMode);
+    CloseHandle(hConIn);
+
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, buffer, -1, NULL, 0, NULL, NULL);
+    std::string buf(size_needed, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, buffer, -1, &buf[0], size_needed, NULL, NULL);
+    buf.pop_back(); //size_needed includes null that we needed to have space for
+    return buf;
+  }
+#endif
+
+void closefrom(int fd)
+  {
+#if defined __FreeBSD__ || defined __OpenBSD__ || defined __NetBSD__ || defined __DragonFly__
+    ::closefrom(fd);
+#else
+#if defined __GLIBC__
+    const int sc_open_max =  sysconf(_SC_OPEN_MAX);
+    const int MAX_FDS = std::min(65536, sc_open_max);
+#else
+    const int MAX_FDS = 65536;
+#endif
+    while (fd < MAX_FDS)
+    {
+      close(fd);
+      ++fd;
+    }
+#endif
+  }
+
  }

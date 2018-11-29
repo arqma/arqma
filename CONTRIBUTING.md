@@ -1,5 +1,4 @@
-# Contributing to ArQmA
-# Contributing to Monero
+# Contributing to Arqma
 
 A good way to help is to test, and report bugs. See
 [How to Report Bugs Effectively (by Simon Tatham)](http://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
@@ -16,7 +15,7 @@ of software solid and usable.
 Patches are preferably to be sent via a Github pull request. If that
 can't be done, patches in "git format-patch" format can be sent
 (eg, posted to fpaste.org with a long enough timeout and a link
-posted to #monero-dev on irc.freenode.net).
+posted to Telegram Arqma Group: https://t.me/joinchat/ILmRXEVOi85CjDGtK8C9zQ).
 
 Patches should be self contained. A good rule of thumb is to have
 one patch per separate issue, feature, or logical change. Also, no
@@ -57,6 +56,7 @@ the previous paragraph is here.
 Copyright (c) 2018, The ArQmA Project
 Copyright (c) 2009-2015 Pieter Hintjens.
 Copyright (c) 2017-2018 The Monero Project.
+Copyright (c) 2018-     The Arqma-Network.
 
 This Specification is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
 
@@ -68,10 +68,11 @@ You should have received a copy of the GNU General Public License along with thi
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119.
 
-The "Monero Maintainer Team" is defined in this document as the following users:
-- fluffypony
-- moneromooo
-- hyc
+The "Arqma Development Team" is defined in this document as the following users:
+- malbit
+- ArqTras
+- SmajeNz0
+- Arg0nator
 
 ## Goals
 
@@ -127,7 +128,7 @@ C4 is meant to provide a reusable optimal collaboration model for open source so
 - To request changes, a user SHOULD log an issue on the project Platform issue tracker.
 - The user or Contributor SHOULD write the issue by describing the problem they face or observe.
 - The user or Contributor SHOULD seek consensus on the accuracy of their observation, and the value of solving the problem.
-- Users SHALL NOT log feature requests, ideas, or suggestions unrelated to Monero code or Monero's dependency code or Monero's potential/future dependency code or research which successfully implements Monero.
+- Users SHALL NOT log feature requests, ideas, or suggestions unrelated to Arqma code or Arqma's dependency code or Arqma's potential/future dependency code or research which successfully implements Arqma.
 - Users SHALL NOT log any solutions to problems (verifiable or hypothetical) of which are not explicitly documented and/or not provable and/or cannot be reasonably proven.
 - Thus, the release history of the project SHALL be a list of meaningful issues logged and solved.
 - To work on an issue, a Contributor SHALL fork the project repository and then work on their forked repository.

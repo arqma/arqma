@@ -31,6 +31,7 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #include "common/command_line.h"
+#include "cryptonote_core/cryptonote_core.h"
 #include "net_node.h"
 
 namespace nodetool
@@ -59,13 +60,13 @@ namespace nodetool
     const command_line::arg_descriptor<bool> arg_p2p_hide_my_port   =    {"hide-my-port", "Do not announce yourself as peerlist candidate", false, true};
 
     const command_line::arg_descriptor<bool>        arg_no_igd  = {"no-igd", "Disable UPnP port mapping"};
-    const command_line::arg_descriptor<int64_t>     arg_out_peers = {"out-peers", "set max number of out peers", -1};
-    const command_line::arg_descriptor<int64_t>     arg_in_peers = {"in-peers", "set max number of in peers", -1};
+    const command_line::arg_descriptor<int64_t>     arg_out_peers = {"out-peers", "set max number of out peers", P2P_DEFAULT_OUT_CONNECTIONS_COUNT};
+    const command_line::arg_descriptor<int64_t>     arg_in_peers = {"in-peers", "set max number of in peers", P2P_DEFAULT_IN_CONNECTIONS_COUNT};
     const command_line::arg_descriptor<int> arg_tos_flag = {"tos-flag", "set TOS flag", -1};
 
-    const command_line::arg_descriptor<int64_t> arg_limit_rate_up = {"limit-rate-up", "set limit-rate-up [kB/s]", -1};
-    const command_line::arg_descriptor<int64_t> arg_limit_rate_down = {"limit-rate-down", "set limit-rate-down [kB/s]", -1};
-    const command_line::arg_descriptor<int64_t> arg_limit_rate = {"limit-rate", "set limit-rate [kB/s]", -1};
+    const command_line::arg_descriptor<int64_t> arg_limit_rate_up = {"limit-rate-up", "set limit-rate-up [Kbps]", P2P_DEFAULT_LIMIT_RATE_UP};
+    const command_line::arg_descriptor<int64_t> arg_limit_rate_down = {"limit-rate-down", "set limit-rate-down [Kbps]", P2P_DEFAULT_LIMIT_RATE_DOWN};
+    const command_line::arg_descriptor<int64_t> arg_limit_rate = {"limit-rate", "set limit-rate [kbps]", -1};
 
     const command_line::arg_descriptor<bool> arg_save_graph = {"save-graph", "Save data for dr Arqma", false};
 }

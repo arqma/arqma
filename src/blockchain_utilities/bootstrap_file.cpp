@@ -33,8 +33,8 @@
 
 #include "bootstrap_file.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "bcutil"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "bcutil"
 
 namespace po = boost::program_options;
 
@@ -305,7 +305,7 @@ bool BootstrapFile::store_blockchain_raw(Blockchain* _blockchain_storage, tx_mem
     }
     if (m_cur_height % progress_interval == 0) {
       std::cout << refresh_string;
-      std::cout << "block " << m_cur_height << "/" << block_stop << std::flush;
+      std::cout << "block " << m_cur_height << "/" << block_stop << "\r" << std::flush;
     }
   }
   // NOTE: use of NUM_BLOCKS_PER_CHUNK is a placeholder in case multi-block chunks are later supported.
@@ -401,18 +401,18 @@ uint64_t BootstrapFile::count_bytes(std::ifstream& import_file, uint64_t blocks,
     {
       std::cout << refresh_string;
       MWARNING("WARNING: chunk_size " << chunk_size << " > BUFFER_SIZE " << BUFFER_SIZE
-          << "  height: " << h-1);
+          << "  height: " << h-1 << ", offset " << bytes_read);
       throw std::runtime_error("Aborting: chunk size exceeds buffer size");
     }
     if (chunk_size > CHUNK_SIZE_WARNING_THRESHOLD)
     {
       std::cout << refresh_string;
       MDEBUG("NOTE: chunk_size " << chunk_size << " > " << CHUNK_SIZE_WARNING_THRESHOLD << " << height: "
-          << h-1);
+          << h-1 << ", offset " << bytes_read);
     }
     else if (chunk_size <= 0) {
       std::cout << refresh_string;
-      MDEBUG("ERROR: chunk_size " << chunk_size << " <= 0" << "  height: " << h-1);
+      MDEBUG("ERROR: chunk_size " << chunk_size << " <= 0" << "  height: " << h-1 << ", offset " << bytes_read);
       throw std::runtime_error("Aborting");
     }
     // skip to next expected block size value
@@ -480,7 +480,7 @@ uint64_t BootstrapFile::count_blocks(const std::string& import_file_path, std::s
     bytes_read += count_bytes(import_file, progress_interval, blocks, quit);
     h += blocks;
     std::cout << "\r" << "block height: " << h-1 <<
-      "    " <<
+      "    \r" <<
       std::flush;
 
     // std::cout << refresh_string;
