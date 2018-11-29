@@ -1,6 +1,6 @@
-ArQmA wallet tools version 0.2.0.0
+ArQmA wallet tools version 0.1.3.1
 
-Release date 11/29/2018
+Release date 09/26/2018
 
 Support at: https://arqma.com
 
