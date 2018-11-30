@@ -1,4 +1,4 @@
-# Copyright (c) 2018, The ArQmA Project
+
 cmake_minimum_required(VERSION 2.8)
 
 set(Boost_USE_MULTITHREADED ON)
