@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
 // All rights reserved.
 //
@@ -41,7 +40,7 @@ using epee::string_tools::pod_to_hex;
 
 // Increase when the DB changes in a non backward compatible way, and there
 // is no automatic conversion, so that a full resync is needed.
-#define VERSION 0
+#define VERSION 1
 
 namespace
 {
@@ -1212,6 +1211,11 @@ std::vector<std::string> BlockchainBDB::get_filenames() const
     }
 
     return full_paths;
+}
+
+bool BlockchainBDB::remove_data_file(const std::string& folder)
+{
+    return true;
 }
 
 std::string BlockchainBDB::get_db_name() const

@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -201,7 +200,11 @@ std::string PendingTransactionImpl::multisigSignData() {
             throw std::runtime_error("wallet is not multisig");
         }
 
-        auto cipher = m_wallet.m_wallet->save_multisig_tx(m_pending_tx);
+        tools::wallet2::multisig_tx_set txSet;
+        txSet.m_ptx = m_pending_tx;
+        txSet.m_signers = m_signers;
+        auto cipher = m_wallet.m_wallet->save_multisig_tx(txSet);
+
         return epee::string_tools::buff_to_hex_nodelimer(cipher);
     } catch (const std::exception& e) {
         m_status = Status_Error;
@@ -245,4 +248,3 @@ std::vector<std::string> PendingTransactionImpl::signersKeys() const {
 }
 
 namespace Bitmonero = Monero;
-

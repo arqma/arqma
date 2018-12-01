@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2016, Monero Research Labs
 //
 // Author: Shen Noether <shen.noether@gmx.com>
@@ -37,6 +36,7 @@
 #include <vector>
 #include <iostream>
 #include <cinttypes>
+#include <sodium/crypto_verify_32.h>
 
 extern "C" {
 #include "crypto/crypto-ops.h"
@@ -82,7 +82,7 @@ namespace rct {
         unsigned char operator[](int i) const {
             return bytes[i];
         }
-        bool operator==(const key &k) const { return !memcmp(bytes, k.bytes, sizeof(bytes)); }
+        bool operator==(const key &k) const { return !crypto_verify_32(bytes, k.bytes); }
         unsigned char bytes[32];
     };
     typedef std::vector<key> keyV; //vector of keys
@@ -144,12 +144,12 @@ namespace rct {
         key64 s1;
         key ee;
     };
-  
+
     //Container for precomp
     struct geDsmp {
         ge_dsmp k;
     };
-    
+
     //just contains the necessary keys to represent MLSAG sigs
     //c.f. http://eprint.iacr.org/2015/1098
     struct mgSig {
@@ -306,9 +306,9 @@ namespace rct {
             return false;
           if (type == RCTTypeSimpleBulletproof || type == RCTTypeFullBulletproof)
           {
+            PREPARE_CUSTOM_VECTOR_SERIALIZATION(outputs, bulletproofs);
             ar.tag("bp");
             ar.begin_array();
-            PREPARE_CUSTOM_VECTOR_SERIALIZATION(outputs, bulletproofs);
             if (bulletproofs.size() != outputs)
               return false;
             for (size_t i = 0; i < outputs; ++i)
@@ -404,6 +404,16 @@ namespace rct {
     };
     struct rctSig: public rctSigBase {
         rctSigPrunable p;
+
+        keyV& get_pseudo_outs()
+        {
+          return type == RCTTypeSimpleBulletproof ? p.pseudoOuts : pseudoOuts;
+        }
+
+        keyV const& get_pseudo_outs() const
+        {
+          return type == RCTTypeSimpleBulletproof ? p.pseudoOuts : pseudoOuts;
+        }
     };
 
     //other basepoint H = toPoint(cn_fast_hash(G)), G the basepoint
@@ -507,24 +517,24 @@ namespace rct {
     //int[64] to uint long long
     xmr_amount b2d(bits amountb);
 
-    static inline const rct::key pk2rct(const crypto::public_key &pk) { return (const rct::key&)pk; }
-    static inline const rct::key sk2rct(const crypto::secret_key &sk) { return (const rct::key&)sk; }
-    static inline const rct::key ki2rct(const crypto::key_image &ki) { return (const rct::key&)ki; }
-    static inline const rct::key hash2rct(const crypto::hash &h) { return (const rct::key&)h; }
-    static inline const crypto::public_key rct2pk(const rct::key &k) { return (const crypto::public_key&)k; }
-    static inline const crypto::secret_key rct2sk(const rct::key &k) { return (const crypto::secret_key&)k; }
-    static inline const crypto::key_image rct2ki(const rct::key &k) { return (const crypto::key_image&)k; }
-    static inline const crypto::hash rct2hash(const rct::key &k) { return (const crypto::hash&)k; }
-    static inline bool operator==(const rct::key &k0, const crypto::public_key &k1) { return !memcmp(&k0, &k1, 32); }
-    static inline bool operator!=(const rct::key &k0, const crypto::public_key &k1) { return memcmp(&k0, &k1, 32); }
+    static inline const rct::key &pk2rct(const crypto::public_key &pk) { return (const rct::key&)pk; }
+    static inline const rct::key &sk2rct(const crypto::secret_key &sk) { return (const rct::key&)sk; }
+    static inline const rct::key &ki2rct(const crypto::key_image &ki) { return (const rct::key&)ki; }
+    static inline const rct::key &hash2rct(const crypto::hash &h) { return (const rct::key&)h; }
+    static inline const crypto::public_key &rct2pk(const rct::key &k) { return (const crypto::public_key&)k; }
+    static inline const crypto::secret_key &rct2sk(const rct::key &k) { return (const crypto::secret_key&)k; }
+    static inline const crypto::key_image &rct2ki(const rct::key &k) { return (const crypto::key_image&)k; }
+    static inline const crypto::hash &rct2hash(const rct::key &k) { return (const crypto::hash&)k; }
+    static inline bool operator==(const rct::key &k0, const crypto::public_key &k1) { return !crypto_verify_32(k0.bytes, (const unsigned char*)&k1); }
+    static inline bool operator!=(const rct::key &k0, const crypto::public_key &k1) { return crypto_verify_32(k0.bytes, (const unsigned char*)&k1); }
 }
 
 
 namespace cryptonote {
-    static inline bool operator==(const crypto::public_key &k0, const rct::key &k1) { return !memcmp(&k0, &k1, 32); }
-    static inline bool operator!=(const crypto::public_key &k0, const rct::key &k1) { return memcmp(&k0, &k1, 32); }
-    static inline bool operator==(const crypto::secret_key &k0, const rct::key &k1) { return !memcmp(&k0, &k1, 32); }
-    static inline bool operator!=(const crypto::secret_key &k0, const rct::key &k1) { return memcmp(&k0, &k1, 32); }
+   static inline bool operator==(const crypto::public_key &k0, const rct::key &k1) { return !crypto_verify_32((const unsigned char*)&k0, k1.bytes); }
+   static inline bool operator!=(const crypto::public_key &k0, const rct::key &k1) { return crypto_verify_32((const unsigned char*)&k0, k1.bytes); }
+   static inline bool operator==(const crypto::secret_key &k0, const rct::key &k1) { return !crypto_verify_32((const unsigned char*)&k0, k1.bytes); }
+   static inline bool operator!=(const crypto::secret_key &k0, const rct::key &k1) { return crypto_verify_32((const unsigned char*)&k0, k1.bytes); }
 }
 
 namespace rct {

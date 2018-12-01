@@ -1,4 +1,3 @@
-# Copyright (c) 2018, The ArQmA Project
 # Multistage docker build, requires docker 17.05
 
 # builder stage
@@ -19,14 +18,16 @@ RUN set -ex && \
         libtool-bin \
         autoconf \
         automake \
-        bzip2
+        bzip2 \
+        xsltproc \
+        gperf
 
 WORKDIR /usr/local
 
 #Cmake
-ARG CMAKE_VERSION=3.11.4
-ARG CMAKE_VERSION_DOT=v3.11
-ARG CMAKE_HASH=8f864e9f78917de3e1483e256270daabc4a321741592c5b36af028e72bff87f5
+ARG CMAKE_VERSION=3.12.1
+ARG CMAKE_VERSION_DOT=v3.12
+ARG CMAKE_HASH=c53d5c2ce81d7a957ee83e3e635c8cda5dfe20c9d501a4828ee28e1615e57ab2
 RUN set -ex \
     && curl -s -O https://cmake.org/files/${CMAKE_VERSION_DOT}/cmake-${CMAKE_VERSION}.tar.gz \
     && echo "${CMAKE_HASH}  cmake-${CMAKE_VERSION}.tar.gz" | sha256sum -c \
@@ -37,9 +38,9 @@ RUN set -ex \
     && make install
 
 ## Boost
-ARG BOOST_VERSION=1_67_0
-ARG BOOST_VERSION_DOT=1.67.0
-ARG BOOST_HASH=2684c972994ee57fc5632e03bf044746f6eb45d4920c343937a465fd67a5adba
+ARG BOOST_VERSION=1_68_0
+ARG BOOST_VERSION_DOT=1.68.0
+ARG BOOST_HASH=7f6130bc3cf65f56a618888ce9d5ea704fa10b462be126ad053e80e553d6d8b7
 RUN set -ex \
     && curl -s -L -o  boost_${BOOST_VERSION}.tar.bz2 https://dl.bintray.com/boostorg/release/${BOOST_VERSION_DOT}/source/boost_${BOOST_VERSION}.tar.bz2 \
     && echo "${BOOST_HASH}  boost_${BOOST_VERSION}.tar.bz2" | sha256sum -c \
@@ -110,11 +111,49 @@ RUN set -ex \
     && make check \
     && make install
 
+# Udev
+ARG UDEV_VERSION=v3.2.6
+ARG UDEV_HASH=0c35b136c08d64064efa55087c54364608e65ed6
+RUN set -ex \
+    && git clone https://github.com/gentoo/eudev -b ${UDEV_VERSION} \
+    && cd eudev \
+    && test `git rev-parse HEAD` = ${UDEV_HASH} || exit 1 \
+    && ./autogen.sh \
+    && CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --disable-gudev --disable-introspection --disable-hwdb --disable-manpages --disable-shared \
+    && make \
+    && make install
+
+# Libusb
+ARG USB_VERSION=v1.0.22
+ARG USB_HASH=0034b2afdcdb1614e78edaa2a9e22d5936aeae5d
+RUN set -ex \
+    && git clone https://github.com/libusb/libusb.git -b ${USB_VERSION} \
+    && cd libusb \
+    && test `git rev-parse HEAD` = ${USB_HASH} || exit 1 \
+    && ./autogen.sh \
+    && CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --disable-shared \
+    && make \
+    && make install
+
+# Hidapi
+ARG HIDAPI_VERSION=hidapi-0.8.0-rc1
+ARG HIDAPI_HASH=40cf516139b5b61e30d9403a48db23d8f915f52c
+RUN set -ex \
+    && git clone https://github.com/signal11/hidapi -b ${HIDAPI_VERSION} \
+    && cd hidapi \
+    && test `git rev-parse HEAD` = ${HIDAPI_HASH} || exit 1 \
+    && ./bootstrap \
+    && CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --enable-static --disable-shared \
+    && make \
+    && make install
+
 WORKDIR /src
 COPY . .
 
+ENV USE_SINGLE_BUILDDIR=1
 ARG NPROC
 RUN set -ex && \
+    git submodule init && git submodule update && \
     rm -rf build && \
     if [ -z "$NPROC" ] ; \
     then make -j$(nproc) release-static ; \
@@ -129,8 +168,7 @@ RUN set -ex && \
     apt-get --no-install-recommends --yes install ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt
-
-COPY --from=builder /src/build/release/bin/* /usr/local/bin/
+COPY --from=builder /src/build/release/bin /usr/local/bin/
 
 # Contains the blockchain
 VOLUME /root/.arqma

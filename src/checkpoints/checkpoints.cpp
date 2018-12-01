@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -41,8 +40,8 @@ using namespace epee;
 #include "storages/portable_storage_template_helper.h" // epee json include
 #include "serialization/keyvalue_serialization.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "checkpoints"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "checkpoints"
 
 namespace cryptonote
 {
@@ -136,9 +135,9 @@ namespace cryptonote
   //---------------------------------------------------------------------------
   uint64_t checkpoints::get_max_height() const
   {
-    std::map< uint64_t, crypto::hash >::const_iterator highest = 
+    std::map< uint64_t, crypto::hash >::const_iterator highest =
         std::max_element( m_points.begin(), m_points.end(),
-                         ( boost::bind(&std::map< uint64_t, crypto::hash >::value_type::first, _1) < 
+                         ( boost::bind(&std::map< uint64_t, crypto::hash >::value_type::first, _1) <
                            boost::bind(&std::map< uint64_t, crypto::hash >::value_type::first, _2 ) ) );
     return highest->first;
   }
@@ -231,7 +230,45 @@ namespace cryptonote
 						ADD_CHECKPOINT(5501, "3df674086d717f5811d96d9f584eac421cda8ce28e4738a6214c88b98af0fe8f");
 						ADD_CHECKPOINT(6000, "7a484c09c956105890f147001d329b40af70756558a425dbd837fecd3d3c70b4");
 						ADD_CHECKPOINT(6500, "3592d98ddf9ecc50eeec339074984ac2c3526c5e2d35bf76018277f81550a1ba");
-
+            ADD_CHECKPOINT(7000, "f1e31dae63825f923c2a53cfa5a5d7f39e774f81b662f6f93c9d9d5cd2280801");
+            ADD_CHECKPOINT(7500, "63a07de1d04052dde7c4beab312d71f66f883c23d49dcead15a5db4de618a53a");
+            ADD_CHECKPOINT(8500, "f7dccf57cd90690c0809714467caf707a5e4f383c58c49b5604f2d9ec6a74b6e");
+            ADD_CHECKPOINT(9000, "4c2f4d770234e56049eb25999d15534c84a53fcb0d8e04bbec9a826712764526");
+            ADD_CHECKPOINT(9500, "c17fb8441aef53cdc025745d9a35a25c7377953a96a88fd727948f50313385bc");
+            ADD_CHECKPOINT(10000, "1a35ebbe820d2cad63112750d602817c00ce1e11e48fce302a9edb697f635533");
+            ADD_CHECKPOINT(10500, "f9c6fa31ca37da5d31c659f661bce18e969f68c84c4ff221b503b510c7fead5e");
+            ADD_CHECKPOINT(11000, "f4375d4287298a83d542af39e850229e7a8c36be181f13b5682a2d384fb7b75b");
+            ADD_CHECKPOINT(11500, "b6723619eed591c9488f28db59b8157181f011509f84c90c6b1be2d0d3d5c8a5");
+            ADD_CHECKPOINT(12000, "caff4eca4bc3653c1cea7ba15ca3f6a4747947d2aa3873af67b864a170e196bc");
+            ADD_CHECKPOINT(12500, "e8055084f8f7e1da906d1c736512529a9b492a4c9ba939411afa7d856ca7b308");
+            ADD_CHECKPOINT(13000, "a7c2cac3d7a04811051a9fdd8cb23230ba1b9547ccb12271f90a49e352605656");
+            ADD_CHECKPOINT(14000, "f9fd57d39fb0011d22eb14cf716b6fcb5fc510d87c7c04fd764af287589a149c");
+            ADD_CHECKPOINT(13500, "f220ddabeb622fbb0d0ed14c65d2a76cd59645c46943e10beeec0ba736d8a568");
+            ADD_CHECKPOINT(15000, "395ab30253be389607079d9b7d7f4012b1747d7315ea7e6502cb5488e0b5c7ce");
+            ADD_CHECKPOINT(16000, "9982ff1bcbb3e1e9dc0a54c1d8f33a2fc48ce9f8ff8f7d3be66a668f4f072c28");
+            ADD_CHECKPOINT(18000, "9382eb63a35238c592979e72cc5f7c9a52194b0c58aac106e1dd4077f52cc588");
+            ADD_CHECKPOINT(20000, "0feb87f0cae6bce22b652cfba2d9a462637c16da3437afc8c58bd24fcbe1854b");
+            ADD_CHECKPOINT(25000, "0c8486777e821731f323cc053bd61f3586e5003279d4f19d9d71760b64afc174");
+            ADD_CHECKPOINT(27500, "75c2d5dbad7edc11ab8cb022b1a0b0cc49e512ad22dc5ea9e66d455a1180d836");
+            ADD_CHECKPOINT(38000, "1d395ed3f22d7786d1891e1c665eca0564eeed2cfcaaba0987509f45d8bf9d6a");
+            ADD_CHECKPOINT(38500, "a041acdf0041ef2847d2fbc16462dfb57b6612a632fa006803b3b0f9cebab6b2");
+            ADD_CHECKPOINT(41000, "1e5f54871f1ec6dc0728bf168f71c3e0c8c8a5ee8f2344bb43275f90a393417d");
+            ADD_CHECKPOINT(42000, "a9909e7dc6d8cd62f651b34301e065031fb2d00116f3ba77678837e0e1c53849");
+            ADD_CHECKPOINT(43000, "b650d0397309c3a099f1cf8460547bda492b70040a95689a412dbc55b3fb539c");
+            ADD_CHECKPOINT(44000, "b8009c319002a5ae8f69a04767efff2c2c119237f43bf2a6ae7e4f87ea8f86a4");
+            ADD_CHECKPOINT(45000, "9fed3ec147d68e7e59465a37fb5dfd719a9e1ff1d77cdbc4b2bbe64a7f2d2203");
+            ADD_CHECKPOINT(46000, "7e1fcc5aad4e8350cfbfbf0eeb6267dd39ba19c1f8bb4fb0bc8ab8afbb31ea59");
+            ADD_CHECKPOINT(47000, "3398e16335b22592d80116d54b07893fb992a7cef33230972dd5957bf795244e");
+            ADD_CHECKPOINT(48000, "5ad1a271b3f78a9e9d4a4d6221c7cbf8baf2dbf9affdc5d9b5dd6c99c239c401");
+            ADD_CHECKPOINT(49000, "f9fc79ef6062533aeb9343b54de62f00bbd6bcb59a97d8566a9f762b0e82eb2e");
+            ADD_CHECKPOINT(49441, "ee218a867af849586f720cd9f3350bec7fef063eb887ee5af57295e29e552f21");
+            ADD_CHECKPOINT(49479, "5f7840552837c315dd152270edd017f7757f0c8560c096e880158e72dda355ab");
+            ADD_CHECKPOINT(49600, "5eb42755fed34d92de5f4c15b518b7c37b81f589808de16d3f5ddf778eb4351b");
+            ADD_CHECKPOINT(50500, "c5c2d1c0ae20d5690326d8cfe1bdb41d2a79d21368351bd1d80fd69244cc7696");
+            ADD_CHECKPOINT(52000, "caa850b6561cf6720692a900a77de199ae76c6756ec42c9c3411f61cd51127d9");
+            ADD_CHECKPOINT(54500, "5f3d9ecc1a43d20c5fcf8daba285fdf8aa790b83a062c0b8d43d95d79e608a53");
+            ADD_CHECKPOINT(57000, "482e98aeca79c86915b1a1e82844328eb6f12224909a98eaddec7b6b14361d3c");
+            ADD_CHECKPOINT(59005, "f5b54e0686679b124fdda7abecf342c134e10f8a8e33fcfee5368511d5da8a7b");
     return true;
   }
 

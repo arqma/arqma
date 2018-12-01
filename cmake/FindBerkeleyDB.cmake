@@ -1,4 +1,3 @@
-# Copyright (c) 2018, The ArQmA Project
 # - Try to find Berkeley DB
 # Once done this will define
 #

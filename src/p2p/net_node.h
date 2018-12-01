@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -127,9 +126,6 @@ namespace nodetool
     virtual bool unblock_host(const epee::net_utils::network_address &address);
     virtual std::map<std::string, time_t> get_blocked_hosts() { CRITICAL_REGION_LOCAL(m_blocked_hosts_lock); return m_blocked_hosts; }
   private:
-    const std::vector<std::string> m_seed_nodes_list =
-    { 
-    };
 
     bool islimitup=false;
     bool islimitdown=false;
@@ -242,6 +238,7 @@ namespace nodetool
 
     bool check_connection_and_handshake_with_peer(const epee::net_utils::network_address& na, uint64_t last_seen_stamp);
     bool gray_peerlist_housekeeping();
+    bool check_incoming_connections();
 
     void kill() { ///< will be called e.g. from deinit()
       _info("Killing the net_node");
@@ -305,6 +302,7 @@ namespace nodetool
     epee::math_helper::once_a_time_seconds<1> m_connections_maker_interval;
     epee::math_helper::once_a_time_seconds<60*30, false> m_peerlist_store_interval;
     epee::math_helper::once_a_time_seconds<60> m_gray_peerlist_housekeeping_interval;
+    epee::math_helper::once_a_time_seconds<900, false> m_incoming_connections_interval;
 
     std::string m_bind_ip;
     std::string m_port;
@@ -314,6 +312,7 @@ namespace nodetool
     std::list<epee::net_utils::network_address>   m_priority_peers;
     std::vector<epee::net_utils::network_address> m_exclusive_peers;
     std::vector<epee::net_utils::network_address> m_seed_nodes;
+    bool m_fallback_seed_nodes_added;
     std::list<nodetool::peerlist_entry> m_command_line_peers;
     uint64_t m_peer_livetime;
     //keep connections to initiate some interactions
@@ -332,8 +331,8 @@ namespace nodetool
     cryptonote::network_type m_nettype;
   };
 
-    const int64_t default_limit_up = 4092;    // kB/s
-    const int64_t default_limit_down = 16384;  // kB/s
+    const int64_t default_limit_up = P2P_DEFAULT_LIMIT_RATE_UP;    // Kbps
+    const int64_t default_limit_down = P2P_DEFAULT_LIMIT_RATE_DOWN;  // Kbps
     extern const command_line::arg_descriptor<std::string> arg_p2p_bind_ip;
     extern const command_line::arg_descriptor<std::string, false, true, 2> arg_p2p_bind_port;
     extern const command_line::arg_descriptor<uint32_t>    arg_p2p_external_port;

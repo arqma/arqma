@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2016-2018, The Monero Project
 //
 // All rights reserved.
@@ -47,10 +46,19 @@
 #include "common/stack_trace.h"
 #include "misc_log_ex.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "stacktrace"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "stacktrace"
 
-#define ST_LOG(x) CINFO(el::base::Writer,el::base::DispatchAction::FileOnlyLog,MONERO_DEFAULT_LOG_CATEGORY) << x
+#define ST_LOG(x) \
+  do { \
+    auto elpp = ELPP; \
+    if (elpp) { \
+      CINFO(el::base::Writer,el::base::DispatchAction::FileOnlyLog,ARQMA_DEFAULT_LOG_CATEGORY) << x; \
+    } \
+    else { \
+      std::cout << x << std::endl; \
+    } \
+  } while(0)
 
 // from http://stackoverflow.com/questions/11665829/how-can-i-print-stack-trace-for-caught-exceptions-in-c-code-injection-in-c
 

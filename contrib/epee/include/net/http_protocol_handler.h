@@ -1,6 +1,6 @@
 // Copyright (c) 2006-2013, Andrey N. Sabelnikov, www.sabelnikov.net
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 // * Neither the name of the Andrey N. Sabelnikov nor the
 // names of its contributors may be used to endorse or promote products
 // derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -22,7 +22,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 
 
 
@@ -37,8 +37,8 @@
 #include "http_auth.h"
 #include "http_base.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "net.http"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "net.http"
 
 namespace epee
 {
@@ -69,7 +69,7 @@ namespace net_utils
 			typedef t_connection_context connection_context;//t_connection_context net_utils::connection_context_base connection_context;
 			typedef http_server_config config_type;
 
-			simple_http_connection_handler(i_service_endpoint* psnd_hndlr, config_type& config);
+			simple_http_connection_handler(i_service_endpoint* psnd_hndlr, config_type& config, t_connection_context& conn_context);
 			virtual ~simple_http_connection_handler(){}
 
 			bool release_protocol()
@@ -105,7 +105,7 @@ namespace net_utils
 			enum body_transfer_type{
 				http_body_transfer_chunked,
 				http_body_transfer_measure,//mean "Content-Length" valid
-				http_body_transfer_chunked_instead_measure, 
+				http_body_transfer_chunked_instead_measure,
 				http_body_transfer_connection_close,
 				http_body_transfer_multipart,
 				http_body_transfer_undefined
@@ -126,7 +126,7 @@ namespace net_utils
 			std::string get_file_mime_tipe(const std::string& path);
 			std::string get_response_header(const http_response_info& response);
 
-			//major function 
+			//major function
 			inline bool handle_request_and_send_response(const http::http_request_info& query_info);
 
 
@@ -143,7 +143,8 @@ namespace net_utils
 			bool m_want_close;
 			size_t m_newlines;
 		protected:
-			i_service_endpoint* m_psnd_hndlr; 
+			i_service_endpoint* m_psnd_hndlr;
+			t_connection_context& m_conn_context;
 		};
 
 		template<class t_connection_context>
@@ -173,11 +174,10 @@ namespace net_utils
 		{
 		public:
 			typedef custum_handler_config<t_connection_context> config_type;
-			
+
 			http_custom_handler(i_service_endpoint* psnd_hndlr, config_type& config, t_connection_context& conn_context)
-				: simple_http_connection_handler<t_connection_context>(psnd_hndlr, config),
+				: simple_http_connection_handler<t_connection_context>(psnd_hndlr, config, conn_context),
 					m_config(config),
-					m_conn_context(conn_context),
 					m_auth(m_config.m_user ? http_server_auth{*m_config.m_user, config.rng} : http_server_auth{})
 			{}
 			inline bool handle_request(const http_request_info& query_info, http_response_info& response)
@@ -197,14 +197,14 @@ namespace net_utils
 				response.m_response_comment = "OK";
 				response.m_body.clear();
 
-				return m_config.m_phandler->handle_http_request(query_info, response, m_conn_context);
+				return m_config.m_phandler->handle_http_request(query_info, response, this->m_conn_context);
 			}
 
 			virtual bool thread_init()
 			{
 				return m_config.m_phandler->init_server_thread();;
 			}
-	
+
 			virtual bool thread_deinit()
 			{
 				return m_config.m_phandler->deinit_server_thread();
@@ -219,7 +219,6 @@ namespace net_utils
 		private:
 			//simple_http_connection_handler::config_type m_stub_config;
 			config_type& m_config;
-			t_connection_context& m_conn_context;
 			http_server_auth m_auth;
 		};
 	}

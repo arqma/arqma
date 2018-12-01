@@ -1,22 +1,21 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2017-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -41,8 +40,8 @@ extern "C"
 #include "rctOps.h"
 #include "bulletproofs.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "bulletproofs"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "bulletproofs"
 
 //#define DEBUG_BP
 
@@ -86,6 +85,13 @@ static void init_exponents()
     rct::precomp(Gprecomp[i], Gi[i]);
   }
   init_done = true;
+}
+
+static bool is_reduced(const rct::key &scalar)
+{
+  rct::key reduced = scalar;
+  sc_reduce32(reduced.bytes);
+  return scalar == reduced;
 }
 
 /* Given two scalar arrays, construct a vector commitment */
@@ -334,6 +340,9 @@ static rct::key hash_cache_mash(rct::key &hash_cache, const rct::key &mash0, con
 /* Given a value v (0..2^N-1) and a mask gamma, construct a range proof */
 Bulletproof bulletproof_PROVE(const rct::key &sv, const rct::key &gamma)
 {
+  CHECK_AND_ASSERT_THROW_MES(is_reduced(sv), "Invalid sv input");
+  CHECK_AND_ASSERT_THROW_MES(is_reduced(gamma), "Invalid gamma input");
+
   init_exponents();
 
   PERF_TIMER_UNIT(PROVE, 1000000);
@@ -577,6 +586,25 @@ bool bulletproof_VERIFY(const Bulletproof &proof)
   CHECK_AND_ASSERT_MES(proof.L.size() == proof.R.size(), false, "Mismatched L and R sizes");
   CHECK_AND_ASSERT_MES(proof.L.size() > 0, false, "Empty proof");
   CHECK_AND_ASSERT_MES(proof.L.size() == 6, false, "Proof is not for 64 bits");
+
+  for (const rct::key &k: proof.V)
+    CHECK_AND_ASSERT_MES(rct::isInMainSubgroup(k), false, "Input point not in subgroup");
+  for (const rct::key &k: proof.L)
+    CHECK_AND_ASSERT_MES(rct::isInMainSubgroup(k), false, "Input point not in subgroup");
+  for (const rct::key &k: proof.R)
+    CHECK_AND_ASSERT_MES(rct::isInMainSubgroup(k), false, "Input point not in subgroup");
+
+  CHECK_AND_ASSERT_MES(rct::isInMainSubgroup(proof.A), false, "Input point not in subgroup");
+  CHECK_AND_ASSERT_MES(rct::isInMainSubgroup(proof.S), false, "Input point not in subgroup");
+  CHECK_AND_ASSERT_MES(rct::isInMainSubgroup(proof.T1), false, "Input point not in subgroup");
+  CHECK_AND_ASSERT_MES(rct::isInMainSubgroup(proof.T2), false, "Input point not in subgroup");
+
+  // check scalar range
+  CHECK_AND_ASSERT_MES(is_reduced(proof.taux), false, "Input scalar not in range");
+  CHECK_AND_ASSERT_MES(is_reduced(proof.mu), false, "Input scalar not in range");
+  CHECK_AND_ASSERT_MES(is_reduced(proof.a), false, "Input scalar not in range");
+  CHECK_AND_ASSERT_MES(is_reduced(proof.b), false, "Input scalar not in range");
+  CHECK_AND_ASSERT_MES(is_reduced(proof.t), false, "Input scalar not in range");
 
   const size_t logN = proof.L.size();
   const size_t N = 1 << logN;

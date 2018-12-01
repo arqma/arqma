@@ -1,4 +1,3 @@
-# Copyright (c) 2018, The ArQmA Project
 # - Try to find libunwind
 # Once done this will define
 #

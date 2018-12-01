@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 //#define DBG
 // Copyright (c) 2016, Monero Research Labs
 //
@@ -78,19 +77,21 @@ namespace rct {
     inline key copy(const key & A) { key AA; memcpy(&AA, &A, 32); return AA; }
 
     //initializes a key matrix;
-    //first parameter is rows, 
+    //first parameter is rows,
     //second is columns
     keyM keyMInit(size_t rows, size_t cols);
 
-    //Various key generation functions        
+    //Various key generation functions
+
+    bool toPointCheckOrder(ge_p3 *P, const unsigned char *data);
 
     //generates a random scalar which can be used as a secret key or mask
     key skGen();
     void skGen(key &);
-    
+
     //generates a vector of secret keys of size "int"
     keyV skvGen(size_t rows );
-    
+
     //generates a random curve point (for testing)
     key pkGen();
     //generates a random secret and corresponding public key
@@ -109,7 +110,7 @@ namespace rct {
     //generates a random uint long long
     xmr_amount randXmrAmount(xmr_amount upperlimit);
 
-    //Scalar multiplications of curve points        
+    //Scalar multiplications of curve points
 
     //does a * G where a is a scalar and G is the curve basepoint
     void scalarmultBase(key & aG, const key &a);
@@ -119,6 +120,8 @@ namespace rct {
     key scalarmultKey(const key &P, const key &a);
     //Computes aH where H= toPoint(cn_fast_hash(G)), G the basepoint
     key scalarmultH(const key & a);
+    // checks a is in the main subgroup (ie, not a small one)
+    bool isInMainSubgroup(const key & a);
 
     //Curve addition / subtractions
 
@@ -143,7 +146,7 @@ namespace rct {
 
     //Hashing - cn_fast_hash
     //be careful these are also in crypto namespace
-    //cn_fast_hash for arbitrary l multiples of 32 bytes 
+    //cn_fast_hash for arbitrary l multiples of 32 bytes
     void cn_fast_hash(key &hash, const void * data, const size_t l);
     void hash_to_scalar(key &hash, const void * data, const size_t l);
     //cn_fast_hash for a 32 byte key
@@ -157,14 +160,14 @@ namespace rct {
     key hash_to_scalar128(const void * in);
     key cn_fast_hash(const ctkeyV &PC);
     key hash_to_scalar(const ctkeyV &PC);
-    //for mg sigs 
+    //for mg sigs
     key cn_fast_hash(const keyV &keys);
     key hash_to_scalar(const keyV &keys);
     //for ANSL
     key cn_fast_hash(const key64 keys);
     key hash_to_scalar(const key64 keys);
 
-    //returns hashToPoint as described in https://github.com/ShenNoether/ge_fromfe_writeup 
+    //returns hashToPoint as described in https://github.com/ShenNoether/ge_fromfe_writeup
     key hashToPointSimple(const key &in);
     key hashToPoint(const key &in);
     void hashToPoint(key &out, const key &in);

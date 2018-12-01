@@ -1,4 +1,3 @@
-// Copyright (c) 2018, The ArQmA Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -40,7 +39,7 @@ namespace Monero {
 namespace Utils {
 
 bool isAddressLocal(const std::string &address)
-{ 
+{
     try {
         return tools::is_local_address(address);
     } catch (const std::exception &e) {
@@ -52,6 +51,9 @@ bool isAddressLocal(const std::string &address)
 void onStartup()
 {
     tools::on_startup();
+#ifdef NDEBUG
+    tools::disable_core_dumps();
+#endif
 }
 
 }

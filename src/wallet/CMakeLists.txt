@@ -1,4 +1,3 @@
-# Copyright (c) 2018, The ArQmA Project
 # Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
@@ -91,6 +90,8 @@ target_link_libraries(wallet_rpc_server
     cncrypto
     common
     version
+    daemonizer
+    ${EPEE_READLINE}
     ${Boost_CHRONO_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}

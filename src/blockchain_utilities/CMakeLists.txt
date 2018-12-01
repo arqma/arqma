@@ -1,4 +1,3 @@
-# Copyright (c) 2018, The ArQmA Project
 # Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
@@ -29,7 +28,9 @@
 
 set(blocksdat "")
 if(PER_BLOCK_CHECKPOINT)
-  if(APPLE)
+  if(APPLE AND DEPENDS)
+    add_custom_command(OUTPUT blocksdat.o MAIN_DEPENDENCY ../blocks/checkpoints.dat COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && touch stub.c && ${CMAKE_C_COMPILER} --target=x86_64-apple-darwin11 -o stub.o -c stub.c COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${CMAKE_LINKER} -r -sectcreate __DATA __blocks_dat ../blocks/checkpoints.dat -o ${CMAKE_CURRENT_BINARY_DIR}/blocksdat.o stub.o && rm -f stub.*)
+  elseif(APPLE AND NOT DEPENDS)
     add_custom_command(OUTPUT blocksdat.o MAIN_DEPENDENCY ../blocks/checkpoints.dat COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && touch stub.c && ${CMAKE_C_COMPILER} -o stub.o -c stub.c COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${CMAKE_LINKER} ${LD_RAW_FLAGS} -r -sectcreate __DATA __blocks_dat ../blocks/checkpoints.dat -o ${CMAKE_CURRENT_BINARY_DIR}/blocksdat.o stub.o && rm -f stub.*)
   else()
     add_custom_command(OUTPUT blocksdat.o MAIN_DEPENDENCY ../blocks/checkpoints.dat COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && cp ../blocks/checkpoints.dat blocks.dat && ${CMAKE_LINKER} ${LD_RAW_FLAGS} -r -b binary -o ${CMAKE_CURRENT_BINARY_DIR}/blocksdat.o blocks.dat && rm -f blocks.dat)
@@ -89,6 +90,28 @@ set(blockchain_usage_private_headers)
 
 monero_private_headers(blockchain_usage
 	  ${blockchain_usage_private_headers})
+
+
+
+set(blockchain_ancestry_sources
+  blockchain_ancestry.cpp
+  )
+
+set(blockchain_ancestry_private_headers)
+
+monero_private_headers(blockchain_ancestry
+	  ${blockchain_ancestry_private_headers})
+
+
+
+set(blockchain_depth_sources
+  blockchain_depth.cpp
+  )
+
+set(blockchain_depth_private_headers)
+
+monero_private_headers(blockchain_depth
+	  ${blockchain_depth_private_headers})
 
 
 
@@ -159,7 +182,7 @@ target_link_libraries(blockchain_blackball
 
 set_property(TARGET blockchain_blackball
 	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-blackball")
+	OUTPUT_NAME "arqma-blockchain-mark-spent-outputs")
 install(TARGETS blockchain_blackball DESTINATION bin)
 
 
@@ -184,3 +207,44 @@ set_property(TARGET blockchain_usage
 	OUTPUT_NAME "arqma-blockchain-usage")
 install(TARGETS blockchain_usage DESTINATION bin)
 
+monero_add_executable(blockchain_ancestry
+  ${blockchain_ancestry_sources}
+  ${blockchain_ancestry_private_headers})
+
+target_link_libraries(blockchain_ancestry
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
+
+set_property(TARGET blockchain_ancestry
+	PROPERTY
+	OUTPUT_NAME "arqma-blockchain-ancestry")
+install(TARGETS blockchain_ancestry DESTINATION bin)
+
+monero_add_executable(blockchain_depth
+  ${blockchain_depth_sources}
+  ${blockchain_depth_private_headers})
+
+target_link_libraries(blockchain_depth
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
+
+set_property(TARGET blockchain_depth
+	PROPERTY
+	OUTPUT_NAME "arqma-blockchain-depth")
+install(TARGETS blockchain_depth DESTINATION bin)
