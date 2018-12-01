@@ -1,3 +1,4 @@
+# Copyright (c) 2018, The Arqma Network
 # Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
@@ -104,6 +105,16 @@ coverage:
 
 # Targets for specific prebuilt builds which will be advertised for updates by their build tag
 
+release-static-android-armv7:
+	mkdir -p $(builddir)/release/translations
+	cd $(builddir)/release/translations && cmake ../../../translations && $(MAKE)
+	cd $(builddir)/release && CC=arm-linux-androideabi-clang CXX=arm-linux-androideabi-clang++ cmake -D BUILD_TESTS=OFF -D ARCH="armv7-a" -D STATIC=ON -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=release -D ANDROID=true -D INSTALL_VENDORED_LIBUNBOUND=ON -D BUILD_TAG="android-armv7" -D CMAKE_SYSTEM_NAME="Android" -D CMAKE_ANDROID_STANDALONE_TOOLCHAIN="${ANDROID_STANDALONE_TOOLCHAIN_PATH}" -D CMAKE_ANDROID_ARM_MODE=ON -D CMAKE_ANDROID_ARCH_ABI="armeabi-v7a" ../.. && $(MAKE)
+
+release-static-android-armv8:
+	mkdir -p $(builddir)/release/translations
+	cd $(builddir)/release/translations && cmake ../../../translations && $(MAKE)
+	cd $(builddir)/release && CC=aarch64-linux-android-clang CXX=aarch64-linux-android-clang++ cmake -D BUILD_TESTS=OFF -D ARCH="armv8-a" -D STATIC=ON -D BUILD_64=ON -D CMAKE_BUILD_TYPE=release -D ANDROID=true -D INSTALL_VENDORED_LIBUNBOUND=ON -D BUILD_TAG="android-armv8" -D CMAKE_SYSTEM_NAME="Android" -D CMAKE_ANDROID_STANDALONE_TOOLCHAIN="${ANDROID_STANDALONE_TOOLCHAIN_PATH}" -D CMAKE_ANDROID_ARCH_ABI="arm64-v8a" ../.. && $(MAKE)
+
 release-static-linux-armv6:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -D BUILD_TESTS=OFF -D ARCH="armv6zk" -D STATIC=ON -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=release -D BUILD_TAG="linux-armv6" $(topdir) && $(MAKE)
@@ -111,11 +122,6 @@ release-static-linux-armv6:
 release-static-linux-armv7:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -D BUILD_TESTS=OFF -D ARCH="armv7-a" -D STATIC=ON -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=release -D BUILD_TAG="linux-armv7" $(topdir) && $(MAKE)
-
-release-static-android:
-	mkdir -p $(builddir)/release/translations
-	cd $(builddir)/release/translations && cmake ../../../translations && $(MAKE)
-	cd $(builddir)/release && CC=arm-linux-androideabi-clang CXX=arm-linux-androideabi-clang++ cmake -D BUILD_TESTS=OFF -D ARCH="armv7-a" -D STATIC=ON -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=release -D ANDROID=true -D INSTALL_VENDORED_LIBUNBOUND=ON -D BUILD_TAG="android" -D CMAKE_SYSTEM_NAME="Android" -D CMAKE_ANDROID_STANDALONE_TOOLCHAIN="${ANDROID_STANDALONE_TOOLCHAIN_PATH}" -D CMAKE_ANDROID_ARM_MODE=ON -D CMAKE_ANDROID_ARCH_ABI="armeabi-v7a" $(topdir) && $(MAKE)
 
 release-static-linux-armv8:
 	mkdir -p $(builddir)/release
@@ -150,11 +156,17 @@ release-static-win32:
 #	cd $(builddir)/fuzz && cmake -D STATIC=ON -D SANITIZE=ON -D BUILD_TESTS=ON -D USE_LTO=OFF -D CMAKE_C_COMPILER=afl-gcc -D CMAKE_CXX_COMPILER=afl-g++ -D ARCH="x86-64" -D CMAKE_BUILD_TYPE=fuzz -D BUILD_TAG="linux-x64" $(topdir) && $(MAKE)
 
 clean:
+	@echo "WARNING: Back-up your wallet if it exists within ./"$(deldirs)"!" ; \
+    read -r -p "This will destroy the build directory, continue (y/N)?: " CONTINUE; \
+	[ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] || (echo "Exiting."; exit 1;)
+	rm -rf $(deldirs)
+
+clean-all:
 	@echo "WARNING: Back-up your wallet if it exists within ./build!" ; \
-        read -r -p "This will destroy all build directories, continue (y/N)?: " CONTINUE; \
+	read -r -p "This will destroy all build directories, continue (y/N)?: " CONTINUE; \
 	[ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] || (echo "Exiting."; exit 1;)
 	rm -rf ./build
-
+	
 tags:
 	ctags -R --sort=1 --c++-kinds=+p --fields=+iaS --extra=+q --language-force=C++ src contrib tests/gtest
 
