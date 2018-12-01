@@ -9,7 +9,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Web: [arqma.com](https://arqma.com)
 - Mail: [support@arqma.com](mailto:support@arqma.com)
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
-
+- Discord: [https://discord.gg/TqXZWGm](https://discord.gg/TqXZWGm)
 
 ## Introduction
 
