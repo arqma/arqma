@@ -45,6 +45,16 @@ If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidel
 
 ## Compiling ArQmA from source
 
+## Build
+
+### IMPORTANT
+
+That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
+
+Status (branch: master): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=master)](https://travis-ci.org/arqma/arqma)
+
+Status (branch: release-v0.2): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=release-v0.2)](https://travis-ci.org/arqma/arqma)
+
 ### Dependencies
 
 The following table summarizes the tools and libraries required to build. A
