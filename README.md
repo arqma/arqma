@@ -9,7 +9,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Web: [arqma.com](https://arqma.com)
 - Mail: [support@arqma.com](mailto:support@arqma.com)
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
-
+- Discord: [https://discord.gg/TqXZWGm](https://discord.gg/TqXZWGm)
 
 ## Introduction
 
@@ -44,6 +44,16 @@ See [LICENSE](LICENSE).
 If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidelines.
 
 ## Compiling ArQmA from source
+
+## Build
+
+### IMPORTANT
+
+That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
+
+Status (branch: master): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=master)](https://travis-ci.org/arqma/arqma)
+
+Status (branch: release-v0.2): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=release-v0.2)](https://travis-ci.org/arqma/arqma)
 
 ### Dependencies
 
