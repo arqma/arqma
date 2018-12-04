@@ -184,8 +184,8 @@ namespace nodetool
     template <class Archive, class t_version_type>
     void serialize(Archive &a,  const t_version_type ver)
     {
-      // at v6, we drop existing peerlists, because annoying change
-      if (ver < 9)
+      // at v6 we drop existing peerlists, because annoying change
+      if (ver < 10)
         return;
 
       CRITICAL_REGION_LOCAL(m_peerlist_lock);
