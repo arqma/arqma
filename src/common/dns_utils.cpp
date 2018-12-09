@@ -34,12 +34,10 @@
 #include <stdlib.h>
 #include "include_base_utils.h"
 #include <random>
-#include <boost/filesystem/fstream.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/algorithm/string/join.hpp>
 using namespace epee;
-namespace bf = boost::filesystem;
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.dns"

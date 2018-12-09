@@ -807,6 +807,9 @@ else()
     set(DEBUG_FLAGS "${DEBUG_FLAGS} -O0 ")
   endif()
 
+  # At least some CLANGs default to not enough for Arqma
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth=900")
+
   if(NOT DEFINED USE_LTO_DEFAULT)
     set(USE_LTO_DEFAULT false)
   endif()
