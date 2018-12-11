@@ -318,7 +318,7 @@ namespace serialization {
      * \brief self explanatory
      */
     template<class Stream>
-    bool do_check_stream_state(Stream& s, boost::mpl::bool_<true>, bool noeof)
+    bool do_check_stream_state(Stream& s, boost::mpl::bool_<true>)
     {
       return s.good();
     }
@@ -329,13 +329,13 @@ namespace serialization {
      * \detailed Also checks to make sure that the stream is not at EOF
      */
     template<class Stream>
-    bool do_check_stream_state(Stream& s, boost::mpl::bool_<false>, bool noeof)
+    bool do_check_stream_state(Stream& s, boost::mpl::bool_<false>)
     {
       bool result = false;
       if (s.good())
 	{
 	  std::ios_base::iostate state = s.rdstate();
-	  result = noeof || EOF == s.peek();
+	  result = EOF == s.peek();
 	  s.clear(state);
 	}
       return result;
@@ -347,9 +347,9 @@ namespace serialization {
    * \brief calls detail::do_check_stream_state for ar
    */
   template<class Archive>
-  bool check_stream_state(Archive& ar, bool noeof = false)
+  bool check_stream_state(Archive& ar)
   {
-    return detail::do_check_stream_state(ar.stream(), typename Archive::is_saving(), noeof);
+    return detail::do_check_stream_state(ar.stream(), typename Archive::is_saving());
   }
 
   /*! \fn serialize
@@ -360,16 +360,6 @@ namespace serialization {
   inline bool serialize(Archive &ar, T &v)
   {
     bool r = do_serialize(ar, v);
-    return r && check_stream_state(ar, false);
-  }
-   /*! \fn serialize
-   *
-   * \brief serializes \a v into \a ar
-   */
-  template <class Archive, class T>
-  inline bool serialize_noeof(Archive &ar, T &v)
-  {
-    bool r = do_serialize(ar, v);
-    return r && check_stream_state(ar, true);
+    return r && check_stream_state(ar);
   }
 }
