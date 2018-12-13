@@ -351,7 +351,7 @@ namespace cryptonote
       ::serialization::serialize(a, const_cast<transaction&>(tx));
       blob_size = s.str().size();
     }
-    return get_transaction_size(tx, blob_size);
+    return get_transaction_size(tx);
   }
   //----------------------------------------------------------------
   bool get_tx_fee(const transaction& tx, uint64_t & fee)
