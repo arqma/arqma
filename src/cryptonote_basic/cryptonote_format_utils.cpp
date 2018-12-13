@@ -337,23 +337,6 @@ namespace cryptonote
     return string_tools::get_xtype_from_string(amount, str_amount);
   }
   //---------------------------------------------------------------
-  uint64_t get_transaction_size(const transaction &tx)
-  {
-    size_t blob_size;
-    if (tx.is_blob_size_valid())
-    {
-      blob_size = tx.blob_size;
-    }
-    else
-    {
-      std::ostringstream s;
-      binary_archive<true> a(s);
-      ::serialization::serialize(a, const_cast<transaction&>(tx));
-      blob_size = s.str().size();
-    }
-    return get_transaction_size(tx);
-  }
-  //----------------------------------------------------------------
   bool get_tx_fee(const transaction& tx, uint64_t & fee)
   {
     if (tx.version > 1)
