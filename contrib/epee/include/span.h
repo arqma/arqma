@@ -61,7 +61,9 @@ namespace epee
       return std::is_same<T, U>() ||
         (std::is_const<T>() && std::is_same<T, with_const>());
     }
-
+    
+  static_assert(!std::is_class<T>(), "no class types are currently allowed");
+  
   public:
     using value_type = T;
     using size_type = std::size_t;
