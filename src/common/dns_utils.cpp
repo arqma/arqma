@@ -313,7 +313,7 @@ std::vector<std::string> DNSResolver::get_record(const std::string& url, int rec
         if (res)
         {
           MINFO("Found \"" << *res << "\" in " << get_record_name(record_type) << " record for " << url);
-          address.push_back(*res);
+          addresses.push_back(*res);
         }
       }
     }
