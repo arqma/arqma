@@ -28,18 +28,20 @@
 //
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-using namespace epee;
-
 #include <atomic>
 #include <boost/algorithm/string.hpp>
 #include "wipeable_string.h"
 #include "string_tools.h"
-#include "serialization/string.h"
+//#include "serialization/string.h"
 #include "cryptonote_format_utils.h"
 #include "cryptonote_config.h"
 #include "crypto/crypto.h"
 #include "crypto/hash.h"
 #include "ringct/rctSigs.h"
+
+using namespace epee;
+
+#include "serialization/string.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
