@@ -61,7 +61,7 @@ namespace epee
       return std::is_same<T, U>() ||
         (std::is_const<T>() && std::is_same<T, with_const>());
     }
-
+  
   public:
     using value_type = T;
     using size_type = std::size_t;

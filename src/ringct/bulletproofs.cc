@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <openssl/ssl.h>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/lock_guard.hpp>
 #include "misc_log_ex.h"
 #include "common/perf_timer.h"
 extern "C"

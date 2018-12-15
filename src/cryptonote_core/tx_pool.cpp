@@ -40,7 +40,7 @@
 #include "blockchain.h"
 #include "blockchain_db/blockchain_db.h"
 #include "common/boost_serialization_helper.h"
-#include "common/int-util.h"
+#include "int-util.h"
 #include "misc_language.h"
 #include "warnings.h"
 #include "common/perf_timer.h"
@@ -414,7 +414,7 @@ namespace cryptonote
   //FIXME: Can return early before removal of all of the key images.
   //       At the least, need to make sure that a false return here
   //       is treated properly.  Should probably not return early, however.
-  bool tx_memory_pool::remove_transaction_keyimages(const transaction_prefix& tx, const crypto::hash &actual_hash)
+  bool tx_memory_pool::remove_transaction_keyimages(const transaction_prefix &tx, const crypto::hash &actual_hash)
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     CRITICAL_REGION_LOCAL1(m_blockchain);
