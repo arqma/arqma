@@ -17,19 +17,6 @@ More independent Gitian builders are needed, which is why this guide exists.
 It is preferred you follow these steps yourself instead of using someone else's
 VM image to avoid 'contaminating' the build.
 
-Table of Contents
-------------------
-
-Please note that these instructions have been forked from bitcoin's gitian build
-instructions. Please also consult their documentation, when running into problems.
-The signing is left as inherited from bitcoin at the moment.
-
-- [Preparing the Gitian builder host](#preparing-the-gitian-builder-host)
-- [Getting and building the inputs](#getting-and-building-the-inputs)
-- [Building Binaries](#building-bitcoin-core)
-- [Signing externally](#signing-externally)
-- [Uploading signatures](#uploading-signatures)
-
 Preparing the Gitian builder host
 ---------------------------------
 
