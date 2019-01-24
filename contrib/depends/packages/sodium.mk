@@ -1,8 +1,7 @@
 package=sodium
-$(package)_version=1.0.15
+$(package)_version=1.0.17
 $(package)_download_path=https://download.libsodium.org/libsodium/releases/
 $(package)_file_name=libsodium-$($(package)_version).tar.gz
-$(package)_sha256_hash=fb6a9e879a2f674592e4328c5d9f79f082405ee4bb05cb6e679b90afe9e178f4
 $(package)_patches=fix-whitespace.patch
 
 define $(package)_set_vars
