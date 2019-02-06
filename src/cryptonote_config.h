@@ -48,7 +48,7 @@
 #define CURRENT_BLOCK_MINOR_VERSION                     1
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2           300*2
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3           100*3
-#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V4		         CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3
+#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V4           CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT              60*60*2
 #define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             4
 
@@ -58,7 +58,7 @@
 
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define MONEY_PREMINE					                              ((uint64_t)7500000000000000)
+#define MONEY_PREMINE                                   ((uint64_t)7500000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
@@ -85,7 +85,7 @@
 #define DIFFICULTY_TARGET_V2                            240  // seconds
 #define DIFFICULTY_TARGET_V1                            120  // seconds - before first fork
 #define DIFFICULTY_WINDOW                               720 // blocks
-#define DIFFICULTY_WINDOW_V2			                         30
+#define DIFFICULTY_WINDOW_V2                            30
 #define DIFFICULTY_WINDOW_V3                            17
 #define DIFFICULTY_LAG                                  15  // !!!
 #define DIFFICULTY_CUT                                  60  // timestamps to cut after sorting
