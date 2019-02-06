@@ -1,4 +1,4 @@
-// Copyright (c) 2018, The ArQmA Network
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -39,7 +39,7 @@
 
 #define CRYPTONOTE_MAX_BLOCK_NUMBER                     500000000
 #define CRYPTONOTE_MAX_BLOCK_SIZE                       500000000  // block header blob limit, never used!
-#define CRYPTONOTE_GETBLOCKTEMPLATE_MAX_BLOCK_SIZE	    196608 //size of block (bytes) that is the maximum that miners will produce
+#define CRYPTONOTE_GETBLOCKTEMPLATE_MAX_BLOCK_SIZE	     196608 //size of block (bytes) that is the maximum that miners will produce
 #define CRYPTONOTE_MAX_TX_SIZE                          1000000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
 #define CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW            18
@@ -48,7 +48,7 @@
 #define CURRENT_BLOCK_MINOR_VERSION                     1
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2           300*2
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3           100*3
-#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V4		    CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3
+#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V4		         CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT              60*60*2
 #define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             4
 
@@ -58,7 +58,7 @@
 
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define MONEY_PREMINE					                ((uint64_t)7500000000000000)
+#define MONEY_PREMINE					                              ((uint64_t)7500000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
@@ -85,7 +85,7 @@
 #define DIFFICULTY_TARGET_V2                            240  // seconds
 #define DIFFICULTY_TARGET_V1                            120  // seconds - before first fork
 #define DIFFICULTY_WINDOW                               720 // blocks
-#define DIFFICULTY_WINDOW_V2			                30
+#define DIFFICULTY_WINDOW_V2			                         30
 #define DIFFICULTY_WINDOW_V3                            17
 #define DIFFICULTY_LAG                                  15  // !!!
 #define DIFFICULTY_CUT                                  60  // timestamps to cut after sorting
@@ -149,139 +149,139 @@
 
 #define ALLOW_DEBUG_COMMANDS
 
-#define CRYPTONOTE_NAME                         "arqma"
-#define CRYPTONOTE_POOLDATA_FILENAME            "poolstate.bin"
-#define CRYPTONOTE_BLOCKCHAINDATA_FILENAME      "data.mdb"
-#define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME "lock.mdb"
-#define P2P_NET_DATA_FILENAME                   "p2pstate.bin"
-#define MINER_CONFIG_FILE_NAME                  "miner_conf.json"
+#define CRYPTONOTE_NAME                                 "arqma"
+#define CRYPTONOTE_POOLDATA_FILENAME                    "poolstate.bin"
+#define CRYPTONOTE_BLOCKCHAINDATA_FILENAME              "data.mdb"
+#define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
+#define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
+#define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
-#define THREAD_STACK_SIZE                       5 * 1024 * 1024
+#define THREAD_STACK_SIZE                               5 * 1024 * 1024
 
-#define HF_VERSION_DYNAMIC_FEE                  4
-#define HF_VERSION_MIN_MIXIN_4                  6
-#define HF_VERSION_MIN_MIXIN_6                  7
-#define HF_VERSION_ENFORCE_RCT                  6
-#define HF_VERSION_LOWER_FEE                    10
+#define HF_VERSION_DYNAMIC_FEE                          4
+#define HF_VERSION_MIN_MIXIN_4                          6
+#define HF_VERSION_MIN_MIXIN_6                          7
+#define HF_VERSION_ENFORCE_RCT                          6
+#define HF_VERSION_LOWER_FEE                            10
 
-#define PER_KB_FEE_QUANTIZATION_DECIMALS        8
+#define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
-#define HASH_OF_HASHES_STEP                     256
+#define HASH_OF_HASHES_STEP                             256
 
-#define DEFAULT_TXPOOL_MAX_SIZE                 648000000ull // 3 days at 300000, in bytes
+#define DEFAULT_TXPOOL_MAX_SIZE                         648000000ull // 3 days at 300000, in bytes
 
 // New constants are intended to go here
 namespace config
 {
- uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
- uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
- uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000);
- uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
- std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
+   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
+   uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
+   uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000);
+   uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
+   std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
- uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar...
- uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi..
- uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS..
- uint16_t const P2P_DEFAULT_PORT = 19993;
- uint16_t const RPC_DEFAULT_PORT = 19994;
- uint16_t const ZMQ_RPC_DEFAULT_PORT = 19995;
- boost::uuids::uuid const NETWORK_ID = { {
- 0x11, 0x11, 0x11, 0x11 , 0xFF, 0xFF , 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
- } }; // Bender's nightmare
- std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
- uint32_t const GENESIS_NONCE = 19993;
+   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
+   uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
+   uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
+   uint16_t const P2P_DEFAULT_PORT = 19993;
+   uint16_t const RPC_DEFAULT_PORT = 19994;
+   uint16_t const ZMQ_RPC_DEFAULT_PORT = 19995;
+   boost::uuids::uuid const NETWORK_ID = { {
+       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
+     } }; // Bender's nightmare
+   std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
+   uint32_t const GENESIS_NONCE = 19993;
 
- namespace testnet
- {
- uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x53ca; // Wallet prefix: at...
- uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x504a; // Wallet prefix: ati..
- uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x524a; // Wallet prefix: ats..
- uint16_t const P2P_DEFAULT_PORT = 29993;
- uint16_t const RPC_DEFAULT_PORT = 29994;
- uint16_t const ZMQ_RPC_DEFAULT_PORT = 29995;
- boost::uuids::uuid const NETWORK_ID = { {
- 0x11 ,0x11, 0x11, 0x11 , 0xFF, 0xFF , 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
- } }; // Bender's daydream
- }
+   namespace testnet
+   {
+     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x53ca; // Wallet prefix: at... // decimal prefix: 21450
+     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x504a; // Wallet prefix: ati... // decimal prefix: 20554
+     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x524a; // Wallet prefix: ats... // decimal prefix: 21066
+     uint16_t const P2P_DEFAULT_PORT = 29993;
+     uint16_t const RPC_DEFAULT_PORT = 29994;
+     uint16_t const ZMQ_RPC_DEFAULT_PORT = 29995;
+     boost::uuids::uuid const NETWORK_ID = { {
+         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
+       } }; // Bender's daydream
+   }
 
- namespace stagenet
- {
- uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x39ca; // Wallet prefix: as..
- uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1742ca; // Wallet prefix: asi..
- uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1d84ca; // Wallet prefix: ass..
- uint16_t const P2P_DEFAULT_PORT = 39993;
- uint16_t const RPC_DEFAULT_PORT = 39994;
- uint16_t const ZMQ_RPC_DEFAULT_PORT = 39995;
- boost::uuids::uuid const NETWORK_ID = { {
- 0x11 ,0x11, 0x11, 0x11 , 0xFF, 0xFF , 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
- } }; // Bender's daydream
- }
+   namespace stagenet
+   {
+     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x39ca; // Wallet prefix: as... // decimal prefix: 14794
+     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1742ca; // Wallet prefix: asi... // decimal prefix: 1524426
+     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1d84ca; // Wallet prefix: ass... // decimal prefix: 1934538
+     uint16_t const P2P_DEFAULT_PORT = 39993;
+     uint16_t const RPC_DEFAULT_PORT = 39994;
+     uint16_t const ZMQ_RPC_DEFAULT_PORT = 39995;
+     boost::uuids::uuid const NETWORK_ID = { {
+         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
+       } }; // Bender's daydream
+   }
 }
 
 namespace cryptonote
 {
- enum network_type : uint8_t
- {
- MAINNET = 0,
- TESTNET,
- STAGENET,
- FAKECHAIN,
- UNDEFINED = 255
- };
- struct config_t
- {
- uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
- uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX;
- uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
- uint16_t const P2P_DEFAULT_PORT;
- uint16_t const RPC_DEFAULT_PORT;
- uint16_t const ZMQ_RPC_DEFAULT_PORT;
- boost::uuids::uuid const NETWORK_ID;
- std::string const GENESIS_TX;
- uint32_t const GENESIS_NONCE;
- };
- inline const config_t& get_config(network_type nettype)
- {
- static const config_t mainnet = {
- ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
- ::config::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
- ::config::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
- ::config::P2P_DEFAULT_PORT,
- ::config::RPC_DEFAULT_PORT,
- ::config::ZMQ_RPC_DEFAULT_PORT,
- ::config::NETWORK_ID,
- ::config::GENESIS_TX,
- ::config::GENESIS_NONCE
- };
- static const config_t testnet = {
- ::config::testnet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
- ::config::testnet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
- ::config::testnet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
- ::config::testnet::P2P_DEFAULT_PORT,
- ::config::testnet::RPC_DEFAULT_PORT,
- ::config::testnet::ZMQ_RPC_DEFAULT_PORT,
- ::config::testnet::NETWORK_ID,
- ::config::GENESIS_TX,
- ::config::GENESIS_NONCE
- };
- static const config_t stagenet = {
- ::config::stagenet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
- ::config::stagenet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
- ::config::stagenet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
- ::config::stagenet::P2P_DEFAULT_PORT,
- ::config::stagenet::RPC_DEFAULT_PORT,
- ::config::stagenet::ZMQ_RPC_DEFAULT_PORT,
- ::config::stagenet::NETWORK_ID,
- ::config::GENESIS_TX,
- ::config::GENESIS_NONCE
- };
- switch (nettype)
- {
- case MAINNET: return mainnet;
- case TESTNET: return testnet;
- case STAGENET: return stagenet;
- case FAKECHAIN: return mainnet;
- default: throw std::runtime_error("Invalid network type");
- }
- };
+  enum network_type : uint8_t
+    {
+      MAINNET = 0,
+      TESTNET,
+      STAGENET,
+      FAKECHAIN,
+      UNDEFINED = 255
+    };
+    struct config_t
+    {
+      uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
+      uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX;
+      uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
+      uint16_t const P2P_DEFAULT_PORT;
+      uint16_t const RPC_DEFAULT_PORT;
+      uint16_t const ZMQ_RPC_DEFAULT_PORT;
+      boost::uuids::uuid const NETWORK_ID;
+      std::string const GENESIS_TX;
+      uint32_t const GENESIS_NONCE;
+    };
+    inline const config_t& get_config(network_type nettype)
+    {
+      static const config_t mainnet = {
+        ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+        ::config::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+        ::config::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+        ::config::P2P_DEFAULT_PORT,
+        ::config::RPC_DEFAULT_PORT,
+        ::config::ZMQ_RPC_DEFAULT_PORT,
+        ::config::NETWORK_ID,
+        ::config::GENESIS_TX,
+        ::config::GENESIS_NONCE
+      };
+      static const config_t testnet = {
+        ::config::testnet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+        ::config::testnet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+        ::config::testnet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+        ::config::testnet::P2P_DEFAULT_PORT,
+        ::config::testnet::RPC_DEFAULT_PORT,
+        ::config::testnet::ZMQ_RPC_DEFAULT_PORT,
+        ::config::testnet::NETWORK_ID,
+        ::config::GENESIS_TX,
+        ::config::GENESIS_NONCE
+      };
+      static const config_t stagenet = {
+        ::config::stagenet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+        ::config::stagenet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+        ::config::stagenet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+        ::config::stagenet::P2P_DEFAULT_PORT,
+        ::config::stagenet::RPC_DEFAULT_PORT,
+        ::config::stagenet::ZMQ_RPC_DEFAULT_PORT,
+        ::config::stagenet::NETWORK_ID,
+        ::config::GENESIS_TX,
+        ::config::GENESIS_NONCE
+      };
+      switch (nettype)
+      {
+        case MAINNET: return mainnet;
+        case TESTNET: return testnet;
+        case STAGENET: return stagenet;
+        case FAKECHAIN: return mainnet;
+        default: throw std::runtime_error("Invalid network type");
+      }
+   };
 }
