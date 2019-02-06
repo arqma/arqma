@@ -1,4 +1,4 @@
-# Copyright (c) 2018, The ArQmA Network
+# Copyright (c) 2018-2019, The Arqma Network
 # Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
@@ -40,7 +40,7 @@ if (IOS)
     INCLUDE(CmakeLists_IOS.txt)
 endif()
 
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.6.3)
 message(STATUS "CMake version ${CMAKE_VERSION}")
 
 project(arqma)
@@ -877,7 +877,7 @@ if(STATIC)
 endif()
 
 set(BOOST_LIBRARIES system filesystem thread date_time chrono regex serialization program_options)
-if(WIN32)
+if(WIN32 OR MINGW OR MSVC)
   set(BOOST_LIBRARIES ${BOOST_LIBRARIES} locale)
 endif()
 
@@ -885,7 +885,7 @@ find_package(Boost 1.62 QUIET REQUIRED COMPONENTS ${BOOST_LIBRARIES})
 
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_LIB_SUFFIXES})
 if(NOT Boost_FOUND)
-  die("Could not find Boost libraries, please make sure you have installed Boost or libboost-all-dev (1.58) or the equivalent")
+  die("Could not find Boost libraries, please make sure you have installed Boost or libboost-all-dev (1.62) or the equivalent")
 elseif(Boost_FOUND)
   message(STATUS "Found Boost Version: ${Boost_VERSION}")
   if (Boost_VERSION VERSION_LESS 106200 AND NOT (OPENSSL_VERSION VERSION_LESS 1.1))
