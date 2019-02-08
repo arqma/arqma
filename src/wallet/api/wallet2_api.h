@@ -419,7 +419,7 @@ struct Wallet
      *
      * \param payment_id        - 16 characters hexadecimal string or empty string if new random payment id needs to be
      *                            generated
-     * \return                  - 106 characters string representing integrated address
+     * \return                  - 109 characters string representing integrated address
      */
     virtual std::string integratedAddress(const std::string &payment_id) const = 0;
 

@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <boost/bind.hpp>
 #include <atomic>
 
@@ -58,7 +59,7 @@
 
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
 
-#define MIN_WANTED_SEED_NODES 3
+#define MIN_WANTED_SEED_NODES 7
 
 namespace nodetool
 {
@@ -393,13 +394,13 @@ namespace nodetool
     {
       full_addrs.insert("139.99.106.122:29993");
       full_addrs.insert("77.93.206.172:29993");
-      full_addrs.insert("77.103.133.157:39993");
+      full_addrs.insert("77.103.229.42:29993");
     }
     else if (nettype == cryptonote::STAGENET)
     {
       full_addrs.insert("77.93.206.172:39993");
       full_addrs.insert("51.38.99.79:39993");
-      full_addrs.insert("77.103.133.157:39993");
+      full_addrs.insert("77.103.229.42:39993");
     }
     else if (nettype == cryptonote::FAKECHAIN)
     {
@@ -409,7 +410,10 @@ namespace nodetool
       full_addrs.insert("144.217.242.16:19993");
       full_addrs.insert("207.244.120.39:19993");
       full_addrs.insert("92.222.70.207:19993");
-      full_addrs.insert("77.103.133.157:19993");
+      full_addrs.insert("77.103.229.42:19993");
+      full_addrs.insert("77.93.206.170:19993");
+      full_addrs.insert("51.15.50.83:19993");
+      full_addrs.insert("51.38.99.79:19993");
     }
     return full_addrs;
   }

@@ -20,7 +20,6 @@ created. To use it for Arqma:
 
 Common `host-platform-triplets` for cross compilation are:
 
-- `i686-w64-mingw32` for Win32
 - `x86_64-w64-mingw32` for Win64
 - `x86_64-apple-darwin11` for MacOSX
 - `arm-linux-gnueabihf` for Linux ARM 32 bit
@@ -55,7 +54,7 @@ directory and place the entire MacOSX10.11.sdk folder in it. The depends build w
 
 #Mingw builds
 
- Building for 32/64bit mingw requires switching alternatives to a posix mode
+ Building for 64bit mingw requires switching alternatives to a posix mode
 
  ```bash
  update-alternatives --set x86_64-w64-mingw32-g++ x86_64-w64-mingw32-g++-posix

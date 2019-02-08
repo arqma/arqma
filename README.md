@@ -1,6 +1,6 @@
-# ArQmA
+# Arqma Network
 
-Copyright (c) 2018 The ArQmA Project.
+Copyright (c) 2018 The Arqma Network.
 Copyright (c) 2014-2018 The Monero Project.   
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
@@ -13,27 +13,27 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Introduction
 
-ArQmA is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.
+Arqma is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.
 
-**Privacy:** ArQmA uses a cryptographically sound system to allow you to send and receive funds without your transactions being easily revealed on the blockchain (the ledger of transactions that everyone has). This ensures that your purchases, receipts, and all transfers remain absolutely private by default.
+**Privacy:** Arqma uses a cryptographically sound system to allow you to send and receive funds without your transactions being easily revealed on the blockchain (the ledger of transactions that everyone has). This ensures that your purchases, receipts, and all transfers remain absolutely private by default.
 
 **Security:** Using the power of a distributed peer-to-peer consensus network, every transaction on the network is cryptographically secured. Individual wallets have a 25 word mnemonic seed that is only displayed once, and can be written down to backup the wallet. Wallet files are encrypted with a passphrase to ensure they are useless if stolen.
 
-**Untraceability:** By taking advantage of ring signatures, a special property of a certain type of cryptography, ArQmA is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.
+**Untraceability:** By taking advantage of ring signatures, a special property of a certain type of cryptography, Arqma is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.
 
 ## About this project
 
-This is the core implementation of ArQmA. It is open source and completely free to use without restrictions, except for those specified in the license agreement below. There are no restrictions on anyone creating an alternative implementation of ArQmA that uses the protocol and network in a compatible manner.
+This is the core implementation of Arqma. It is open source and completely free to use without restrictions, except for those specified in the license agreement below. There are no restrictions on anyone creating an alternative implementation of Arqma that uses the protocol and network in a compatible manner.
 
 As with many development projects, the repository on Github is considered to be the "staging" area for the latest changes. Before changes are merged into that branch on the main repository, they are tested by individual developers in their own branches, submitted as a pull request, and then subsequently tested by contributors who focus on testing and code reviews. That having been said, the repository should be carefully considered before using it in a production environment, unless there is a patch in the repository for a particular show-stopping issue you are experiencing. It is generally a better idea to use a tagged release for stability.
 
-**Anyone is welcome to contribute to ArQmA's codebase!** If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.
+**Anyone is welcome to contribute to Arqma's codebase!** If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.
 
 ## Supporting the project
 
-ArQmA is a 100% community-sponsored endeavor. If you want to join our efforts, the easiest thing you can do is support the project financially. You can send ARQ to the ArQmA donation address via the `donate` command (type `help` in the command-line wallet for details).
+Arqma is a 100% community-sponsored endeavor. If you want to join our efforts, the easiest thing you can do is support the project financially. You can send ARQ to the Arqma donation address via the `donate` command (type `help` in the command-line wallet for details).
 
-The ArQmA donation address is: `ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3` (viewkey: `4e5373dfd5ba67fa2988107a605bc960575c465bd07aba624915d3f660b73d62`)
+The Arqma donation address is: `ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3` (viewkey: `4e5373dfd5ba67fa2988107a605bc960575c465bd07aba624915d3f660b73d62`)
 
 ## License
 
@@ -43,7 +43,7 @@ See [LICENSE](LICENSE).
 
 If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidelines.
 
-## Compiling ArQmA from source
+## Compiling Arqma from source
 
 ## Build
 
@@ -53,7 +53,6 @@ That build is from the master branch, which is used for active development and c
 
 Status (branch: master): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=master)](https://travis-ci.org/arqma/arqma)
 
-Status (branch: release-v0.2.2): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=release-v0.2.2)](https://travis-ci.org/arqma/arqma)
 
 ### Dependencies
 
@@ -68,10 +67,10 @@ library archives (`.a`).
 
 | Dep          | Min. version  | Vendored | Debian/Ubuntu pkg  | Arch pkg     | Fedora            | Optional | Purpose        |
 | ------------ | ------------- | -------- | ------------------ | ------------ | ----------------- | -------- | -------------- |
-| GCC          | 4.7.3         | NO       | `build-essential`  | `base-devel` | `gcc`             | NO       |                |
-| CMake        | 3.0.0         | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
+| GCC          | 7.3.0         | NO       | `build-essential`  | `base-devel` | `gcc`             | NO       |                |
+| CMake        | 3.6.3         | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
 | pkg-config   | any           | NO       | `pkg-config`       | `base-devel` | `pkgconf`         | NO       |                |
-| Boost        | 1.58          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
+| Boost        | 1.62          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | basically any | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
 | libzmq       | 3.0.0         | NO       | `libzmq3-dev`      | `zeromq`     | `cppzmq-devel`    | NO       | ZeroMQ library |
 | OpenPGM      | ????          | NO       | `libpgm-dev`       | `libpgm`     | `openpgm-devel`   | NO       | For ZeroMQ     |
@@ -118,7 +117,7 @@ If you already have a repo cloned, initialize and update:
 
 ### Build instructions
 
-ArQmA uses the CMake build system and a top-level [Makefile](Makefile) that
+Arqma uses the CMake build system and a top-level [Makefile](Makefile) that
 invokes cmake commands as needed.
 
 #### On Linux and OS X
@@ -141,7 +140,7 @@ invokes cmake commands as needed.
 
 * Add `PATH="$PATH:$HOME/arqma/build/release/bin"` to `.profile`
 
-* Run ArQmA with `arqmad --detach`
+* Run Arqma with `arqmad --detach`
 
 * **Optional**: build and run the test suite to verify the binaries:
 
@@ -169,7 +168,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * `apt-get update && apt-get upgrade` to install all of the latest software
 
-* Install the dependencies for ArQmA from the 'Debian' column in the table above.
+* Install the dependencies for Arqma from the 'Debian' column in the table above.
 
 * Increase the system swap size:
 ```
@@ -194,13 +193,13 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Add `PATH="$PATH:$HOME/arqma/build/release/bin"` to `.profile`
 
-* Run ArQmA with `arqmad --detach`
+* Run Arqma with `arqmad --detach`
 
 * You may wish to reduce the size of the swap file after the build has finished, and delete the boost directory from your home directory
 
 #### *Note for Raspbian Jessie users:*
 
-If you are using the older Raspbian Jessie image, compiling ArQmA is a bit more complicated. The version of Boost available in the Debian Jessie repositories is too old to use with ArQmA, and thus you must compile a newer version yourself. The following explains the extra steps, and has been tested on a Raspberry Pi 2 with a clean install of minimal Raspbian Jessie.
+If you are using the older Raspbian Jessie image, compiling Arqma is a bit more complicated. The version of Boost available in the Debian Jessie repositories is too old to use with Arqma, and thus you must compile a newer version yourself. The following explains the extra steps, and has been tested on a Raspberry Pi 2 with a clean install of minimal Raspbian Jessie.
 
 * As before, `apt-get update && apt-get upgrade` to install all of the latest software, and increase the system swap size
 
@@ -240,7 +239,7 @@ application.
 
 **Preparing the build environment**
 
-1. Download and install the [MSYS2 installer](http://msys2.github.io), either the 64-bit or the 32-bit package, depending on your system.
+1. Download and install the [MSYS2 installer](http://msys2.github.io) 64-bit package, depending on your system.
 
 2. Open the MSYS shell via the `MSYS2 MSYS` shortcut at Menu Start
 
@@ -250,7 +249,7 @@ application.
 
 4. Exit the MSYS shell using Alt+F4 or by clicking X at top-right corner. It is Very Important to do not exit to shell!!.
 
-5. Start `MSYS2 MINGW64` either `MSYS2 MINGW32` from Menu Start
+5. Start `MSYS2 MINGW64` from Menu Start
 
 6. Update packages again using pacman:  
 
@@ -262,14 +261,9 @@ application.
 
         pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi protobuf-devel mingw-w64-x86_64-protobuf-c mingw-w64-x86_64-protobuf
 
-    To build for 32-bit Windows:
-
-        pacman -S git mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium mingw-w64-i686-hidapi protobuf-devel mingw-w64-i686-protobuf-c mingw-w64-i686-protobuf
-
-
 **Building**
 
-* Download ArQmA with command:
+* Download Arqma with command:
 
 	`git clone https://github.com/arqma/arqma`
 
@@ -281,19 +275,11 @@ application.
 
         make release-static-win64
 
-* If you are on a 32-bit system, run:
-
-        make release-static-win32
-
 * The resulting executables can be found in `build/release/bin`
 
 * **Optional**: to build Windows binaries suitable for debugging on a 64-bit system, run:
 
         make debug-static-win64
-
-* **Optional**: to build Windows binaries suitable for debugging on a 32-bit system, run:
-
-        make debug-static-win32
 
 * The resulting executables can be found in `build/debug/bin`
 
@@ -301,7 +287,7 @@ application.
 
 The project can be built from scratch by following instructions for Linux above. If you are running arqma in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
 
-We expect to add ArQmA into the ports tree in the near future, which will aid in managing installations using ports or packages.
+We expect to add Arqma into the ports tree in the near future, which will aid in managing installations using ports or packages.
 
 ### On OpenBSD:
 
@@ -316,7 +302,7 @@ The doxygen and graphviz packages are optional and require the xbase set.
 The Boost package has a bug that will prevent librpc.a from building correctly. In order to fix this, you will have to Build boost yourself from scratch. Follow the directions here (under "Building Boost"):
 https://github.com/bitcoin/bitcoin/blob/master/doc/build-openbsd.md
 
-You will have to add the serialization, date_time, and regex modules to Boost when building as they are needed by ArQmA.
+You will have to add the serialization, date_time, and regex modules to Boost when building as they are needed by Arqma.
 
 To build: `env CC=egcc CXX=eg++ CPP=ecpp DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/path/to/the/boost/you/built make release-static-64`
 
@@ -423,7 +409,6 @@ By default, in either dynamically or statically linked builds, binaries target t
 * ```make release-static-linux-armv7``` builds binaries on Linux portable across POSIX systems on armv7 processors
 * ```make release-static-linux-armv6``` builds binaries on Linux portable across POSIX systems on armv6 processors
 * ```make release-static-win64``` builds binaries on 64-bit Windows portable across 64-bit Windows systems
-* ```make release-static-win32``` builds binaries on 64-bit or 32-bit Windows portable across 32-bit Windows systems
 
 ### Cross Compiling
 
@@ -433,7 +418,6 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 * ```make depends target=x86_64-w64-mingw32``` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
 * ```make depends target=x86_64-apple-darwin11``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python-dev
 * ```make depends target=i686-linux-gnu``` for 32-bit linux binaries. Requires: g++-multilib bc
-* ```make depends target=i686-w64-mingw32``` for 32-bit windows binaries. Requires: python3 g++-mingw-w64-i686
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
@@ -477,7 +461,7 @@ See [README.i18n.md](README.i18n.md).
 
 ## Using Tor
 
-While ArQmA isn't made to integrate with Tor, it can be used wrapped with torsocks, by
+While Arqma isn't made to integrate with Tor, it can be used wrapped with torsocks, by
 setting the following configuration parameters and environment variables:
 
 * `--p2p-bind-ip 127.0.0.1` on the command line or `p2p-bind-ip=127.0.0.1` in
@@ -515,7 +499,7 @@ allow inbound connections. Full example:
 
 ## Debugging
 
-This section contains general instructions for debugging failed installs or problems encountered with ArQmA. First ensure you are running the latest version built from the Github repo.
+This section contains general instructions for debugging failed installs or problems encountered with Arqma. First ensure you are running the latest version built from the Github repository.
 
 ### Obtaining stack traces and core dumps on Unix systems
 
