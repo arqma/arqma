@@ -29,7 +29,7 @@ env:
 # i686 Linux
     - HOST=i686-pc-linux-gnu PACKAGES="gperf cmake g++-multilib bc python3-zmq"
 # Win64
-    - HOST=x86_64-w64-mingw32 PACKAGES="cmake python3 nsis g++-mingw-w64-x86-64 gcc-mingw-w64-x86_64 wine-binfmt wine64 bc"
+    - HOST=x86_64-w64-mingw32 PACKAGES="cmake python3 nsis g++-mingw-w64-x86-64 wine-binfmt wine64 bc"
 # x86_64 Linux
     - HOST=x86_64-unknown-linux-gnu PACKAGES="gperf cmake python3-zmq libdbus-1-dev libharfbuzz-dev"
 # Cross-Mac
