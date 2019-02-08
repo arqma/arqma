@@ -53,7 +53,6 @@ That build is from the master branch, which is used for active development and c
 
 Status (branch: master): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=master)](https://travis-ci.org/arqma/arqma)
 
-Status (branch: release-v0.2.2): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=release-v0.2.2)](https://travis-ci.org/arqma/arqma)
 
 ### Dependencies
 
