@@ -17,7 +17,7 @@ define $(package)_config_cmds
   sh ../source/runConfigureICU Linux &&\
   make &&\
   cd ../buildb &&\
-  sh ../source/$($(package)_autoconf) --disable-static --enable-shared=yes --disable-layout --disable-layoutex --disable-tests --disable-samples --prefix=$(host_prefix) --with-cross-build=`pwd`/../builda &&\
+  sh ../source/$($(package)_autoconf) --enable-static=yes --disable-shared --disable-layout --disable-layoutex --disable-tests --disable-samples --prefix=$(host_prefix) --with-cross-build=`pwd`/../builda &&\
   $(MAKE) $($(package)_build_opts)
 endef
 
