@@ -27,11 +27,11 @@ env:
 # ARM v8
     - HOST=aarch64-linux-gnu PACKAGES="python3 gperf g++-aarch64-linux-gnu"
 # i686 Linux
-    - HOST=i686-pc-linux-gnu PACKAGES="gperf cmake g++-multilib bc python3-zmq"
+    - HOST=i686-pc-linux-gnu PACKAGES="gperf cmake g++-multilib bc python3-zmq" RUN_TESTS=false
 # Win64
-    - HOST=x86_64-w64-mingw32 PACKAGES="cmake python3 nsis g++-mingw-w64-x86-64 wine-binfmt wine64 bc"
+    - HOST=x86_64-w64-mingw32 PACKAGES="cmake python3 nsis g++-mingw-w64-x86-64 wine-binfmt wine64 bc" RUN_TESTS=false
 # x86_64 Linux
-    - HOST=x86_64-unknown-linux-gnu PACKAGES="gperf cmake python3-zmq libdbus-1-dev libharfbuzz-dev"
+    - HOST=x86_64-unknown-linux-gnu PACKAGES="gperf cmake python3-zmq libdbus-1-dev libharfbuzz-dev" RUN_TESTS=false
 # Cross-Mac
     - HOST=x86_64-apple-darwin11 PACKAGES="cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python-dev python3-setuptools-git" OSX_SDK=10.11
 

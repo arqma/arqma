@@ -1,6 +1,6 @@
 package=readline
 $(package)_version=6.3
-$(package)_download_path=ftp://ftp.gnu.org/gnu/readline/
+$(package)_download_path=http://ftp.vim.org/ftp/gnu/readline/
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=56ba6071b9462f980c5a72ab0023893b65ba6debb4eeb475d7a563dc65cafd43
 $(package)_patches=readline-1.patch
