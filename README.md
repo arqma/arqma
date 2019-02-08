@@ -53,7 +53,7 @@ That build is from the master branch, which is used for active development and c
 
 Status (branch: master): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=master)](https://travis-ci.org/arqma/arqma)
 
-Status (branch: release-v0.2.1): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=release-v0.2.1)](https://travis-ci.org/arqma/arqma)
+Status (branch: release-v0.2.2): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=release-v0.2.2)](https://travis-ci.org/arqma/arqma)
 
 ### Dependencies
 
@@ -87,16 +87,24 @@ library archives (`.a`).
 | Doxygen      | any           | NO       | `doxygen`          | `doxygen`    | `doxygen`         | YES      | Documentation  |
 | Graphviz     | any           | NO       | `graphviz`         | `graphviz`   | `graphviz`        | YES      | Documentation  |
 | HIDAPI       | ?             | NO       | `libhidapi-dev`    | ``           | ``                | NO       | for Device     |
-| libusb-1.0   | 1.0           | NO       | `libusb-1.0-0-dev` | ``           | ``                | YES      |                |
-| libudev      | ?             | NO       | `libudev-dev`      | ``           | ``                | YES      |                |
+| libusb-1.0   | 1.0           | NO       | `libusb-1.0-0-dev` | ``           | ``                | NO       |                |
+| libudev      | ?             | NO       | `libudev-dev`      | ``           | ``                | NO       |                |
+| protobuf     | ?             | NO       | `protobuf-compiler`| ``           | ``                | NO       | serializing    |
+|              |               |          | `libprotobuf-dev`  | ``           | ``                |          | structured data|
+-------------------------------------------------------------------------------------------------------------------------------
 
 
 [1] On Debian/Ubuntu `libgtest-dev` only includes sources and headers. You must
 build the library binary manually. This can be done with the following command ```sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/ ```
 [2] libnorm-dev is needed if your zmq library was built with libnorm, and not needed otherwise
 
-Debian / Ubuntu one liner for all dependencies  
-``` sudo apt update && sudo apt install build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev libudev-dev libusb-1.0-0-dev libhidapi-dev```
+Debian / Ubuntu one liner for all dependencies
+
+``` sudo apt update && sudo apt install build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev libudev-dev libusb-1.0-0-dev libhidapi-dev protobuf-compiler libprotobuf-dev xsltproc gperf autoconf automake libtool-bin libprotobuf-c-dev ```
+
+Install all dependencies at once on OSX:
+
+``` brew update && brew install cmake pkg-config boost zmq libpgm unbound libsodium miniupnpc libunwind-headers xz readline ldns expat doxygen graphviz protobuf ```
 
 ### Cloning the repository
 
@@ -118,8 +126,7 @@ invokes cmake commands as needed.
 * Install the dependencies
 * Change to the root of the source code directory and build:
 
-        cd arqma
-        make cmake-release && cd build/release && make
+        `$ cd arqma && make`
 
 
     *Optional*: If your machine has several cores and enough memory, enable
@@ -253,11 +260,11 @@ application.
 
     To build for 64-bit Windows:
 
-        pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi
+        pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi protobuf-devel mingw-w64-x86_64-protobuf-c mingw-w64-x86_64-protobuf
 
     To build for 32-bit Windows:
 
-        pacman -S git mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium mingw-w64-i686-hidapi
+        pacman -S git mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium mingw-w64-i686-hidapi protobuf-devel mingw-w64-i686-protobuf-c mingw-w64-i686-protobuf
 
 
 **Building**
@@ -433,6 +440,8 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
 Using `depends` might also be easier to compile Arqma on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
+
+The produced binaries still link libc dynamically. If the binary is compiled on a current distribution, it might not run on an older distribution with an older installation of libc. Passing `-DBACKCOMPAT=ON` to cmake will make sure that the binary will run on systems having at least libc version 2.17.
 
 ## Running arqmad
 
