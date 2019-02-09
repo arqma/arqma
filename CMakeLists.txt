@@ -881,14 +881,14 @@ if(WIN32 OR MINGW OR MSVC)
   set(BOOST_LIBRARIES ${BOOST_LIBRARIES} locale)
 endif()
 
-find_package(Boost 1.62 QUIET REQUIRED COMPONENTS ${BOOST_LIBRARIES})
+find_package(Boost 1.58 QUIET REQUIRED COMPONENTS ${BOOST_LIBRARIES})
 
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_LIB_SUFFIXES})
 if(NOT Boost_FOUND)
-  die("Could not find Boost libraries, please make sure you have installed Boost or libboost-all-dev (1.62) or the equivalent")
+  die("Could not find Boost libraries, please make sure you have installed Boost or libboost-all-dev (1.58) or the equivalent")
 elseif(Boost_FOUND)
   message(STATUS "Found Boost Version: ${Boost_VERSION}")
-  if (Boost_VERSION VERSION_LESS 106200 AND NOT (OPENSSL_VERSION VERSION_LESS 1.1))
+  if (Boost_VERSION VERSION_LESS 105800 AND NOT (OPENSSL_VERSION VERSION_LESS 1.1))
       message(FATAL_ERROR "Boost older than 1.62 is too old to link with OpenSSL 1.1 or newer. "
                           "Update Boost or install OpenSSL 1.0 and set path to it when running cmake: "
                           "cmake -DOPENSSL_ROOT_DIR='/usr/include/openssl-1.0;/usr/lib/openssl-1.0'")
