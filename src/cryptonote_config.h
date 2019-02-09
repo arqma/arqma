@@ -39,7 +39,7 @@
 
 #define CRYPTONOTE_MAX_BLOCK_NUMBER                     500000000
 #define CRYPTONOTE_MAX_BLOCK_SIZE                       500000000  // block header blob limit, never used!
-#define CRYPTONOTE_GETBLOCKTEMPLATE_MAX_BLOCK_SIZE	     196608 //size of block (bytes) that is the maximum that miners will produce
+#define CRYPTONOTE_GETBLOCKTEMPLATE_MAX_BLOCK_SIZE      196608 //size of block (bytes) that is the maximum that miners will produce
 #define CRYPTONOTE_MAX_TX_SIZE                          1000000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
 #define CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW            18
@@ -124,8 +124,8 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_IN_CONNECTIONS_COUNT                12
-#define P2P_DEFAULT_OUT_CONNECTIONS_COUNT               24
+#define P2P_DEFAULT_IN_CONNECTIONS_COUNT                8
+#define P2P_DEFAULT_OUT_CONNECTIONS_COUNT               16
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60           //secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000     //50000000 bytes maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -134,7 +134,7 @@
 #define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  //2 minutes
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       //5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
-#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            4
+#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
 
 #define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // Kbps
 #define P2P_DEFAULT_LIMIT_RATE_DOWN                     16384      // Kbps

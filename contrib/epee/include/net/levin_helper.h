@@ -1,6 +1,6 @@
 // Copyright (c) 2006-2013, Andrey N. Sabelnikov, www.sabelnikov.net
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 // * Neither the name of the Andrey N. Sabelnikov nor the
 // names of its contributors may be used to endorse or promote products
 // derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -22,7 +22,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 
 
 
@@ -30,6 +30,7 @@
 
 #include "levin_base.h"
 #include "serializeble_struct_helper.h"
+#include "int-util.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
@@ -43,37 +44,37 @@ namespace levin
 	{
 		buff.resize(sizeof(levin::bucket_head));
 		levin::bucket_head& head = *(levin::bucket_head*)(&buff[0]);
-		head.m_signature = LEVIN_SIGNATURE;
+		head.m_signature = SWAP64LE(LEVIN_SIGNATURE);
 		head.m_cb = 0;
 		head.m_have_to_return_data = true;
-		head.m_command = command_id;
-		head.m_return_code = 1;
+		head.m_command = SWAP32LE(command_id);
+		head.m_return_code = SWAP32LE(1);
 		head.m_reservedA = rand(); //probably some flags in future
 		head.m_reservedB = rand(); //probably some check summ in future
 
 		std::string buff_strg;
 		if(!StorageNamed::save_struct_as_storage_to_buff_t<t_struct, StorageNamed::DefaultStorageType>(t, buff_strg))
 			return false;
-		
-		head.m_cb = buff_strg.size();
+
+		head.m_cb = SWAP64LE(buff_strg.size());
 		buff.append(buff_strg);
 		return true;
 	}
 
-	
+
 	bool pack_data_to_levin_message(const std::string& data, std::string& buff, int command_id)
 	{
 		buff.resize(sizeof(levin::bucket_head));
 		levin::bucket_head& head = *(levin::bucket_head*)(&buff[0]);
-		head.m_signature = LEVIN_SIGNATURE;
+		head.m_signature = SWAP64LE(LEVIN_SIGNATURE);
 		head.m_cb = 0;
 		head.m_have_to_return_data = true;
-		head.m_command = command_id;
-		head.m_return_code = 1;
+		head.m_command = SWAP32LE(command_id);
+		head.m_return_code = SWAP32LE(1);
 		head.m_reservedA = rand(); //probably some flags in future
 		head.m_reservedB = rand(); //probably some check summ in future
 
-		head.m_cb = data.size();
+		head.m_cb = SWAP64LE(data.size());
 		buff.append(data);
 		return true;
 	}
@@ -86,7 +87,17 @@ namespace levin
 			return false;
 		}
 
-		levin::bucket_head& head = *(levin::bucket_head*)(&buff[0]);
+#if BYTE_ORDER == LITTLE_ENDIAN
+    levin::bucket_head &head = *(levin::bucket_head*)(&buff[0]);
+#else
+    levin::bucket_head head = *(levin::bucket_head*)(&buff[0]);
+		head.m_signature = SWAP64LE(head.m_signature);
+		head.m_cb = SWAP64LE(head.m_cb);
+		head.m_command = SWAP32LE(head.m_command);
+		head.m_return_code = SWAP32LE(head.m_return_code);
+		head.m_reservedA = SWAP32LE(head.m_reservedA);
+		head.m_reservedB = SWAP32LE(head.m_reservedB);
+#endif
 		if(head.m_signature != LEVIN_SIGNATURE)
 		{
 			LOG_PRINT_L3("Failed to read signature in levin message, at load_struct_from_levin_message");
@@ -112,8 +123,18 @@ namespace levin
 			LOG_ERROR("size of buff(" << buff.size() << ") is too small, at load_struct_from_levin_message");
 			return false;
 		}
-		
-		levin::bucket_head& head = *(levin::bucket_head*)(&buff[0]);
+
+#if BYTE_ORDER == LITTLE_ENDIAN
+    levin::bucket_head &head = *(levin::bucket_head*)(&buff[0]);
+#else
+    levin::bucket_head head = *(levin::bucket_head*)(&buff[0]);
+		head.m_signature = SWAP64LE(head.m_signature);
+		head.m_cb = SWAP64LE(head.m_cb);
+		head.m_command = SWAP32LE(head.m_command);
+		head.m_return_code = SWAP32LE(head.m_return_code);
+		head.m_reservedA = SWAP32LE(head.m_reservedA);
+		head.m_reservedB = SWAP32LE(head.m_reservedB);
+#endif
 		if(head.m_signature != LEVIN_SIGNATURE)
 		{
 			LOG_ERROR("Failed to read signature in levin message, at load_struct_from_levin_message");
