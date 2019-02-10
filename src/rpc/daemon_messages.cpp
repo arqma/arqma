@@ -60,6 +60,7 @@ const char* const GetOutputHistogram::name = "get_output_histogram";
 const char* const GetOutputKeys::name = "get_output_keys";
 const char* const GetRPCVersion::name = "get_rpc_version";
 const char* const GetPerKBFeeEstimate::name = "get_dynamic_per_kb_fee_estimate";
+const char* const GetOutputDistribution::name = "get_output_distribution";
 
 
 
@@ -857,6 +858,43 @@ void GetPerKBFeeEstimate::Response::fromJson(rapidjson::Value& val)
   GET_FROM_JSON_OBJECT(val, estimated_fee_per_kb, estimated_fee_per_kb);
 }
 
+rapidjson::Value GetOutputDistribution::Request::toJson(rapidjson::Document& doc) const
+{
+  auto val = Message::toJson(doc);
+  auto& al = doc.GetAllocator();
+
+  INSERT_INTO_JSON_OBJECT(val, doc, amounts, amounts);
+  INSERT_INTO_JSON_OBJECT(val, doc, from_height, from_height);
+  INSERT_INTO_JSON_OBJECT(val, doc, to_height, to_height);
+  INSERT_INTO_JSON_OBJECT(val, doc, cumulative, cumulative);
+
+  return val;
+}
+
+void GetOutputDistribution::Request::fromJson(rapidjson::Value& val)
+{
+  GET_FROM_JSON_OBJECT(val, amounts, amounts);
+  GET_FROM_JSON_OBJECT(val, from_height, from_height);
+  GET_FROM_JSON_OBJECT(val, to_height, to_height);
+  GET_FROM_JSON_OBJECT(val, cumulative, cumulative);
+}
+
+rapidjson::Value GetOutputDistribution::Response::toJson(rapidjson::Document& doc) const
+{
+  auto val = Message::toJson(doc);
+  auto& al = doc.GetAllocator();
+
+  INSERT_INTO_JSON_OBJECT(val, doc, status, status);
+  INSERT_INTO_JSON_OBJECT(val, doc, distributions, distributions);
+
+  return val;
+}
+
+void GetOutputDistribution::Response::fromJson(rapidjson::Value& val)
+{
+  GET_FROM_JSON_OBJECT(val, status, status);
+  GET_FROM_JSON_OBJECT(val, distributions, distributions);
+}
 
 }  // namespace rpc
 

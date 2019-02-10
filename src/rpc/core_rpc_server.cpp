@@ -45,6 +45,7 @@ using namespace epee;
 #include "storages/http_abstract_invoke.h"
 #include "crypto/hash.h"
 #include "rpc/rpc_args.h"
+#include "rpc/rpc_handler.h"
 #include "core_rpc_server_error_codes.h"
 #include "p2p/net_node.h"
 #include "version.h"
@@ -2114,68 +2115,62 @@ namespace cryptonote
       const uint64_t req_to_height = req.to_height ? req.to_height : (m_core.get_current_blockchain_height() - 1);
       for (uint64_t amount: req.amounts)
       {
-        static struct D
-        {
-          boost::mutex mutex;
-          std::vector<uint64_t> cached_distribution;
-          uint64_t cached_from, cached_to, cached_start_height, cached_base;
-          bool cached;
-          D(): cached_from(0), cached_to(0), cached_start_height(0), cached_base(0), cached(false) {}
-        } d;
-        boost::unique_lock<boost::mutex> lock(d.mutex);
-
-        if (d.cached && amount == 0 && d.cached_from == req.from_height && d.cached_to == req_to_height)
-        {
-          res.distributions.push_back({amount, d.cached_start_height, req.binary, d.cached_distribution, d.cached_base});
-          if (!req.cumulative)
-          {
-            auto &distribution = res.distributions.back().distribution;
-            for (size_t n = distribution.size() - 1; n > 0; --n)
-              distribution[n] -= distribution[n-1];
-            distribution[0] -= d.cached_base;
-          }
-          continue;
-        }
-
-        std::vector<uint64_t> distribution;
-        uint64_t start_height, base;
-        if (!m_core.get_output_distribution(amount, req.from_height, req_to_height, start_height, distribution, base))
+        auto data = rpc::RpcHandler::get_output_distribution(m_core, amount, req.from_height, req_to_height, req.cumulative);
+        if (!data)
         {
           error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
-          error_resp.message = "Failed to get rct distribution";
+          error_resp.message = "Failed to get output distribution";
           return false;
         }
-        if (req_to_height > 0 && req_to_height >= req.from_height)
-        {
-          uint64_t offset = std::max(req.from_height, start_height);
-          if (offset <= req_to_height && req_to_height - offset + 1 < distribution.size())
-            distribution.resize(req_to_height - offset + 1);
-        }
 
-        if (amount == 0)
-        {
-          d.cached_from = req.from_height;
-          d.cached_to = req_to_height;
-          d.cached_distribution = distribution;
-          d.cached_start_height = start_height;
-          d.cached_base = base;
-          d.cached = true;
-        }
-
-        if (!req.cumulative)
-        {
-          for (size_t n = distribution.size() - 1; n > 0; --n)
-            distribution[n] -= distribution[n-1];
-          distribution[0] -= base;
-        }
-
-        res.distributions.push_back({amount, start_height, req.binary, std::move(distribution), base});
+        res.distributions.push_back({std::move(*data), amount, req.binary});
       }
     }
     catch (const std::exception &e)
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Failed to get output distribution";
+      return false;
+    }
+
+    res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_get_output_distribution_bin(const COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request& req, COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response& res)
+  {
+    PERF_TIMER(on_get_output_distribution_bin);
+
+    bool r;
+    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_OUTPUT_DISTRIBUTION>(invoke_http_mode::BIN, "/get_output_distribution.bin", req, res, r))
+      return r;
+
+    res.status = "Failed";
+
+    if (!req.binary)
+    {
+      res.status = "Binary only call";
+      return false;
+    }
+    try
+    {
+      // 0 is a placeholder for the whole chain
+      const uint64_t req_to_height = req.to_height ? req.to_height : (m_core.get_current_blockchain_height() - 1);
+      for (uint64_t amount: req.amounts)
+      {
+        auto data = rpc::RpcHandler::get_output_distribution([this](uint64_t amount, uint64_t from, uint64_t to, uint64_t &start_height, std::vector<uint64_t> &distribution, uint64_t &base) { return m_core.get_output_distribution(amount, from, to, start_height, distribution, base); }, amount, req.from_height, req_to_height, req.cumulative);
+        if (!data)
+        {
+          res.status = "Failed to get output distribution";
+          return false;
+        }
+
+        res.distributions.push_back({std::move(*data), amount, "", req.binary, req.compress});
+      }
+    }
+    catch (const std::exception &e)
+    {
+      res.status = "Failed to get output distribution";
       return false;
     }
 

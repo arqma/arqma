@@ -729,6 +729,35 @@ namespace rpc
     res.status = Message::STATUS_OK;
   }
 
+  void DaemonHandler::handle(const GetOutputDistribution::Request& req, GetOutputDistribution::Response& res)
+  {
+    try
+    {
+      res.distributions.reserve(req.amounts.size());
+
+      const uint64_t req_to_height = req.to_height ? req.to_height : (m_core.get_current_blockchain_height() - 1);
+      for (std::uint64_t amount : req.amounts)
+      {
+        auto data = get_output_distribution(m_core, amount, req.from_height, req_to_height, req.cumulative);
+        if (!data)
+        {
+          res.distributions.clear();
+          res.status = Message::STATUS_FAILED;
+          res.error_details = "Failed to get output distribution";
+          return;
+        }
+        res.distributions.push_back(output_distribution{std::move(*data), amount, req.cumulative});
+      }
+      res.status = Message::STATUS_OK;
+    }
+    catch (const std::exception& e)
+    {
+      res.distributions.clear();
+      res.status = Message::STATUS_FAILED;
+      res.error_details = e.what();
+    }
+  }
+
   bool DaemonHandler::getBlockHeaderByHash(const crypto::hash& hash_in, cryptonote::rpc::BlockHeaderResponse& header)
   {
     block b;
@@ -804,6 +833,7 @@ namespace rpc
       REQ_RESP_TYPES_MACRO(request_type, GetOutputKeys, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, GetRPCVersion, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, GetPerKBFeeEstimate, req_json, resp_message, handle);
+      REQ_RESP_TYPES_MACRO(request_type, GetOutputDistribution, req_json, resp_message, handle);
 
       // if none of the request types matches
       if (resp_message == NULL)

@@ -2758,10 +2758,10 @@ bool wallet2::get_rct_distribution(uint64_t &start_height, std::vector<uint64_t>
   cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response res = AUTO_VAL_INIT(res);
   req.amounts.push_back(0);
   req.from_height = 0;
-  req.cumulative = true;
+  req.cumulative = false;
   req.binary = true;
   m_daemon_rpc_mutex.lock();
-  bool r = net_utils::invoke_http_json_rpc("/json_rpc", "get_output_distribution", req, res, m_http_client, rpc_timeout);
+  bool r = net_utils::invoke_http_bin("/get_output_distribution.bin", req, res, m_http_client, rpc_timeout);
   m_daemon_rpc_mutex.unlock();
   if (!r)
   {
@@ -2788,8 +2788,10 @@ bool wallet2::get_rct_distribution(uint64_t &start_height, std::vector<uint64_t>
     MWARNING("Failed to request output distribution: results are not for amount 0");
     return false;
   }
-  start_height = res.distributions[0].start_height;
-  distribution = std::move(res.distributions[0].distribution);
+  for (size_t i = 1; i < res.distributions[0].data.distribution.size(); ++i)
+    res.distributions[0].data.distribution[i] += res.distributions[0].data.distribution[i-1];
+  start_height = res.distributions[0].data.start_height;
+  distribution = std::move(res.distributions[0].data.distribution);
   return true;
 }
 //----------------------------------------------------------------------------------------------------
@@ -6440,13 +6442,13 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
         {
           if (d.amount == amount)
           {
-            THROW_WALLET_EXCEPTION_IF(d.start_height > segregation_fork_height, error::get_output_distribution, "Distribution start_height too high");
-            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - d.start_height >= d.distribution.size(), error::get_output_distribution, "Distribution size too small");
-            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - RECENT_OUTPUT_BLOCKS - d.start_height >= d.distribution.size(), error::get_output_distribution, "Distribution size too small");
+            THROW_WALLET_EXCEPTION_IF(d.data.start_height > segregation_fork_height, error::get_output_distribution, "Distribution start_height too high");
+            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - d.data.start_height >= d.data.distribution.size(), error::get_output_distribution, "Distribution size too small");
+            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - RECENT_OUTPUT_BLOCKS - d.data.start_height >= d.data.distribution.size(), error::get_output_distribution, "Distribution size too small");
             THROW_WALLET_EXCEPTION_IF(segregation_fork_height <= RECENT_OUTPUT_BLOCKS, error::wallet_internal_error, "Fork height too low");
-            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - RECENT_OUTPUT_BLOCKS < d.start_height, error::get_output_distribution, "Bad start height");
-            uint64_t till_fork = d.distribution[segregation_fork_height - d.start_height];
-            uint64_t recent = till_fork - d.distribution[segregation_fork_height - RECENT_OUTPUT_BLOCKS - d.start_height];
+            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - RECENT_OUTPUT_BLOCKS < d.data.start_height, error::get_output_distribution, "Bad start height");
+            uint64_t till_fork = d.data.distribution[segregation_fork_height - d.data.start_height];
+            uint64_t recent = till_fork - d.data.distribution[segregation_fork_height - RECENT_OUTPUT_BLOCKS - d.data.start_height];
             segregation_limit[amount] = std::make_pair(till_fork, recent);
             found = true;
             break;
@@ -11067,7 +11069,7 @@ bool wallet2::parse_uri(const std::string &uri, std::string &address, std::strin
 {
   static const std::string ARQMA_URI = "arqma:";
   static const int ARQMA_URI_LEN = ARQMA_URI.length();
-  
+
   if (uri.substr(0, ARQMA_URI_LEN) != ARQMA_URI)
   {
     error = std::string("URI has wrong scheme (expected ") + "\"" + ARQMA_URI + "\"): " + uri;

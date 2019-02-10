@@ -33,6 +33,41 @@
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "cryptonote_basic/difficulty.h"
 #include "crypto/hash.h"
+#include "rpc/rpc_handler.h"
+#include "common/varint.h"
+#include "common/perf_timer.h"
+
+namespace
+{
+  template<typename T>
+  std::string compress_integer_array(const std::vector<T> &v)
+  {
+    std::string s;
+    s.resize(v.size() * (sizeof(T) * 8 / 7 + 1));
+    char *ptr = (char*)s.data();
+    for (const T &t: v)
+      tools::write_varint(ptr, t);
+    s.resize(ptr - s.data());
+    return s;
+  }
+
+  template<typename T>
+  std::vector<T> decompress_integer_array(const std::string &s)
+  {
+    std::vector<T> v;
+    v.reserve(s.size());
+    int read = 0;
+    const std::string::const_iterator end = s.end();
+    for (std::string::const_iterator i = s.begin(); i != end; std::advance(i, read))
+    {
+      T t;
+      read = tools::read_varint(std::string::const_iterator(i), s.end(), t);
+      CHECK_AND_ASSERT_THROW_MES(read > 0 && read <= 256, "Error decompressing data");
+      v.push_back(t);
+    }
+    return v;
+  }
+}
 
 namespace cryptonote
 {
@@ -2209,6 +2244,7 @@ namespace cryptonote
       uint64_t to_height;
       bool cumulative;
       bool binary;
+      bool compress;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(amounts)
@@ -2216,26 +2252,49 @@ namespace cryptonote
         KV_SERIALIZE_OPT(to_height, (uint64_t)0)
         KV_SERIALIZE_OPT(cumulative, false)
         KV_SERIALIZE_OPT(binary, true)
+        KV_SERIALIZE_OPT(compress, false)
       END_KV_SERIALIZE_MAP()
     };
 
     struct distribution
     {
+      rpc::output_distribution_data data;
       uint64_t amount;
-      uint64_t start_height;
+      std::string compressed_data;
       bool binary;
-      std::vector<uint64_t> distribution;
-      uint64_t base;
+      bool compress;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(amount)
-        KV_SERIALIZE(start_height)
+        KV_SERIALIZE_N(data.start_height, "start_height")
         KV_SERIALIZE(binary)
+        KV_SERIALIZE(compress)
         if (this_ref.binary)
-          KV_SERIALIZE_CONTAINER_POD_AS_BLOB(distribution)
+        {
+          if (is_store)
+          {
+            if (this_ref.compress)
+            {
+              const_cast<std::string&>(this_ref.compressed_data) = compress_integer_array(this_ref.data.distribution);
+              KV_SERIALIZE(compressed_data)
+            }
+            else
+              KV_SERIALIZE_CONTAINER_POD_AS_BLOB_N(data.distribution, "distribution")
+          }
+          else
+          {
+            if (this_ref.compress)
+            {
+              KV_SERIALIZE(compressed_data)
+              const_cast<std::vector<uint64_t>&>(this_ref.data.distribution) = decompress_integer_array<uint64_t>(this_ref.compressed_data);
+            }
+            else
+              KV_SERIALIZE_CONTAINER_POD_AS_BLOB_N(data.distribution, "distribution")
+          }
+        }
         else
-          KV_SERIALIZE(distribution)
-        KV_SERIALIZE(base)
+          KV_SERIALIZE_N(data.distribution, "distribution")
+        KV_SERIALIZE_N(data.base, "base")
       END_KV_SERIALIZE_MAP()
     };
 
