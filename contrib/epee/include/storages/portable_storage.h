@@ -1,6 +1,6 @@
 // Copyright (c) 2006-2013, Andrey N. Sabelnikov, www.sabelnikov.net
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 // * Neither the name of the Andrey N. Sabelnikov nor the
 // names of its contributors may be used to endorse or promote products
 // derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -22,11 +22,11 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 
 
 
-#pragma once 
+#pragma once
 
 #include "misc_language.h"
 #include "portable_storage_base.h"
@@ -35,6 +35,8 @@
 #include "portable_storage_to_json.h"
 #include "portable_storage_from_json.h"
 #include "portable_storage_val_converters.h"
+#include "span.h"
+#include "int-util.h"
 
 namespace epee
 {
@@ -80,7 +82,8 @@ namespace epee
 
       //-------------------------------------------------------------------------------
       bool		store_to_binary(binarybuffer& target);
-      bool		load_from_binary(const binarybuffer& target);
+      bool		load_from_binary(const epee::span<const uint8_t> target);
+      bool		load_from_binary(const std::string& target) { return load_from_binary(epee::strspan<uint8_t>(target)); }
       template<class trace_policy>
       bool		  dump_as_xml(std::string& targetObj, const std::string& root_name = "");
       bool		  dump_as_json(std::string& targetObj, size_t indent = 0, bool insert_newlines = true);
@@ -135,8 +138,8 @@ namespace epee
       TRY_ENTRY();
       std::stringstream ss;
       storage_block_header sbh = AUTO_VAL_INIT(sbh);
-      sbh.m_signature_a = PORTABLE_STORAGE_SIGNATUREA;
-      sbh.m_signature_b = PORTABLE_STORAGE_SIGNATUREB;
+      sbh.m_signature_a = SWAP32LE(PORTABLE_STORAGE_SIGNATUREA);
+      sbh.m_signature_b = SWAP32LE(PORTABLE_STORAGE_SIGNATUREB);
       sbh.m_ver = PORTABLE_STORAGE_FORMAT_VER;
       ss.write((const char*)&sbh, sizeof(storage_block_header));
       pack_entry_to_buff(ss, m_root);
@@ -145,7 +148,7 @@ namespace epee
       CATCH_ENTRY("portable_storage::store_to_binary", false)
     }
     inline
-    bool portable_storage::load_from_binary(const binarybuffer& source)
+    bool portable_storage::load_from_binary(const epee::span<const uint8_t> source)
     {
       m_root.m_entries.clear();
       if(source.size() < sizeof(storage_block_header))
@@ -154,8 +157,8 @@ namespace epee
         return false;
       }
       storage_block_header* pbuff = (storage_block_header*)source.data();
-      if(pbuff->m_signature_a != PORTABLE_STORAGE_SIGNATUREA || 
-        pbuff->m_signature_b != PORTABLE_STORAGE_SIGNATUREB 
+      if(pbuff->m_signature_a != SWAP32LE(PORTABLE_STORAGE_SIGNATUREA) ||
+        pbuff->m_signature_b != SWAP32LE(PORTABLE_STORAGE_SIGNATUREB)
         )
       {
         LOG_ERROR("portable_storage: wrong binary format - signature mismatch");
@@ -210,7 +213,7 @@ namespace epee
     template<class t_value>
     bool portable_storage::get_value(const std::string& value_name, t_value& val, hsection hparent_section)
     {
-      BOOST_MPL_ASSERT(( boost::mpl::contains<storage_entry::types, t_value> )); 
+      BOOST_MPL_ASSERT(( boost::mpl::contains<storage_entry::types, t_value> ));
       //TRY_ENTRY();
       if(!hparent_section) hparent_section = &m_root;
       storage_entry* pentry = find_storage_entry(value_name, hparent_section);
@@ -238,9 +241,9 @@ namespace epee
     }
     //---------------------------------------------------------------------------------------------------------------
     template<class t_value>
-    bool portable_storage::set_value(const std::string& value_name, const t_value& v, hsection hparent_section)        
+    bool portable_storage::set_value(const std::string& value_name, const t_value& v, hsection hparent_section)
     {
-      BOOST_MPL_ASSERT(( boost::mpl::contains<boost::mpl::push_front<storage_entry::types, storage_entry>::type, t_value> )); 
+      BOOST_MPL_ASSERT(( boost::mpl::contains<boost::mpl::push_front<storage_entry::types, storage_entry>::type, t_value> ));
       TRY_ENTRY();
       if(!hparent_section)
         hparent_section = &m_root;
@@ -309,7 +312,7 @@ namespace epee
     template<class t_value>
     harray portable_storage::get_first_value(const std::string& value_name, t_value& target, hsection hparent_section)
     {
-      BOOST_MPL_ASSERT(( boost::mpl::contains<storage_entry::types, t_value> )); 
+      BOOST_MPL_ASSERT(( boost::mpl::contains<storage_entry::types, t_value> ));
       //TRY_ENTRY();
       if(!hparent_section) hparent_section = &m_root;
       storage_entry* pentry = find_storage_entry(value_name, hparent_section);
@@ -318,7 +321,7 @@ namespace epee
       if(pentry->type() != typeid(array_entry))
         return nullptr;
       array_entry& ar_entry = boost::get<array_entry>(*pentry);
-      
+
       get_first_value_visitor<t_value> gfv(target);
       if(!boost::apply_visitor(gfv, ar_entry))
         return nullptr;
@@ -347,7 +350,7 @@ namespace epee
     template<class t_value>
     bool portable_storage::get_next_value(harray hval_array, t_value& target)
     {
-      BOOST_MPL_ASSERT(( boost::mpl::contains<storage_entry::types, t_value> )); 
+      BOOST_MPL_ASSERT(( boost::mpl::contains<storage_entry::types, t_value> ));
       //TRY_ENTRY();
       CHECK_AND_ASSERT(hval_array, false);
       array_entry& ar_entry = *hval_array;
@@ -356,7 +359,7 @@ namespace epee
         return false;
       return true;
       //CATCH_ENTRY("portable_storage::get_next_value", false);
-    } 
+    }
     //---------------------------------------------------------------------------------------------------------------
     template<class t_value>
     harray portable_storage::insert_first_value(const std::string& value_name, const t_value& target, hsection hparent_section)
@@ -389,7 +392,7 @@ namespace epee
       TRY_ENTRY();
       CHECK_AND_ASSERT(hval_array, false);
 
-      CHECK_AND_ASSERT_MES(hval_array->type() == typeid(array_entry_t<t_value>), 
+      CHECK_AND_ASSERT_MES(hval_array->type() == typeid(array_entry_t<t_value>),
         false, "unexpected type in insert_next_value: " << typeid(array_entry_t<t_value>).name());
 
       array_entry_t<t_value>& arr_typed = boost::get<array_entry_t<t_value> >(*hval_array);
@@ -466,7 +469,7 @@ namespace epee
     {
       TRY_ENTRY();
       CHECK_AND_ASSERT(hsec_array, false);
-      CHECK_AND_ASSERT_MES(hsec_array->type() == typeid(array_entry_t<section>), 
+      CHECK_AND_ASSERT_MES(hsec_array->type() == typeid(array_entry_t<section>),
         false, "unexpected type(not 'section') in insert_next_section, type: " << hsec_array->type().name());
 
       array_entry_t<section>& sec_array = boost::get<array_entry_t<section>>(*hsec_array);

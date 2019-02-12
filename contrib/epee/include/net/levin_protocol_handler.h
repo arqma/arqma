@@ -1,6 +1,6 @@
 // Copyright (c) 2006-2013, Andrey N. Sabelnikov, www.sabelnikov.net
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 // * Neither the name of the Andrey N. Sabelnikov nor the
 // names of its contributors may be used to endorse or promote products
 // derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -22,7 +22,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 
 
 
@@ -31,6 +31,7 @@
 
 #include <boost/uuid/uuid_generators.hpp>
 #include "levin_base.h"
+#include "int-util.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
@@ -70,7 +71,7 @@ namespace levin
 
 		config_type& m_config;
 		t_connection_context& m_conn_context;
-		net_utils::i_service_endpoint* m_psnd_hndlr; 
+		net_utils::i_service_endpoint* m_psnd_hndlr;
 		std::string m_cach_in_buffer;
 		connection_data_state m_state;
 		bucket_head m_current_head;
@@ -78,11 +79,11 @@ namespace levin
 
   template<class t_connection_context>
 	protocol_handler<t_connection_context>::protocol_handler(net_utils::i_service_endpoint* psnd_hndlr, config_type& config, t_connection_context& conn_context):
-                  m_config(config), 
+                  m_config(config),
                   m_conn_context(conn_context),
-                  m_psnd_hndlr(psnd_hndlr), 
-                  m_state(conn_state_reading_head), 
-                  m_current_head(bucket_head()) 
+                  m_psnd_hndlr(psnd_hndlr),
+                  m_state(conn_state_reading_head),
+                  m_current_head(bucket_head())
 	{}
 
   template<class t_connection_context>
@@ -103,7 +104,7 @@ namespace levin
 			case conn_state_reading_head:
 				if(m_cach_in_buffer.size() < sizeof(bucket_head))
 				{
-					if(m_cach_in_buffer.size() >= sizeof(uint64_t) && *((uint64_t*)m_cach_in_buffer.data()) != LEVIN_SIGNATURE)
+					if(m_cach_in_buffer.size() >= sizeof(uint64_t) && *((uint64_t*)m_cach_in_buffer.data()) != SWAP64LE(LEVIN_SIGNATURE))
 					{
 						LOG_ERROR_CC(m_conn_context, "Signature mismatch on accepted connection");
 						return false;
@@ -112,13 +113,23 @@ namespace levin
 					break;
 				}
 				{
-					bucket_head* phead = (bucket_head*)m_cach_in_buffer.data();
-					if(LEVIN_SIGNATURE != phead->m_signature)
+#if BYTE_ORDER == LITTLE_ENDIAN
+          bucket_head &phead = *(bucket_head*)m_cach_in_buffer.data();
+#else
+          bucket_head phead = *(bucket_head*)m_cach_in_buffer.data();
+          phead.m_signature = SWAP64LE(phead.m_signature);
+					phead.m_cb = SWAP64LE(phead.m_cb);
+					phead.m_command = SWAP32LE(phead.m_command);
+					phead.m_return_code = SWAP32LE(phead.m_return_code);
+					phead.m_reservedA = SWAP32LE(phead.m_reservedA);
+					phead.m_reservedB = SWAP32LE(phead.m_reservedB);
+#endif
+					if(LEVIN_SIGNATURE != phead.m_signature)
 					{
 						LOG_ERROR_CC(m_conn_context, "Signature mismatch on accepted connection");
 						return false;
 					}
-					m_current_head = *phead;
+					m_current_head = phead;
 				}
 				m_cach_in_buffer.erase(0, sizeof(bucket_head));
 				m_state = conn_state_reading_body;
@@ -180,4 +191,3 @@ namespace levin
 
 
 #endif //_LEVIN_PROTOCOL_HANDLER_H_
-

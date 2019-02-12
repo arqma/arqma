@@ -33,7 +33,14 @@ As with many development projects, the repository on Github is considered to be 
 
 Arqma is a 100% community-sponsored endeavor. If you want to join our efforts, the easiest thing you can do is support the project financially. You can send ARQ to the Arqma donation address via the `donate` command (type `help` in the command-line wallet for details).
 
-The Arqma donation address is: `ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3` (viewkey: `4e5373dfd5ba67fa2988107a605bc960575c465bd07aba624915d3f660b73d62`)
+Arqma donation addresses are:
+
+ARQ:  `ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3`
+       (viewkey: `4e5373dfd5ba67fa2988107a605bc960575c465bd07aba624915d3f660b73d62`)
+
+BTC:  `32DEr9inVahpfYL8NSLFHVftJqY3Rb1tUb`
+
+We are also did add Arqma Donation address to OpenAlias at Arq-Net: donations@arqma.com
 
 ## License
 

@@ -4,7 +4,7 @@ native_packages := native_ccache native_protobuf
 darwin_native_packages = native_biplist native_ds_store native_mac_alias
 darwin_packages = sodium-darwin
 
-linux_packages = eudev
+linux_packages = eudev unbound
 qt_packages = qt
 
 ifeq ($(host_os),linux)
