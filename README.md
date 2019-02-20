@@ -32,6 +32,10 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Medium: [https://medium.com/@ArQmANetwork](https://medium.com/@ArQmANetwork)
 - YouTube: [https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA](https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA)
 
+## Arqma Exchange Websites
+
+- TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
+- Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
 
 ## Introduction
 
