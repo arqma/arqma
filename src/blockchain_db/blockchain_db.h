@@ -1303,7 +1303,7 @@ public:
    * @param offsets a list of amount-specific output indices
    * @param indices return-by-reference a list of tx hashes and output indices (as pairs)
    */
-  virtual void get_output_tx_and_index(const epee::span<const uint64_t> &amounts, const std::vector<uint64_t> &offsets, std::vector<tx_out_index> &indices) const = 0;
+  virtual void get_output_tx_and_index(const uint64_t& amount, const std::vector<uint64_t> &offsets, std::vector<tx_out_index> &indices) const = 0;
 
   /**
    * @brief gets outputs' data

@@ -3174,7 +3174,7 @@ void BlockchainLMDB::get_output_key(const epee::span<uint64_t> &amounts, const s
 {
   if (amounts.size() != 1 && amounts.size() != offsets.size())
 	throw0(DB_ERROR("Invalid sizes of amounts and offets"));
-	
+
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   TIME_MEASURE_START(db3);
   check_open();
@@ -3187,8 +3187,8 @@ void BlockchainLMDB::get_output_key(const epee::span<uint64_t> &amounts, const s
   for (size_t i = 0; i < offsets.size(); ++i)
   {
     const uint64_t amount = amounts.size() == 1 ? amounts[0] : amounts[i];
-	MDB_val_set(k, amount);
-	MDB_val_set(v, offsets[i]);
+	  MDB_val_set(k, amount);
+	  MDB_val_set(v, offsets[i]);
 
     auto get_result = mdb_cursor_get(m_cur_output_amounts, &k, &v, MDB_GET_BOTH);
     if (get_result == MDB_NOTFOUND)
