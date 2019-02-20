@@ -13,6 +13,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Other Arqma related websites
 
+- Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
 - Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
 - Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
