@@ -11,6 +11,27 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
 - Discord: [https://discord.gg/TqXZWGm](https://discord.gg/TqXZWGm)
 
+## Other Arqma related websites
+
+- Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
+- Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
+- Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
+- Arqma Mining Pools List: [https://pools.arqma.com](https://pools.arqma.com)
+- Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
+- Arqma Payment Gateway: [https://pg.arqma.com](https://pg.arqma.com)
+- Arqma WooCommerce Payment Plugin: [https://github.com/arqma/arqma-payments-woocommerce-gateway](https://github.com/arqma/arqma-payments-woocommerce-gateway)
+- Arqma Off-line Wallet Address Generator: [https://generate.arqma.com](https://generate.arqma.com)
+- myArqma - Arqma Web-Wallet Interface: [https://myarqma.com](https://myarqma.com)
+- arqmaDroid - Arqma Android Wallet: [https://play.google.com/store/apps/details?id=com.arqma.Droid](https://play.google.com/store/apps/details?id=com.arqma.Droid)
+
+## Arqma Social-Media Websites
+
+- Twitter: [https://twitter.com/ArQmA_Network](https://twitter.com/ArQmA_Network)
+- FaceBook: [https://www.facebook.com/ARQMAnetwork](https://www.facebook.com/ARQMAnetwork)
+- Medium: [https://medium.com/@ArQmANetwork](https://medium.com/@ArQmANetwork)
+- YouTube: [https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA](https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA)
+
+
 ## Introduction
 
 Arqma is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.
