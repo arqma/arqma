@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2019, The Arqma Network
 # Copyright (c) 2016-2018, The Monero Project
 #
 # All rights reserved.
@@ -34,9 +35,9 @@ set(serialization_headers)
 set(serialization_private_headers
   json_object.h)
 
-monero_private_headers(serialization
+arqma_private_headers(serialization
   ${serialization_private_headers})
-monero_add_library(serialization
+arqma_add_library(serialization
   ${serialization_sources}
   ${serialization_headers}
   ${serialization_private_headers})
@@ -51,4 +52,3 @@ target_link_libraries(serialization
     ${EXTRA_LIBRARIES})
 add_dependencies(serialization
   version)
-
