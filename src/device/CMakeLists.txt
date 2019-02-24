@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2019, The Arqma Network
 # Copyright (c) 2014-2017, The Monero Project
 #
 # All rights reserved.
@@ -64,10 +65,10 @@ else()
   set(Blocks "")
 endif()
 
-monero_private_headers(device
+arqma_private_headers(device
   ${device_private_headers})
 
-monero_add_library(device
+arqma_add_library(device
   ${device_sources}
   ${device_headers}
   ${device_private_headers})

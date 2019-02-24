@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2019, The Arqma Network
 # Copyright (c) 2017-2018, The Monero Project
 #
 # All rights reserved.
@@ -26,7 +27,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.5.0)
 
 project(translations)
 

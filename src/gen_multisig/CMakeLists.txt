@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2019, The Arqma Network
 # Copyright (c) 2017-2018, The Monero Project
 #
 # All rights reserved.
@@ -29,7 +30,7 @@
 set(gen_multisig_sources
   gen_multisig.cpp)
 
-monero_add_executable(gen_multisig
+arqma_add_executable(gen_multisig
   ${gen_multisig_sources})
 target_link_libraries(gen_multisig
   PRIVATE
