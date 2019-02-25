@@ -47,7 +47,7 @@
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define WALLET_RPC_VERSION_MAJOR 1
-#define WALLET_RPC_VERSION_MINOR 5
+#define WALLET_RPC_VERSION_MINOR 6
 #define MAKE_WALLET_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define WALLET_RPC_VERSION MAKE_WALLET_RPC_VERSION(WALLET_RPC_VERSION_MAJOR, WALLET_RPC_VERSION_MINOR)
 namespace tools
@@ -63,14 +63,17 @@ namespace wallet_rpc
     {
       uint32_t account_index;
       std::set<uint32_t> address_indices;
+      bool all_accounts;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(account_index)
         KV_SERIALIZE(address_indices)
+        KV_SERIALIZE_OPT(all_accounts, false)
       END_KV_SERIALIZE_MAP()
     };
 
     struct per_subaddress_info
     {
+      uint32_t account_index;
       uint32_t address_index;
       std::string address;
       uint64_t balance;
@@ -79,6 +82,7 @@ namespace wallet_rpc
       uint64_t num_unspent_outputs;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(account_index)
         KV_SERIALIZE(address_index)
         KV_SERIALIZE(address)
         KV_SERIALIZE(balance)
@@ -1423,6 +1427,7 @@ namespace wallet_rpc
       uint64_t max_height;
       uint32_t account_index;
       std::set<uint32_t> subaddr_indices;
+      bool all_accounts;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(in);
@@ -1435,6 +1440,7 @@ namespace wallet_rpc
         KV_SERIALIZE_OPT(max_height, (uint64_t)CRYPTONOTE_MAX_BLOCK_NUMBER);
         KV_SERIALIZE(account_index);
         KV_SERIALIZE(subaddr_indices);
+        KV_SERIALIZE_OPT(all_accounts, false)
       END_KV_SERIALIZE_MAP()
     };
 
