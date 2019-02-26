@@ -32,17 +32,27 @@
 
 #include "easylogging++.h"
 
+#undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "default"
-#define MAX_LOG_FILE_SIZE 104850000 // 100 MB - 7600 bytes
 
-#define MCFATAL(cat,x) CLOG(FATAL,cat) << x
-#define MCERROR(cat,x) CLOG(ERROR,cat) << x
-#define MCWARNING(cat,x) CLOG(WARNING,cat) << x
-#define MCINFO(cat,x) CLOG(INFO,cat) << x
-#define MCDEBUG(cat,x) CLOG(DEBUG,cat) << x
-#define MCTRACE(cat,x) CLOG(TRACE,cat) << x
-#define MCLOG(level,cat,x) ELPP_WRITE_LOG(el::base::Writer, level, el::base::DispatchAction::NormalLog, cat) << x
-#define MCLOG_FILE(level,cat,x) ELPP_WRITE_LOG(el::base::Writer, level, el::base::DispatchAction::FileOnlyLog, cat) << x
+#define MAX_LOG_FILE_SIZE 104850000 // 100 MB - 7600 bytes
+#define MAX_LOG_FILES 50
+
+#define MCLOG_TYPE(level, cat, type, x) do { \
+    if (ELPP->vRegistry()->allowed(level, cat)) { \
+      el::base::Writer(level, __FILE__, __LINE__, ELPP_FUNC, type).construct(cat) << x; \
+    } \
+  } while (0)
+
+#define MCLOG(level, cat, x) MCLOG_TYPE(level, cat, el::base::DispatchAction::NormalLog, x)
+#define MCLOG_FILE(level, cat, x) MCLOG_TYPE(level, cat, el::base::DispatchAction::FileOnlyLog, x)
+
+#define MCFATAL(cat,x) MCLOG(el::Level::Fatal,cat, x)
+#define MCERROR(cat,x) MCLOG(el::Level::Error,cat, x)
+#define MCWARNING(cat,x) MCLOG(el::Level::Warning,cat, x)
+#define MCINFO(cat,x) MCLOG(el::Level::Info,cat, x)
+#define MCDEBUG(cat,x) MCLOG(el::Level::Debug,cat, x)
+#define MCTRACE(cat,x) MCLOG(el::Level::Trace,cat, x)
 
 #define MCLOG_COLOR(level,cat,color,x) MCLOG(level,cat,"\033[1;" color "m" << x << "\033[0m")
 #define MCLOG_RED(level,cat,x) MCLOG_COLOR(level,cat,"31",x)
@@ -105,7 +115,7 @@
 #endif
 
 std::string mlog_get_default_log_path(const char *default_filename);
-void mlog_configure(const std::string &filename_base, bool console, const std::size_t max_log_file_size = MAX_LOG_FILE_SIZE);
+void mlog_configure(const std::string &filename_base, bool console, const std::size_t max_log_file_size = MAX_LOG_FILE_SIZE, const std::size_t max_log_files = MAX_LOG_FILES);
 void mlog_set_categories(const char *categories);
 std::string mlog_get_categories();
 void mlog_set_log_level(int level);
