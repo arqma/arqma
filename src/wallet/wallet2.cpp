@@ -100,8 +100,8 @@ using namespace cryptonote;
 
 #define RECENT_OUTPUT_RATIO (0.50) // 50% of outputs are from the recent zone
 #define RECENT_OUTPUT_DAYS (1.8) // last 1.8 day makes up the recent zone
-#define RECENT_OUTPUT_ZONE ((time_t)(RECENT_OUTPUT_DAYS * 21600))
-#define RECENT_OUTPUT_BLOCKS (RECENT_OUTPUT_DAYS * 360)
+#define RECENT_OUTPUT_ZONE ((time_t)(RECENT_OUTPUT_DAYS * 86400))
+#define RECENT_OUTPUT_BLOCKS (RECENT_OUTPUT_DAYS * 720)
 
 #define FEE_ESTIMATE_GRACE_BLOCKS 10 // estimate fee valid for that many blocks
 
