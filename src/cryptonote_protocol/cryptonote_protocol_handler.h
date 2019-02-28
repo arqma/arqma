@@ -2,6 +2,7 @@
 /// @author rfree (current maintainer/user in monero.cc project - most of code is from CryptoNote)
 /// @brief This is the original cryptonote protocol network-events handler, modified by us
 
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.

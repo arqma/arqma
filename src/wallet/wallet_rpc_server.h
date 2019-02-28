@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -241,7 +242,7 @@ namespace tools
           Ts &tx_hash, bool get_tx_hex, Ts &tx_blob, bool get_tx_metadata, Ts &tx_metadata, epee::json_rpc::error &er);
 
       bool validate_transfer(const std::list<wallet_rpc::transfer_destination>& destinations, const std::string& payment_id, std::vector<cryptonote::tx_destination_entry>& dsts, std::vector<uint8_t>& extra, bool at_least_one_destination, epee::json_rpc::error& er);
-      
+
       wallet2 *m_wallet;
       std::string m_wallet_dir;
       tools::private_file rpc_login_file;

@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -578,9 +579,9 @@ struct Wallet
 	* @brief estimateBlockChainHeight - returns estimate blockchain height. More accurate than approximateBlockChainHeight,
 	*                                   uses daemon height and falls back to calculation from date/time
 	* @return
-	**/ 
+	**/
 	virtual uint64_t estimateBlockChainHeight() const = 0;
-	
+
     /**
      * @brief daemonBlockChainHeight - returns daemon blockchain height
      * @return 0 - in case error communicating with the daemon.

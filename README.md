@@ -10,6 +10,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Mail: [support@arqma.com](mailto:support@arqma.com)
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
 - Discord: [https://discord.gg/TqXZWGm](https://discord.gg/TqXZWGm)
+- Telegram: [https://t.me/joinchat/HNpOMRIiNSoCn0zYrAOofw](https://t.me/joinchat/HNpOMRIiNSoCn0zYrAOofw)
 
 ## Other Arqma related websites
 

@@ -1,4 +1,4 @@
-//#define DBG
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2016, Monero Research Labs
 //
 // Author: Shen Noether <shen.noether@gmx.com>

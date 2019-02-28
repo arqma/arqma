@@ -3676,7 +3676,8 @@ int main(int argc, char** argv) {
   const auto arg_wallet_file = wallet_args::arg_wallet_file();
   const auto arg_from_json = wallet_args::arg_generate_from_json();
 
-  po::options_description hidden_options("Hidden");
+  //po::options_description hidden_options("Hidden"); no options presented except "Hidden:"
+  po::options_description hidden_options("");
 
   po::options_description desc_params(wallet_args::tr("Wallet options"));
   tools::wallet2::init_options(desc_params);

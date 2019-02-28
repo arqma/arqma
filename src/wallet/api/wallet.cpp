@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -935,7 +936,7 @@ uint64_t WalletImpl::estimateBlockChainHeight() const
 {
 	return m_wallet->estimate_blockchain_height();
 }
-	
+
 uint64_t WalletImpl::daemonBlockChainHeight() const
 {
     if(m_wallet->light_wallet()) {
