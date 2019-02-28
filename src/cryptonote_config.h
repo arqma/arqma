@@ -124,8 +124,7 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_IN_CONNECTIONS_COUNT                8
-#define P2P_DEFAULT_OUT_CONNECTIONS_COUNT               16
+#define P2P_DEFAULT_CONNECTIONS_COUNT                   8
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60           //secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000     //50000000 bytes maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -169,6 +168,11 @@
 #define HASH_OF_HASHES_STEP                             256
 
 #define DEFAULT_TXPOOL_MAX_SIZE                         648000000ull // 3 days at 300000, in bytes
+
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096 // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_LOG_STRIPES                  3 // the higher, the more space saved
+#define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500 // the smaller, the more space saved
+//#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
 
 // New constants are intended to go here
 namespace config

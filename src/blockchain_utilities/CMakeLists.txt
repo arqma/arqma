@@ -93,6 +93,27 @@ arqma_private_headers(blockchain_usage
 	  ${blockchain_usage_private_headers})
 
 
+set(blockchain_prune_known_spent_data_sources
+  blockchain_prune_known_spent_data.cpp
+  )
+
+set(blockchain_prune_known_spent_data_private_headers)
+
+arqma_private_headers(blockchain_prune_known_spent_data
+         ${blockchain_prune_known_spent_data_private_headers})
+
+
+set(blockchain_prune_sources
+  blockchain_prune.cpp
+  )
+
+set(blockchain_prune_private_headers)
+
+arqma_private_headers(blockchain_prune
+         ${blockchain_prune_private_headers})
+
+
+
 
 set(blockchain_ancestry_sources
   blockchain_ancestry.cpp
@@ -249,3 +270,47 @@ set_property(TARGET blockchain_depth
 	PROPERTY
 	OUTPUT_NAME "arqma-blockchain-depth")
 install(TARGETS blockchain_depth DESTINATION bin)
+
+arqma_add_executable(blockchain_prune_known_spent_data
+  ${blockchain_prune_known_spent_data_sources}
+  ${blockchain_prune_known_spent_data_private_headers})
+
+target_link_libraries(blockchain_prune_known_spent_data
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    p2p
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
+
+set_property(TARGET blockchain_prune_known_spent_data
+	PROPERTY
+	OUTPUT_NAME "arqma-blockchain-prune-known-spent-data")
+install(TARGETS blockchain_prune_known_spent_data DESTINATION bin)
+
+arqma_add_executable(blockchain_prune
+  ${blockchain_prune_sources}
+  ${blockchain_prune_private_headers})
+
+set_property(TARGET blockchain_prune
+	PROPERTY
+	OUTPUT_NAME "arqma-blockchain-prune")
+install(TARGETS blockchain_prune DESTINATION bin)
+
+target_link_libraries(blockchain_prune
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    p2p
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
