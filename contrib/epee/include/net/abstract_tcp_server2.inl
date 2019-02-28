@@ -288,36 +288,36 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
     if (!e)
     {
-		{
-			CRITICAL_REGION_LOCAL(m_throttle_speed_in_mutex);
-			m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
-			context.m_current_speed_down = m_throttle_speed_in.get_current_speed();
-		}
-
+      {
+        CRITICAL_REGION_LOCAL(m_throttle_speed_in_mutex);
+        m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
+        context.m_current_speed_down = m_throttle_speed_in.get_current_speed();
+        context.m_max_speed_down = std::max(context.m_max_speed_down, context.m_current_speed_down);
+      }
     {
-			CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in );
-			epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
-		}
+        CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in );
+        epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
+      }
 
-		double delay=0; // will be calculated - how much we should sleep to obey speed limit etc
+      double delay=0; // will be calculated - how much we should sleep to obey speed limit etc
 
 
-		if (speed_limit_is_enabled()) {
-			do // keep sleeping if we should sleep
-			{
-				{ //_scope_dbg1("CRITICAL_REGION_LOCAL");
-					CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in );
-					delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
-				}
+      if (speed_limit_is_enabled()) {
+        do // keep sleeping if we should sleep
+        {
+          { //_scope_dbg1("CRITICAL_REGION_LOCAL");
+            CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in );
+            delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
+          }
 
-				delay *= 0.5;
-				if (delay > 0) {
-					long int ms = (long int)(delay * 100);
-					reset_timer(boost::posix_time::milliseconds(ms + 1), true);
-					boost::this_thread::sleep_for(boost::chrono::milliseconds(ms));
-				}
-			} while(delay > 0);
-		} // any form of sleeping
+          delay *= 0.5;
+          if (delay > 0) {
+            long int ms = (long int)(delay * 100);
+            reset_timer(boost::posix_time::milliseconds(ms + 1), true);
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(ms));
+          }
+        } while(delay > 0);
+      } // any form of sleeping
 
       //_info("[sock " << socket_.native_handle() << "] RECV " << bytes_transferred);
       logger_handle_net_read(bytes_transferred);
@@ -494,6 +494,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 		CRITICAL_REGION_LOCAL(m_throttle_speed_out_mutex);
 		m_throttle_speed_out.handle_trafic_exact(cb);
 		context.m_current_speed_up = m_throttle_speed_out.get_current_speed();
+    context.m_max_speed_up = std::max(context.m_max_speed_up, context.m_current_speed_up);
 	}
 
     //_info("[sock " << socket_.native_handle() << "] SEND " << cb);
@@ -779,12 +780,12 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
   template<class t_protocol_handler>
   boosted_tcp_server<t_protocol_handler>::boosted_tcp_server( t_connection_type connection_type ) :
-    m_io_service_local_instance(new boost::asio::io_service()),
-    io_service_(*m_io_service_local_instance.get()),
+    m_io_service_local_instance(new worker()),
+    io_service_(m_io_service_local_instance->io_service),
     acceptor_(io_service_),
     m_stop_signal_sent(false), m_port(0),
-	m_sock_count(0), m_sock_number(0), m_threads_count(0),
-	m_pfilter(NULL), m_thread_index(0),
+	  m_sock_count(0), m_sock_number(0), m_threads_count(0),
+	  m_pfilter(NULL), m_thread_index(0),
 		m_connection_type( connection_type ),
     new_connection_()
   {
@@ -887,6 +888,7 @@ POP_WARNINGS
       try
       {
         io_service_.run();
+        return true;
       }
       catch(const std::exception& ex)
       {

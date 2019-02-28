@@ -1,6 +1,6 @@
 // Copyright (c) 2006-2013, Andrey N. Sabelnikov, www.sabelnikov.net
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 // * Neither the name of the Andrey N. Sabelnikov nor the
 // names of its contributors may be used to endorse or promote products
 // derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -22,7 +22,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 
 
 
@@ -96,7 +96,7 @@ namespace math_helper
 			value_type vl = std::accumulate(m_list.begin(), m_list.end(), value_type(0));
 			if(m_list.size())
 				return m_last_avg_val = (double)(vl/m_list.size());
-	
+
 			return m_last_avg_val = (double)vl;
 		}
 
@@ -116,9 +116,9 @@ namespace math_helper
 		critical_section m_lock;
 	};
 
-	
+
 #ifdef WINDOWS_PLATFORM
-	
+
 	/************************************************************************/
 	/*                                                                      */
 	/************************************************************************/
@@ -174,7 +174,7 @@ namespace math_helper
 			CRITICAL_REGION_END();
 			//flush(ticks);
 #endif
-			return true;			
+			return true;
 		}
 
 		bool chick(size_t count)
@@ -182,7 +182,7 @@ namespace math_helper
 			for(size_t s = 0; s != count; s++)
 				chick();
 
-			return true;			
+			return true;
 		}
 
 
@@ -230,35 +230,57 @@ namespace math_helper
 		}
 
 	}
-	template<int default_interval, bool start_immediate = true>
-	class once_a_time_seconds
+	template<uint64_t scale, int default_interval, bool start_immediate = true>
+	class once_a_time
 	{
+    uint64_t get_time() const
+    {
+#ifdef _WIN32
+      FILETIME fileTime;
+      GetSystemTimeAsFileTime(&fileTime);
+      unsigned __int64 present = 0;
+      present |= fileTime.dwHighDateTime;
+      present = present << 32;
+      present |= fileTime.dwLowDateTime;
+      present /= 10;  // mic-sec
+			return present;
+#else
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      return tv.tv_sec * 1000000 + tv.tv_usec;
+#endif
+    }
+
 	public:
-		once_a_time_seconds():m_interval(default_interval)
+		once_a_time():m_interval(default_interval * scale)
 		{
 			m_last_worked_time = 0;
       if(!start_immediate)
-        time(&m_last_worked_time);
+        m_last_worked_time = get_time();
 		}
 
 		template<class functor_t>
 		bool do_call(functor_t functr)
 		{
-			time_t current_time = 0;
-			time(&current_time);
+			uint64_t current_time = get_time();
 
       if(current_time - m_last_worked_time > m_interval)
 			{
 				bool res = functr();
-				time(&m_last_worked_time);
+				m_last_worked_time = get_time();
 				return res;
 			}
 			return true;
 		}
 
 	private:
-		time_t m_last_worked_time;
-		time_t m_interval;
+		uint64_t m_last_worked_time;
+		uint64_t m_interval;
 	};
+
+  template<int default_interval, bool start_immediate = true>
+  class once_a_time_seconds: public once_a_time<1000000, default_interval, start_immediate> {};
+  template<int default_interval, bool start_immediate = true>
+  class once_a_time_milliseconds: public once_a_time<1000, default_interval, start_immediate> {};
 }
 }

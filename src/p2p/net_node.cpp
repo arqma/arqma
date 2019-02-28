@@ -58,8 +58,8 @@ namespace nodetool
     const command_line::arg_descriptor<bool> arg_p2p_hide_my_port   =    {"hide-my-port", "Do not announce yourself as peerlist candidate", false, true};
 
     const command_line::arg_descriptor<bool>        arg_no_igd  = {"no-igd", "Disable UPnP port mapping"};
-    const command_line::arg_descriptor<int64_t>     arg_out_peers = {"out-peers", "set max number of out peers", P2P_DEFAULT_OUT_CONNECTIONS_COUNT};
-    const command_line::arg_descriptor<int64_t>     arg_in_peers = {"in-peers", "set max number of in peers", P2P_DEFAULT_IN_CONNECTIONS_COUNT};
+    const command_line::arg_descriptor<int64_t>     arg_out_peers = {"out-peers", "set max number of out peers", -1};
+    const command_line::arg_descriptor<int64_t>     arg_in_peers = {"in-peers", "set max number of in peers", -1};
     const command_line::arg_descriptor<int> arg_tos_flag = {"tos-flag", "set TOS flag", -1};
 
     const command_line::arg_descriptor<int64_t> arg_limit_rate_up = {"limit-rate-up", "set limit-rate-up [Kbps]", P2P_DEFAULT_LIMIT_RATE_UP};

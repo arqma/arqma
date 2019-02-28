@@ -303,7 +303,16 @@ namespace net_utils
     bool is_thread_worker();
 
     /// The io_service used to perform asynchronous operations.
-    std::unique_ptr<boost::asio::io_service> m_io_service_local_instance;
+    struct worker
+    {
+      worker()
+        : io_service(), work(io_service)
+      {}
+
+      boost::asio::io_service io_service;
+      boost::asio::io_service::work work;
+    };
+    std::unique_ptr<worker> m_io_service_local_instance;
     boost::asio::io_service& io_service_;
 
     /// Acceptor used to listen for incoming connections.
@@ -311,8 +320,8 @@ namespace net_utils
 
     std::atomic<bool> m_stop_signal_sent;
     uint32_t m_port;
-	std::atomic<long> m_sock_count;
-	std::atomic<long> m_sock_number;
+    std::atomic<long> m_sock_count;
+    std::atomic<long> m_sock_number;
     std::string m_address;
     std::string m_thread_name_prefix; //TODO: change to enum server_type, now used
     size_t m_threads_count;
