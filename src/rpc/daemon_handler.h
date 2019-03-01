@@ -68,6 +68,8 @@ class DaemonHandler : public RpcHandler
     void handle(const GetTxGlobalOutputIndices::Request& req, GetTxGlobalOutputIndices::Response& res);
 
     void handle(const SendRawTx::Request& req, SendRawTx::Response& res);
+    
+    void handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res);
 
     void handle(const StartMining::Request& req, StartMining::Response& res);
 
@@ -134,6 +136,8 @@ class DaemonHandler : public RpcHandler
   private:
 
     bool getBlockHeaderByHash(const crypto::hash& hash_in, cryptonote::rpc::BlockHeaderResponse& response);
+    
+    void handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res);
 
     cryptonote::core& m_core;
     t_p2p& m_p2p;
