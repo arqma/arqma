@@ -2,6 +2,7 @@
 /// @author rfree (current maintainer/user in monero.cc project - most of code is from CryptoNote)
 /// @brief This is the original cryptonote protocol network-events handler, modified by us
 
+// Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -1014,8 +1015,8 @@ namespace cryptonote
     }
 
     {
-      MLOG_YELLOW(el::Level::Debug, context << " Got NEW BLOCKS inside of " << __FUNCTION__ << ": size: " << arg.blocks.size() 
-          << ", blocks: " << start_height << " - " << (start_height + arg.blocks.size() - 1) << 
+      MLOG_YELLOW(el::Level::Debug, context << " Got NEW BLOCKS inside of " << __FUNCTION__ << ": size: " << arg.blocks.size()
+          << ", blocks: " << start_height << " - " << (start_height + arg.blocks.size() - 1) <<
           " (pruning seed " << epee::string_tools::to_string_hex(context.m_pruning_seed) << ")");
 
       // add that new span to the block queue
@@ -1299,7 +1300,7 @@ namespace cryptonote
                 + std::to_string(previous_stripe) + " -> " + std::to_string(current_stripe);
             if (ELPP->vRegistry()->allowed(el::Level::Debug, "sync-info"))
               timing_message += std::string(": ") + m_block_queue.get_overview(current_blockchain_height);
-            MGINFO_YELLOW("Synced " << current_blockchain_height << "/" << target_blockchain_height << 
+            MGINFO_YELLOW("Synced " << current_blockchain_height << "/" << target_blockchain_height <<
                 progress_message << timing_message);
             if (previous_stripe != current_stripe)
               notify_new_stripe(context, current_stripe);
