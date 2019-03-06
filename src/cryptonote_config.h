@@ -96,11 +96,11 @@
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V10          360
 #define DIFFICULTY_WINDOW_V10                           90
 
-//#define DIFFICULTY_TARGET_V11                           120
-//#define DIFFICULTY_BLOCKS_COUNT_V11                     (DIFFICULTY_WINDOW_V11 + 1)
-//#define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V11           11
-//#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11          360
-//#define DIFFICULTY_WINDOW_V11                           90
+#define DIFFICULTY_TARGET_V11                           120
+#define DIFFICULTY_BLOCKS_COUNT_V11                     (DIFFICULTY_WINDOW_V11 + 1)
+#define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V11           11
+#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11          360
+#define DIFFICULTY_WINDOW_V11                           90
 
 #define DIFFICULTY_BLOCKS_COUNT_V3                      (DIFFICULTY_WINDOW_V3 + 1)
 #define DIFFICULTY_BLOCKS_COUNT_V2                      (DIFFICULTY_WINDOW_V2 + 1) // added to make N=N
