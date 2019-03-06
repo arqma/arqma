@@ -693,7 +693,7 @@ namespace tools
         : transfer_error(std::move(loc), "transaction is too big")
         , m_tx(tx)
         , m_tx_valid(true)
-        , m_tx_size(cryptonote::get_transaction_size(tx))
+        , m_tx_size(cryptonote::get_object_blobsize(tx))
         , m_tx_size_limit(tx_size_limit)
       {
       }
