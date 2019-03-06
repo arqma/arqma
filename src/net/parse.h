@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2016-2018, The Monero Project
+// Copyright (c) 2018-2019, The Arqma Project
+// Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -27,17 +27,28 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ARQMA_EXCEPTION_H
-#define ARQMA_EXCEPTION_H
+#pragma once
 
-#include <string>
+#include <boost/utility/string_ref.hpp>
+#include <cstdint>
 
-namespace tools
+#include "common/expect.h"
+#include "net/net_utils_base.h"
+
+namespace net
 {
+    /*!
+      Identifies onion, i2p and IPv4 addresses and returns them as a generic
+      `network_address`. If the type is unsupported, it might be a hostname,
+      and `error() == net::error::kUnsupportedAddress` is returned.
 
-void set_stack_trace_log(const std::string &log);
-void log_stack_trace(const char *msg);
+      \param address An onion address, i2p address ipv4 address or hostname. Hostname
+          will return an error.
+      \param default_port If `address` does not specify a port, this value
+          will be used.
 
-}  // namespace tools
-
-#endif
+      \return A tor or IPv4 address, else error.
+    */
+    expect<epee::net_utils::network_address>
+        get_network_address(boost::string_ref address, std::uint16_t default_port);
+}

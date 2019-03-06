@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2016-2018, The Monero Project
+// Copyright (c) 2018-2019, The Arqma Project
+// Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -27,17 +27,39 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ARQMA_EXCEPTION_H
-#define ARQMA_EXCEPTION_H
+#pragma once
 
-#include <string>
+#include <system_error>
+#include <type_traits>
 
-namespace tools
+namespace net
 {
+    //! General net errors
+    enum class error : int
+    {
+        // 0 reserved for success (as per expect<T>)
+        expected_tld = 1,   //!< Expected a tld
+        invalid_host,       //!< Hostname is not valid
+        invalid_i2p_address,
+        invalid_port,       //!< Outside of 0-65535 range
+        invalid_tor_address,//!< Invalid base32 or length
+        unsupported_address //!< Type not supported by `get_network_address`
+    };
 
-void set_stack_trace_log(const std::string &log);
-void log_stack_trace(const char *msg);
+    //! \return `std::error_category` for `net` namespace.
+    std::error_category const& error_category() noexcept;
 
-}  // namespace tools
+    //! \return `net::error` as a `std::error_code` value.
+    inline std::error_code make_error_code(error value) noexcept
+    {
+        return std::error_code{int(value), error_category()};
+    }
+}
 
-#endif
+namespace std
+{
+    template<>
+    struct is_error_code_enum<::net::error>
+      : true_type
+    {};
+}

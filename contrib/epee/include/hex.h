@@ -68,4 +68,12 @@ namespace epee
     //! Write `src` bytes as hex to `out`. `out` must be twice the length
     static void buffer_unchecked(char* out, const span<const std::uint8_t> src) noexcept;
   };
+
+  struct from_hex
+  {
+      //! \return An std::vector of unsigned integers from the `src`
+      // would be nice to use a gsl::string_span here, but that one
+      // needs c++14 or needs to be backported like gsl::span
+      static std::vector<uint8_t> vector(const std::string &src);
+  };
 }

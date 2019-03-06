@@ -1,5 +1,5 @@
 // Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2016-2018, The Monero Project
+// Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -27,17 +27,39 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ARQMA_EXCEPTION_H
-#define ARQMA_EXCEPTION_H
+#pragma once
 
-#include <string>
+#include <boost/utility/string_ref.hpp>
+#include <cstdint>
 
-namespace tools
+namespace epee
 {
+namespace net_utils
+{
+	enum class address_type : std::uint8_t
+	{
+		// Do not change values, this will break serialization
+		invalid = 0,
+		ipv4 = 1,
+		ipv6 = 2,
+		i2p = 3,
+		tor = 4
+	};
 
-void set_stack_trace_log(const std::string &log);
-void log_stack_trace(const char *msg);
+	enum class zone : std::uint8_t
+	{
+		invalid = 0,
+		public_ = 1, // public is keyword
+		i2p = 2,
+		tor = 3
+	};
 
-}  // namespace tools
+	// implementations in src/net_utils_base.cpp
 
-#endif
+	//! \return String name of zone or "invalid" on error.
+	const char* zone_to_string(zone value) noexcept;
+
+	//! \return `zone` enum of `value` or `zone::invalid` on error.
+	zone zone_from_string(boost::string_ref value) noexcept;
+} // net_utils
+} // epee

@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2019, The Arqma Project
+# Copyright (c) 2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -27,27 +27,8 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required (VERSION 3.5.0)
-project (arqma CXX)
+set(net_sources error.cpp parse.cpp socks.cpp tor_address.cpp i2p_address.cpp)
+set(net_headers error.h parse.h socks.h tor_address.h i2p_address.h)
 
-file(GLOB P2P *)
-source_group(p2p FILES ${P2P})
-
-#add_library(p2p ${P2P})
-
-#arqma_private_headers(p2p ${P2P})
-arqma_add_library(p2p ${P2P})
-target_link_libraries(p2p
-  PUBLIC
-    version
-    cryptonote_core
-    net
-    ${UPNP_LIBRARIES}
-    ${Boost_CHRONO_LIBRARY}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${Boost_SERIALIZATION_LIBRARY}
-  PRIVATE
-    ${EXTRA_LIBRARIES})
+arqma_add_library(net ${net_sources} ${net_headers})
+target_link_libraries(net epee ${Boost_ASIO_LIBRARY})

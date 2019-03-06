@@ -265,7 +265,7 @@ namespace rpc
   {
     handleTxBlob(cryptonote::tx_to_blob(req.tx), req.relay, res);
   }
-	
+
 	void DaemonHandler::handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res)
 	{
 	  std::string tx_blob;
@@ -278,7 +278,7 @@ namespace rpc
 	  }
 	  handleTxBlob(tx_blob, req.relay, res);
 	}
-	
+
 	void DaemonHandler::handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res)
 	{
 	  if (!m_p2p.get_payload_object().is_synchronized())
@@ -446,13 +446,13 @@ namespace rpc
 
     res.info.alt_blocks_count = chain.get_alternative_blocks_count();
 
-    uint64_t total_conn = m_p2p.get_connections_count();
-    res.info.outgoing_connections_count = m_p2p.get_outgoing_connections_count();
+    uint64_t total_conn = m_p2p.get_public_connections_count();
+    res.info.outgoing_connections_count = m_p2p.get_public_outgoing_connections_count();
     res.info.incoming_connections_count = total_conn - res.info.outgoing_connections_count;
 
-    res.info.white_peerlist_size = m_p2p.get_peerlist_manager().get_white_peers_count();
+    res.info.white_peerlist_size = m_p2p.get_public_white_peers_count();
 
-    res.info.grey_peerlist_size = m_p2p.get_peerlist_manager().get_gray_peers_count();
+    res.info.grey_peerlist_size = m_p2p.get_public_gray_peers_count();
 
     res.info.mainnet = m_core.get_nettype() == MAINNET;
     res.info.testnet = m_core.get_nettype() == TESTNET;

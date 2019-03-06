@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2016-2018, The Monero Project
+// Copyright (c) 2018-2019, The Arqma Project
+// Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -27,17 +27,36 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ARQMA_EXCEPTION_H
-#define ARQMA_EXCEPTION_H
+#include "parse.h"
 
-#include <string>
+#include "net/tor_address.h"
+#include "net/i2p_address.h"
+#include "string_tools.h"
 
-namespace tools
+namespace net
 {
+    expect<epee::net_utils::network_address>
+    get_network_address(const boost::string_ref address, const std::uint16_t default_port)
+    {
+        const boost::string_ref host = address.substr(0, address.rfind(':'));
 
-void set_stack_trace_log(const std::string &log);
-void log_stack_trace(const char *msg);
+        if (host.empty())
+            return make_error_code(net::error::invalid_host);
+        if (host.ends_with(".onion"))
+            return tor_address::make(address, default_port);
+        if (host.ends_with(".i2p"))
+            return i2p_address::make(address, default_port);
 
-}  // namespace tools
+        std::uint16_t port = default_port;
+        if (host.size() < address.size())
+        {
+            if (!epee::string_tools::get_xtype_from_string(port, std::string{address.substr(host.size() + 1)}))
+                return make_error_code(net::error::invalid_port);
+        }
 
-#endif
+        std::uint32_t ip = 0;
+        if (epee::string_tools::get_ip_int32_from_string(ip, std::string{host}))
+            return {epee::net_utils::ipv4_network_address{ip, port}};
+        return make_error_code(net::error::unsupported_address);
+    }
+}

@@ -49,6 +49,7 @@ namespace cryptonote
     bool incoming;
     bool localhost;
     bool local_ip;
+    bool ssl;
 
     std::string address;
     std::string host;

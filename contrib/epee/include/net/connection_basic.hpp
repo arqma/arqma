@@ -8,6 +8,7 @@
 // ! (how ever if in some wonderful juristdictions that is not the case, then why not make another sub-class withat that members and licence it as epee part)
 // ! Working on above premise, IF this is valid in your juristdictions, then consider this code as released as:
 
+// Copyright (c) 2018-2019, The Arqma Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -47,14 +48,25 @@
 #include <memory>
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "net/net_utils_base.h"
+#include "net/net_ssl.h"
 #include "syncobj.h"
 
 namespace epee
 {
 namespace net_utils
 {
+  struct socket_stats
+  {
+    socket_stats()
+      : sock_count(0), sock_number(0)
+    {}
+
+    std::atomic<long> sock_count;
+    std::atomic<long> sock_number;
+  };
 
   /************************************************************************/
   /*                                                                      */
@@ -64,59 +76,103 @@ namespace net_utils
 class connection_basic_pimpl; // PIMPL for this class
 
   enum t_connection_type { // type of the connection (of this server), e.g. so that we will know how to limit it
-	  e_connection_type_NET = 0, // default (not used?)
-	  e_connection_type_RPC = 1, // the rpc commands  (probably not rate limited, not chunked, etc)
-	  e_connection_type_P2P = 2  // to other p2p node (probably limited)
+    e_connection_type_NET = 0, // default (not used?)
+    e_connection_type_RPC = 1, // the rpc commands  (probably not rate limited, not chunked, etc)
+    e_connection_type_P2P = 2  // to other p2p node (probably limited)
   };
 
   std::string to_string(t_connection_type type);
 
 class connection_basic { // not-templated base class for rapid developmet of some code parts
-	public:
-		std::unique_ptr< connection_basic_pimpl > mI; // my Implementation
+  // beware of removing const, net_utils::connection is sketchily doing a cast to prevent storing ptr twice
+  const boost::shared_ptr<socket_stats> m_stats;
+    public:
+      std::unique_ptr< connection_basic_pimpl > mI; // my Implementation
 
-		// moved here from orginal connecton<> - common member variables that do not depend on template in connection<>
-    volatile uint32_t m_want_close_connection;
-    std::atomic<bool> m_was_shutdown;
-    critical_section m_send_que_lock;
-    std::list<std::string> m_send_que;
-    volatile bool m_is_multithreaded;
-    /// Strand to ensure the connection's handlers are not called concurrently.
-    boost::asio::io_service::strand strand_;
-    /// Socket for the connection.
-    boost::asio::ip::tcp::socket socket_;
+      // moved here from orginal connecton<> - common member variables that do not depend on template in connection<>
+  volatile uint32_t m_want_close_connection;
+  std::atomic<bool> m_was_shutdown;
+  critical_section m_send_que_lock;
+  std::list<std::string> m_send_que;
+  volatile bool m_is_multithreaded;
+  /// Strand to ensure the connection's handlers are not called concurrently.
+  boost::asio::io_service::strand strand_;
+  /// Socket for the connection.
+  ssl_context_t &m_ssl_context;
+  ssl_support_t m_ssl_support;
+  boost::asio::ssl::stream<boost::asio::ip::tcp::socket> socket_;
 
-		std::atomic<long> &m_ref_sock_count; // reference to external counter of existing sockets that we will ++/--
-	public:
-		// first counter is the ++/-- count of current sockets, the other socket_number is only-increasing ++ number generator
-		connection_basic(boost::asio::io_service& io_service, std::atomic<long> &ref_sock_count, std::atomic<long> &sock_number);
+    public:
+      // first counter is the ++/-- count of current sockets, the other socket_number is only-increasing ++ number generator
+      connection_basic(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<socket_stats> stats, ssl_support_t ssl_support, ssl_context_t &ssl_context);
+      connection_basic(boost::asio::io_service &io_service, boost::shared_ptr<socket_stats> stats, ssl_support_t ssl_support, ssl_context_t &ssl_context);
 
-		virtual ~connection_basic() noexcept(false);
+      virtual ~connection_basic() noexcept(false);
 
-		// various handlers to be called from connection class:
-		void do_send_handler_write(const void * ptr , size_t cb);
-		void do_send_handler_write_from_queue(const boost::system::error_code& e, size_t cb , int q_len); // from handle_write, sending next part
+      //! \return `socket_stats` object passed in construction (ptr never changes).
+      socket_stats& get_stats() noexcept { return *m_stats; /* verified in constructor */ }
+      connection_basic(boost::asio::io_service& io_service, std::atomic<long> &ref_sock_count, std::atomic<long> &sock_number, ssl_support_t ssl, ssl_context_t &ssl_context);
 
-		void logger_handle_net_write(size_t size); // network data written
-		void logger_handle_net_read(size_t size); // network data read
+      boost::asio::ip::tcp::socket& socket() { return socket_.next_layer(); }
+      ssl_support_t get_ssl_support() const { return m_ssl_support; }
+      void disable_ssl() { m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_disabled; }
 
-		// config for rate limit
+      bool handshake(boost::asio::ssl::stream_base::handshake_type type)
+      {
+        return ssl_handshake(socket_, type, m_ssl_context);
+      }
 
-		static void set_rate_up_limit(uint64_t limit);
-		static void set_rate_down_limit(uint64_t limit);
-		static uint64_t get_rate_up_limit();
-		static uint64_t get_rate_down_limit();
+      template<typename MutableBufferSequence, typename ReadHandler>
+      void async_read_some(const MutableBufferSequence &buffers, ReadHandler &&handler)
+      {
+        if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+          socket_.async_read_some(buffers, std::forward<ReadHandler>(handler));
+        else
+          socket().async_read_some(buffers, std::forward<ReadHandler>(handler));
+      }
 
-		// config misc
-		static void set_tos_flag(int tos); // ToS / QoS flag
-		static int get_tos_flag();
+      template<typename ConstBufferSequence, typename WriteHandler>
+      void async_write_some(const ConstBufferSequence &buffers, WriteHandler &&handler)
+      {
+        if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+          socket_.async_write_some(buffers, std::forward<WriteHandler>(handler));
+        else
+          socket().async_write_some(buffers, std::forward<WriteHandler>(handler));
+      }
 
-		// handlers and sleep
-		void sleep_before_packet(size_t packet_size, int phase, int q_len); // execute a sleep ; phase is not really used now(?)
-		static void save_limit_to_file(int limit); ///< for dr-monero
-		static double get_sleep_time(size_t cb);
+      template<typename ConstBufferSequence, typename WriteHandler>
+      void async_write(const ConstBufferSequence &buffers, WriteHandler &&handler)
+      {
+        if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+          boost::asio::async_write(socket_, buffers, std::forward<WriteHandler>(handler));
+        else
+          boost::asio::async_write(socket(), buffers, std::forward<WriteHandler>(handler));
+      }
 
-		static void set_save_graph(bool save_graph);
+      // various handlers to be called from connection class:
+      void do_send_handler_write(const void * ptr , size_t cb);
+      void do_send_handler_write_from_queue(const boost::system::error_code& e, size_t cb , int q_len); // from handle_write, sending next part
+
+      void logger_handle_net_write(size_t size); // network data written
+      void logger_handle_net_read(size_t size); // network data read
+
+      // config for rate limit
+
+      static void set_rate_up_limit(uint64_t limit);
+      static void set_rate_down_limit(uint64_t limit);
+      static uint64_t get_rate_up_limit();
+      static uint64_t get_rate_down_limit();
+
+      // config misc
+      static void set_tos_flag(int tos); // ToS / QoS flag
+      static int get_tos_flag();
+
+      // handlers and sleep
+      void sleep_before_packet(size_t packet_size, int phase, int q_len); // execute a sleep ; phase is not really used now(?)
+      static void save_limit_to_file(int limit); ///< for dr-arqma
+      static double get_sleep_time(size_t cb);
+
+      static void set_save_graph(bool save_graph);
 };
 
 } // nameserver

@@ -35,6 +35,8 @@
 #include <boost/serialization/version.hpp>
 #include "serialization/keyvalue_serialization.h"
 #include "net/net_utils_base.h"
+#include "net/tor_address.h"
+#include "net/i2p_address.h"
 #include "misc_language.h"
 #include "string_tools.h"
 #include "time_helper.h"
@@ -205,7 +207,7 @@ namespace nodetool
           std::vector<peerlist_entry_base<network_address_old>> local_peerlist;
           for (const auto &p: this_ref.local_peerlist_new)
           {
-            if (p.adr.get_type_id() == epee::net_utils::ipv4_network_address::ID)
+            if (p.adr.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
             {
               const epee::net_utils::network_address  &na = p.adr;
               const epee::net_utils::ipv4_network_address &ipv4 = na.as<const epee::net_utils::ipv4_network_address>();
@@ -264,7 +266,7 @@ namespace nodetool
           std::vector<peerlist_entry_base<network_address_old>> local_peerlist;
           for (const auto &p: this_ref.local_peerlist_new)
           {
-            if (p.adr.get_type_id() == epee::net_utils::ipv4_network_address::ID)
+            if (p.adr.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
             {
               const epee::net_utils::network_address  &na = p.adr;
               const epee::net_utils::ipv4_network_address &ipv4 = na.as<const epee::net_utils::ipv4_network_address>();

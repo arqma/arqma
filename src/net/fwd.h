@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2016-2018, The Monero Project
+// Copyright (c) 2018-2019, The Arqma Project
+// Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -27,17 +27,21 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ARQMA_EXCEPTION_H
-#define ARQMA_EXCEPTION_H
+#pragma once
 
-#include <string>
+#include <cstdint>
 
-namespace tools
+namespace net
 {
+    enum class error : int;
+    class tor_address;
+    class i2p_address;
 
-void set_stack_trace_log(const std::string &log);
-void log_stack_trace(const char *msg);
-
-}  // namespace tools
-
-#endif
+    namespace socks
+    {
+        class client;
+        template<typename> class connect_handler;
+        enum class error : int;
+        enum class version : std::uint8_t;
+    }
+}
