@@ -186,6 +186,7 @@ namespace nodetool
                 break;
             case epee::net_utils::zone::i2p:
                 proxies.back().zone = epee::net_utils::zone::i2p;
+                break;
             default:
                 MERROR("Invalid network for --" << arg_proxy.name);
                 return boost::none;
