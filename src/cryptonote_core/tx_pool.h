@@ -142,7 +142,7 @@ namespace cryptonote
      *
      * @return true unless the transaction cannot be found in the pool
      */
-    bool take_tx(const crypto::hash &id, transaction &tx, size_t& blob_size, uint64_t& fee, bool &relayed, bool &do_not_relay, bool &double_spend_seen);
+    bool take_tx(const crypto::hash &id, transaction &tx, cryptonote::blobdata &txblob, size_t& blob_size, uint64_t& fee, bool &relayed, bool &do_not_relay, bool &double_spend_seen);
 
     /**
      * @brief checks if the pool has a transaction with the given hash
@@ -585,6 +585,8 @@ private:
     size_t m_txpool_size;
 
     mutable std::unordered_map<crypto::hash, std::tuple<bool, tx_verification_context, uint64_t, crypto::hash>> m_input_cache;
+
+    std::unordered_map<crypto::hash, transaction> m_parsed_tx_cache;
   };
 }
 

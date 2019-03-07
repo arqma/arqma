@@ -342,11 +342,8 @@ namespace cryptonote
     int64_t diff = static_cast<int64_t>(hshd.current_height) - static_cast<int64_t>(m_core.get_current_blockchain_height());
     uint64_t abs_diff = std::abs(diff);
     uint64_t max_block_height = std::max(hshd.current_height,m_core.get_current_blockchain_height());
-    uint64_t last_block_v1 = m_core.get_nettype() == TESTNET ? 1 : m_core.get_nettype() == MAINNET ? 1 : (uint64_t)-1;
-    uint64_t diff_v2 = max_block_height > last_block_v1 ? std::min(abs_diff, max_block_height - last_block_v1) : 0;
-    //assert(diff_v2 == 0);
     MCLOG(is_inital ? el::Level::Info : el::Level::Debug, "global", context <<  "Sync data returned a new top block candidate: " << m_core.get_current_blockchain_height() << " -> " << hshd.current_height
-      << " [Your node is " << abs_diff << " blocks (" << (diff_v2 / (24 * 60 * 60 / DIFFICULTY_TARGET_V2)) << " days) "
+      << " [Your node is " << abs_diff << " blocks (" << (abs_diff / (24 * 60 * 60 / DIFFICULTY_TARGET_V10)) << " days) "
       << (0 <= diff ? std::string("behind") : std::string("ahead"))
       << "] " << ENDL << "SYNCHRONIZATION started");
       if (hshd.current_height >= m_core.get_current_blockchain_height() + 5) // don't switch to unsafe mode just for a few blocks
@@ -412,7 +409,14 @@ namespace cryptonote
     m_core.pause_mine();
     std::vector<block_complete_entry> blocks;
     blocks.push_back(arg.b);
-    m_core.prepare_handle_incoming_blocks(blocks);
+    std::vector<block> pblocks;
+    if (!m_core.prepare_handle_incoming_blocks(blocks, pblocks))
+    {
+      LOG_PRINT_CCONTEXT_L1("Block verification failed: prepare_handle_incoming_blocks failed, dropping connection");
+      drop_connection(context, false, false);
+      m_core.resume_mine();
+      return 1;
+    }
     for(auto tx_blob_it = arg.b.txs.begin(); tx_blob_it!=arg.b.txs.end();tx_blob_it++)
     {
       cryptonote::tx_verification_context tvc = AUTO_VAL_INIT(tvc);
@@ -428,7 +432,7 @@ namespace cryptonote
     }
 
     block_verification_context bvc = boost::value_initialized<block_verification_context>();
-    m_core.handle_incoming_block(arg.b.block, bvc); // got block from handle_notify_new_block
+    m_core.handle_incoming_block(arg.b.block, pblocks.empty() ? NULL : &pblocks[0], bvc); // got block from handle_notify_new_block
     if (!m_core.cleanup_handle_incoming_blocks(true))
     {
       LOG_PRINT_CCONTEXT_L0("Failure in cleanup_handle_incoming_blocks");
@@ -691,10 +695,16 @@ namespace cryptonote
 
         std::vector<block_complete_entry> blocks;
         blocks.push_back(b);
-        m_core.prepare_handle_incoming_blocks(blocks);
+        std::vector<block> pblocks;
+        if (!m_core.prepare_handle_incoming_blocks(blocks, pblocks))
+        {
+          LOG_PRINT_CCONTEXT_L0("Failure in prepare_handle_incoming_blocks");
+          m_core.resume_mine();
+          return 1;
+        }
 
         block_verification_context bvc = boost::value_initialized<block_verification_context>();
-        m_core.handle_incoming_block(arg.b.block, bvc); // got block from handle_notify_new_block
+        m_core.handle_incoming_block(arg.b.block, pblocks.empty() ? NULL : &pblocks[0], bvc); // got block from handle_notify_new_block
         if (!m_core.cleanup_handle_incoming_blocks(true))
         {
           LOG_PRINT_CCONTEXT_L0("Failure in cleanup_handle_incoming_blocks");
@@ -1166,10 +1176,21 @@ namespace cryptonote
             }
           }
 
-          m_core.prepare_handle_incoming_blocks(blocks);
+          std::vector<block> pblocks;
+          if (!m_core.prepare_handle_incoming_blocks(blocks, pblocks))
+          {
+            LOG_ERROR_CCONTEXT("Failure in prepare_handle_incoming_blocks");
+            return 1;
+          }
+          if (!pblocks.empty() && pblocks.size() != blocks.size())
+          {
+            m_core.cleanup_handle_incoming_blocks();
+            LOG_ERROR_CCONTEXT("Internal error: blocks.size() != block_entry.txs.size()");
+            return 1;
+          }
 
           uint64_t block_process_time_full = 0, transactions_process_time_full = 0;
-          size_t num_txs = 0;
+          size_t num_txs = 0, blockidx = 0;
           for(const block_complete_entry& block_entry: blocks)
           {
             if (m_stopping)
@@ -1219,7 +1240,7 @@ namespace cryptonote
             TIME_MEASURE_START(block_process_time);
             block_verification_context bvc = boost::value_initialized<block_verification_context>();
 
-            m_core.handle_incoming_block(block_entry.block, bvc, false); // <--- process block
+            m_core.handle_incoming_block(block_entry.block, pblocks.empty() ? NULL : &pblocks[blockidx], bvc, false); // <--- process block
 
             if(bvc.m_verifivation_failed)
             {
@@ -1262,6 +1283,7 @@ namespace cryptonote
 
             TIME_MEASURE_FINISH(block_process_time);
             block_process_time_full += block_process_time;
+            ++blockidx;
 
           } // each download block
 

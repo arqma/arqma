@@ -242,7 +242,7 @@ std::pair<uint64_t, uint64_t> block_queue::reserve_span(uint64_t first_block_hei
     MDEBUG("reserve_span: early out: first_block_height " << first_block_height << ", last_block_height " << last_block_height << ", max_blocks " << max_blocks);
     return std::make_pair(0, 0);
   }
-  if (block_hashes.size() >= last_block_height)
+  if (block_hashes.size() > last_block_height)
   {
     MDEBUG("reserve_span: more block hashes than fit within last_block_height: " << block_hashes.size() << " and " << last_block_height);
     return std::make_pair(0, 0);
@@ -267,7 +267,7 @@ std::pair<uint64_t, uint64_t> block_queue::reserve_span(uint64_t first_block_hei
         "(+" << next_unpruned_height - span_start_height << "), current seed " << pruning_seed);
     span_start_height = next_unpruned_height;
   }
-  MDEBUG("span_start_height: " <<span_start_height);
+  MDEBUG("span_start_height: " << span_start_height);
   const uint64_t block_hashes_start_height = last_block_height - block_hashes.size() + 1;
   if (span_start_height >= block_hashes.size() + block_hashes_start_height)
   {

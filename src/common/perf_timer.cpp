@@ -118,7 +118,7 @@ LoggingPerformanceTimer::LoggingPerformanceTimer(const std::string &s, const std
   if (!performance_timers)
   {
     if (log)
-      PERF_LOG_ALWAYS(level, cat.c_str(), "PERF             ----------");
+    PERF_LOG_ALWAYS(level, cat.c_str(), "PERF             ----------");
     performance_timers = new std::vector<LoggingPerformanceTimer*>();
     performance_timers->reserve(16); // how deep before realloc
   }
