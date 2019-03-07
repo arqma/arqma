@@ -217,7 +217,7 @@ namespace cryptonote
      *
      * @return false on erroneous blocks, else true
      */
-    bool prepare_handle_incoming_blocks(const std::vector<block_complete_entry>  &blocks);
+    bool prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks);
 
     /**
      * @brief incoming blocks post-processing, cleanup, and disk sync
@@ -901,8 +901,7 @@ namespace cryptonote
      * @param txs unused, candidate for removal
      */
     void output_scan_worker(const uint64_t amount,const std::vector<uint64_t> &offsets,
-        std::vector<output_data_t> &outputs, std::unordered_map<crypto::hash,
-        cryptonote::transaction> &txs) const;
+        std::vector<output_data_t> &outputs, const std::vector<output_data_t> &extra_tx_map) const;
 
     /**
      * @brief computes the "short" and "long" hashes for a set of blocks
@@ -911,7 +910,7 @@ namespace cryptonote
      * @param blocks the blocks to be hashed
      * @param map return-by-reference the hashes for each block
      */
-    void block_longhash_worker(uint64_t height, const std::vector<block> &blocks,
+    void block_longhash_worker(uint64_t height, const epee::span<const block> &blocks,
         std::unordered_map<crypto::hash, crypto::hash> &map) const;
 
     /**
@@ -1355,7 +1354,7 @@ namespace cryptonote
      * @return true
      */
     bool update_next_cumulative_size_limit();
-    void return_tx_to_pool(std::vector<transaction> &txs);
+    void return_tx_to_pool(std::vector<std::pair<transaction, blobdata>> &txs);
 
     /**
      * @brief make sure a transaction isn't attempting a double-spend
