@@ -75,7 +75,6 @@ bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
 {
   MGINFO("Generating SSL certificate");
   pkey = EVP_PKEY_new();
-  openssl_pkey pkey_deleter{pkey};
   if (!pkey)
   {
     MERROR("Failed to create new private key");
@@ -85,12 +84,14 @@ bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
   if (!rsa)
   {
     MERROR("Error generating RSA private key");
+    EVP_PKEY_free(pkey);
     return false;
   }
   if (EVP_PKEY_assign_RSA(pkey, rsa) <= 0)
   {
-    RSA_free(rsa);
     MERROR("Error assigning RSA private key");
+    EVP_PKEY_free(pkey);
+    RSA_free(rsa);
     return false;
   }
 
@@ -98,6 +99,7 @@ bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
   if (!cert)
   {
     MERROR("Failed to create new X509 certificate");
+    EVP_PKEY_free(pkey);
     return false;
   }
   ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
@@ -106,6 +108,7 @@ bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
   if (!X509_set_pubkey(cert, pkey))
   {
     MERROR("Error setting pubkey on certificate");
+    EVP_PKEY_free(pkey);
     X509_free(cert);
     return false;
   }
@@ -115,6 +118,7 @@ bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
   if (X509_sign(cert, pkey, EVP_sha256()) == 0)
   {
     MERROR("Error signing certificate");
+    EVP_PKEY_free(pkey);
     X509_free(cert);
     return false;
   }
