@@ -380,7 +380,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   if(!m_db->height())
   {
     MINFO("Blockchain not loaded, generating genesis block.");
-    block bl = boost::value_initialized<block>();
+    block bl;
     block_verification_context bvc = boost::value_initialized<block_verification_context>();
     generate_genesis_block(bl);
     add_new_block(bl, bvc);
@@ -405,7 +405,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 
   // genesis block has no timestamp, could probably change it to have timestamp of 1341378000...
   if(!top_block_timestamp)
-    timestamp_diff = time(NULL) - 1341378000;
+    timestamp_diff = time(NULL) - 1523689524;
 
   // create general purpose async service queue
 
@@ -909,7 +909,7 @@ bool Blockchain::rollback_blockchain_switching(std::list<block>& original_chain,
   m_hardfork->reorganize_from_chain_height(rollback_height);
 
   MINFO("Rollback to height " << rollback_height << " was successful.");
-  if (original_chain.size())
+  if (!original_chain.empty())
   {
     MINFO("Restoration to previous blockchain successful as well.");
   }
@@ -1469,7 +1469,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
 
     // if block to be added connects to known blocks that aren't part of the
     // main chain -- that is, if we're adding on to an alternate chain
-    if(alt_chain.size())
+    if(!alt_chain.empty())
     {
       // make sure alt chain doesn't somehow start past the end of the main chain
       CHECK_AND_ASSERT_MES(m_db->height() > alt_chain.front()->second.height, false, "main blockchain wrong height");
@@ -1826,8 +1826,6 @@ bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, 
   uint64_t db_height = m_db->height();
   if (db_height == 0)
     return false;
-  if (to_height == 0)
-    to_height = db_height - 1;
   if (start_height >= db_height || to_height >= db_height)
     return false;
   if (amount == 0)
@@ -1856,7 +1854,7 @@ bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qbloc
 
   // make sure the request includes at least the genesis block, otherwise
   // how can we expect to sync from the client that the block list came from?
-  if(!qblock_ids.size() /*|| !req.m_total_height*/)
+  if(qblock_ids.empty() /*|| !req.m_total_height*/)
   {
     MCERROR("net.p2p", "Client sent wrong NOTIFY_REQUEST_CHAIN: m_block_ids.size()=" << qblock_ids.size() << /*", m_height=" << req.m_total_height <<*/ ", dropping connection");
     return false;
@@ -3843,8 +3841,7 @@ bool Blockchain::cleanup_handle_incoming_blocks(bool force_sync)
 }
 
 //------------------------------------------------------------------
-//FIXME: unused parameter txs
-void Blockchain::output_scan_worker(const uint64_t amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs, std::unordered_map<crypto::hash, cryptonote::transaction> &txs) const
+void Blockchain::output_scan_worker(const uint64_t amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs) const
 {
   try
   {
@@ -4221,21 +4218,19 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     offsets.second.erase(last, offsets.second.end());
   }
 
-  // [output] stores all transactions for each tx_out_index::hash found
-  std::vector<std::unordered_map<crypto::hash, cryptonote::transaction>> transactions(amounts.size());
-
+  // gather all the output keys
   threads = tpool.get_max_concurrency();
   if (!m_db->can_thread_bulk_indices())
     threads = 1;
 
-  if (threads > 1)
+  if (threads > 1 && amounts.size() > 1)
   {
     tools::threadpool::waiter waiter;
 
     for (size_t i = 0; i < amounts.size(); i++)
     {
       uint64_t amount = amounts[i];
-      tpool.submit(&waiter, boost::bind(&Blockchain::output_scan_worker, this, amount, std::cref(offset_map[amount]), std::ref(tx_map[amount]), std::ref(transactions[i])), true);
+      tpool.submit(&waiter, boost::bind(&Blockchain::output_scan_worker, this, amount, std::cref(offset_map[amount]), std::ref(tx_map[amount])), true);
     }
     waiter.wait(&tpool);
   }
@@ -4244,7 +4239,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     for (size_t i = 0; i < amounts.size(); i++)
     {
       uint64_t amount = amounts[i];
-      output_scan_worker(amount, offset_map[amount], tx_map[amount], transactions[i]);
+      output_scan_worker(amount, offset_map[amount], tx_map[amount]);
     }
   }
 

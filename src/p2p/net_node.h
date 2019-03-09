@@ -421,7 +421,7 @@ namespace nodetool
     epee::math_helper::once_a_time_seconds<1> m_connections_maker_interval;
     epee::math_helper::once_a_time_seconds<60*30, false> m_peerlist_store_interval;
     epee::math_helper::once_a_time_seconds<60> m_gray_peerlist_housekeeping_interval;
-    epee::math_helper::once_a_time_seconds<900, false> m_incoming_connections_interval;
+    epee::math_helper::once_a_time_seconds<3600, false> m_incoming_connections_interval;
 
 #ifdef ALLOW_DEBUG_COMMANDS
     uint64_t m_last_stat_request_time;
