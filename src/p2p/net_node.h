@@ -132,9 +132,9 @@ namespace nodetool
     struct network_zone;
     using connect_func = boost::optional<p2p_connection_context>(network_zone&, epee::net_utils::network_address const&, epee::net_utils::ssl_support_t);
 
-    struct config
+    struct config_t
     {
-      config()
+      config_t()
         : m_net_config(),
           m_peer_id(crypto::rand<uint64_t>()),
           m_support_flags(0)
@@ -144,6 +144,7 @@ namespace nodetool
       uint64_t m_peer_id;
       uint32_t m_support_flags;
     };
+    typedef epee::misc_utils::struct_init<config_t> config;
 
     struct network_zone
     {
@@ -434,8 +435,10 @@ namespace nodetool
     uint64_t m_peer_livetime;
     //keep connections to initiate some interactions
 
+
     static boost::optional<p2p_connection_context> public_connect(network_zone&, epee::net_utils::network_address const&, epee::net_utils::ssl_support_t);
     static boost::optional<p2p_connection_context> socks_connect(network_zone&, epee::net_utils::network_address const&, epee::net_utils::ssl_support_t);
+
 
     /* A `std::map` provides constant iterators and key/value pointers even with
     inserts/erases to _other_ elements. This makes the configuration step easier

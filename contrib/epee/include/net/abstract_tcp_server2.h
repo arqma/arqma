@@ -102,16 +102,18 @@ namespace net_utils
 
     /// Construct a connection with the given io_service.
     explicit connection( boost::asio::io_service& io_service,
-                         boost::shared_ptr<shared_state> state,
-                         t_connection_type connection_type,
-                         epee::net_utils::ssl_support_t ssl_support,
-                         ssl_context_t &ssl_context);
+                        boost::shared_ptr<shared_state> state,
+			t_connection_type connection_type,
+			epee::net_utils::ssl_support_t ssl_support,
+			ssl_context_t &ssl_context);
 
     explicit connection( boost::asio::ip::tcp::socket&& sock,
-                         boost::shared_ptr<shared_state> state,
-                         t_connection_type connection_type,
-                         epee::net_utils::ssl_support_t ssl_support,
-                         ssl_context_t &ssl_context);
+			 boost::shared_ptr<shared_state> state,
+			t_connection_type connection_type,
+			epee::net_utils::ssl_support_t ssl_support,
+			ssl_context_t &ssl_context);
+
+
 
     virtual ~connection() noexcept(false);
 
@@ -145,10 +147,9 @@ namespace net_utils
     //------------------------------------------------------
     boost::shared_ptr<connection<t_protocol_handler> > safe_shared_from_this();
     bool shutdown();
-
-    // Handle completion of a receive operation.
+    /// Handle completion of a receive operation.
     void handle_receive(const boost::system::error_code& e,
-      std::size_t bytes_transfered);
+      std::size_t bytes_transferred);
 
     /// Handle completion of a read operation.
     void handle_read(const boost::system::error_code& e,
