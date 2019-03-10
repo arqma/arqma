@@ -77,31 +77,31 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
   template<class t_protocol_handler>
   connection<t_protocol_handler>::connection( boost::asio::io_service& io_service,
-                boost::shared_ptr<shared_state> state,
-		t_connection_type connection_type,
-		epee::net_utils::ssl_support_t ssl_support,
-		ssl_context_t &ssl_context
-	)
-	: connection(boost::asio::ip::tcp::socket{io_service}, std::move(state), connection_type, ssl_support, ssl_context)
+  	            boost::shared_ptr<shared_state> state,
+                t_connection_type connection_type,
+                epee::net_utils::ssl_support_t ssl_support,
+                ssl_context_t &ssl_context
+        )
+        : connection(boost::asio::ip::tcp::socket{io_service}, std::move(state), connection_type, ssl_support, ssl_context)
   {
   }
 
   template<class t_protocol_handler>
   connection<t_protocol_handler>::connection( boost::asio::ip::tcp::socket&& sock,
                 boost::shared_ptr<shared_state> state,
-		t_connection_type connection_type,
-		epee::net_utils::ssl_support_t ssl_support,
-		ssl_context_t &ssl_context
-	)
-	:
-		connection_basic(std::move(sock), state, ssl_support, ssl_context),
-		m_protocol_handler(this, check_and_get(state).config, context),
-		m_connection_type( connection_type ),
-		m_throttle_speed_in("speed_in", "throttle_speed_in"),
-		m_throttle_speed_out("speed_out", "throttle_speed_out"),
-		m_timer(socket_.get_io_service()),
-		m_local(false),
-		m_ready_to_close(false)
+                t_connection_type connection_type,
+                epee::net_utils::ssl_support_t ssl_support,
+                ssl_context_t &ssl_context
+        )
+        :
+                connection_basic(std::move(sock), state, ssl_support, ssl_context),
+                m_protocol_handler(this, check_and_get(state).config, context),
+                m_connection_type( connection_type ),
+                m_throttle_speed_in("speed_in", "throttle_speed_in"),
+                m_throttle_speed_out("speed_out", "throttle_speed_out"),
+                m_timer(socket_.get_io_service()),
+                m_local(false),
+                m_ready_to_close(false)
   {
     MDEBUG("test, connection constructor set m_connection_type="<<m_connection_type);
   }
@@ -121,7 +121,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  boost::shared_ptr<connection<t_protocol_handler> > connection<t_protocol_handler>::safe_shared_from_this()
+  boost::shared_ptr<connection<t_protocol_handler>> connection<t_protocol_handler>::safe_shared_from_this()
   {
     try
     {
@@ -130,7 +130,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     catch (const boost::bad_weak_ptr&)
     {
       // It happens when the connection is being deleted
-      return boost::shared_ptr<connection<t_protocol_handler> >();
+      return boost::shared_ptr<connection<t_protocol_handler>>();
     }
   }
   //---------------------------------------------------------------------------------
@@ -207,18 +207,17 @@ PRAGMA_WARNING_DISABLE_VS(4355)
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred)));
 #if !defined(_WIN32) || !defined(__i686)
-	// not supported before Windows7, too lazy for runtime check
-	// Just exclude for 32bit windows builds
-	//set ToS flag
-	int tos = get_tos_flag();
-	boost::asio::detail::socket_option::integer< IPPROTO_IP, IP_TOS >
-	optionTos( tos );
+    // not supported before Windows7, too lazy for runtime check
+    // Just exclude for 32bit windows builds
+    //set ToS flag
+    int tos = get_tos_flag();
+    boost::asio::detail::socket_option::integer< IPPROTO_IP, IP_TOS >
+    optionTos( tos );
     socket().set_option( optionTos );
-	//_dbg1("Set ToS flag to " << tos);
+    //_dbg1("Set ToS flag to " << tos);
 #endif
-
-	boost::asio::ip::tcp::no_delay noDelayOption(false);
-	socket().set_option(noDelayOption);
+    boost::asio::ip::tcp::no_delay noDelayOption(false);
+    socket().set_option(noDelayOption);
 
     return true;
 
@@ -270,7 +269,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   bool connection<t_protocol_handler>::release()
   {
     TRY_ENTRY();
-    boost::shared_ptr<connection<t_protocol_handler> >  back_connection_copy;
+    boost::shared_ptr<connection<t_protocol_handler>> back_connection_copy;
     LOG_TRACE_CC(context, "[sock " << socket().native_handle() << "] release");
     CRITICAL_REGION_BEGIN(m_self_refs_lock);
     CHECK_AND_ASSERT_MES(m_reference_count, false, "[sock " << socket().native_handle() << "] m_reference_count already at 0 at connection<t_protocol_handler>::release() call");
@@ -300,7 +299,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     boost::system::error_code e;
 
     boost::asio::ip::tcp::endpoint endpoint = socket().remote_endpoint(e);
-    if (e)
+    if(e)
     {
       address = "<not connected>";
       port = "<not connected>";
@@ -310,9 +309,9 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       address = endpoint.address().to_string();
       port = boost::lexical_cast<std::string>(endpoint.port());
     }
-    MDEBUG(" connection type " << to_string( m_connection_type ) << " "
-        << socket().local_endpoint().address().to_string() << ":" << socket().local_endpoint().port()
-        << " <--> " << context.m_remote_address.str() << " (via " << address << ":" << port << ")");
+    MDEBUG(" connection type " << to_string( m_connection_type ) <<
+           " " << socket().local_endpoint().address().to_string() << ":" << socket().local_endpoint().port() <<
+           " <--> " << context.m_remote_address.str() << " (via " << address << ":" << port << ")");
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
@@ -322,39 +321,39 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     TRY_ENTRY();
     //_info("[sock " << socket().native_handle() << "] Async read calledback.");
 
-    if (!e)
+    if(!e)
     {
-		{
-			CRITICAL_REGION_LOCAL(m_throttle_speed_in_mutex);
-			m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
-			context.m_current_speed_down = m_throttle_speed_in.get_current_speed();
-			context.m_max_speed_down = std::max(context.m_max_speed_down, context.m_current_speed_down);
-		}
+      {
+        CRITICAL_REGION_LOCAL(m_throttle_speed_in_mutex);
+        m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
+        context.m_current_speed_down = m_throttle_speed_in.get_current_speed();
+        context.m_max_speed_down = std::max(context.m_max_speed_down, context.m_current_speed_down);
+      }
+      {
+        CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in );
+        epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
+      }
 
-    {
-			CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in );
-			epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
-		}
+      double delay = 0; // will be calculated - how much we should sleep to obey speed limit etc
 
-		double delay=0; // will be calculated - how much we should sleep to obey speed limit etc
+      if(speed_limit_is_enabled())
+      {
+        do // keep sleeping if we should sleep
+        {
+          { //_scope_dbg1("CRITICAL_REGION_LOCAL");
+            CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in );
+            delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
+          }
 
-
-		if (speed_limit_is_enabled()) {
-			do // keep sleeping if we should sleep
-			{
-				{ //_scope_dbg1("CRITICAL_REGION_LOCAL");
-					CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in );
-					delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
-				}
-
-				delay *= 0.5;
-				if (delay > 0) {
-					long int ms = (long int)(delay * 100);
-					reset_timer(boost::posix_time::milliseconds(ms + 1), true);
-					boost::this_thread::sleep_for(boost::chrono::milliseconds(ms));
-				}
-			} while(delay > 0);
-		} // any form of sleeping
+          delay *= 0.5;
+          if(delay > 0)
+          {
+            long int ms = (long int)(delay * 100);
+            reset_timer(boost::posix_time::milliseconds(ms + 1), true);
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(ms));
+          }
+        } while(delay > 0);
+      } // any form of sleeping
 
       //_info("[sock " << socket().native_handle() << "] RECV " << bytes_transferred);
       logger_handle_net_read(bytes_transferred);
@@ -413,7 +412,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     std::size_t bytes_transferred)
   {
     TRY_ENTRY();
-    if (e)
+    if(e)
     {
       // offload the error case
       handle_read(e, bytes_transferred);
@@ -671,7 +670,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
         CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), false, "Unexpected queue size");
         reset_timer(get_default_timeout(), false);
-            async_write(boost::asio::buffer(m_send_que.front().data(), size_now ) ,
+        async_write(boost::asio::buffer(m_send_que.front().data(), size_now ),
                                  //strand_.wrap(
                                  boost::bind(&connection<t_protocol_handler>::handle_write, self, _1, _2)
                                  //)
@@ -850,18 +849,18 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       }
     }else
     {
-      //have more data to send
-		reset_timer(get_default_timeout(), false);
-		auto size_now = m_send_que.front().size();
-		MDEBUG("handle_write() NOW SENDS: packet="<<size_now<<" B" <<", from  queue size="<<m_send_que.size());
-		if (speed_limit_is_enabled())
-			do_send_handler_write_from_queue(e, m_send_que.front().size() , m_send_que.size()); // (((H)))
-		CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), void(), "Unexpected queue size");
-		  async_write(boost::asio::buffer(m_send_que.front().data(), size_now) ,
-          // strand_.wrap(
-            boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), _1, _2)
-				  // )
-          );
+    //have more data to send
+    reset_timer(get_default_timeout(), false);
+    auto size_now = m_send_que.front().size();
+    MDEBUG("handle_write() NOW SENDS: packet="<<size_now<<" B" <<", from  queue size="<<m_send_que.size());
+    if (speed_limit_is_enabled())
+      do_send_handler_write_from_queue(e, m_send_que.front().size() , m_send_que.size()); // (((H)))
+    CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), void(), "Unexpected queue size");
+    async_write(boost::asio::buffer(m_send_que.front().data(), size_now) ,
+        // strand_.wrap(
+          boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), _1, _2)
+        // )
+        );
       //_dbg3("(normal)" << size_now);
     }
     CRITICAL_REGION_END();
@@ -891,35 +890,35 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   /************************************************************************/
 
   template<class t_protocol_handler>
-  boosted_tcp_server<t_protocol_handler>::boosted_tcp_server( t_connection_type connection_type ) :
-    m_state(boost::make_shared<typename connection<t_protocol_handler>::shared_state>()),
-    m_io_service_local_instance(new boost::asio::io_service()),
-    io_service_(*m_io_service_local_instance.get()),
-    acceptor_(io_service_),
-    default_remote(),
-    m_stop_signal_sent(false), m_port(0),
-    m_threads_count(0),
-    m_thread_index(0),
-		m_connection_type( connection_type ),
-    new_connection_(),
-    m_ssl_context({boost::asio::ssl::context(boost::asio::ssl::context::tlsv12), {}})
+  boosted_tcp_server<t_protocol_handler>::boosted_tcp_server( t_connection_type connection_type )
+    : m_state(boost::make_shared<typename connection<t_protocol_handler>::shared_state>()),
+      m_io_service_local_instance(new worker()),
+      io_service_(m_io_service_local_instance->io_service),
+      acceptor_(io_service_),
+      default_remote(),
+      m_stop_signal_sent(false), m_port(0),
+      m_threads_count(0),
+      m_thread_index(0),
+                m_connection_type( connection_type ),
+      new_connection_(),
+      m_ssl_context({boost::asio::ssl::context(boost::asio::ssl::context::tlsv12), {}})
   {
       create_server_type_map();
       m_thread_name_prefix = "NET";
   }
 
   template<class t_protocol_handler>
-  boosted_tcp_server<t_protocol_handler>::boosted_tcp_server(boost::asio::io_service& extarnal_io_service, t_connection_type connection_type) :
-    m_state(boost::make_shared<typename connection<t_protocol_handler>::shared_state>()),
-    io_service_(extarnal_io_service),
-    acceptor_(io_service_),
-    default_remote(),
-    m_stop_signal_sent(false), m_port(0),
-    m_threads_count(0),
-    m_thread_index(0),
-		m_connection_type(connection_type),
-    new_connection_(),
-    m_ssl_context({boost::asio::ssl::context(boost::asio::ssl::context::sslv23), {}})
+  boosted_tcp_server<t_protocol_handler>::boosted_tcp_server(boost::asio::io_service& extarnal_io_service, t_connection_type connection_type)
+    : m_state(boost::make_shared<typename connection<t_protocol_handler>::shared_state>()),
+      io_service_(extarnal_io_service),
+      acceptor_(io_service_),
+      default_remote(),
+      m_stop_signal_sent(false), m_port(0),
+      m_threads_count(0),
+      m_thread_index(0),
+                m_connection_type(connection_type),
+      new_connection_(),
+      m_ssl_context({boost::asio::ssl::context(boost::asio::ssl::context::sslv23), {}})
   {
       create_server_type_map();
       m_thread_name_prefix = "NET";
@@ -1153,22 +1152,21 @@ POP_WARNINGS
     {
     if(!e)
     {
-		if (m_connection_type == e_connection_type_RPC) {
-			const char *ssl_message = "unknown";
-			switch (new_connection_->get_ssl_support())
-			{
-				case epee::net_utils::ssl_support_t::e_ssl_support_disabled: ssl_message = "disabled"; break;
-				case epee::net_utils::ssl_support_t::e_ssl_support_enabled: ssl_message = "enabled"; break;
-				case epee::net_utils::ssl_support_t::e_ssl_support_autodetect: ssl_message = "autodetection"; break;
-			}
-			MDEBUG("New server for RPC connections, SSL " << ssl_message);
-			new_connection_->setRpcStation(); // hopefully this is not needed actually
-		}
-		connection_ptr conn(std::move(new_connection_));
-      new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, conn->get_ssl_support(), m_ssl_context));
-      acceptor_.async_accept(new_connection_->socket(),
-        boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this,
-        boost::asio::placeholders::error));
+      if (m_connection_type == e_connection_type_RPC)
+      {
+        const char *ssl_message = "unknown";
+        switch (new_connection_->get_ssl_support())
+        {
+          case epee::net_utils::ssl_support_t::e_ssl_support_disabled: ssl_message = "disabled"; break;
+          case epee::net_utils::ssl_support_t::e_ssl_support_enabled: ssl_message = "enabled"; break;
+          case epee::net_utils::ssl_support_t::e_ssl_support_autodetect: ssl_message = "autodetection"; break;
+        }
+        MDEBUG("New server for RPC connections, SSL " << ssl_message);
+        new_connection_->setRpcStation(); // hopefully this is not needed actually
+      }
+      connection_ptr conn(std::move(new_connection_));
+      new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state , m_connection_type, conn->get_ssl_support(), m_ssl_context));
+      acceptor_.async_accept(new_connection_->socket(), boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this, boost::asio::placeholders::error));
 
       boost::asio::socket_base::keep_alive opt(true);
       conn->socket().set_option(opt);
@@ -1178,7 +1176,7 @@ POP_WARNINGS
         res = conn->start(true, 1 < m_threads_count);
       else
         res = conn->start(true, 1 < m_threads_count, default_remote);
-      if (!res)
+      if(!res)
       {
         conn->cancel();
         return;
@@ -1201,9 +1199,7 @@ POP_WARNINGS
     _erro("Some problems at accept: " << e.message() << ", connections_count = " << m_state->sock_count);
     misc_utils::sleep_no_w(100);
     new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, new_connection_->get_ssl_support(), m_ssl_context));
-    acceptor_.async_accept(new_connection_->socket(),
-      boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this,
-      boost::asio::placeholders::error));
+    acceptor_.async_accept(new_connection_->socket(), boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this, boost::asio::placeholders::error));
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
@@ -1398,7 +1394,7 @@ POP_WARNINGS
     MDEBUG("connections_ size now " << connections_.size());
     connections_mutex.unlock();
     epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ CRITICAL_REGION_LOCAL(connections_mutex); connections_.erase(new_connection_l); });
-    boost::asio::ip::tcp::socket&  sock_ = new_connection_l->socket();
+    boost::asio::ip::tcp::socket& sock_ = new_connection_l->socket();
 
     //////////////////////////////////////////////////////////////////////////
     boost::asio::ip::tcp::resolver resolver(io_service_);

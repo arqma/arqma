@@ -318,7 +318,7 @@ namespace net_utils
 				disconnect();
 				m_host_buff = std::move(host);
 				m_port = std::move(port);
-                                m_auth = user ? http_client_auth{std::move(*user)} : http_client_auth{};
+				m_auth = user ? http_client_auth{std::move(*user)} : http_client_auth{};
 				m_ssl_support = ssl_support;
 				m_ssl_private_key_and_certificate_path = private_key_and_certificate_path;
 				m_ssl_allowed_certificates = allowed_ssl_certificates;

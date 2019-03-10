@@ -2343,35 +2343,35 @@ namespace cryptonote
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl = {
       "rpc-ssl"
-    , "Enable SSL on RPC connections: enabled|disabled|autodetect"
+    , "Enable SSL on RPC Connections: enabled|disabled|autodetect <- Autodetect set by Default!"
     , "autodetect"
     };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl_private_key = {
       "rpc-ssl-private-key"
-    , "Path to a PEM format private key"
+    , "Path to Certificate Private Key in PEM format"
     , ""
     };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl_certificate = {
       "rpc-ssl-certificate"
-    , "Path to a PEM format certificate"
+    , "Path to Certificate in PEM format"
     , ""
     };
 
   const command_line::arg_descriptor<std::vector<std::string>> core_rpc_server::arg_rpc_ssl_allowed_certificates = {
       "rpc-ssl-allowed-certificates"
-    , "List of paths to PEM format certificates of allowed peers (all allowed if empty)"
+    , "Path to list with allowed peers Certificates in PEM format. If empty it will allow all"
     };
 
   const command_line::arg_descriptor<std::vector<std::string>> core_rpc_server::arg_rpc_ssl_allowed_fingerprints = {
       "rpc-ssl-allowed-fingerprints"
-    , "List of certificate fingerprints to allow"
-  };
+    , "Path to list with Certificate Fingerprints to allow"
+    };
 
   const command_line::arg_descriptor<bool> core_rpc_server::arg_rpc_ssl_allow_any_cert = {
       "rpc-ssl-allow-any-cert"
-    , "Allow any peer certificate, rather than just those on the allowed list"
+    , "Allow any Certificate used by peer, rather than just those on the allowed list"
     , false
     };
 

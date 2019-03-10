@@ -61,7 +61,7 @@ namespace net_utils
 	void use_ssl_certificate(ssl_context_t &ssl_context, const std::pair<std::string, std::string> &private_key_and_certificate_path);
 	bool is_certificate_allowed(boost::asio::ssl::verify_context &ctx, const ssl_context_t &ssl_context);
 	bool ssl_handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, const epee::net_utils::ssl_context_t &ssl_context);
-        bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s);
+    bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s);
 }
 }
 
