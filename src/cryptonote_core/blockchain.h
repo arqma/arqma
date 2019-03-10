@@ -42,6 +42,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "span.h"
 #include "syncobj.h"
 #include "string_tools.h"
 #include "cryptonote_basic/cryptonote_basic.h"
@@ -908,8 +909,7 @@ namespace cryptonote
      * @param blocks the blocks to be hashed
      * @param map return-by-reference the hashes for each block
      */
-    void block_longhash_worker(uint64_t height, const std::vector<block> &blocks,
-        std::unordered_map<crypto::hash, crypto::hash> &map) const;
+    void block_longhash_worker(uint64_t height, const std::vector<block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const;
 
     /**
      * @brief returns a set of known alternate chains
@@ -946,6 +946,13 @@ namespace cryptonote
      * Used for handling txes from historical blocks in a fast way
      */
     void on_new_tx_from_block(const cryptonote::transaction &tx);
+
+    /**
+     * @brief removes blocks from the top of the blockchain
+     *
+     * @param nblocks number of blocks to be removed
+     */
+    void pop_blocks(uint64_t nblocks);
 
   private:
 

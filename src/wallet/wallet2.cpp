@@ -9975,7 +9975,7 @@ uint64_t wallet2::get_daemon_blockchain_target_height(string &err)
 
 uint64_t wallet2::get_approximate_blockchain_height() const
 {
-  const time_t init_time = 1529003126
+  const time_t init_time = 1529003126;
   uint64_t approx_blockchain_height = (time(NULL) - init_time) / DIFFICULTY_TARGET_V11;
   LOG_PRINT_L2("Calculated blockchain height: " << approx_blockchain_height);
   return approx_blockchain_height;

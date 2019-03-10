@@ -140,6 +140,8 @@ public:
 
   bool sync_info(const std::vector<std::string>& args);
 
+  bool pop_blocks(const std::vector<std::string>& args);
+
   bool version(const std::vector<std::string>& args);
 
   bool prune_blockchain(const std::vector<std::string>& args);

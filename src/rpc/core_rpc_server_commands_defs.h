@@ -50,7 +50,7 @@ namespace cryptonote
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define CORE_RPC_VERSION_MAJOR 2
-#define CORE_RPC_VERSION_MINOR 2
+#define CORE_RPC_VERSION_MINOR 3
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -2289,6 +2289,29 @@ namespace cryptonote
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE(pruning_seed)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
+  struct COMMAND_RPC_POP_BLOCKS
+  {
+    struct request
+    {
+      uint64_t nblocks;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(nblocks);
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      std::string status;
+      uint64_t height;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(height)
       END_KV_SERIALIZE_MAP()
     };
   };
