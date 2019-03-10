@@ -80,7 +80,6 @@ namespace cryptonote
     command_line::add_arg(desc, arg_rpc_ssl_private_key);
     command_line::add_arg(desc, arg_rpc_ssl_certificate);
     command_line::add_arg(desc, arg_rpc_ssl_allowed_certificates);
-    command_line::add_arg(desc, arg_rpc_ssl_allowed_fingerprints);
     command_line::add_arg(desc, arg_rpc_ssl_allow_any_cert);
     command_line::add_arg(desc, arg_bootstrap_daemon_address);
     command_line::add_arg(desc, arg_bootstrap_daemon_login);
@@ -157,16 +156,12 @@ namespace cryptonote
         ssl_allowed_certificates.back() = std::string();
       }
     }
-
-    const std::vector<std::string> ssl_allowed_fingerprint_strings = command_line::get_arg(vm, arg_rpc_ssl_allowed_fingerprints);
-    std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ ssl_allowed_fingerprint_strings.size() };
-    std::transform(ssl_allowed_fingerprint_strings.begin(), ssl_allowed_fingerprint_strings.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
     const bool ssl_allow_any_cert = command_line::get_arg(vm, arg_rpc_ssl_allow_any_cert);
 
     auto rng = [](size_t len, uint8_t *ptr){ return crypto::rand(len, ptr); };
     return epee::http_server_impl_base<core_rpc_server, connection_context>::init(
       rng, std::move(port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login),
-      ssl_support, std::make_pair(ssl_private_key, ssl_certificate), std::move(ssl_allowed_certificates), std::move(ssl_allowed_fingerprints), ssl_allow_any_cert
+      ssl_support, std::make_pair(ssl_private_key, ssl_certificate), ssl_allowed_certificates, ssl_allow_any_cert
     );
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -2331,35 +2326,30 @@ namespace cryptonote
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl = {
       "rpc-ssl"
-    , "Enable SSL on RPC Connections: enabled|disabled|autodetect <- Autodetect set by Default!"
+    , "Enable SSL on RPC connections: enabled|disabled|autodetect"
     , "autodetect"
     };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl_private_key = {
       "rpc-ssl-private-key"
-    , "Path to Certificate Private Key in PEM format"
+    , "Path to a PEM format private key"
     , ""
     };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl_certificate = {
       "rpc-ssl-certificate"
-    , "Path to Certificate in PEM format"
+    , "Path to a PEM format certificate"
     , ""
     };
 
   const command_line::arg_descriptor<std::vector<std::string>> core_rpc_server::arg_rpc_ssl_allowed_certificates = {
       "rpc-ssl-allowed-certificates"
-    , "Path to list with allowed peers Certificates in PEM format. If empty it will allow all"
-    };
-
-  const command_line::arg_descriptor<std::vector<std::string>> core_rpc_server::arg_rpc_ssl_allowed_fingerprints = {
-      "rpc-ssl-allowed-fingerprints"
-    , "Path to list with Certificate Fingerprints to allow"
+    , "List of paths to PEM format certificates of allowed peers (all allowed if empty)"
     };
 
   const command_line::arg_descriptor<bool> core_rpc_server::arg_rpc_ssl_allow_any_cert = {
       "rpc-ssl-allow-any-cert"
-    , "Allow any Certificate used by peer, rather than just those on the allowed list"
+    , "Allow any peer certificate, rather than just those on the allowed list"
     , false
     };
 
