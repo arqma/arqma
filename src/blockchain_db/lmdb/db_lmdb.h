@@ -333,9 +333,9 @@ public:
   static int compare_string(const MDB_val *a, const MDB_val *b);
 
 private:
-  void do_resize(uint64_t size_increase=0);
+  void do_resize(uint64_t size_increase = 0);
 
-  bool need_resize(uint64_t threshold_size=0) const;
+  bool need_resize(uint64_t threshold_size = 0) const;
   void check_and_resize_for_batch(uint64_t batch_num_blocks, uint64_t batch_bytes);
   uint64_t get_estimated_batch_size(uint64_t batch_num_blocks, uint64_t batch_bytes) const;
 
