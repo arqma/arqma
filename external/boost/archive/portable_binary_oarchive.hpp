@@ -258,7 +258,7 @@ portable_binary_oarchive::save_impl(
     else
         ll = l;
     char * cptr = reinterpret_cast<char *>(& ll);
-    #ifdef BOOST_ENDIAN_BIG_BYTE
+    #if BOOST_ENDIAN_BIG_BYTE
         cptr += (sizeof(boost::intmax_t) - size);
         if(m_flags & endian_little)
             reverse_bytes(size, cptr);

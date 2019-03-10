@@ -251,12 +251,12 @@ portable_binary_iarchive::load_impl(boost::intmax_t & l, char maxsize){
         );
 
     char * cptr = reinterpret_cast<char *>(& l);
-    #ifdef BOOST_ENDIAN_BIG_BYTE
+    #if BOOST_ENDIAN_BIG_BYTE
         cptr += (sizeof(boost::intmax_t) - size);
     #endif
     this->primitive_base_t::load_binary(cptr, size);
 
-    #ifdef BOOST_ENDIAN_BIG_BYTE
+    #if BOOST_ENDIAN_BIG_BYTE
         if(m_flags & endian_little)
     #else
         if(m_flags & endian_big)
