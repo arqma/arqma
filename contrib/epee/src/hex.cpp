@@ -84,16 +84,16 @@ namespace epee
     return write_hex(out, src);
   }
 
-  std::vector<uint8_t> from_hex::vector(const std::string &src)
+  std::vector<uint8_t> from_hex::vector(boost::string_ref src)
   {
-    // should we ignore a specific character
-    auto ignore = [](char input) {
+    // should we include a specific character
+    auto include = [](char input) {
         // we ignore spaces and colons
-        return std::isspace(input) || input == ':';
+        return !std::isspace(input) && input != ':';
     };
 
     // the number of relevant characters to decode
-    auto count = std::count_if(src.begin(), src.end(), ignore);
+    auto count = std::count_if(src.begin(), src.end(), include);
 
     // this must be a multiple of two, otherwise we have a truncated input
     if (count % 2) {
@@ -131,8 +131,8 @@ namespace epee
 
     // keep going until we reach the end
     while (data[0] != '\0') {
-      // skip spacing and colon
-      if (std::isspace(data[0]) || data[0] == ':') {
+      // skip unwanted characters
+      if (!include(data[0])) {
         ++data;
         continue;
       }
