@@ -2143,14 +2143,13 @@ skip:
   template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::relay_transactions(NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& exclude_context)
   {
-    const bool hide_tx_broadcast =
-      1 < m_p2p->get_zone_count() && exclude_context.m_remote_address.get_zone() == epee::net_utils::zone::invalid;
+    const bool hide_tx_broadcast = 1 < m_p2p->get_zone_count() && exclude_context.m_remote_address.get_zone() == epee::net_utils::zone::invalid;
 
     if (hide_tx_broadcast)
       MDEBUG("Attempting to conceal origin of tx via anonymity network connection(s)");
 
     // no check for success, so tell core they're relayed unconditionally
-    const bool pad_transactions = m_core.pad_transactions();
+    const bool pad_transactions = m_core.pad_transactions() || hide_tx_broadcast;
     size_t bytes = pad_transactions ? 9 /* header */ + 4 /* 1 + 'txs' */ + tools::get_varint_data(arg.txs.size()).size() : 0;
     for(auto tx_blob_it = arg.txs.begin(); tx_blob_it!=arg.txs.end(); ++tx_blob_it)
     {
@@ -2186,10 +2185,7 @@ skip:
     m_p2p->for_each_connection([hide_tx_broadcast, &exclude_context, &connections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
     {
       const epee::net_utils::zone current_zone = context.m_remote_address.get_zone();
-      const bool broadcast_to_peer =
-        peer_id &&
-        (hide_tx_broadcast != bool(current_zone == epee::net_utils::zone::public_)) &&
-        exclude_context.m_connection_id != context.m_connection_id;
+      const bool broadcast_to_peer = peer_id && (hide_tx_broadcast != bool(current_zone == epee::net_utils::zone::public_)) && exclude_context.m_connection_id != context.m_connection_id;
 
       if (broadcast_to_peer)
         connections.push_back({current_zone, context.m_connection_id});
