@@ -157,7 +157,7 @@ class connection_basic { // not-templated base class for rapid developmet of som
 		void logger_handle_net_read(size_t size); // network data read
 
 		// config for rate limit
-		
+
 		static void set_rate_up_limit(uint64_t limit);
 		static void set_rate_down_limit(uint64_t limit);
 		static uint64_t get_rate_up_limit();
@@ -169,9 +169,9 @@ class connection_basic { // not-templated base class for rapid developmet of som
 
 		// handlers and sleep
 		void sleep_before_packet(size_t packet_size, int phase, int q_len); // execute a sleep ; phase is not really used now(?)
-		static void save_limit_to_file(int limit); ///< for dr-monero
+		static void save_limit_to_file(int limit); ///< for dr-arqma
 		static double get_sleep_time(size_t cb);
-		
+
 		static void set_save_graph(bool save_graph);
 };
 

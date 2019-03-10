@@ -1,21 +1,21 @@
 // Copyright (c) 2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -124,40 +124,6 @@ bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
   return true;
 }
 
-bool create_ssl_certificate(std::string &pkey_buffer, std::string &cert_buffer)
-{
-  EVP_PKEY *pkey;
-  X509 *cert;
-  if (!create_ssl_certificate(pkey, cert))
-    return false;
-  BIO *bio_pkey = BIO_new(BIO_s_mem()), *bio_cert = BIO_new(BIO_s_mem());
-  openssl_bio bio_pkey_deleter{bio_pkey};
-  bool success = PEM_write_bio_PrivateKey(bio_pkey, pkey, NULL, NULL, 0, NULL, NULL) && PEM_write_bio_X509(bio_cert, cert);
-  X509_free(cert);
-  if (!success)
-  {
-    MERROR("Failed to write cert and/or pkey: " << ERR_get_error());
-    return false;
-  }
-  BUF_MEM *buf = NULL;
-  BIO_get_mem_ptr(bio_pkey, &buf);
-  if (!buf || !buf->data || !buf->length)
-  {
-    MERROR("Failed to write pkey: " << ERR_get_error());
-    return false;
-  }
-  pkey_buffer = std::string(buf->data, buf->length);
-  buf = NULL;
-  BIO_get_mem_ptr(bio_cert, &buf);
-  if (!buf || !buf->data || !buf->length)
-  {
-    MERROR("Failed to write cert: " << ERR_get_error());
-    return false;
-  }
-  cert_buffer = std::string(buf->data, buf->length);
-  return success;
-}
-
 ssl_context_t create_ssl_context(const std::pair<std::string, std::string> &private_key_and_certificate_path, std::list<std::string> allowed_certificates, std::vector<std::vector<uint8_t>> allowed_fingerprints, bool allow_any_cert)
 {
   ssl_context_t ssl_context{boost::asio::ssl::context(boost::asio::ssl::context::tlsv12), std::move(allowed_certificates), std::move(allowed_fingerprints)};
@@ -194,10 +160,12 @@ ssl_context_t create_ssl_context(const std::pair<std::string, std::string> &priv
   CHECK_AND_ASSERT_THROW_MES(private_key_and_certificate_path.first.empty() == private_key_and_certificate_path.second.empty(), "private key and certificate must be either both given or both empty");
   if (private_key_and_certificate_path.second.empty())
   {
-    std::string pkey, cert;
+    EVP_PKEY *pkey;
+    X509 *cert;
     CHECK_AND_ASSERT_THROW_MES(create_ssl_certificate(pkey, cert), "Failed to create certificate");
-    ssl_context.context.use_private_key(boost::asio::buffer(pkey), boost::asio::ssl::context::pem);
-    ssl_context.context.use_certificate(boost::asio::buffer(cert), boost::asio::ssl::context::pem);
+    CHECK_AND_ASSERT_THROW_MES(SSL_CTX_use_certificate(ctx, cert), "Failed to use generated certificate");
+    CHECK_AND_ASSERT_THROW_MES(SSL_CTX_use_PrivateKey(ctx, pkey), "Failed to use generated Private Key");
+    EVP_PKEY_free(pkey);
   }
   else
   {
@@ -354,4 +322,3 @@ bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s)
 
 } // namespace
 } // namespace
-
