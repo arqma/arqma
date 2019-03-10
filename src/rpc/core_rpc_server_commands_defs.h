@@ -50,7 +50,7 @@ namespace cryptonote
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define CORE_RPC_VERSION_MAJOR 2
-#define CORE_RPC_VERSION_MINOR 3
+#define CORE_RPC_VERSION_MINOR 4
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -231,7 +231,7 @@ namespace cryptonote
         END_KV_SERIALIZE_MAP()
       };
       typedef epee::misc_utils::struct_init<request_t> request;
-      
+
       struct spent_output {
         uint64_t amount;
         std::string key_image;
@@ -279,8 +279,8 @@ namespace cryptonote
           KV_SERIALIZE(mixin)
         END_KV_SERIALIZE_MAP()
       };
-      
-      
+
+
       struct response_t
       {
         //std::list<std::string> txs_as_json;
@@ -318,8 +318,8 @@ namespace cryptonote
         END_KV_SERIALIZE_MAP()
       };
       typedef epee::misc_utils::struct_init<request_t> request;
-      
-      struct spent_output 
+
+      struct spent_output
       {
         uint64_t amount;
         std::string key_image;
@@ -335,9 +335,9 @@ namespace cryptonote
           KV_SERIALIZE(mixin)
         END_KV_SERIALIZE_MAP()
       };
- 
+
       struct response_t
-      { 
+      {
         uint64_t locked_funds;
         uint64_t total_received;
         uint64_t total_sent;
@@ -385,8 +385,8 @@ namespace cryptonote
         END_KV_SERIALIZE_MAP()
       };
       typedef epee::misc_utils::struct_init<request_t> request;
-    
-      
+
+
       struct output {
         uint64_t amount;
         std::string public_key;
@@ -415,7 +415,7 @@ namespace cryptonote
           KV_SERIALIZE(height)
         END_KV_SERIALIZE_MAP()
       };
-      
+
       struct response_t
       {
         uint64_t amount;
@@ -448,8 +448,8 @@ namespace cryptonote
         END_KV_SERIALIZE_MAP()
       };
       typedef epee::misc_utils::struct_init<request_t> request;
-    
-      
+
+
       struct output {
         std::string public_key;
         uint64_t global_index;
@@ -471,7 +471,7 @@ namespace cryptonote
         END_KV_SERIALIZE_MAP()
 
       };
-      
+
       struct response_t
       {
         std::vector<amount_out> amount_outs;
@@ -499,8 +499,8 @@ namespace cryptonote
         END_KV_SERIALIZE_MAP()
       };
       typedef epee::misc_utils::struct_init<request_t> request;
-    
-      
+
+
       struct response_t
       {
         std::string status;
@@ -1120,7 +1120,7 @@ namespace cryptonote
   struct COMMAND_RPC_SUBMITBLOCK
   {
     typedef std::vector<std::string> request;
-    
+
     struct response_t
     {
       std::string status;
@@ -1145,7 +1145,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t
     {
       uint64_t height;
@@ -1745,7 +1745,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t
     {
 	  std::string status;
@@ -1765,7 +1765,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t
     {
       std::string status;
@@ -1796,7 +1796,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t
     {
       std::string status;
@@ -1822,7 +1822,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t
     {
       std::string status;
@@ -1864,7 +1864,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t
     {
 	  std::string status;
@@ -1884,7 +1884,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-    
+
     struct response_t
     {
 	  std::string status;
@@ -2433,29 +2433,6 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_POP_BLOCKS
-  {
-    struct request
-    {
-      uint64_t nblocks;
-
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(nblocks);
-      END_KV_SERIALIZE_MAP()
-    };
-
-    struct response
-    {
-      std::string status;
-      uint64_t height;
-
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(status)
-        KV_SERIALIZE(height)
-      END_KV_SERIALIZE_MAP()
-    };
   };
 
 }
