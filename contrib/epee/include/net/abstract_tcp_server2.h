@@ -148,7 +148,7 @@ namespace net_utils
 
     // Handle completion of a receive operation.
     void handle_receive(const boost::system::error_code& e,
-      std::size_t bytes_transfered);
+      std::size_t bytes_transferred);
 
     /// Handle completion of a read operation.
     void handle_read(const boost::system::error_code& e,
