@@ -463,6 +463,8 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 
 * ```git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs ```    
 
+You can download SDK at https://github.com/malbit/MacOSX-SDKs/archive/MacOSX10.11.sdk.tar.gz and unpack it and put to contrib/depends/SDKs    
+
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
 Using `depends` might also be easier to compile Arqma on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
