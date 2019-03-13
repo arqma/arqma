@@ -244,8 +244,6 @@ namespace cryptonote
         memset(meta.padding, 0, sizeof(meta.padding));
         try
         {
-          if (kept_by_block)
-            m_parsed_tx_cache.insert(std::make_pair(id, tx));
           CRITICAL_REGION_LOCAL1(m_blockchain);
           LockedTXN lock(m_blockchain);
           m_blockchain.add_txpool_tx(id, blob, meta);
@@ -287,13 +285,12 @@ namespace cryptonote
 
       try
       {
-        if (kept_by_block)
-          m_parsed_tx_cache.insert(std::make_pair(id, tx));
         CRITICAL_REGION_LOCAL1(m_blockchain);
         LockedTXN lock(m_blockchain);
-        m_blockchain.remove_txpool_tx(id);
-        m_blockchain.add_txpool_tx(id, blob, meta);
-        if (!insert_key_images(tx, id, kept_by_block))
+        const crypto::hash txid = get_transaction_hash(tx);
+        m_blockchain.remove_txpool_tx(txid);
+        m_blockchain.add_txpool_tx(txid, blob, meta);
+        if (!insert_key_images(tx, txid, kept_by_block))
           return false;
         m_txs_by_fee_and_receive_time.emplace(std::pair<double, std::time_t>(fee / (double)blob_size, receive_time), id);
       }
@@ -450,7 +447,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------------------------
-  bool tx_memory_pool::take_tx(const crypto::hash &id, transaction &tx, cryptonote::blobdata &txblob, size_t& blob_size, uint64_t& fee, bool &relayed, bool &do_not_relay, bool &double_spend_seen)
+  bool tx_memory_pool::take_tx(const crypto::hash &id, transaction &tx, size_t& blob_size, uint64_t& fee, bool &relayed, bool &do_not_relay, bool &double_spend_seen)
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     CRITICAL_REGION_LOCAL1(m_blockchain);
@@ -468,13 +465,8 @@ namespace cryptonote
         MERROR("Failed to find tx in txpool");
         return false;
       }
-      txblob = m_blockchain.get_txpool_tx_blob(id);
-      auto ci = m_parsed_tx_cache.find(id);
-      if (ci != m_parsed_tx_cache.end())
-      {
-        tx = ci->second;
-      }
-      else if (!parse_and_validate_tx_from_blob(txblob, tx))
+      cryptonote::blobdata txblob = m_blockchain.get_txpool_tx_blob(id);
+      if (!parse_and_validate_tx_from_blob(txblob, tx))
       {
         MERROR("Failed to parse tx from txpool");
         return false;
@@ -915,7 +907,6 @@ namespace cryptonote
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     m_input_cache.clear();
-    m_parsed_tx_cache.clear();
     return true;
   }
   //---------------------------------------------------------------------------------
@@ -923,7 +914,6 @@ namespace cryptonote
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     m_input_cache.clear();
-    m_parsed_tx_cache.clear();
     return true;
   }
   //---------------------------------------------------------------------------------
