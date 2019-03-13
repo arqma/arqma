@@ -62,7 +62,7 @@ namespace cryptonote
   class txCompare
   {
   public:
-    bool operator()(const tx_by_fee_and_receive_time_entry& a, const tx_by_fee_and_receive_time_entry& b)
+    bool operator()(const tx_by_fee_and_receive_time_entry& a, const tx_by_fee_and_receive_time_entry& b) const
     {
       // sort by greatest first, not least
       if (a.first.first > b.first.first) return true;
@@ -585,6 +585,8 @@ private:
     size_t m_txpool_size;
 
     mutable std::unordered_map<crypto::hash, std::tuple<bool, tx_verification_context, uint64_t, crypto::hash>> m_input_cache;
+
+    std::unordered_map<crypto::hash, transaction> m_parsed_tx_cache;
   };
 }
 

@@ -380,7 +380,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   if(!m_db->height())
   {
     MINFO("Blockchain not loaded, generating genesis block.");
-    block bl = boost::value_initialized<block>();
+    block bl;
     block_verification_context bvc = boost::value_initialized<block_verification_context>();
     generate_genesis_block(bl);
     add_new_block(bl, bvc);
@@ -405,7 +405,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 
   // genesis block has no timestamp, could probably change it to have timestamp of 1341378000...
   if(!top_block_timestamp)
-    timestamp_diff = time(NULL) - 1341378000;
+    timestamp_diff = time(NULL) - 1523689524;
 
   // create general purpose async service queue
 
@@ -550,6 +550,38 @@ bool Blockchain::deinit()
   delete m_db;
   m_db = NULL;
   return true;
+}
+//------------------------------------------------------------------
+// This function removes blocks from the top of blockchain.
+// It starts a batch and calls private method pop_block_from_blockchain().
+void Blockchain::pop_blocks(uint64_t nblocks)
+{
+  uint64_t i;
+  CRITICAL_REGION_LOCAL(m_tx_pool);
+  CRITICAL_REGION_LOCAL1(m_blockchain_lock);
+
+  while (!m_db->batch_start())
+  {
+    m_blockchain_lock.unlock();
+    m_tx_pool.unlock();
+    epee::misc_utils::sleep_no_w(1000);
+    m_tx_pool.lock();
+    m_blockchain_lock.lock();
+  }
+
+  try
+  {
+    for (i=0; i < nblocks; ++i)
+    {
+      pop_block_from_blockchain();
+    }
+  }
+  catch (const std::exception& e)
+  {
+    LOG_ERROR("Error when popping blocks, only " << i << " blocks are popped: " << e.what());
+  }
+
+  m_db->batch_stop();
 }
 //------------------------------------------------------------------
 // This function tells BlockchainDB to remove the top block from the
@@ -819,7 +851,7 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
 
   uint8_t version = get_current_hard_fork_version();
   size_t difficulty_blocks_count =
-      version >= 10 ? DIFFICULTY_BLOCKS_COUNT_V10 :
+      version >= 10 ? DIFFICULTY_BLOCKS_COUNT_V11 :
       version == 9 ? DIFFICULTY_BLOCKS_COUNT_V3 :
       version >= 7 ? DIFFICULTY_BLOCKS_COUNT_V2 :
                      DIFFICULTY_BLOCKS_COUNT;
@@ -1025,7 +1057,7 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   std::vector<difficulty_type> cumulative_difficulties;
   uint8_t version = get_current_hard_fork_version();
   size_t difficulty_blocks_count =
-      version >= 10 ? DIFFICULTY_BLOCKS_COUNT_V10 :
+      version >= 10 ? DIFFICULTY_BLOCKS_COUNT_V11 :
       version == 9 ? DIFFICULTY_BLOCKS_COUNT_V3 :
       version >= 7 ? DIFFICULTY_BLOCKS_COUNT_V2 :
                      DIFFICULTY_BLOCKS_COUNT;
@@ -1236,7 +1268,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
   b.timestamp = time(NULL);
 
   uint8_t version = get_current_hard_fork_version();
-  uint64_t blockchain_timestamp_check_window = version > 9 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V10 : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V9;
+  uint64_t blockchain_timestamp_check_window = version > 9 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V11 : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V9;
 
   if(m_db->height() >= blockchain_timestamp_check_window) {
     std::vector<uint64_t> timestamps;
@@ -1395,11 +1427,11 @@ bool Blockchain::complete_timestamps_vector(uint64_t start_top_height, std::vect
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
 
-  if(timestamps.size() >= BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V10)
+  if(timestamps.size() >= BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V11)
     return true;
 
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  size_t need_elements = BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V10 - timestamps.size();
+  size_t need_elements = BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V11 - timestamps.size();
   CHECK_AND_ASSERT_MES(start_top_height < m_db->height(), false, "internal error: passed start_height not < " << " m_db->height() -- " << start_top_height << " >= " << m_db->height());
   size_t stop_offset = start_top_height > need_elements ? start_top_height - need_elements : 0;
   timestamps.reserve(timestamps.size() + start_top_height - stop_offset);
@@ -1664,7 +1696,6 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
   for (auto& bl: blocks)
   {
     std::vector<crypto::hash> missed_tx_ids;
-    std::vector<cryptonote::blobdata> txs;
 
     rsp.blocks.push_back(block_complete_entry());
     block_complete_entry& e = rsp.blocks.back();
@@ -1692,7 +1723,6 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
     e.block = std::move(bl.first);
   }
   //get and pack other transactions, if needed
-  std::vector<cryptonote::blobdata> txs;
   get_transactions_blobs(arg.txs, rsp.txs, rsp.missed_ids);
 
   m_db->block_txn_stop();
@@ -1826,8 +1856,6 @@ bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, 
   uint64_t db_height = m_db->height();
   if (db_height == 0)
     return false;
-  if (to_height == 0)
-    to_height = db_height - 1;
   if (start_height >= db_height || to_height >= db_height)
     return false;
   if (amount == 0)
@@ -1856,7 +1884,7 @@ bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qbloc
 
   // make sure the request includes at least the genesis block, otherwise
   // how can we expect to sync from the client that the block list came from?
-  if(!qblock_ids.size() /*|| !req.m_total_height*/)
+  if(!qblock_ids.size())
   {
     MCERROR("net.p2p", "Client sent wrong NOTIFY_REQUEST_CHAIN: m_block_ids.size()=" << qblock_ids.size() << /*", m_height=" << req.m_total_height <<*/ ", dropping connection");
     return false;
@@ -3122,9 +3150,9 @@ bool Blockchain::check_block_timestamp(std::vector<uint64_t>& timestamps, const 
   size_t blockchain_timestamp_check_window = hf_version < 2 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
 
   uint64_t top_block_timestamp = timestamps.back();
-  if (hf_version  > 9 && b.timestamp < top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V10)
+  if (hf_version  > 9 && b.timestamp < top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11)
   {
-    MERROR_VER("Timestamp of Block with id: " << get_block_hash(b) << ", " << b.timestamp << ", is less than Top Block Timestamp - FTL" << top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V10);
+    MERROR_VER("Timestamp of Block with id: " << get_block_hash(b) << ", " << b.timestamp << ", is less than Top Block Timestamp - FTL" << top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11);
     return false;
   }
 
@@ -3157,7 +3185,7 @@ bool Blockchain::check_block_timestamp(const block& b) const
   uint64_t cryptonote_block_future_time_limit;
   uint8_t hf_version = get_current_hard_fork_version();
   if (hf_version >= 10) {
-    cryptonote_block_future_time_limit = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V10;
+    cryptonote_block_future_time_limit = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11;
   } else if (hf_version >= 7) {
     cryptonote_block_future_time_limit = CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3;
   } else {
@@ -3176,7 +3204,7 @@ bool Blockchain::check_block_timestamp(const block& b) const
 
 bool Blockchain::check_median_block_timestamp(const block& b, uint64_t& median_ts) const
 {
-  size_t blockchain_timestamp_check_window = get_current_hard_fork_version() > 9 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V10 : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V9;
+  size_t blockchain_timestamp_check_window = get_current_hard_fork_version() > 9 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V11 : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V9;
 
   // if not enough blocks, no proper median yet, return true
   if(m_db->height() < blockchain_timestamp_check_window)
@@ -3843,8 +3871,7 @@ bool Blockchain::cleanup_handle_incoming_blocks(bool force_sync)
 }
 
 //------------------------------------------------------------------
-//FIXME: unused parameter txs
-void Blockchain::output_scan_worker(const uint64_t amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs, std::unordered_map<crypto::hash, cryptonote::transaction> &txs) const
+void Blockchain::output_scan_worker(const uint64_t amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs) const
 {
   try
   {
@@ -4221,21 +4248,19 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     offsets.second.erase(last, offsets.second.end());
   }
 
-  // [output] stores all transactions for each tx_out_index::hash found
-  std::vector<std::unordered_map<crypto::hash, cryptonote::transaction>> transactions(amounts.size());
-
+  // gather all the output keys
   threads = tpool.get_max_concurrency();
   if (!m_db->can_thread_bulk_indices())
     threads = 1;
 
-  if (threads > 1)
+  if (threads > 1 && amounts.size() > 1)
   {
     tools::threadpool::waiter waiter;
 
     for (size_t i = 0; i < amounts.size(); i++)
     {
       uint64_t amount = amounts[i];
-      tpool.submit(&waiter, boost::bind(&Blockchain::output_scan_worker, this, amount, std::cref(offset_map[amount]), std::ref(tx_map[amount]), std::ref(transactions[i])), true);
+      tpool.submit(&waiter, boost::bind(&Blockchain::output_scan_worker, this, amount, std::cref(offset_map[amount]), std::ref(tx_map[amount])), true);
     }
     waiter.wait(&tpool);
   }
@@ -4244,7 +4269,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     for (size_t i = 0; i < amounts.size(); i++)
     {
       uint64_t amount = amounts[i];
-      output_scan_worker(amount, offset_map[amount], tx_map[amount], transactions[i]);
+      output_scan_worker(amount, offset_map[amount], tx_map[amount]);
     }
   }
 
@@ -4423,7 +4448,7 @@ bool Blockchain::get_hard_fork_voting_info(uint8_t version, uint32_t &window, ui
 uint64_t Blockchain::get_difficulty_target() const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
-  return get_current_hard_fork_version() >= 10 ? DIFFICULTY_TARGET_V10 : DIFFICULTY_TARGET_V2;
+  return get_current_hard_fork_version() >= 10 ? DIFFICULTY_TARGET_V11 : DIFFICULTY_TARGET_V2;
 }
 
 std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> Blockchain:: get_output_histogram(const std::vector<uint64_t> &amounts, bool unlocked, uint64_t recent_cutoff, uint64_t min_count) const

@@ -156,7 +156,7 @@ t_rpc_command_executor::~t_rpc_command_executor()
   }
 }
 
-bool t_rpc_command_executor::print_peer_list() {
+bool t_rpc_command_executor::print_peer_list(bool white, bool gray, size_t limit) {
   cryptonote::COMMAND_RPC_GET_PEER_LIST::request req;
   cryptonote::COMMAND_RPC_GET_PEER_LIST::response res;
 
@@ -177,14 +177,24 @@ bool t_rpc_command_executor::print_peer_list() {
     }
   }
 
-  for (auto & peer : res.white_list)
+  if (white)
   {
-    print_peer("white", peer);
+    auto peer = res.white_list.cbegin();
+    const auto end = limit ? peer + std::min(limit, res.white_list.size()) : res.white_list.cend();
+    for (; peer != end; ++peer)
+    {
+      print_peer("white", *peer);
+    }
   }
 
-  for (auto & peer : res.gray_list)
+  if (gray)
   {
-    print_peer("gray", peer);
+    auto peer = res.gray_list.cbegin();
+    const auto end = limit ? peer + std::min(limit, res.gray_list.size()) : res.gray_list.cend();
+    for (; peer != end; ++peer)
+    {
+      print_peer("gray", *peer);
+    }
   }
 
   return true;
@@ -490,6 +500,7 @@ bool t_rpc_command_executor::print_connections() {
   }
 
   tools::msg_writer() << std::setw(30) << std::left << "Remote Host"
+      << std::setw(6) << "SSL"
       << std::setw(20) << "Peer id"
       << std::setw(20) << "Support Flags"
       << std::setw(30) << "Recv/Sent (inactive,sec)"
@@ -509,6 +520,7 @@ bool t_rpc_command_executor::print_connections() {
     tools::msg_writer()
      //<< std::setw(30) << std::left << in_out
      << std::setw(30) << std::left << address
+     << std::setw(6) << (info.ssl ? "yes" : "no")
      << std::setw(20) << epee::string_tools::pad_string(info.peer_id, 16, '0', true)
      << std::setw(20) << info.support_flags
      << std::setw(30) << std::to_string(info.recv_count) + "("  + std::to_string(info.recv_idle_time) + ")/" + std::to_string(info.send_count) + "(" + std::to_string(info.send_idle_time) + ")"
@@ -1132,8 +1144,8 @@ bool t_rpc_command_executor::stop_daemon()
 //# ifdef WIN32
 //    // Stop via service API
 //    // TODO - this is only temporary!  Get rid of hard-coded constants!
-//    bool ok = windows::stop_service("BitMonero Daemon");
-//    ok = windows::uninstall_service("BitMonero Daemon");
+//    bool ok = windows::stop_service("Arqma Daemon");
+//    ok = windows::uninstall_service("Arqma Daemon");
 //    //bool ok = windows::stop_service(SERVICE_NAME);
 //    //ok = windows::uninstall_service(SERVICE_NAME);
 //    if (ok)
@@ -1950,7 +1962,7 @@ bool t_rpc_command_executor::sync_info()
       tools::success_msg_writer() << address << "  " << epee::string_tools::pad_string(p.info.peer_id, 16, '0', true) << "  "
                                   << epee::string_tools::pad_string(p.info.state, 16) << "  "
                                   << epee::string_tools::pad_string(epee::string_tools::to_string_hex(p.info.pruning_seed), 8) << "  " << p.info.height << "  "
-                                  << p.info.current_download << " kB/s, " << nblocks << " blocks / " << size/1e6 << " MB queued";
+                                  << p.info.current_download << " Kbps, " << nblocks << " blocks / " << size/1e6 << " MB queued";
     }
 
     uint64_t total_size = 0;
@@ -1968,7 +1980,7 @@ bool t_rpc_command_executor::sync_info()
       }
       else
       {
-        tools::success_msg_writer() << address << "  " << s.nblocks << "/" << pruning_seed << " (" << s.start_block_height << " - " << (s.start_block_height + s.nblocks - 1) << ", " << (uint64_t)(s.size/1e3) << " kB)  " << (unsigned)(s.rate/1e3) << " kB/s (" << s.speed/100.0f << ")";
+        tools::success_msg_writer() << address << "  " << s.nblocks << "/" << pruning_seed << " (" << s.start_block_height << " - " << (s.start_block_height + s.nblocks - 1) << ", " << (uint64_t)(s.size/1e3) << " kB)  " << (unsigned)(s.rate/1e3) << " Kbps (" << s.speed/100.0f << ")";
       }
     }
 
@@ -2038,6 +2050,33 @@ bool t_rpc_command_executor::check_blockchain_pruning()
       tools::success_msg_writer() << "Blockchain is not pruned";
     }
     return true;
+}
+
+bool t_rpc_command_executor::pop_blocks(uint64_t num_blocks)
+{
+  cryptonote::COMMAND_RPC_POP_BLOCKS::request req;
+  cryptonote::COMMAND_RPC_POP_BLOCKS::response res;
+  std::string fail_message = "pop_blocks failed";
+
+  req.nblocks = num_blocks;
+  if (m_is_rpc)
+  {
+    if (!m_rpc_client->rpc_request(req, res, "/pop_blocks", fail_message.c_str()))
+    {
+      return true;
+    }
+  }
+  else
+  {
+    if (!m_rpc_server->on_pop_blocks(req, res) || res.status != CORE_RPC_STATUS_OK)
+    {
+      tools::fail_msg_writer() << make_error(fail_message, res.status);
+      return true;
+    }
+  }
+  tools::success_msg_writer() << "new height: " << res.height;
+
+  return true;
 }
 
 }// namespace daemonize

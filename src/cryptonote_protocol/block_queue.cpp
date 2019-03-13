@@ -233,16 +233,14 @@ std::pair<uint64_t, uint64_t> block_queue::reserve_span(uint64_t first_block_hei
 {
   boost::unique_lock<boost::recursive_mutex> lock(mutex);
 
-  MDEBUG("reserve_span: first_block_height " << first_block_height << ", last_block_height " << last_block_height
-                                             << ", max " << max_blocks << ", seed " << epee::string_tools::to_string_hex(pruning_seed) << ", blockchain_height "
-                                             << blockchain_height << ", block hashes size " << block_hashes.size());
-
+  MDEBUG("reserve_span: first_block_height " << first_block_height << ", last_block_height " << last_block_height << ", max " << max_blocks <<
+      ", seed " << epee::string_tools::to_string_hex(pruning_seed) << ", blockchain_height " << blockchain_height << ", block hashes size " << block_hashes.size());
   if (last_block_height < first_block_height || max_blocks == 0)
   {
     MDEBUG("reserve_span: early out: first_block_height " << first_block_height << ", last_block_height " << last_block_height << ", max_blocks " << max_blocks);
     return std::make_pair(0, 0);
   }
-  if (block_hashes.size() >= last_block_height)
+  if (block_hashes.size() > last_block_height)
   {
     MDEBUG("reserve_span: more block hashes than fit within last_block_height: " << block_hashes.size() << " and " << last_block_height);
     return std::make_pair(0, 0);

@@ -58,7 +58,7 @@ namespace cryptonote
 bool blockchain_valid_db_type(const std::string& db_type)
 {
   int i;
-  for (i=0; db_types[i]; i++)
+  for (i = 0; db_types[i]; i++)
   {
     if (db_types[i] == db_type)
       return true;
@@ -70,7 +70,7 @@ std::string blockchain_db_types(const std::string& sep)
 {
   int i;
   std::string ret = "";
-  for (i=0; db_types[i]; i++)
+  for (i = 0; db_types[i]; i++)
   {
     if (i)
       ret += sep;

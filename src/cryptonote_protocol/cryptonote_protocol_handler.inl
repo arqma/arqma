@@ -227,7 +227,7 @@ namespace cryptonote
       cnx.host = cntxt.m_remote_address.host_str();
       cnx.ip = "";
       cnx.port = "";
-      if (cntxt.m_remote_address.get_type_id() == epee::net_utils::ipv4_network_address::ID)
+      if (cntxt.m_remote_address.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
       {
         cnx.ip = cnx.host;
         cnx.port = std::to_string(cntxt.m_remote_address.as<epee::net_utils::ipv4_network_address>().port());
@@ -269,6 +269,7 @@ namespace cryptonote
       cnx.current_upload = cntxt.m_current_speed_up / 1024;
 
       cnx.connection_id = epee::string_tools::pod_to_hex(cntxt.m_connection_id);
+      cnx.ssl = cntxt.m_ssl;
 
       cnx.height = cntxt.m_remote_blockchain_height;
       cnx.pruning_seed = cntxt.m_pruning_seed;
@@ -334,6 +335,13 @@ namespace cryptonote
       return true;
     }
 
+    // No chain synchronization over hidden networks (tor, i2p, etc.)
+    if(context.m_remote_address.get_zone() != epee::net_utils::zone::public_)
+    {
+      context.m_state = cryptonote_connection_context::state_normal;
+      return true;
+    }
+
     if (hshd.current_height > target)
     {
     /* As I don't know if accessing hshd from core could be a good practice,
@@ -342,11 +350,8 @@ namespace cryptonote
     int64_t diff = static_cast<int64_t>(hshd.current_height) - static_cast<int64_t>(m_core.get_current_blockchain_height());
     uint64_t abs_diff = std::abs(diff);
     uint64_t max_block_height = std::max(hshd.current_height,m_core.get_current_blockchain_height());
-    uint64_t last_block_v1 = m_core.get_nettype() == TESTNET ? 1 : m_core.get_nettype() == MAINNET ? 1 : (uint64_t)-1;
-    uint64_t diff_v2 = max_block_height > last_block_v1 ? std::min(abs_diff, max_block_height - last_block_v1) : 0;
-    //assert(diff_v2 == 0);
     MCLOG(is_inital ? el::Level::Info : el::Level::Debug, "global", context <<  "Sync data returned a new top block candidate: " << m_core.get_current_blockchain_height() << " -> " << hshd.current_height
-      << " [Your node is " << abs_diff << " blocks (" << (diff_v2 / (24 * 60 * 60 / DIFFICULTY_TARGET_V2)) << " days) "
+      << " [Your node is " << abs_diff << " blocks (" << (abs_diff / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) << " days) "
       << (0 <= diff ? std::string("behind") : std::string("ahead"))
       << "] " << ENDL << "SYNCHRONIZATION started");
       if (hshd.current_height >= m_core.get_current_blockchain_height() + 5) // don't switch to unsafe mode just for a few blocks
@@ -1022,7 +1027,7 @@ namespace cryptonote
       // add that new span to the block queue
       const boost::posix_time::time_duration dt = now - request_time;
       const float rate = size * 1e6 / (dt.total_microseconds() + 1);
-      MDEBUG(context << " adding span: " << arg.blocks.size() << " at height " << start_height << ", " << dt.total_microseconds()/1e6 << " seconds, " << (rate/1024) << " Kbps, size now " << (m_block_queue.get_data_size() + blocks_size) / 1048576.f << " MB");
+      MDEBUG(context << " adding span: " << arg.blocks.size() << " at height " << start_height << ", " << dt.total_microseconds()/1e6 << " seconds, " << (rate / 1024) << " Kbps, size now " << (m_block_queue.get_data_size() + blocks_size) / 1048576.f << " MB");
       m_block_queue.add_blocks(start_height, arg.blocks, context.m_connection_id, rate, blocks_size);
 
       const crypto::hash last_block_hash = cryptonote::get_block_hash(b);
@@ -1194,8 +1199,10 @@ namespace cryptonote
               if(tvc[i].m_verifivation_failed)
               {
                 if (!m_p2p->for_connection(span_connection_id, [&](cryptonote_connection_context& context, nodetool::peerid_type peer_id, uint32_t f)->bool{
+                  cryptonote::transaction tx;
+                  parse_and_validate_tx_from_blob(*it, tx); // must succeed if we got here
                   LOG_ERROR_CCONTEXT("transaction verification failed on NOTIFY_RESPONSE_GET_OBJECTS, tx_id = "
-                      << epee::string_tools::pod_to_hex(get_blob_hash(*it)) << ", dropping connection");
+                      << epee::string_tools::pod_to_hex(cryptonote::get_transaction_hash(tx)) << ", dropping connection");
                   drop_connection(context, false, true);
                   return 1;
                 }))
@@ -2097,20 +2104,20 @@ skip:
     fluffy_arg.b.txs = fluffy_txs;
 
     // sort peers between fluffy ones and others
-    std::list<boost::uuids::uuid> fullConnections, fluffyConnections;
+    std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> fullConnections, fluffyConnections;
     m_p2p->for_each_connection([this, &exclude_context, &fullConnections, &fluffyConnections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
     {
-      if (peer_id && exclude_context.m_connection_id != context.m_connection_id)
+      if (peer_id && exclude_context.m_connection_id != context.m_connection_id && context.m_remote_address.get_zone() == epee::net_utils::zone::public_)
       {
         if(m_core.fluffy_blocks_enabled() && (support_flags & P2P_SUPPORT_FLAG_FLUFFY_BLOCKS))
         {
           LOG_DEBUG_CC(context, "PEER SUPPORTS FLUFFY BLOCKS - RELAYING THIN/COMPACT WHATEVER BLOCK");
-          fluffyConnections.push_back(context.m_connection_id);
+          fluffyConnections.push_back({context.m_remote_address.get_zone(), context.m_connection_id});
         }
         else
         {
           LOG_DEBUG_CC(context, "PEER DOESN'T SUPPORT FLUFFY BLOCKS - RELAYING FULL BLOCK");
-          fullConnections.push_back(context.m_connection_id);
+          fullConnections.push_back({context.m_remote_address.get_zone(), context.m_connection_id});
         }
       }
       return true;
@@ -2121,13 +2128,13 @@ skip:
     {
       std::string fluffyBlob;
       epee::serialization::store_t_to_binary(fluffy_arg, fluffyBlob);
-      m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, epee::strspan<uint8_t>(fluffyBlob), fluffyConnections);
+      m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, epee::strspan<uint8_t>(fluffyBlob), std::move(fluffyConnections));
     }
     if (!fullConnections.empty())
     {
       std::string fullBlob;
       epee::serialization::store_t_to_binary(arg, fullBlob);
-      m_p2p->relay_notify_to_list(NOTIFY_NEW_BLOCK::ID, epee::strspan<uint8_t>(fullBlob), fullConnections);
+      m_p2p->relay_notify_to_list(NOTIFY_NEW_BLOCK::ID, epee::strspan<uint8_t>(fullBlob), std::move(fluffyConnections));
     }
 
     return true;
@@ -2136,10 +2143,65 @@ skip:
   template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::relay_transactions(NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& exclude_context)
   {
+    const bool hide_tx_broadcast = 1 < m_p2p->get_zone_count() && exclude_context.m_remote_address.get_zone() == epee::net_utils::zone::invalid;
+
+    if (hide_tx_broadcast)
+      MDEBUG("Attempting to conceal origin of tx via anonymity network connection(s)");
+
     // no check for success, so tell core they're relayed unconditionally
+    const bool pad_transactions = m_core.pad_transactions() || hide_tx_broadcast;
+    size_t bytes = pad_transactions ? 9 /* header */ + 4 /* 1 + 'txs' */ + tools::get_varint_data(arg.txs.size()).size() : 0;
     for(auto tx_blob_it = arg.txs.begin(); tx_blob_it!=arg.txs.end(); ++tx_blob_it)
+    {
       m_core.on_transaction_relayed(*tx_blob_it);
-    return relay_post_notify<NOTIFY_NEW_TRANSACTIONS>(arg, exclude_context);
+      if (pad_transactions)
+        bytes += tools::get_varint_data(tx_blob_it->size()).size() + tx_blob_it->size();
+    }
+
+    if (pad_transactions)
+    {
+      // stuff some dummy bytes in to stay safe from traffic volume analysis
+      static constexpr size_t granularity = 1024;
+      size_t padding = granularity - bytes % granularity;
+      const size_t overhead = 2 /* 1 + '_' */ + tools::get_varint_data(padding).size();
+      if (overhead > padding)
+        padding = 0;
+      else
+        padding -= overhead;
+      arg._ = std::string(padding, ' ');
+
+      std::string arg_buff;
+      epee::serialization::store_t_to_binary(arg, arg_buff);
+
+      // we probably lowballed the payload size a bit, so added a but too much. Fix this now.
+      size_t remove = arg_buff.size() % granularity;
+      if (remove > arg._.size())
+        arg._.clear();
+      else
+        arg._.resize(arg._.size() - remove);
+      // if the size of _ moved enough, we might lose byte in size encoding, we don't care
+    }
+    std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections;
+    m_p2p->for_each_connection([hide_tx_broadcast, &exclude_context, &connections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
+    {
+      const epee::net_utils::zone current_zone = context.m_remote_address.get_zone();
+      const bool broadcast_to_peer = peer_id && (hide_tx_broadcast != bool(current_zone == epee::net_utils::zone::public_)) && exclude_context.m_connection_id != context.m_connection_id;
+
+      if (broadcast_to_peer)
+        connections.push_back({current_zone, context.m_connection_id});
+
+      return true;
+    });
+
+    if (connections.empty())
+      MERROR("Transaction not relayed - no" << (hide_tx_broadcast ? " privacy": "") << " peers available");
+    else
+    {
+      std::string fullBlob;
+      epee::serialization::store_t_to_binary(arg, fullBlob);
+      m_p2p->relay_notify_to_list(NOTIFY_NEW_TRANSACTIONS::ID, epee::strspan<uint8_t>(fullBlob), std::move(connections));
+    }
+    return true;
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
@@ -2226,9 +2288,9 @@ skip:
     if (add_fail)
       m_p2p->add_host_fail(context.m_remote_address);
 
-    m_p2p->drop_connection(context);
-
     m_block_queue.flush_spans(context.m_connection_id, flush_all_spans);
+
+    m_p2p->drop_connection(context);
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
