@@ -233,10 +233,8 @@ std::pair<uint64_t, uint64_t> block_queue::reserve_span(uint64_t first_block_hei
 {
   boost::unique_lock<boost::recursive_mutex> lock(mutex);
 
-  MDEBUG("reserve_span: first_block_height " << first_block_height << ", last_block_height " << last_block_height
-                                             << ", max " << max_blocks << ", seed " << epee::string_tools::to_string_hex(pruning_seed) << ", blockchain_height "
-                                             << blockchain_height << ", block hashes size " << block_hashes.size());
-
+  MDEBUG("reserve_span: first_block_height " << first_block_height << ", last_block_height " << last_block_height << ", max " << max_blocks <<
+      ", seed " << epee::string_tools::to_string_hex(pruning_seed) << ", blockchain_height " << blockchain_height << ", block hashes size " << block_hashes.size());
   if (last_block_height < first_block_height || max_blocks == 0)
   {
     MDEBUG("reserve_span: early out: first_block_height " << first_block_height << ", last_block_height " << last_block_height << ", max_blocks " << max_blocks);
@@ -267,7 +265,7 @@ std::pair<uint64_t, uint64_t> block_queue::reserve_span(uint64_t first_block_hei
         "(+" << next_unpruned_height - span_start_height << "), current seed " << pruning_seed);
     span_start_height = next_unpruned_height;
   }
-  MDEBUG("span_start_height: " << span_start_height);
+  MDEBUG("span_start_height: " <<span_start_height);
   const uint64_t block_hashes_start_height = last_block_height - block_hashes.size() + 1;
   if (span_start_height >= block_hashes.size() + block_hashes_start_height)
   {

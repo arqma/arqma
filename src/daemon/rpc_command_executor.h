@@ -68,7 +68,7 @@ public:
 
   ~t_rpc_command_executor();
 
-  bool print_peer_list();
+  bool print_peer_list(bool white = true, bool gray = true, size_t limit = 0);
 
   bool print_peer_list_stats();
 
@@ -153,6 +153,8 @@ public:
   bool relay_tx(const std::string &txid);
 
   bool sync_info();
+
+  bool pop_blocks(uint64_t num_blocks);
 
   bool prune_blockchain();
 

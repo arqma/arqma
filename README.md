@@ -48,6 +48,23 @@ Arqma is a private, secure, untraceable, decentralised digital currency. You are
 
 **Untraceability:** By taking advantage of ring signatures, a special property of a certain type of cryptography, Arqma is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.
 
+## SSL
+
+As a network, Arqma supports complete, cryptographically secured connections at all levels. This includes, but is not limited to Arqma Network Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
+
+Arqma Network will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over the Arqma Network.
+
+The use of SSL connections means that there will not be any possibility to use the Arqma Network with unsecured or tampered connections (daemons), and that your privacy will remain a feature built in a protocol level.
+
+ * Below is an example how to generate SSL Keys with openssl
+
+    `$ openssl genrsa -out /tmp/KEY 4096`    
+    `$ openssl req -new -key /tmp/KEY -out /tmp/REQ`    
+    `$ openssl x509 -req -days 999999 -sha256 -in /tmp/REQ -signkey /tmp/KEY -out /tmp/CERT`    
+
+ * Above example will generate 4096bit SSL Cert at /tmp (which can be changed)*
+
+
 ## About this project
 
 This is the core implementation of Arqma. It is open source and completely free to use without restrictions, except for those specified in the license agreement below. There are no restrictions on anyone creating an alternative implementation of Arqma that uses the protocol and network in a compatible manner.
@@ -200,13 +217,13 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 ```
 * Clone arqma and checkout most recent release version:
 ```
-        git clone https://github.com/arqma/arqma.git
+  git clone https://github.com/arqma/arqma.git
 	cd arqma
 
 ```
 * Build:
 ```
-        make release
+  make release
 ```
 * Wait 4-6 hours
 
@@ -481,6 +498,12 @@ arqma-wallet-cli, and possibly arqmad, if you get crashes refreshing.
 See [README.i18n.md](README.i18n.md).
 
 ## Using Tor
+
+> There is a new, still experimental, [integration with Tor](ANONYMITY_NETWORKS.md). The
+> feature allows connecting over IPv4 and Tor simultaneously - IPv4 is used for
+> relaying blocks and relaying transactions received by peers whereas Tor is
+> used solely for relaying transactions received over local RPC. This provides
+> privacy and better protection against surrounding node (sybil) attacks.
 
 While Arqma isn't made to integrate with Tor, it can be used wrapped with torsocks, by
 setting the following configuration parameters and environment variables:

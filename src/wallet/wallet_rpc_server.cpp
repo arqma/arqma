@@ -64,6 +64,11 @@ namespace
   const command_line::arg_descriptor<bool> arg_restricted = {"restricted-rpc", "Restricts to view-only commands", false};
   const command_line::arg_descriptor<std::string> arg_wallet_dir = {"wallet-dir", "Directory for newly created wallets"};
   const command_line::arg_descriptor<bool> arg_prompt_for_password = {"prompt-for-password", "Prompts for password when not provided", false};
+  const command_line::arg_descriptor<std::string> arg_rpc_ssl = {"rpc-ssl", tools::wallet2::tr("Enable SSL on wallet RPC connections: enabled|disabled|autodetect <- Autodetect Set by Default"), "autodetect"};
+  const command_line::arg_descriptor<std::string> arg_rpc_ssl_private_key = {"rpc-ssl-private-key", tools::wallet2::tr("Path to a PEM format private key"), ""};
+  const command_line::arg_descriptor<std::string> arg_rpc_ssl_certificate = {"rpc-ssl-certificate", tools::wallet2::tr("Path to a PEM format certificate"), ""};
+  const command_line::arg_descriptor<std::vector<std::string>> arg_rpc_ssl_allowed_certificates = {"rpc-ssl-allowed-certificates", tools::wallet2::tr("List of paths to PEM format certificates of allowed RPC servers (all allowed if empty)")};
+  const command_line::arg_descriptor<std::vector<std::string>> arg_rpc_ssl_allowed_fingerprints = {"rpc-ssl-allowed-fingerprints", tools::wallet2::tr("List of certificate fingerprints to allow")};
 
   constexpr const char default_rpc_username[] = "arqma";
 
@@ -234,10 +239,36 @@ namespace tools
       assert(bool(http_login));
     } // end auth enabled
 
+    auto rpc_ssl_private_key = command_line::get_arg(vm, arg_rpc_ssl_private_key);
+    auto rpc_ssl_certificate = command_line::get_arg(vm, arg_rpc_ssl_certificate);
+    auto rpc_ssl_allowed_certificates = command_line::get_arg(vm, arg_rpc_ssl_allowed_certificates);
+    auto rpc_ssl_allowed_fingerprints = command_line::get_arg(vm, arg_rpc_ssl_allowed_fingerprints);
+    auto rpc_ssl = command_line::get_arg(vm, arg_rpc_ssl);
+    epee::net_utils::ssl_support_t rpc_ssl_support;
+    if (!epee::net_utils::ssl_support_from_string(rpc_ssl_support, rpc_ssl))
+    {
+      MERROR("Invalid argument for " << std::string(arg_rpc_ssl.name));
+      return false;
+    }
+    std::list<std::string> allowed_certificates;
+    for (const std::string &path: rpc_ssl_allowed_certificates)
+    {
+        allowed_certificates.push_back({});
+        if (!epee::file_io_utils::load_file_to_string(path, allowed_certificates.back()))
+        {
+          MERROR("Failed to load certificate: " << path);
+          allowed_certificates.back() = std::string();
+        }
+    }
+
+    std::vector<std::vector<uint8_t>> allowed_fingerprints{ rpc_ssl_allowed_fingerprints.size() };
+    std::transform(rpc_ssl_allowed_fingerprints.begin(), rpc_ssl_allowed_fingerprints.end(), allowed_fingerprints.begin(), epee::from_hex::vector);
+
     m_net_server.set_threads_prefix("RPC");
     auto rng = [](size_t len, uint8_t *ptr) { return crypto::rand(len, ptr); };
     return epee::http_server_impl_base<wallet_rpc_server, connection_context>::init(
-      rng, std::move(bind_port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login)
+      rng, std::move(bind_port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login),
+      rpc_ssl_support, std::make_pair(rpc_ssl_private_key, rpc_ssl_certificate), std::move(allowed_certificates), std::move(allowed_fingerprints)
     );
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -2135,9 +2166,6 @@ namespace tools
 
     try
     {
-      uint64_t received;
-      bool in_pool;
-      uint64_t confirmations;
       res.good = m_wallet->check_tx_proof(txid, info.address, info.is_subaddress, req.message, req.signature, res.received, res.in_pool, res.confirmations);
     }
     catch (const std::exception &e)
@@ -2853,8 +2881,6 @@ namespace tools
       std::vector<std::string> languages;
       crypto::ElectrumWords::get_language_list(languages);
       std::vector<std::string>::iterator it;
-      std::string wallet_file;
-      char *ptr;
 
       it = std::find(languages.begin(), languages.end(), req.language);
       if (it == languages.end())
@@ -3493,6 +3519,57 @@ namespace tools
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  bool wallet_rpc_server::on_validate_address(const wallet_rpc::COMMAND_RPC_VALIDATE_ADDRESS::request& req, wallet_rpc::COMMAND_RPC_VALIDATE_ADDRESS::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    cryptonote::address_parse_info info;
+    static const struct { cryptonote::network_type type; const char *stype; } net_types[] = {
+      { cryptonote::MAINNET, "mainnet" },
+      { cryptonote::TESTNET, "testnet" },
+      { cryptonote::STAGENET, "stagenet" },
+    };
+    for (const auto &net_type: net_types)
+    {
+      if (!req.any_net_type && net_type.type != m_wallet->nettype())
+        continue;
+      if (req.allow_openalias)
+      {
+        std::string address;
+        res.valid = get_account_address_from_str_or_url(info, net_type.type, req.address,
+          [&er, &address](const std::string &url, const std::vector<std::string> &addresses, bool dnssec_valid)->std::string {
+            if (!dnssec_valid)
+            {
+              er.message = std::string("Invalid DNSSEC for: ") + url;
+              return {};
+            }
+            if (addresses.empty())
+            {
+              er.message = std::string("No Arqma Wallet Address found at: ") + url;
+              return {};
+            }
+            address = addresses[0];
+            return address;
+          });
+        if (res.valid)
+          res.openalias_address = address;
+      }
+      else
+      {
+        res.valid = cryptonote::get_account_address_from_str(info, net_type.type, req.address);
+      }
+      if (res.valid)
+      {
+        res.integrated = info.has_payment_id;
+        res.subaddress = info.is_subaddress;
+        res.nettype = net_type.stype;
+        return true;
+      }
+    }
+
+    er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
+    er.message = std::string("Invalid address");
+    return false;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_get_version(const wallet_rpc::COMMAND_RPC_GET_VERSION::request& req, wallet_rpc::COMMAND_RPC_GET_VERSION::response& res, epee::json_rpc::error& er, const connection_context *ctx)
   {
     res.version = WALLET_RPC_VERSION;
@@ -3689,6 +3766,10 @@ int main(int argc, char** argv) {
   command_line::add_arg(desc_params, arg_from_json);
   command_line::add_arg(desc_params, arg_wallet_dir);
   command_line::add_arg(desc_params, arg_prompt_for_password);
+  command_line::add_arg(desc_params, arg_rpc_ssl);
+  command_line::add_arg(desc_params, arg_rpc_ssl_private_key);
+  command_line::add_arg(desc_params, arg_rpc_ssl_certificate);
+  command_line::add_arg(desc_params, arg_rpc_ssl_allowed_certificates);
 
   daemonizer::init_options(hidden_options, desc_params);
   desc_params.add(hidden_options);

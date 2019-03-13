@@ -826,7 +826,7 @@ bool simple_wallet::print_fee_info(const std::vector<std::string> &args/* = std:
       std::string msg;
       if (priority == m_wallet->get_default_priority() || (m_wallet->get_default_priority() == 0 && priority == 2))
         msg = tr(" (current)");
-      uint64_t minutes_low = nblocks_low * DIFFICULTY_TARGET_V2 / 60, minutes_high = nblocks_high * DIFFICULTY_TARGET_V10 / 60;
+      uint64_t minutes_low = nblocks_low * DIFFICULTY_TARGET_V2 / 60, minutes_high = nblocks_high * DIFFICULTY_TARGET_V11 / 60;
       if (nblocks_high == nblocks_low)
         message_writer() << (boost::format(tr("%u block (%u minutes) backlog at priority %u%s")) % nblocks_low % minutes_low % priority % msg).str();
       else
@@ -7530,7 +7530,8 @@ bool simple_wallet::status(const std::vector<std::string> &args)
 {
   uint64_t local_height = m_wallet->get_blockchain_current_height();
   uint32_t version = 0;
-  if (!m_wallet->check_connection(&version))
+  bool ssl = false;
+  if (!m_wallet->check_connection(&version, &ssl))
   {
     success_msg_writer() << "Refreshed " << local_height << "/?, no daemon connected";
     return true;
@@ -7542,7 +7543,7 @@ bool simple_wallet::status(const std::vector<std::string> &args)
   {
     bool synced = local_height == bc_height;
     success_msg_writer() << "Refreshed " << local_height << "/" << bc_height << ", " << (synced ? "synced" : "syncing")
-        << ", daemon RPC v" << get_version_string(version);
+        << ", daemon RPC v" << get_version_string(version) << ", " << (ssl ? "SSL" : "no SSL");
   }
   else
   {

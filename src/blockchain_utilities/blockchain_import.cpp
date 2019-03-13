@@ -192,16 +192,8 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
   }
   core.prevalidate_block_hashes(core.get_blockchain_storage().get_db().height(), hashes);
 
-  std::vector<block> pblocks;
-  core.prepare_handle_incoming_blocks(blocks, pblocks);
-  if (!pblocks.empty() && pblocks.size() != blocks.size())
-  {
-    MERROR("Unexpected parsed blocks size");
-    core.cleanup_handle_incoming_blocks();
-    return 1;
-  }
+  core.prepare_handle_incoming_blocks(blocks);
 
-  size_t blockidx = 0;
   for(const block_complete_entry& block_entry: blocks)
   {
     // process transactions
@@ -222,7 +214,7 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
 
     block_verification_context bvc = boost::value_initialized<block_verification_context>();
 
-    core.handle_incoming_block(block_entry.block, pblocks.empty() ? NULL : &pblocks[blockidx++], bvc, false); // <--- process block
+    core.handle_incoming_block(block_entry.block, bvc, false); // <--- process block
 
     if(bvc.m_verifivation_failed)
     {
@@ -462,7 +454,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
         }
         else
         {
-          std::vector<std::pair<transaction, blobdata>> txs;
+          std::vector<transaction> txs;
           std::vector<transaction> archived_txs;
 
           archived_txs = bp.txs;
@@ -479,7 +471,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
             // because add_block() calls
             // add_transaction(blk_hash, blk.miner_tx) first, and
             // then a for loop for the transactions in txs.
-            txs.push_back(std::make_pair(tx, tx_to_blob(tx)));
+            txs.push_back(tx);
           }
 
           size_t block_size;
@@ -492,7 +484,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
 
           try
           {
-            core.get_blockchain_storage().get_db().add_block(std::make_pair(b, block_to_blob(b)), block_size, cumulative_difficulty, coins_generated, txs);
+            core.get_blockchain_storage().get_db().add_block(b, block_size, cumulative_difficulty, coins_generated, txs);
           }
           catch (const std::exception& e)
           {
@@ -602,8 +594,8 @@ int main(int argc, char* argv[])
   const command_line::arg_descriptor<std::string> arg_database = {
     "database", available_dbs.c_str(), default_db_type
   };
-  const command_line::arg_descriptor<bool> arg_verify =  {"guard-against-pwnage",
-    "Verify blocks and transactions during import (only disable if you exported the file yourself)", true};
+  const command_line::arg_descriptor<bool> arg_noverify =  {"dangerous-unverified-import",
+    "Blindly trust the import file and use potentially malicious blocks and transactions during import (only enable if you exported the file yourself)", false};
   const command_line::arg_descriptor<bool> arg_batch  =  {"batch",
     "Batch transactions for faster import", true};
   const command_line::arg_descriptor<bool> arg_resume =  {"resume",
@@ -623,7 +615,7 @@ int main(int argc, char* argv[])
   // call add_options() directly for these arguments since
   // command_line helpers support only boolean switch, not boolean argument
   desc_cmd_sett.add_options()
-    (arg_verify.name, make_semantic(arg_verify), arg_verify.description)
+    (arg_noverify.name, make_semantic(arg_noverify), arg_noverify.description)
     (arg_batch.name,  make_semantic(arg_batch),  arg_batch.description)
     (arg_resume.name, make_semantic(arg_resume), arg_resume.description)
     ;
@@ -642,7 +634,7 @@ int main(int argc, char* argv[])
   if (! r)
     return 1;
 
-  opt_verify    = command_line::get_arg(vm, arg_verify);
+  opt_verify    = !command_line::get_arg(vm, arg_noverify);
   opt_batch     = command_line::get_arg(vm, arg_batch);
   opt_resume    = command_line::get_arg(vm, arg_resume);
   block_stop    = command_line::get_arg(vm, arg_block_stop);
@@ -746,6 +738,18 @@ int main(int argc, char* argv[])
 
   MINFO("bootstrap file path: " << import_file_path);
   MINFO("database path:       " << m_config_folder);
+
+  if (!opt_verify)
+  {
+    MCLOG_RED(el::Level::Warning, "global", "\n"
+      "Import is set to proceed WITHOUT VERIFICATION.\n"
+      "This is a DANGEROUS operation: if the file was tampered with in transit, or obtained from a malicious source,\n"
+      "you could end up with a compromised database. It is recommended to NOT use " << arg_noverify.name << ".\n"
+      "*****************************************************************************************\n"
+      "You have 90 seconds to press ^C or terminate this program before unverified import starts\n"
+      "*****************************************************************************************");
+    sleep(90);
+  }
 
   cryptonote::cryptonote_protocol_stub pr; //TODO: stub only for this kind of test, make real validation of relayed objects
   cryptonote::core core(&pr);

@@ -2,7 +2,7 @@ packages:=boost openssl zeromq cppzmq expat ldns cppzmq readline libiconv hidapi
 native_packages := native_ccache native_protobuf
 
 darwin_native_packages = native_biplist native_ds_store native_mac_alias
-darwin_packages = sodium-darwin
+darwin_packages = sodium-darwin unbound
 
 linux_packages = eudev unbound
 qt_packages = qt

@@ -1,4 +1,4 @@
-// Copyright (c) 2018, The ArQmA Project
+// Copyright (c) 2018-2019, The ArQmA Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -45,12 +45,12 @@ using namespace epee;
 
 static const char *DEFAULT_DNS_PUBLIC_ADDR[] =
 {
-  "1.1.1.1",    				// Cloudflare
-  "8.8.8.8",         		// Google
-  "64.6.64.6",      	  // Verisign
-  "209.244.0.3",        // Level3
-  "8.26.56.26",   		  // Comodo
-  "77.88.8.8",				  // Yandex
+  "1.1.1.1",      // Cloudflare
+  "8.8.8.8",      // Google
+  "64.6.64.6",    // Verisign
+  "209.244.0.3",  // Level3
+  "8.26.56.26",   // Comodo
+  "77.88.8.8",    // Yandex
 };
 
 static boost::mutex instance_lock;
@@ -278,7 +278,7 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
   }
 
   add_anchors(m_data->m_ub_context);
-  
+
   if (DNS_PUBLIC)
   {
     // if no DNS_PUBLIC specified, we try a lookup to what we know
@@ -433,9 +433,9 @@ std::string address_from_txt_record(const std::string& s)
   return {};
 }
 /**
- * @brief gets a monero address from the TXT record of a DNS entry
+ * @brief gets a Arqma address from the TXT record of a DNS entry
  *
- * gets the monero address from the TXT record of the DNS entry associated
+ * gets the Arqma address from the TXT record of the DNS entry associated
  * with <url>.  If this lookup fails, or the TXT record does not contain an
  * XMR address in the correct format, returns an empty string.  <dnssec_valid>
  * will be set true or false according to whether or not the DNS query passes
@@ -444,7 +444,7 @@ std::string address_from_txt_record(const std::string& s)
  * @param url the url to look up
  * @param dnssec_valid return-by-reference for DNSSEC status of query
  *
- * @return a monero address (as a string) or an empty string
+ * @return a Arqma address (as a string) or an empty string
  */
 std::vector<std::string> addresses_from_url(const std::string& url, bool& dnssec_valid)
 {
@@ -461,7 +461,7 @@ std::vector<std::string> addresses_from_url(const std::string& url, bool& dnssec
   }
   else dnssec_valid = false;
 
-  // for each txt record, try to find a monero address in it.
+  // for each txt record, try to find a Arqma address in it.
   for (auto& rec : records)
   {
     std::string addr = address_from_txt_record(rec);

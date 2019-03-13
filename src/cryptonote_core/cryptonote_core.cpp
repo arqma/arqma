@@ -166,6 +166,11 @@ namespace cryptonote
   , "Relay blocks as normal blocks"
   , false
   };
+  static const command_line::arg_descriptor<bool> arg_pad_transactions  = {
+    "pad-transactions"
+  , "Pad relayed transactions to help defend against traffic volume analysis"
+  , false
+  };
   static const command_line::arg_descriptor<size_t> arg_max_txpool_size  = {
     "max-txpool-size"
   , "Set maximum txpool size in bytes."
@@ -195,7 +200,8 @@ namespace cryptonote
               m_last_json_checkpoints_update(0),
               m_disable_dns_checkpoints(false),
               m_update_download(0),
-              m_nettype(UNDEFINED)
+              m_nettype(UNDEFINED),
+              m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
     set_cryptonote_protocol(pprotocol);
@@ -290,6 +296,7 @@ namespace cryptonote
     command_line::add_arg(desc, arg_disable_dns_checkpoints);
     command_line::add_arg(desc, arg_block_download_max_size);
     command_line::add_arg(desc, arg_max_txpool_size);
+    command_line::add_arg(desc, arg_pad_transactions);
     command_line::add_arg(desc, arg_block_notify);
     command_line::add_arg(desc, arg_prune_blockchain);
 
@@ -329,6 +336,7 @@ namespace cryptonote
     set_enforce_dns_checkpoints(command_line::get_arg(vm, arg_dns_checkpoints));
     test_drop_download_height(command_line::get_arg(vm, arg_test_drop_download_height));
     m_fluffy_blocks_enabled = !get_arg(vm, arg_no_fluffy_blocks);
+    m_pad_transactions = get_arg(vm, arg_pad_transactions);
     m_offline = get_arg(vm, arg_offline);
     m_disable_dns_checkpoints = get_arg(vm, arg_disable_dns_checkpoints);
     if (!command_line::is_arg_defaulted(vm, arg_fluffy_blocks))
@@ -816,13 +824,15 @@ namespace cryptonote
     bool ok = true;
     it = tx_blobs.begin();
     for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
-      if (already_have[i])
-        continue;
       if (!results[i].res)
       {
         ok = false;
         continue;
       }
+      if (keeped_by_block)
+        get_blockchain_storage().on_new_tx_from_block(results[i].tx);
+      if (already_have[i])
+        continue;
 
       ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], results[i].prefix_hash, it->size(), tvc[i], keeped_by_block, relayed, do_not_relay);
       if(tvc[i].m_verifivation_failed)
@@ -1078,9 +1088,6 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, const crypto::hash& tx_prefix_hash, size_t blob_size, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
-    if (keeped_by_block)
-      get_blockchain_storage().on_new_tx_from_block(tx);
-
     if(m_mempool.have_tx(tx_hash))
     {
       LOG_PRINT_L2("tx " << tx_hash << "already have transaction in tx_pool");
@@ -1202,13 +1209,7 @@ namespace cryptonote
       m_miner.resume();
       return false;
     }
-    std::vector<block> pblocks;
-    if (!prepare_handle_incoming_blocks(blocks, pblocks))
-    {
-      MERROR("Block found, but failed to prepare to add");
-      m_miner.resume();
-      return false;
-    }
+    prepare_handle_incoming_blocks(blocks);
     m_blockchain_storage.add_new_block(b, bvc);
     cleanup_handle_incoming_blocks(true);
     //anyway - update miner template
@@ -1259,14 +1260,10 @@ namespace cryptonote
   }
 
   //-----------------------------------------------------------------------------------------------
-  bool core::prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks)
+  bool core::prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks)
   {
     m_incoming_tx_lock.lock();
-    if (!m_blockchain_storage.prepare_handle_incoming_blocks(blocks_entry, blocks))
-    {
-      cleanup_handle_incoming_blocks(false);
-      return false;
-    }
+    m_blockchain_storage.prepare_handle_incoming_blocks(blocks);
     return true;
   }
 
@@ -1283,7 +1280,7 @@ namespace cryptonote
   }
 
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_block(const blobdata& block_blob, const block *b, block_verification_context& bvc, bool update_miner_blocktemplate)
+  bool core::handle_incoming_block(const blobdata& block_blob, block_verification_context& bvc, bool update_miner_blocktemplate)
   {
     TRY_ENTRY();
 
@@ -1299,18 +1296,14 @@ namespace cryptonote
       return false;
     }
 
-    block lb;
-    if (!b)
+    block b = AUTO_VAL_INIT(b);
+    if(!parse_and_validate_block_from_blob(block_blob, b))
     {
-      if(!parse_and_validate_block_from_blob(block_blob, lb))
-      {
-        LOG_PRINT_L1("Failed to parse and validate new block");
-        bvc.m_verifivation_failed = true;
-        return false;
-      }
-      b = &lb;
+      LOG_PRINT_L1("Failed to parse and validate new block");
+      bvc.m_verifivation_failed = true;
+      return false;
     }
-    add_new_block(*b, bvc);
+    add_new_block(b, bvc);
     if(update_miner_blocktemplate && bvc.m_added_to_main_chain)
        update_miner_block_template();
     return true;

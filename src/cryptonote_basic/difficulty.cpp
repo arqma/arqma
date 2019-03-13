@@ -310,8 +310,8 @@ namespace cryptonote {
   difficulty_type next_difficulty_lwma_4(std::vector<uint64_t> timestamps,
     std::vector<difficulty_type> cumulative_difficulties) {
 
-    uint64_t  T = DIFFICULTY_TARGET_V10;
-    uint64_t  N = DIFFICULTY_WINDOW_V10; // N=45, 60, and 90 for T=600, 120, 60.
+    uint64_t  T = DIFFICULTY_TARGET_V11;
+    uint64_t  N = DIFFICULTY_WINDOW_V11; // N=45, 60, and 90 for T=600, 120, 60.
     uint64_t  L(0), ST(0), next_D, prev_D, avg_D, i;
 
     assert(timestamps.size() == cumulative_difficulties.size() && timestamps.size() <= N+1 );

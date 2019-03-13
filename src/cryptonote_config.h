@@ -114,7 +114,7 @@
 
 #define BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT          10000  //by default, blocks ids count in synchronizing
 #define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT_PRE_V4       100    //by default, blocks count in blocks downloading
-#define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT              20     //by default, blocks count in blocks downloading
+#define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT              40     //by default, blocks count in blocks downloading
 
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 //seconds, one week
@@ -125,13 +125,14 @@
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT                   8
-#define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60           //secondes
-#define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000     //50000000 bytes maximum packet size
+#define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
+#define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50000000 bytes maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
-#define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       //5 seconds
-#define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       //2 seconds
-#define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  //2 minutes
-#define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       //5 seconds
+#define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
+#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               45         // seconds
+#define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       // 2 seconds
+#define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  // 2 minutes
+#define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
@@ -139,10 +140,10 @@
 #define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // Kbps
 #define P2P_DEFAULT_LIMIT_RATE_DOWN                     16384      // Kbps
 
-#define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)     //1 hour
-#define P2P_IP_BLOCKTIME                                (60*60*24)  //24 hour
+#define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)    // 1 hour
+#define P2P_IP_BLOCKTIME                                (60*60*24) // 24 hour
 #define P2P_IP_FAILS_BEFORE_BLOCK                       10
-#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60) //5 minutes
+#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60)     // 5 minutes
 
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
@@ -170,9 +171,9 @@
 
 #define DEFAULT_TXPOOL_MAX_SIZE                         648000000ull // 3 days at 300000, in bytes
 
-#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096 // the smaller, the smoother the increase
-#define CRYPTONOTE_PRUNING_LOG_STRIPES                  3 // the higher, the more space saved
-#define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500 // the smaller, the more space saved
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096         // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_LOG_STRIPES                  3            // the higher, the more space saved
+#define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500         // the smaller, the more space saved
 //#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
 
 // New constants are intended to go here

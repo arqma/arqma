@@ -1476,7 +1476,6 @@ PendingTransaction *WalletImpl::createSweepUnmixableTransaction()
 
 {
     clearStatus();
-    vector<cryptonote::tx_destination_entry> dsts;
     cryptonote::tx_destination_entry de;
 
     PendingTransactionImpl * transaction = new PendingTransactionImpl(*this);
@@ -1896,7 +1895,7 @@ bool WalletImpl::verifyMessageWithPublicKey(const std::string &message, const st
 
 bool WalletImpl::connectToDaemon()
 {
-    bool result = m_wallet->check_connection(NULL, DEFAULT_CONNECTION_TIMEOUT_MILLIS);
+    bool result = m_wallet->check_connection(NULL, NULL, DEFAULT_CONNECTION_TIMEOUT_MILLIS);
     if (!result) {
         setStatusError("Error connecting to daemon at " + m_wallet->get_daemon_address());
     } else {
@@ -1909,7 +1908,7 @@ bool WalletImpl::connectToDaemon()
 Wallet::ConnectionStatus WalletImpl::connected() const
 {
     uint32_t version = 0;
-    m_is_connected = m_wallet->check_connection(&version, DEFAULT_CONNECTION_TIMEOUT_MILLIS);
+    m_is_connected = m_wallet->check_connection(&version, NULL, DEFAULT_CONNECTION_TIMEOUT_MILLIS);
     if (!m_is_connected)
         return Wallet::ConnectionStatus_Disconnected;
     // Version check is not implemented in light wallets nodes/wallets

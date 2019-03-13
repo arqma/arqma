@@ -122,7 +122,7 @@ using namespace cryptonote;
 #define STAGENET_SEGREGATION_FORK_HEIGHT 1000
 #define SEGREGATION_FORK_VICINITY 1500 /* blocks */
 
-#define FIRST_REFRESH_GRANULARITY     1024
+#define FIRST_REFRESH_GRANULARITY 1024
 
 #define GAMMA_PICK_HALF_WINDOW 5
 
@@ -133,7 +133,7 @@ namespace
   std::string get_default_ringdb_path()
   {
     boost::filesystem::path dir = tools::get_default_data_dir();
-    // remove .bitmonero, replace with .shared-ringdb
+    // remove .arqma, replace with .shared-ringdb
     dir = dir.remove_filename();
     dir /= ".shared-ringdb";
     return dir.string();
@@ -152,6 +152,12 @@ struct options {
   const command_line::arg_descriptor<std::string> password_file = {"password-file", tools::wallet2::tr("Wallet password file"), "", true};
   const command_line::arg_descriptor<int> daemon_port = {"daemon-port", tools::wallet2::tr("Use daemon instance at port <arg> instead of 19993"), 0};
   const command_line::arg_descriptor<std::string> daemon_login = {"daemon-login", tools::wallet2::tr("Specify username[:password] for daemon RPC client"), "", true};
+  const command_line::arg_descriptor<std::string> daemon_ssl = {"daemon-ssl", tools::wallet2::tr("Enable SSL on daemon RPC connections: enabled|disabled|autodetect"), "autodetect"};
+  const command_line::arg_descriptor<std::string> daemon_ssl_private_key = {"daemon-ssl-private-key", tools::wallet2::tr("Path to a PEM format private key"), ""};
+  const command_line::arg_descriptor<std::string> daemon_ssl_certificate = {"daemon-ssl-certificate", tools::wallet2::tr("Path to a PEM format certificate"), ""};
+  const command_line::arg_descriptor<std::vector<std::string>> daemon_ssl_allowed_certificates = {"daemon-ssl-allowed-certificates", tools::wallet2::tr("List of paths to PEM format certificates of allowed RPC servers")};
+  const command_line::arg_descriptor<std::vector<std::string>> daemon_ssl_allowed_fingerprints = {"daemon-ssl-allowed-fingerprints", tools::wallet2::tr("List of valid fingerprints of allowed RPC servers")};
+  const command_line::arg_descriptor<bool> daemon_ssl_allow_any_cert = {"daemon-ssl-allow-any-cert", tools::wallet2::tr("Allow any SSL certificate from the daemon"), false};
   const command_line::arg_descriptor<bool> testnet = {"testnet", tools::wallet2::tr("For testnet. Daemon must also be launched with --testnet flag"), false};
   const command_line::arg_descriptor<bool> stagenet = {"stagenet", tools::wallet2::tr("For stagenet. Daemon must also be launched with --stagenet flag"), false};
   const command_line::arg_descriptor<std::string, false, true, 2> shared_ringdb_dir = {
@@ -218,6 +224,15 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   auto daemon_host = command_line::get_arg(vm, opts.daemon_host);
   auto daemon_port = command_line::get_arg(vm, opts.daemon_port);
   auto device_name = command_line::get_arg(vm, opts.hw_device);
+  auto daemon_ssl_private_key = command_line::get_arg(vm, opts.daemon_ssl_private_key);
+  auto daemon_ssl_certificate = command_line::get_arg(vm, opts.daemon_ssl_certificate);
+  auto daemon_ssl_allowed_certificates = command_line::get_arg(vm, opts.daemon_ssl_allowed_certificates);
+  auto daemon_ssl_allowed_fingerprints = command_line::get_arg(vm, opts.daemon_ssl_allowed_fingerprints);
+  auto daemon_ssl_allow_any_cert = command_line::get_arg(vm, opts.daemon_ssl_allow_any_cert);
+  auto daemon_ssl = command_line::get_arg(vm, opts.daemon_ssl);
+  epee::net_utils::ssl_support_t ssl_support;
+  THROW_WALLET_EXCEPTION_IF(!epee::net_utils::ssl_support_from_string(ssl_support, daemon_ssl), tools::error::wallet_internal_error,
+      tools::wallet2::tr("Invalid argument for ") + std::string(opts.daemon_ssl.name));
 
   THROW_WALLET_EXCEPTION_IF(!daemon_address.empty() && !daemon_host.empty() && 0 != daemon_port,
       tools::error::wallet_internal_error, tools::wallet2::tr("can't specify daemon host or port more than once"));
@@ -268,8 +283,23 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
     catch (const std::exception &e) { }
   }
 
+  std::list<std::string> ssl_allowed_certificates;
+  for (const std::string &path: daemon_ssl_allowed_certificates)
+  {
+      ssl_allowed_certificates.push_back({});
+      if (!epee::file_io_utils::load_file_to_string(path, ssl_allowed_certificates.back()))
+      {
+        MERROR("Failed to load certificate: " << path);
+        ssl_allowed_certificates.back() = std::string();
+      }
+  }
+
+  std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ daemon_ssl_allowed_fingerprints.size() };
+  std::transform(daemon_ssl_allowed_fingerprints.begin(), daemon_ssl_allowed_fingerprints.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
+
   std::unique_ptr<tools::wallet2> wallet(new tools::wallet2(nettype, kdf_rounds, unattended));
-  wallet->init(std::move(daemon_address), std::move(login), 0, false, *trusted_daemon);
+  wallet->init(std::move(daemon_address), std::move(login), 0, *trusted_daemon, ssl_support, std::make_pair(daemon_ssl_private_key, daemon_ssl_certificate), ssl_allowed_certificates, ssl_allowed_fingerprints, daemon_ssl_allow_any_cert);
+
   boost::filesystem::path ringdb_path = command_line::get_arg(vm, opts.shared_ringdb_dir);
   wallet->set_ring_database(ringdb_path.string());
   wallet->device_name(device_name);
@@ -761,7 +791,12 @@ wallet_keys_unlocker::~wallet_keys_unlocker()
 {
   if (!locked)
     return;
-  w.encrypt_keys(key);
+  try { w.encrypt_keys(key); }
+  catch (...)
+  {
+    MERROR("Failed to re-encrypt wallet keys");
+    // do not propagate through dtor, we'd crash
+  }
 }
 
 wallet2::wallet2(network_type nettype, uint64_t kdf_rounds, bool unattended):
@@ -850,6 +885,12 @@ void wallet2::init_options(boost::program_options::options_description& desc_par
   command_line::add_arg(desc_params, opts.password_file);
   command_line::add_arg(desc_params, opts.daemon_port);
   command_line::add_arg(desc_params, opts.daemon_login);
+  command_line::add_arg(desc_params, opts.daemon_ssl);
+  command_line::add_arg(desc_params, opts.daemon_ssl_private_key);
+  command_line::add_arg(desc_params, opts.daemon_ssl_certificate);
+  command_line::add_arg(desc_params, opts.daemon_ssl_allowed_certificates);
+  command_line::add_arg(desc_params, opts.daemon_ssl_allowed_fingerprints);
+  command_line::add_arg(desc_params, opts.daemon_ssl_allow_any_cert);
   command_line::add_arg(desc_params, opts.testnet);
   command_line::add_arg(desc_params, opts.stagenet);
   command_line::add_arg(desc_params, opts.shared_ringdb_dir);
@@ -899,7 +940,7 @@ std::unique_ptr<wallet2> wallet2::make_dummy(const boost::program_options::varia
 }
 
 //----------------------------------------------------------------------------------------------------
-bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, uint64_t upper_transaction_size_limit, bool ssl, bool trusted_daemon)
+bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, uint64_t upper_transaction_size_limit, bool trusted_daemon, epee::net_utils::ssl_support_t ssl_support, const std::pair<std::string, std::string> &private_key_and_certificate_path, const std::list<std::string> &allowed_certificates, const std::vector<std::vector<uint8_t>> &allowed_fingerprints, bool allow_any_cert)
 {
   m_checkpoints.init_default_checkpoints(m_nettype);
   if(m_http_client.is_connected())
@@ -909,8 +950,7 @@ bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::
   m_daemon_address = std::move(daemon_address);
   m_daemon_login = std::move(daemon_login);
   m_trusted_daemon = trusted_daemon;
-  // When switching from light wallet to full wallet, we need to reset the height we got from lw node.
-  return m_http_client.set_server(get_daemon_address(), get_daemon_login(), ssl);
+  return m_http_client.set_server(get_daemon_address(), get_daemon_login(), ssl_support, private_key_and_certificate_path, allowed_certificates, allowed_fingerprints, allow_any_cert);
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::is_deterministic() const
@@ -1330,7 +1370,6 @@ void wallet2::cache_tx_data(const cryptonote::transaction& tx, const crypto::has
 
       // additional tx pubkeys and derivations for multi-destination transfers involving one or more subaddresses
       tx_extra_additional_pub_keys additional_tx_pub_keys;
-      std::vector<crypto::key_derivation> additional_derivations;
       if (find_tx_extra_field_by_type(tx_cache_data.tx_extra_fields, additional_tx_pub_keys))
       {
         for (size_t i = 0; i < additional_tx_pub_keys.data.size(); ++i)
@@ -2163,11 +2202,10 @@ void wallet2::pull_and_parse_next_blocks(uint64_t start_height, uint64_t &blocks
     THROW_WALLET_EXCEPTION_IF(prev_blocks.size() != prev_parsed_blocks.size(), error::wallet_internal_error, "size mismatch");
 
     // prepend the last 3 blocks, should be enough to guard against a block or two's reorg
-    std::vector<parsed_block>::const_reverse_iterator i = prev_parsed_blocks.rbegin();
-    for (size_t n = 0; n < std::min((size_t)3, prev_parsed_blocks.size()); ++n)
+    auto s = std::next(prev_parsed_blocks.rbegin(), std::min((size_t)3, prev_parsed_blocks.size())).base();
+    for (; s != prev_parsed_blocks.end(); ++s)
     {
-      short_chain_history.push_front(i->hash);
-      ++i;
+      short_chain_history.push_front(s->hash);
     }
 
     // pull the new blocks
@@ -3691,7 +3729,7 @@ crypto::secret_key wallet2::generate(const std::string& wallet_, const epee::wip
  {
    // -1 month for fluctuations in block time and machine date/time setup.
    // avg seconds per block
-   const int seconds_per_block = DIFFICULTY_TARGET_V10;
+   const int seconds_per_block = DIFFICULTY_TARGET_V11;
    // ~num blocks per month
    const uint64_t blocks_per_month = 60*60*24*30/seconds_per_block;
 
@@ -4295,7 +4333,7 @@ bool wallet2::prepare_file_names(const std::string& file_path)
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::check_connection(uint32_t *version, uint32_t timeout)
+bool wallet2::check_connection(uint32_t *version, bool *ssl, uint32_t timeout)
 {
   THROW_WALLET_EXCEPTION_IF(!m_is_initialized, error::wallet_not_initialized);
 
@@ -4303,14 +4341,19 @@ bool wallet2::check_connection(uint32_t *version, uint32_t timeout)
 
   // TODO: Add light wallet version check.
   if(m_light_wallet) {
-      version = 0;
+      if (version)
+        *version = 0;
+      if (ssl)
+        *ssl = m_light_wallet_connected; // light wallet is always SSL
       return m_light_wallet_connected;
   }
 
-  if(!m_http_client.is_connected())
+  if(!m_http_client.is_connected(ssl))
   {
     m_node_rpc_proxy.invalidate();
     if (!m_http_client.connect(std::chrono::milliseconds(timeout)))
+      return false;
+    if(!m_http_client.is_connected(ssl))
       return false;
   }
 
@@ -6512,7 +6555,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     {
       double x = gamma(engine);
       x = exp(x);
-      uint64_t block_offset = x / DIFFICULTY_TARGET_V10; // this assumes constant target over the whole rct range
+      uint64_t block_offset = x / DIFFICULTY_TARGET_V11; // this assumes constant target over the whole rct range
       if (block_offset > last_usable_block - CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE)
         return std::numeric_limits<uint64_t>::max(); // bad pick
       block_offset = last_usable_block - block_offset;
@@ -9932,18 +9975,8 @@ uint64_t wallet2::get_daemon_blockchain_target_height(string &err)
 
 uint64_t wallet2::get_approximate_blockchain_height() const
 {
-  // time of v2 fork
-  const time_t fork_time = m_nettype == TESTNET ? 1448285909 : m_nettype == STAGENET ? (time_t)-1/*TODO*/ : 1458748658;
-  // v2 fork block
-  const uint64_t fork_block = m_nettype == TESTNET ? 624634 : m_nettype == STAGENET ? (uint64_t)-1/*TODO*/ : 1009827;
-  // avg seconds per block
-  const int seconds_per_block = DIFFICULTY_TARGET_V10;
-  // Calculated blockchain height
-  uint64_t approx_blockchain_height = fork_block + (time(NULL) - fork_time)/seconds_per_block;
-  // testnet got some huge rollbacks, so the estimation is way off
-  static const uint64_t approximate_testnet_rolled_back_blocks = 148540;
-  if (m_nettype == TESTNET && approx_blockchain_height > approximate_testnet_rolled_back_blocks)
-    approx_blockchain_height -= approximate_testnet_rolled_back_blocks;
+  const time_t init_time = 1529003126;
+  uint64_t approx_blockchain_height = (time(NULL) - init_time) / DIFFICULTY_TARGET_V11;
   LOG_PRINT_L2("Calculated blockchain height: " << approx_blockchain_height);
   return approx_blockchain_height;
 }

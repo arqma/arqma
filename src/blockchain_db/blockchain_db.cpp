@@ -58,7 +58,7 @@ namespace cryptonote
 bool blockchain_valid_db_type(const std::string& db_type)
 {
   int i;
-  for (i=0; db_types[i]; i++)
+  for (i = 0; db_types[i]; i++)
   {
     if (db_types[i] == db_type)
       return true;
@@ -70,7 +70,7 @@ std::string blockchain_db_types(const std::string& sep)
 {
   int i;
   std::string ret = "";
-  for (i=0; db_types[i]; i++)
+  for (i = 0; db_types[i]; i++)
   {
     if (i)
       ret += sep;
@@ -121,10 +121,8 @@ void BlockchainDB::pop_block()
   pop_block(blk, txs);
 }
 
-void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
+void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const transaction& tx, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
 {
-  const transaction &tx = txp.first;
-
   bool miner_tx = false;
   crypto::hash tx_hash, tx_prunable_hash;
   if (!tx_hash_ptr)
@@ -140,7 +138,7 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
   if (tx.version >= 2)
   {
     if (!tx_prunable_hash_ptr)
-      tx_prunable_hash = get_transaction_prunable_hash(tx, &txp.second);
+      tx_prunable_hash = get_transaction_prunable_hash(tx);
     else
       tx_prunable_hash = *tx_prunable_hash_ptr;
   }
@@ -170,7 +168,7 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
     }
   }
 
-  uint64_t tx_id = add_transaction_data(blk_hash, txp, tx_hash, tx_prunable_hash);
+  uint64_t tx_id = add_transaction_data(blk_hash, tx, tx_hash, tx_prunable_hash);
 
   std::vector<uint64_t> amount_output_indices;
 
@@ -197,15 +195,13 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
   add_tx_amount_output_indices(tx_id, amount_output_indices);
 }
 
-uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
+uint64_t BlockchainDB::add_block( const block& blk
                                 , const size_t& block_size
                                 , const difficulty_type& cumulative_difficulty
                                 , const uint64_t& coins_generated
-                                , const std::vector<std::pair<transaction, blobdata>>& txs
+                                , const std::vector<transaction>& txs
                                 )
 {
-  const block &blk = blck.first;
-
   // sanity
   if (blk.tx_hashes.size() != txs.size())
     throw std::runtime_error("Inconsistent tx/hashes sizes");
@@ -224,16 +220,16 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
   time1 = epee::misc_utils::get_tick_count();
 
   uint64_t num_rct_outs = 0;
-  add_transaction(blk_hash, std::make_pair(blk.miner_tx, tx_to_blob(blk.miner_tx)));
+  add_transaction(blk_hash, blk.miner_tx);
   if (blk.miner_tx.version == 2)
     num_rct_outs += blk.miner_tx.vout.size();
   int tx_i = 0;
   crypto::hash tx_hash = crypto::null_hash;
-  for (const std::pair<transaction, blobdata>& tx : txs)
+  for (const transaction& tx : txs)
   {
     tx_hash = blk.tx_hashes[tx_i];
     add_transaction(blk_hash, tx, &tx_hash);
-    for (const auto &vout: tx.first.vout)
+    for (const auto &vout: tx.vout)
     {
       if (vout.amount == 0)
         ++num_rct_outs;

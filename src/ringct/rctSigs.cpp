@@ -507,7 +507,6 @@ namespace rct {
     //       a_out, Cout is for the output commitment
     //       index is the signing index..
     mgSig proveRctMGSimple(const key &message, const ctkeyV & pubs, const ctkey & inSk, const key &a , const key &Cout, const multisig_kLRki *kLRki, key *mscout, unsigned int index, hw::device &hwdev) {
-        mgSig mg;
         //setup vars
         size_t rows = 1;
         size_t cols = pubs.size();

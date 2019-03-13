@@ -290,11 +290,11 @@ public:
   virtual bool for_all_outputs(std::function<bool(uint64_t amount, const crypto::hash &tx_hash, uint64_t height, size_t tx_idx)> f) const;
   virtual bool for_all_outputs(uint64_t amount, const std::function<bool(uint64_t height)> &f) const;
 
-  virtual uint64_t add_block( const std::pair<block, blobdata>& blk
+  virtual uint64_t add_block( const block& blk
                             , const size_t& block_size
                             , const difficulty_type& cumulative_difficulty
                             , const uint64_t& coins_generated
-                            , const std::vector<std::pair<transaction, blobdata>>& txs
+                            , const std::vector<transaction>& txs
                             );
 
   virtual void set_batch_transactions(bool batch_transactions);
@@ -333,9 +333,9 @@ public:
   static int compare_string(const MDB_val *a, const MDB_val *b);
 
 private:
-  void do_resize(uint64_t size_increase=0);
+  void do_resize(uint64_t size_increase = 0);
 
-  bool need_resize(uint64_t threshold_size=0) const;
+  bool need_resize(uint64_t threshold_size = 0) const;
   void check_and_resize_for_batch(uint64_t batch_num_blocks, uint64_t batch_bytes);
   uint64_t get_estimated_batch_size(uint64_t batch_num_blocks, uint64_t batch_bytes) const;
 
@@ -349,7 +349,7 @@ private:
 
   virtual void remove_block();
 
-  virtual uint64_t add_transaction_data(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& tx, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash);
+  virtual uint64_t add_transaction_data(const crypto::hash& blk_hash, const transaction& tx, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash);
 
   virtual void remove_transaction_data(const crypto::hash& tx_hash, const transaction& tx);
 
