@@ -50,7 +50,7 @@ Arqma is a private, secure, untraceable, decentralised digital currency. You are
 
 ## SSL
 
-As a network, Arqma supports complete, cryptographically secured connections at all levels. This includes, but is not limited to Arqma Network Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].
+As a network, Arqma supports complete, cryptographically secured connections at all levels. This includes, but is not limited to Arqma Network Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
 
 Arqma Network will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over the Arqma Network.
 
@@ -58,9 +58,9 @@ The use of SSL connections means that there will not be any possibility to use t
 
  * Below is an example how to generate SSL Keys with openssl
 
-   `$ openssl genrsa -out /tmp/KEY 4096`
-   `$ openssl req -new -key /tmp/KEY -out /tmp/REQ`
-   `$ openssl x509 -req -days 999999 -sha256 -in /tmp/REQ -signkey /tmp/KEY -out /tmp/CERT`
+    `$ openssl genrsa -out /tmp/KEY 4096`
+    `$ openssl req -new -key /tmp/KEY -out /tmp/REQ`
+    `$ openssl x509 -req -days 999999 -sha256 -in /tmp/REQ -signkey /tmp/KEY -out /tmp/CERT`
 
  * Above example will generate 4096bit SSL Cert at /tmp (which can be changed)*
 
