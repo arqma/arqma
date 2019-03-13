@@ -58,9 +58,9 @@ The use of SSL connections means that there will not be any possibility to use t
 
  * Below is an example how to generate SSL Keys with openssl
 
-    `$ openssl genrsa -out /tmp/KEY 4096`
-    `$ openssl req -new -key /tmp/KEY -out /tmp/REQ`
-    `$ openssl x509 -req -days 999999 -sha256 -in /tmp/REQ -signkey /tmp/KEY -out /tmp/CERT`
+    `$ openssl genrsa -out /tmp/KEY 4096`    
+    `$ openssl req -new -key /tmp/KEY -out /tmp/REQ`    
+    `$ openssl x509 -req -days 999999 -sha256 -in /tmp/REQ -signkey /tmp/KEY -out /tmp/CERT`    
 
  * Above example will generate 4096bit SSL Cert at /tmp (which can be changed)*
 
