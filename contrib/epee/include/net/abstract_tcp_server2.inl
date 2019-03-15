@@ -762,8 +762,8 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     // Initiate graceful connection closure.
     m_timer.cancel();
     boost::system::error_code ignored_ec;
+    socket_.shutdown(ignored_ec);
     socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-    socket().close();
     if (!m_host.empty())
     {
       try { host_count(m_host, -1); } catch (...) { /* ignore */ }
