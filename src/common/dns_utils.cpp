@@ -541,12 +541,12 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
     if (!avail[cur_index])
     {
       records[cur_index].clear();
-      LOG_PRINT_L2("DNSSEC not available for checkpoint update at URL: " << url << ", skipping.");
+      LOG_PRINT_L2("DNSSEC not available for hostname: " << url << ", skipping.");
     }
     if (!valid[cur_index])
     {
       records[cur_index].clear();
-      LOG_PRINT_L2("DNSSEC validation failed for checkpoint update at URL: " << url << ", skipping.");
+      LOG_PRINT_L2("DNSSEC validation failed for hostname: " << url << ", skipping.");
     }
 
     cur_index++;
@@ -568,7 +568,7 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
 
   if (num_valid_records < 2)
   {
-    LOG_PRINT_L0("WARNING: no two valid ArQ-Net DNS checkpoint records were received");
+    LOG_PRINT_L0("WARNING: no two valid DNS TXT records were received");
     return false;
   }
 
@@ -590,7 +590,7 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
 
   if (good_records_index < 0)
   {
-    LOG_PRINT_L0("WARNING: no two ArQ-Net DNS checkpoint records matched");
+    LOG_PRINT_L0("WARNING: no two DNS TXT records matched");
     return false;
   }
 
