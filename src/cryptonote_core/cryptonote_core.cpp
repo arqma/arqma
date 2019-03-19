@@ -833,7 +833,7 @@ namespace cryptonote
       if (already_have[i])
         continue;
 
-      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], weight, tvc[i], keeped_by_block, relayed, do_not_relay);
+      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], it->size(), tvc[i], keeped_by_block, relayed, do_not_relay);
       if(tvc[i].m_verifivation_failed)
       {MERROR_VER("Transaction verification failed: " << results[i].hash);}
       else if(tvc[i].m_verifivation_impossible)
