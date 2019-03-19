@@ -1980,7 +1980,7 @@ bool simple_wallet::set_unit(const std::vector<std::string> &args/* = std::vecto
   const std::string &unit = args[1];
   unsigned int decimal_point = CRYPTONOTE_DISPLAY_DECIMAL_POINT;
 
-  if (unit == "ARQ")
+  if (unit == "arq")
     decimal_point = CRYPTONOTE_DISPLAY_DECIMAL_POINT;
   else if (unit == "milliarq")
     decimal_point = CRYPTONOTE_DISPLAY_DECIMAL_POINT - 3;
