@@ -858,7 +858,7 @@ namespace cryptonote
   {
     if (decimal_point == (unsigned int)-1)
       decimal_point = default_decimal_point;
-    switch (decimal_point))
+    switch (decimal_point)
     {
       case 9:
         return "arq";
