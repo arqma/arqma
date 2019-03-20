@@ -135,7 +135,14 @@ namespace cryptonote
         return false;
       }
       for (size_t n = 0; n < tx.rct_signatures.outPk.size(); ++n)
+      {
+        if (tx.vout[n].target.type() != typeid(txout_to_key))
+        {
+          LOG_PRINT_L1("Unsupported output type in tx " << get_transaction_hash(tx));
+          return false;
+        }
         rv.outPk[n].dest = rct::pk2rct(boost::get<txout_to_key>(tx.vout[n].target).key);
+      }
 
       if (!base_only)
       {
@@ -906,26 +913,42 @@ namespace cryptonote
     return get_transaction_hash(t, res, NULL);
   }
   //---------------------------------------------------------------
-  bool calculate_transaction_prunable_hash(const transaction& t, crypto::hash& res)
+  bool calculate_transaction_prunable_hash(const transaction& t, const cryptonote::blobdata *blob, crypto::hash& res)
   {
     if (t.version == 1)
       return false;
-    transaction &tt = const_cast<transaction&>(t);
-    std::stringstream ss;
-    binary_archive<true> ba(ss);
-    const size_t inputs = t.vin.size();
-    const size_t outputs = t.vout.size();
-    const size_t mixin = t.vin.empty() ? 0 : t.vin[0].type() == typeid(txin_to_key) ? boost::get<txin_to_key>(t.vin[0]).key_offsets.size() - 1 : 0;
-    bool r = tt.rct_signatures.p.serialize_rctsig_prunable(ba, t.rct_signatures.type, inputs, outputs, mixin);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to serialize rct signatures prunable");
-    cryptonote::get_blob_hash(ss.str(), res);
+    static const crypto::hash empty_hash = { (char)0x70, (char)0xa4, (char)0x85, (char)0x5d, (char)0x04, (char)0xd8, (char)0xfa, (char)0x7b, (char)0x3b, (char)0x27, (char)0x82, (char)0xca, (char)0x53, (char)0xb6, (char)0x00, (char)0xe5, (char)0xc0, (char)0x03, (char)0xc7, (char)0xdc, (char)0xb2, (char)0x7d, (char)0x7e, (char)0x92, (char)0x3c, (char)0x23, (char)0xf7, (char)0x86, (char)0x01, (char)0x46, (char)0xd2, (char)0xc5 };
+    const unsigned int unprunable_size = t.unprunable_size;
+    if (blob && unprunable_size)
+    {
+      CHECK_AND_ASSERT_MES(unprunable_size <= blob->size(), false, "Inconsistent transaction unprunable and blob sizes");
+      if (blob->size() - unprunable_size == 0)
+        res = empty_hash;
+      else
+        cryptonote::get_blob_hash(epee::span<const char>(blob->data() + unprunable_size, blob->size() - unprunable_size), res);
+    }
+    else
+    {
+      transaction &tt = const_cast<transaction&>(t);
+      std::stringstream ss;
+      binary_archive<true> ba(ss);
+      const size_t inputs = t.vin.size();
+      const size_t outputs = t.vout.size();
+      const size_t mixin = t.vin.empty() ? 0 : t.vin[0].type() == typeid(txin_to_key) ? boost::get<txin_to_key>(t.vin[0]).key_offsets.size() - 1 : 0;
+      bool r = tt.rct_signatures.p.serialize_rctsig_prunable(ba, t.rct_signatures.type, inputs, outputs, mixin);
+      CHECK_AND_ASSERT_MES(r, false, "Failed to serialize rct signatures prunable");
+      if (ss.str().empty())
+        res = empty_hash;
+      else
+        cryptonote::get_blob_hash(ss.str(), res);
+    }
     return true;
   }
   //---------------------------------------------------------------
-  crypto::hash get_transaction_prunable_hash(const transaction& t)
+  crypto::hash get_transaction_prunable_hash(const transaction& t, const cryptonote::blobdata *blobdata)
   {
     crypto::hash res;
-    CHECK_AND_ASSERT_THROW_MES(calculate_transaction_prunable_hash(t, res), "Failed to calculate tx prunable hash");
+    CHECK_AND_ASSERT_THROW_MES(calculate_transaction_prunable_hash(t, blobdata, res), "Failed to calculate tx prunable hash");
     return res;
   }
   //---------------------------------------------------------------
@@ -978,17 +1001,13 @@ namespace cryptonote
 
     transaction &tt = const_cast<transaction&>(t);
 
-    // base rct
-    {
-      std::stringstream ss;
-      binary_archive<true> ba(ss);
-      const size_t inputs = t.vin.size();
-      const size_t outputs = t.vout.size();
-      bool r = tt.rct_signatures.serialize_rctsig_base(ba, inputs, outputs);
-      CHECK_AND_ASSERT_MES(r, false, "Failed to serialize rct signatures base");
-      cryptonote::get_blob_hash(ss.str(), hashes[1]);
-    }
+    const blobdata blob = tx_to_blob(t);
+    const unsigned int unprunable_size = t.unprunable_size;
+    const unsigned int prefix_size = t.prefix_size;
 
+    // base rct
+    CHECK_AND_ASSERT_MES(prefix_size <= unprunable_size && unprunable_size <= blob.size(), false, "Inconsistent transaction prefix, unprunable and blob sizes");
+    cryptonote::get_blob_hash(epee::span<const char>(blob.data() + prefix_size, unprunable_size - prefix_size), hashes[1]);
     // prunable rct
     if (t.rct_signatures.type == rct::RCTTypeNull)
     {
@@ -996,7 +1015,7 @@ namespace cryptonote
     }
     else
     {
-      CHECK_AND_ASSERT_MES(calculate_transaction_prunable_hash(t, hashes[2]), false, "Failed to get tx prunable hash");
+      CHECK_AND_ASSERT_MES(calculate_transaction_prunable_hash(t, &blob, hashes[2]), false, "Failed to get tx prunable hash");
     }
 
     // the tx hash is the hash of the 3 hashes

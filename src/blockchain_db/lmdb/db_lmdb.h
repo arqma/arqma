@@ -400,7 +400,7 @@ private:
    */
   tx_out output_from_blob(const blobdata& blob) const;
 
-  void check_open() const;
+  inline void check_open() const;
 
   bool prune_worker(int mode, uint32_t pruning_seed);
 

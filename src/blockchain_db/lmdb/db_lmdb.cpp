@@ -465,6 +465,12 @@ inline int lmdb_txn_renew(MDB_txn *txn)
   return res;
 }
 
+inline void BlockchainLMDB::check_open() const
+{
+  if (!m_open)
+    throw0(DB_ERROR("DB operation attempted on a not-open DB instance"));
+}
+
 void BlockchainLMDB::do_resize(uint64_t increase_size)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
@@ -848,10 +854,10 @@ uint64_t BlockchainLMDB::add_transaction_data(const crypto::hash& blk_hash, cons
 	  throw0(DB_ERROR("Failed to serialize pruned tx"));
 	unprunable_size = ss.str().size();
   }
-	
+
   if (unprunable_size > blob.size())
     throw0(DB_ERROR("pruned tx size is larger than tx size"));
-	
+
   dMDB_val pruned_blob = {unprunable_size, (void*)blob.data()};
   result = mdb_cursor_put(m_cur_txs_pruned, &val_tx_id, &pruned_blob, MDB_APPEND);
   if (result)
@@ -1221,13 +1227,6 @@ tx_out BlockchainLMDB::output_from_blob(const blobdata& blob) const
     throw1(DB_ERROR("Error deserializing tx output blob"));
 
   return o;
-}
-
-void BlockchainLMDB::check_open() const
-{
-//  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
-  if (!m_open)
-    throw0(DB_ERROR("DB operation attempted on a not-open DB instance"));
 }
 
 BlockchainLMDB::~BlockchainLMDB()
@@ -3546,7 +3545,7 @@ uint64_t BlockchainLMDB::add_block(const block& blk, const size_t& block_size, c
   check_open();
   uint64_t m_height = height();
 
-  if (m_height % 1000 == 0)
+  if (m_height % 1024 == 0)
   {
     // for batch mode, DB resize check is done at start of batch transaction
     if (! m_batch_active && need_resize())
