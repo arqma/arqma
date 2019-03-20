@@ -841,6 +841,11 @@ namespace cryptonote
     cn_fast_hash(blob.data(), blob.size(), res);
   }
   //---------------------------------------------------------------
+  void get_blob_hash(const epee::span<const char>& blob, crypto::hash& res)
+  {
+    cn_fast_hash(blob.data(), blob.size(), res);
+  }
+  //---------------------------------------------------------------
   void set_default_decimal_point(unsigned int decimal_point)
   {
     switch (decimal_point)
@@ -895,6 +900,13 @@ namespace cryptonote
   }
   //---------------------------------------------------------------
   crypto::hash get_blob_hash(const blobdata& blob)
+  {
+    crypto::hash h = null_hash;
+    get_blob_hash(blob, h);
+    return h;
+  }
+  //---------------------------------------------------------------
+  crypto::hash get_blob_hash(const epee::span<const char>& blob)
   {
     crypto::hash h = null_hash;
     get_blob_hash(blob, h);
