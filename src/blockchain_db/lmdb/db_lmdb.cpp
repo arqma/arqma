@@ -858,7 +858,7 @@ uint64_t BlockchainLMDB::add_transaction_data(const crypto::hash& blk_hash, cons
   if (unprunable_size > blob.size())
     throw0(DB_ERROR("pruned tx size is larger than tx size"));
 
-  dMDB_val pruned_blob = {unprunable_size, (void*)blob.data()};
+  MDB_val pruned_blob = {unprunable_size, (void*)blob.data()};
   result = mdb_cursor_put(m_cur_txs_pruned, &val_tx_id, &pruned_blob, MDB_APPEND);
   if (result)
     throw0(DB_ERROR(lmdb_error("Failed to add pruned tx blob to db transaction: ", result).c_str()));
