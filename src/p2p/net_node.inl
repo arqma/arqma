@@ -460,6 +460,7 @@ namespace nodetool
       full_addrs.insert("77.93.206.170:19993");
       full_addrs.insert("51.15.50.83:19993");
       full_addrs.insert("51.38.99.79:19993");
+      full_addrs.insert("51.15.253.177:19993");
     }
     return full_addrs;
   }
