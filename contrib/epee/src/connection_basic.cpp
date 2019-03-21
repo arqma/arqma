@@ -47,6 +47,12 @@
 // TODO:
 #include "net/network_throttle-detail.hpp"
 
+#if BOOST_VERSION >= 107000
+#define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
+#else
+#define GET_IO_SERVICE(s) ((s).get_io_service())
+#endif
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.conn"
 
@@ -116,8 +122,8 @@ int connection_basic_pimpl::m_default_tos;
 connection_basic::connection_basic(boost::asio::ip::tcp::socket&& sock, boost::shared_ptr<socket_stats> stats, ssl_support_t ssl_support, ssl_context_t &ssl_context)
 	: m_stats(std::move(stats)),
       mI( new connection_basic_pimpl("peer") ),
-      strand_(sock.get_io_service()),
-      socket_(sock.get_io_service(), ssl_context.context),
+      strand_(GET_IO_SERVICE(sock)),
+      socket_(GET_IO_SERVICE(sock)), ssl_context.context),
       m_want_close_connection(false),
       m_was_shutdown(false),
       m_ssl_support(ssl_support),
