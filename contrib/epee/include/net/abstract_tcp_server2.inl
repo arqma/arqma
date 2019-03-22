@@ -1211,7 +1211,7 @@ POP_WARNINGS
   template<class t_protocol_handler>
   bool boosted_tcp_server<t_protocol_handler>::add_connection(t_connection_context& out, boost::asio::ip::tcp::socket&& sock, network_address real_remote, epee::net_utils::ssl_support_t ssl_support)
   {
-    if(std::addressof(get_io_service()) == std::addressof(GET_IO_SERVICE(sock)));
+    if(std::addressof(get_io_service()) == std::addressof(GET_IO_SERVICE(sock)))
     {
       connection_ptr conn(new connection<t_protocol_handler>(std::move(sock), m_state, m_connection_type, ssl_support, m_ssl_context));
       if(conn->start(false, 1 < m_threads_count, std::move(real_remote)))
