@@ -123,7 +123,7 @@ connection_basic::connection_basic(boost::asio::ip::tcp::socket&& sock, boost::s
 	: m_stats(std::move(stats)),
       mI( new connection_basic_pimpl("peer") ),
       strand_(GET_IO_SERVICE(sock)),
-      socket_(GET_IO_SERVICE(sock)), ssl_context.context),
+      socket_(GET_IO_SERVICE(sock), ssl_context.context),
       m_want_close_connection(false),
       m_was_shutdown(false),
       m_ssl_support(ssl_support),
