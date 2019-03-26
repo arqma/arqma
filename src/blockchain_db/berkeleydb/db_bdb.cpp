@@ -1639,7 +1639,7 @@ uint64_t BlockchainBDB::get_num_outputs(const uint64_t& amount) const
     return num_elems;
 }
 
-output_data_t BlockchainBDB::get_output_key(const uint64_t& global_index) const
+output_data_t BlockchainBDB::get_output_key(const uint64_t& global_index)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
@@ -1655,7 +1655,7 @@ output_data_t BlockchainBDB::get_output_key(const uint64_t& global_index) const
     return v;
 }
 
-output_data_t BlockchainBDB::get_output_key(const uint64_t& amount, const uint64_t& index) const
+output_data_t BlockchainBDB::get_output_key(const uint64_t& amount, const uint64_t& index)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
