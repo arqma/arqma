@@ -650,7 +650,7 @@ namespace tools
     // the minimum block size.
     bool deinit();
     bool init(std::string daemon_address = "http://localhost:19994",
-      boost::optional<epee::net_utils::http::login> daemon_login = boost::none, uint64_t upper_transaction_weight_limit = 0,
+      boost::optional<epee::net_utils::http::login> daemon_login = boost::none, uint64_t upper_transaction_size_limit = 0,
       bool trusted_daemon = true,
       epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect,
       const std::pair<std::string, std::string> &private_key_and_certificate_path = {},
@@ -1870,7 +1870,7 @@ namespace tools
 
     THROW_WALLET_EXCEPTION_IF(m_multisig, error::wallet_internal_error, "Multisig wallets cannot spend non rct outputs");
 
-    uint64_t upper_transaction_weight_limit = get_upper_transaction_weight_limit();
+    uint64_t upper_transaction_size_limit = get_upper_transaction_size_limit();
     uint64_t needed_money = fee;
 
     // calculate total amount being sent to all destinations
@@ -2002,7 +2002,7 @@ namespace tools
     rct::multisig_out msout;
     bool r = cryptonote::construct_tx_and_get_tx_key(m_account.get_keys(), m_subaddresses, sources, splitted_dsts, change_dts.addr, extra, tx, unlock_time, tx_key, additional_tx_keys, false, rct::RangeProofBorromean, m_multisig ? &msout : NULL);
     THROW_WALLET_EXCEPTION_IF(!r, error::tx_not_constructed, sources, splitted_dsts, unlock_time, m_nettype);
-    THROW_WALLET_EXCEPTION_IF(upper_transaction_weight_limit <= get_transaction_weight(tx), error::tx_too_big, tx, upper_transaction_weight_limit);
+    THROW_WALLET_EXCEPTION_IF(upper_transaction_size_limit <= get_object_blobsize(tx), error::tx_too_big, tx, upper_transaction_size_limit);
 
     std::string key_images;
     bool all_are_txin_to_key = std::all_of(tx.vin.begin(), tx.vin.end(), [&](const txin_v& s_e) -> bool
@@ -2044,5 +2044,5 @@ namespace tools
       ptx.construction_data.subaddr_indices.insert(m_transfers[idx].m_subaddr_index.minor);
   }
 
-  
+
 }
