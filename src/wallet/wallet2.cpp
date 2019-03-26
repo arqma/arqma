@@ -6132,14 +6132,12 @@ uint32_t wallet2::adjust_priority(uint32_t priority)
 //
 // this function will make multiple calls to wallet2::transfer if multiple
 // transactions will be required
-std::vector<wallet2::pending_tx> wallet2::create_transactions(std::vector<cryptonote::tx_destination_entry> dsts, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra)
+std::vector<wallet2::pending_tx> wallet2::create_transactions(std::vector<cryptonote::tx_destination_entry> dsts, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra, bool trusted_daemon)
 {
-  const std::vector<size_t> unused_transfers_indices = select_available_outputs_from_histogram(fake_outs_count + 1, true, true, true);
+  const std::vector<size_t> unused_transfers_indices = select_available_outputs_from_histogram(fake_outs_count + 1, true, true, true, trusted_daemon;
 
-  const uint64_t base_fee = get_base_fee();
+  const uint64_t fee_per_kb  = get_per_kb_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
-  const bool use_per_byte_fee = use_fork_rules(HF_VERSION_PER_BYTE_FEE);
-  const uint64_t fee_quantization_mask = get_fee_quantization_mask();
 
   // failsafe split attempt counter
   size_t attempt_count = 0;
@@ -6166,12 +6164,13 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions(std::vector<crypto
         pending_tx ptx;
 
 	// loop until fee is met without increasing tx size to next KB boundary.
-	uint64_t needed_fee = estimate_fee(use_per_byte_fee, false, unused_transfers_indices.size(), fake_outs_count, dst_vector.size()+1, extra.size(), false, base_fee, fee_multiplier, fee_quantization_mask);
+  const size_t estimated_tx_size = estimate_tx_size(false, unused_transfers_indices.size(), fake_outs_count, dst_vector.size(), extra.size(), false);
+	uint64_t needed_fee = calculate_fee(fee_per_kb, estimated_tx_size, fee_multiplier);
 	do
 	{
 	  transfer(dst_vector, fake_outs_count, unused_transfers_indices, unlock_time, needed_fee, extra, tx, ptx);
 	  auto txBlob = t_serializable_object_to_blob(ptx.tx);
-	  needed_fee = calculate_fee(use_per_byte_fee, ptx.tx, txBlob.size(), base_fee, fee_multiplier, fee_quantization_mask);
+	  needed_fee = calculate_fee(use_per_byte_fee, ptx.tx, txBlob.size(), base_fee, fee_multiplier);
 	} while (ptx.fee < needed_fee);
 
         ptx_vector.push_back(ptx);
