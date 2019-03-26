@@ -248,6 +248,44 @@ namespace rpc
     res.status = Message::STATUS_OK;
   }
 
+  //TODO: handle "restricted" RPC
+  void DaemonHandler::handle(const GetRandomOutputsForAmounts::Request& req, GetRandomOutputsForAmounts::Response& res)
+  {
+    auto& chain = m_core.get_blockchain_storage();
+
+    try
+    {
+      for (const uint64_t& amount : req.amounts)
+      {
+        std::vector<uint64_t> indices = chain.get_random_outputs(amount, req.count);
+
+        outputs_for_amount ofa;
+
+        ofa.resize(indices.size());
+
+        for (size_t i = 0; i < indices.size(); i++)
+        {
+          crypto::public_key key = chain.get_output_key(amount, indices[i]);
+          ofa[i].amount_index = indices[i];
+          ofa[i].key = key;
+        }
+
+        amount_with_random_outputs amt;
+        amt.amount = amount;
+        amt.outputs = ofa;
+
+        res.amounts_with_outputs.push_back(amt);
+      }
+
+      res.status = Message::STATUS_OK;
+    }
+    catch (const std::exception& e)
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = e.what();
+    }
+  }
+
   void DaemonHandler::handle(const GetTxGlobalOutputIndices::Request& req, GetTxGlobalOutputIndices::Response& res)
   {
     if (!m_core.get_tx_outputs_gindexs(req.tx_hash, res.output_indices))

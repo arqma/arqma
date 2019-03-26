@@ -50,7 +50,7 @@ namespace cryptonote
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define CORE_RPC_VERSION_MAJOR 2
-#define CORE_RPC_VERSION_MINOR 6
+#define CORE_RPC_VERSION_MINOR 7
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -715,6 +715,50 @@ namespace cryptonote
     typedef epee::misc_utils::struct_init<response_t> response;
   };
   //-----------------------------------------------
+  struct COMMAND_RPC_GET_RANDOM_OUTPUTS_FOR_AMOUNTS
+  {
+    struct request
+    {
+      std::vector<uint64_t> amounts;
+      uint64_t              outs_count;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(amounts)
+        KV_SERIALIZE(outs_count)
+      END_KV_SERIALIZE_MAP()
+    };
+
+#pragma pack (push, 1)
+    struct out_entry
+    {
+      uint64_t global_amount_index;
+      crypto::public_key out_key;
+    };
+#pragma pack(pop)
+
+    struct outs_for_amount
+    {
+      uint64_t amount;
+      std::list<out_entry> outs;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(amount)
+        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(outs)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      std::vector<outs_for_amount> outs;
+      std::string status;
+      bool untrusted;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(outs)
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(untrusted)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+  //-----------------------------------------------
   struct get_outputs_out
   {
     uint64_t amount;
@@ -812,6 +856,39 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_RANDOM_RCT_OUTPUTS
+  {
+    struct request
+    {
+      uint64_t outs_count;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(outs_count)
+      END_KV_SERIALIZE_MAP()
+    };
+
+#pragma pack (push, 1)
+    struct out_entry
+    {
+      uint64_t amount;
+      uint64_t global_amount_index;
+      crypto::public_key out_key;
+      rct::key commitment;
+    };
+#pragma pack(pop)
+
+    struct response
+    {
+      std::list<out_entry> outs;
+      std::string status;
+      bool untrusted;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(outs)
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(untrusted)
+      END_KV_SERIALIZE_MAP()
+    };
   };
   //-----------------------------------------------
   struct COMMAND_RPC_SEND_RAW_TX
