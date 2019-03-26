@@ -307,9 +307,9 @@ namespace rct {
             return false;
           if (type == RCTTypeSimpleBulletproof || type == RCTTypeFullBulletproof)
           {
-            PREPARE_CUSTOM_VECTOR_SERIALIZATION(outputs, bulletproofs);
             ar.tag("bp");
             ar.begin_array();
+            PREPARE_CUSTOM_VECTOR_SERIALIZATION(outputs, bulletproofs);
             if (bulletproofs.size() != outputs)
               return false;
             for (size_t i = 0; i < outputs; ++i)
