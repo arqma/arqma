@@ -361,7 +361,7 @@ namespace tools
         FIELD(extra)
         FIELD(unlock_time)
         FIELD(use_rct)
-		FIELD(use_bulletproofs)
+        FIELD(use_bulletproofs)
         FIELD(dests)
         FIELD(subaddr_account)
         FIELD(subaddr_indices)
