@@ -616,7 +616,6 @@ namespace cryptonote
         if (!req.prune)
           e.prunable_as_hex = string_tools::buff_to_hex_nodelimer(std::get<3>(tx));
       }
-      else
       {
         cryptonote::blobdata tx_data;
         if (req.prune)
@@ -627,15 +626,30 @@ namespace cryptonote
         if (req.decode_as_json && !tx_data.empty())
         {
           cryptonote::transaction t;
-          if (cryptonote::parse_and_validate_tx_from_blob(tx_data, t))
+          if (req.prune)
           {
-            if (req.prune)
+            if (cryptonote::parse_and_validate_tx_base_from_blob(tx_data, t))
             {
               pruned_transaction pruned_tx{t};
               e.as_json = obj_to_json_str(pruned_tx);
             }
             else
+            {
+              res.status = "Failed to parse and validate tx from blob";
+              return true;
+            }
+          }
+          else
+          {
+            if (cryptonote::parse_and_validate_tx_from_blob(tx_data, t))
+            {
               e.as_json = obj_to_json_str(t);
+	    }
+            else
+            {
+              res.status = "Failed to parse and validate tx from blob";
+              return true;
+            }
           }
         }
       }
