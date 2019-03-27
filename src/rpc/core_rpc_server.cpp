@@ -156,14 +156,14 @@ namespace cryptonote
     };
 
     // user specified CA file or fingeprints implies enabled SSL by default
-    if (ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl)
+    if (ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl))
     {
       const std::string ssl = command_line::get_arg(vm, arg_rpc_ssl);
       if (!epee::net_utils::ssl_support_from_string(ssl_options.support, ssl))
       {
         MFATAL("Invalid RPC SSL support: " << ssl);
         return false;
-      };
+      }
     }
 
     auto rng = [](size_t len, uint8_t *ptr){ return crypto::rand(len, ptr); };
