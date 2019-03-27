@@ -33,9 +33,9 @@
 
 #include <stdlib.h>
 #include "include_base_utils.h"
+#include "common/threadpool.h"
 #include <random>
 #include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/optional.hpp>
 using namespace epee;
@@ -279,7 +279,7 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
 
   add_anchors(m_data->m_ub_context);
 
-  if (DNS_PUBLIC)
+  if (!DNS_PUBLIC)
   {
     // if no DNS_PUBLIC specified, we try a lookup to what we know
     // should be a valid DNSSEC record, and switch to known good
@@ -293,8 +293,8 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
 	  ub_ctx_delete(m_data->m_ub_context);
 	  m_data->m_ub_context = ub_ctx_create();
 	  add_anchors(m_data->m_ub_context);
-	  for (const auto &ip: dns_public_addr)
-	    ub_ctx_set_fwd(m_data->m_ub_context, string_copy(ip.c_str()));
+	  for (const auto &ip: DEFAULT_DNS_PUBLIC_ADDR)
+	    ub_ctx_set_fwd(m_data->m_ub_context, string_copy(ip));
 	  ub_ctx_set_option(m_data->m_ub_context, string_copy("do-udp:"), string_copy("no"));
 	  ub_ctx_set_option(m_data->m_ub_context, string_copy("do-tcp:"), string_copy("yes"));
 	}
@@ -523,16 +523,16 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
   size_t first_index = dis(gen);
 
   // send all requests in parallel
-  std::vector<boost::thread> threads(dns_urls.size());
   std::deque<bool> avail(dns_urls.size(), false), valid(dns_urls.size(), false);
+  tools::threadpool& tpool = tools::threadpool::getInstance();
+  tools::threadpool::waiter waiter;
   for (size_t n = 0; n < dns_urls.size(); ++n)
   {
-    threads[n] = boost::thread([n, dns_urls, &records, &avail, &valid](){
+    tpool.submit(&waiter,[n, dns_urls, &records, &avail, &valid](){
       records[n] = tools::DNSResolver::instance().get_txt_record(dns_urls[n], avail[n], valid[n]);
     });
   }
-  for (size_t n = 0; n < dns_urls.size(); ++n)
-    threads[n].join();
+  waiter.wait(&tpool);
 
   size_t cur_index = first_index;
   do

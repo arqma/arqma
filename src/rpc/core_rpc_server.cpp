@@ -156,7 +156,7 @@ namespace cryptonote
     };
 
     // user specified CA file or fingeprints implies enabled SSL by default
-    if (ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl)
+    if (ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl))
     {
       const std::string ssl = command_line::get_arg(vm, arg_rpc_ssl);
       if (!epee::net_utils::ssl_support_from_string(ssl_options.support, ssl))
@@ -167,8 +167,7 @@ namespace cryptonote
     }
 
     auto rng = [](size_t len, uint8_t *ptr){ return crypto::rand(len, ptr); };
-    return epee::http_server_impl_base<core_rpc_server, connection_context>::init(
-      rng, std::move(port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login), std::move(ssl_options)
+    return epee::http_server_impl_base<core_rpc_server, connection_context>::init(rng, std::move(port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login), std::move(ssl_options)
     );
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -617,7 +616,6 @@ namespace cryptonote
         if (!req.prune)
           e.prunable_as_hex = string_tools::buff_to_hex_nodelimer(std::get<3>(tx));
       }
-      else
       {
         cryptonote::blobdata tx_data;
         if (req.prune)
@@ -628,15 +626,30 @@ namespace cryptonote
         if (req.decode_as_json && !tx_data.empty())
         {
           cryptonote::transaction t;
-          if (cryptonote::parse_and_validate_tx_from_blob(tx_data, t))
+          if (req.prune)
           {
-            if (req.prune)
+            if (cryptonote::parse_and_validate_tx_base_from_blob(tx_data, t))
             {
               pruned_transaction pruned_tx{t};
               e.as_json = obj_to_json_str(pruned_tx);
             }
             else
+            {
+              res.status = "Failed to parse and validate tx from blob";
+              return true;
+            }
+          }
+          else
+          {
+            if (cryptonote::parse_and_validate_tx_from_blob(tx_data, t))
+            {
               e.as_json = obj_to_json_str(t);
+	    }
+            else
+            {
+              res.status = "Failed to parse and validate tx from blob";
+              return true;
+            }
           }
         }
       }
