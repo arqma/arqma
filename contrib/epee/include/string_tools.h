@@ -31,8 +31,8 @@
 
 // Previously pulled in by ASIO, further cleanup still required ...
 #ifdef _WIN32
-# include <winsock2.h>
-# include <windows.h>
+  #include <winsock2.h>
+  #include <windows.h>
 #endif
 
 #include <string.h>
@@ -50,11 +50,11 @@
 
 
 #ifndef OUT
-	#define OUT
+  #define OUT
 #endif
 
 #ifdef WINDOWS_PLATFORM
-#pragma comment (lib, "Rpcrt4.lib")
+  #pragma comment (lib, "Rpcrt4.lib")
 #endif
 
 static const constexpr unsigned char isx[256] =
@@ -96,12 +96,12 @@ namespace string_tools
     try
     {
       res.resize(s.size() / 2);
-			unsigned char *dst = (unsigned char *)res.data();
+      unsigned char *dst = (unsigned char *)res.data();
       const unsigned char *src = (const unsigned char *)s.data();
       for(size_t i = 0; i < s.size(); i += 2)
       {
         int tmp = *src++;
-				tmp = isx[tmp];
+        tmp = isx[tmp];
         if (tmp == 0xff) return false;
         int t2 = *src++;
         t2 = isx[t2];
@@ -111,7 +111,7 @@ namespace string_tools
 
       return true;
     }
-		catch(...)
+    catch(...)
     {
       return false;
     }
