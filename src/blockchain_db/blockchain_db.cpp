@@ -184,7 +184,7 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const transacti
       cryptonote::tx_out vout = tx.vout[i];
       rct::key commitment = rct::zeroCommit(vout.amount);
 
-      if(m_hardfork->get_current_version_num() <= 11 && tx.version > 1)
+      if(m_hardfork->get_current_version() <= 10 && tx.version > 1)
         vout.amount = 1; //Put those on a different index to fix a bug
       else
         vout.amount = 0;
@@ -206,7 +206,7 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const transacti
       amount_output_indices.push_back(add_output(tx_hash, tx.vout[i], i, tx.unlock_time, &tx.rct_signatures.outPk[i].mask));
     }
   }
-  
+
   add_tx_amount_output_indices(tx_id, amount_output_indices);
 }
 
