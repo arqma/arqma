@@ -30,7 +30,7 @@
 // Parts of this file are originally copyright (c) 2012-2013, The Cryptonote developers
 
 #include "cn_slow_hash.hpp"
-#include "keccak.h"
+#include "../keccak.h"
 
 #ifdef HAS_INTEL_HW
 
