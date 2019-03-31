@@ -42,6 +42,7 @@
 #include "memwipe.h"
 #include "mlocker.h"
 #include "hash.h"
+#include "pow_hash/cn_slow_hash.hpp"
 
 namespace crypto {
   extern "C" {
@@ -72,19 +73,21 @@ namespace crypto {
 
   inline void generate_chacha_key(const void *data, size_t size, chacha_key& key, uint64_t kdf_rounds) {
     static_assert(sizeof(chacha_key) <= sizeof(hash), "Size of hash must be at least that of chacha_key");
-    epee::mlocked<tools::scrubbed_arr<char, HASH_SIZE>> pwd_hash;
-    crypto::cn_slow_hash(data, size, pwd_hash.data(), 0/*variant*/, 0/*prehashed*/);
+    epee::mlocked<tools::scrubbed_arr<uint8_t, HASH_SIZE>> pwd_hash;
+    cn_pow_hash_v1 kdf_hash;
+    kdf_hash.hash(data, size, pwd_hash.data());
     for (uint64_t n = 1; n < kdf_rounds; ++n)
-      crypto::cn_slow_hash(pwd_hash.data(), pwd_hash.size(), pwd_hash.data(), 0/*variant*/, 0/*prehashed*/);
+      kdf_hash.hash(pwd_hash.data(), pwd_hash.size(), pwd_hash.data());
     memcpy(&unwrap(unwrap(key)), pwd_hash.data(), sizeof(key));
   }
 
   inline void generate_chacha_key_prehashed(const void *data, size_t size, chacha_key& key, uint64_t kdf_rounds) {
     static_assert(sizeof(chacha_key) <= sizeof(hash), "Size of hash must be at least that of chacha_key");
-    epee::mlocked<tools::scrubbed_arr<char, HASH_SIZE>> pwd_hash;
-    crypto::cn_slow_hash(data, size, pwd_hash.data(), 0/*variant*/, 1/*prehashed*/);
+    epee::mlocked<tools::scrubbed_arr<uint8_t, HASH_SIZE>> pwd_hash;
+    cn_pow_hash_v1 kdf_hash;
+    kdf_hash.hash(data, size, pwd_hash.data());
     for (uint64_t n = 1; n < kdf_rounds; ++n)
-      crypto::cn_slow_hash(pwd_hash.data(), pwd_hash.size(), pwd_hash.data(), 0/*variant*/, 0/*prehashed*/);
+      kdf_hash.hash(pwd_hash.data(), pwd_hash.size(), pwd_hash.data());
     memcpy(&unwrap(unwrap(key)), pwd_hash.data(), sizeof(key));
   }
 

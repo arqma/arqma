@@ -78,9 +78,6 @@ using namespace epee;
 
 #include "miner.h"
 
-
-extern "C" void slow_hash_allocate_state();
-extern "C" void slow_hash_free_state();
 namespace cryptonote
 {
 
@@ -382,10 +379,11 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------------
   bool miner::find_nonce_for_given_block(block& bl, const difficulty_type& diffic, uint64_t height)
   {
+    cn_pow_hash_v2 hash_ctx;
     for(; bl.nonce != std::numeric_limits<uint32_t>::max(); bl.nonce++)
     {
       crypto::hash h;
-      get_block_longhash(bl, h, height);
+      get_block_longhash(bl, hash_ctx, h);
 
       if(check_hash(h, diffic))
       {
@@ -437,11 +435,10 @@ namespace cryptonote
     MLOG_SET_THREAD_NAME(std::string("[miner ") + std::to_string(th_local_index) + "]");
     MGINFO("Miner thread was started ["<< th_local_index << "]");
     uint32_t nonce = m_starter_nonce + th_local_index;
-    uint64_t height = 0;
     difficulty_type local_diff = 0;
     uint32_t local_template_ver = 0;
     block b;
-    slow_hash_allocate_state();
+    cn_pow_hash_v2 hash_ctx;
     while(!m_stop)
     {
       if(m_pausers_count)//anti split workaround
@@ -468,7 +465,6 @@ namespace cryptonote
         CRITICAL_REGION_BEGIN(m_template_lock);
         b = m_template;
         local_diff = m_diffic;
-        height = m_height;
         CRITICAL_REGION_END();
         local_template_ver = m_template_no;
         nonce = m_starter_nonce + th_local_index;
@@ -483,7 +479,7 @@ namespace cryptonote
 
       b.nonce = nonce;
       crypto::hash h;
-      get_block_longhash(b, h, height);
+      get_block_longhash(b, hash_ctx, h);
 
       if(check_hash(h, local_diff))
       {
@@ -503,7 +499,6 @@ namespace cryptonote
       nonce+=m_threads_total;
       ++m_hashes;
     }
-    slow_hash_free_state();
     MGINFO("Miner thread stopped ["<< th_local_index << "]");
     return true;
   }

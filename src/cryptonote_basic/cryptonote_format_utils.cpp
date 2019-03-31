@@ -1081,19 +1081,18 @@ namespace cryptonote
     return p;
   }
   //---------------------------------------------------------------
-  bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
+  bool get_block_longhash(const block& b, cn_pow_hash_v2 &ctx, crypto::hash& res)
   {
     blobdata bd = get_block_hashing_blob(b);
-
-	int cn_variant;
-    if(b.major_version >= 7) {
-      cn_variant = 1;
-	  } else {
-	    cn_variant = 0;
-	  }
-
-    //const int cn_variant = b.major_version >= 7 ? b.major_version - 6 : 0;
-    crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant);
+    if(b_local.major_version < CRYPTONOTE_V2_POW_BLOCK_VERSION)
+    {
+      cn_pow_hash_v1 ctx_v1 = cn_pow_hash_v1::make_borrowed(ctx);
+      ctx_v1.hash(bd.data(), bd.size(), res.data);
+    }
+    else
+    {
+      ctx.hash(bd.data(), bd.size(), res.data);
+    }
     return true;
   }
   //---------------------------------------------------------------
@@ -1115,13 +1114,6 @@ namespace cryptonote
       res[i] -= res[i-1];
 
     return res;
-  }
-  //---------------------------------------------------------------
-  crypto::hash get_block_longhash(const block& b, uint64_t height)
-  {
-    crypto::hash p = null_hash;
-    get_block_longhash(b, p, height);
-    return p;
   }
   //---------------------------------------------------------------
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b)
