@@ -1980,7 +1980,7 @@ bool simple_wallet::set_unit(const std::vector<std::string> &args/* = std::vecto
   const std::string &unit = args[1];
   unsigned int decimal_point = CRYPTONOTE_DISPLAY_DECIMAL_POINT;
 
-  if (unit == "ARQ")
+  if (unit == "arq")
     decimal_point = CRYPTONOTE_DISPLAY_DECIMAL_POINT;
   else if (unit == "milliarq")
     decimal_point = CRYPTONOTE_DISPLAY_DECIMAL_POINT - 3;
@@ -5013,7 +5013,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
         if (transfer_type == TransferLocked)
         {
           float days = locked_blocks / 360.0f;
-          prompt << boost::format(tr(".\nThis transaction will unlock on block %llu, in approximately %s days (assuming 4 minutes per block)")) % ((unsigned long long)unlock_block) % days;
+          prompt << boost::format(tr(".\nThis transaction will unlock on block %llu, in approximately %s days (assuming 2 minutes per block)")) % ((unsigned long long)unlock_block) % days;
         }
         if (m_wallet->print_ring_members())
         {

@@ -58,6 +58,12 @@
 #define DEFAULT_TIMEOUT_MS_REMOTE 300000 // 5 minutes
 #define TIMEOUT_EXTRA_MS_PER_BYTE 0.2
 
+#if BOOST_VERSION >= 107000
+#define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
+#else
+#define GET_IO_SERVICE(s) ((s).get_io_service())
+#endif
+
 PRAGMA_WARNING_PUSH
 namespace epee
 {
@@ -79,10 +85,9 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   connection<t_protocol_handler>::connection( boost::asio::io_service& io_service,
   	            boost::shared_ptr<shared_state> state,
                 t_connection_type connection_type,
-                epee::net_utils::ssl_support_t ssl_support,
-                ssl_context_t &ssl_context
+                epee::net_utils::ssl_support_t ssl_support
         )
-        : connection(boost::asio::ip::tcp::socket{io_service}, std::move(state), connection_type, ssl_support, ssl_context)
+        : connection(boost::asio::ip::tcp::socket{io_service}, std::move(state), connection_type, ssl_support)
   {
   }
 
@@ -90,16 +95,15 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   connection<t_protocol_handler>::connection( boost::asio::ip::tcp::socket&& sock,
                 boost::shared_ptr<shared_state> state,
                 t_connection_type connection_type,
-                epee::net_utils::ssl_support_t ssl_support,
-                ssl_context_t &ssl_context
+                epee::net_utils::ssl_support_t ssl_support
         )
         :
-                connection_basic(std::move(sock), state, ssl_support, ssl_context),
+                connection_basic(std::move(sock), state, ssl_support),
                 m_protocol_handler(this, check_and_get(state).config, context),
                 m_connection_type( connection_type ),
                 m_throttle_speed_in("speed_in", "throttle_speed_in"),
                 m_throttle_speed_out("speed_out", "throttle_speed_out"),
-                m_timer(socket_.get_io_service()),
+                m_timer(GET_IO_SERVICE(socket_)),
                 m_local(false),
                 m_ready_to_close(false)
   {
@@ -166,7 +170,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     const boost::uuids::uuid random_uuid = boost::uuids::random_generator()();
 
     context = t_connection_context{};
-    bool ssl = m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled;
+    bool ssl = m_ssl_support == ssl_support_t::enabled;
     context.set_details(random_uuid, std::move(real_remote), is_income, ssl);
 
     boost::system::error_code ec;
@@ -175,9 +179,9 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
     _dbg3("[sock " << socket_.native_handle() << "] new connection from " << print_connection_context_short(context) <<
           " to " << local_ep.address().to_string() << ':' << local_ep.port() <<
-          ", total sockets objects " << get_stats().sock_count);
+          ", total sockets objects " << get_state().sock_count);
 
-    if(static_cast<shared_state&>(get_stats()).pfilter && !static_cast<shared_state&>(get_stats()).pfilter->is_remote_host_allowed(context.m_remote_address))
+    if(static_cast<shared_state&>(get_state()).pfilter && !static_cast<shared_state&>(get_state()).pfilter->is_remote_host_allowed(context.m_remote_address))
     {
       _dbg2("[sock " << socket().native_handle() << "] host denied " << context.m_remote_address.host_str() << ", shutdowning connection");
       close();
@@ -193,7 +197,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
     // first read on the raw socket to detect SSL for the server
     buffer_ssl_init_fill = 0;
-    if (is_income && m_ssl_support != epee::net_utils::ssl_support_t::e_ssl_support_disabled)
+    if (is_income && m_ssl_support != ssl_support_t::disabled)
       socket().async_receive(boost::asio::buffer(buffer_),
         boost::asio::socket_base::message_peek,
         strand_.wrap(
@@ -242,7 +246,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   template<class t_protocol_handler>
   boost::asio::io_service& connection<t_protocol_handler>::get_io_service()
   {
-    return socket().get_io_service();
+    return GET_IO_SERVICE(socket());
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
@@ -434,21 +438,21 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     }
 
     // detect SSL
-    if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
+    if (m_ssl_support == ssl_support_t::autodetect)
     {
       if (is_ssl((const unsigned char*)buffer_.data(), buffer_ssl_init_fill))
       {
         MDEBUG("That looks like SSL");
-        m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_enabled; // read/write to the SSL socket
+        m_ssl_support = ssl_support_t::enabled; // read/write to the SSL socket
       }
       else
       {
         MDEBUG("That does not look like SSL");
-        m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_disabled; // read/write to the raw socket
+        m_ssl_support = ssl_support_t::disabled; // read/write to the raw socket
       }
     }
 
-    if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+    if (m_ssl_support == ssl_support_t::enabled)
     {
       // Handshake
       if (!handshake(boost::asio::ssl::stream_base::server))
@@ -486,7 +490,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     if(!m_is_multithreaded)
     {
       //single thread model, we can wait in blocked call
-      size_t cnt = socket().get_io_service().run_one();
+      size_t cnt = GET_IO_SERVICE(socket()).run_one();
       if(!cnt)//service is going to quit
         return false;
     }else
@@ -496,7 +500,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       //if no handlers were called
       //TODO: Maybe we need to have have critical section + event + callback to upper protocol to
       //ask it inside(!) critical region if we still able to go in event wait...
-      size_t cnt = socket().get_io_service().poll_one();
+      size_t cnt = GET_IO_SERVICE(socket()).poll_one();
       if(!cnt)
         misc_utils::sleep_no_w(1);
     }
@@ -900,8 +904,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       m_threads_count(0),
       m_thread_index(0),
                 m_connection_type( connection_type ),
-      new_connection_(),
-      m_ssl_context({boost::asio::ssl::context(boost::asio::ssl::context::tlsv12), {}})
+      new_connection_()
   {
       create_server_type_map();
       m_thread_name_prefix = "NET";
@@ -917,8 +920,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       m_threads_count(0),
       m_thread_index(0),
                 m_connection_type(connection_type),
-      new_connection_(),
-      m_ssl_context({boost::asio::ssl::context(boost::asio::ssl::context::sslv23), {}})
+      new_connection_()
   {
       create_server_type_map();
       m_thread_name_prefix = "NET";
@@ -940,14 +942,14 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::init_server(uint32_t port, const std::string address, epee::net_utils::ssl_support_t ssl_support, const std::pair<std::string, std::string> &private_key_and_certificate_path, const std::list<std::string> &allowed_certificates, const std::vector<std::vector<uint8_t>> &allowed_fingerprints, bool allow_any_cert)
+  bool boosted_tcp_server<t_protocol_handler>::init_server(uint32_t port, const std::string address, ssl_options_t ssl_options)
   {
     TRY_ENTRY();
     m_stop_signal_sent = false;
     m_port = port;
     m_address = address;
-    if (ssl_support != epee::net_utils::ssl_support_t::e_ssl_support_disabled)
-      m_ssl_context = create_ssl_context(private_key_and_certificate_path, allowed_certificates, allowed_fingerprints, allow_any_cert);
+    if (ssl_options)
+      m_state->configure_ssl(std::move(ssl_options));
     // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
     boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::query query(address, boost::lexical_cast<std::string>(port), boost::asio::ip::tcp::resolver::query::canonical_name);
@@ -959,7 +961,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     boost::asio::ip::tcp::endpoint binded_endpoint = acceptor_.local_endpoint();
     m_port = binded_endpoint.port();
     MDEBUG("start accept");
-    new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support, m_ssl_context));
+    new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, m_state->ssl_options().support));
     acceptor_.async_accept(new_connection_->socket(),
       boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this,
       boost::asio::placeholders::error));
@@ -981,7 +983,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 PUSH_WARNINGS
 DISABLE_GCC_WARNING(maybe-uninitialized)
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::init_server(const std::string port, const std::string& address, epee::net_utils::ssl_support_t ssl_support, const std::pair<std::string, std::string> &private_key_and_certificate_path, const std::list<std::string> &allowed_certificates, const std::vector<std::vector<uint8_t>> &allowed_fingerprints, bool allow_any_cert)
+  bool boosted_tcp_server<t_protocol_handler>::init_server(const std::string port, const std::string& address, ssl_options_t ssl_options)
   {
     uint32_t p = 0;
 
@@ -989,7 +991,7 @@ DISABLE_GCC_WARNING(maybe-uninitialized)
       MERROR("Failed to convert port no = " << port);
       return false;
     }
-    return this->init_server(p, address, ssl_support, private_key_and_certificate_path, allowed_certificates, allowed_fingerprints, allow_any_cert);
+    return this->init_server(p, address, std::move(ssl_options));
   }
 POP_WARNINGS
   //---------------------------------------------------------------------------------
@@ -1157,15 +1159,15 @@ POP_WARNINGS
         const char *ssl_message = "unknown";
         switch (new_connection_->get_ssl_support())
         {
-          case epee::net_utils::ssl_support_t::e_ssl_support_disabled: ssl_message = "disabled"; break;
-          case epee::net_utils::ssl_support_t::e_ssl_support_enabled: ssl_message = "enabled"; break;
-          case epee::net_utils::ssl_support_t::e_ssl_support_autodetect: ssl_message = "autodetection"; break;
+          case ssl_support_t::disabled: ssl_message = "disabled"; break;
+          case ssl_support_t::enabled: ssl_message = "enabled"; break;
+          case ssl_support_t::autodetect: ssl_message = "autodetection"; break;
         }
         MDEBUG("New server for RPC connections, SSL " << ssl_message);
         new_connection_->setRpcStation(); // hopefully this is not needed actually
       }
       connection_ptr conn(std::move(new_connection_));
-      new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state , m_connection_type, conn->get_ssl_support(), m_ssl_context));
+      new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, conn->get_ssl_support()));
       acceptor_.async_accept(new_connection_->socket(), boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this, boost::asio::placeholders::error));
 
       boost::asio::socket_base::keep_alive opt(true);
@@ -1198,16 +1200,16 @@ POP_WARNINGS
     assert(m_state != nullptr); // always set in constructor
     _erro("Some problems at accept: " << e.message() << ", connections_count = " << m_state->sock_count);
     misc_utils::sleep_no_w(100);
-    new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, new_connection_->get_ssl_support(), m_ssl_context));
+    new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, new_connection_->get_ssl_support()));
     acceptor_.async_accept(new_connection_->socket(), boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this, boost::asio::placeholders::error));
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::add_connection(t_connection_context& out, boost::asio::ip::tcp::socket&& sock, network_address real_remote, epee::net_utils::ssl_support_t ssl_support)
+  bool boosted_tcp_server<t_protocol_handler>::add_connection(t_connection_context& out, boost::asio::ip::tcp::socket&& sock, network_address real_remote, ssl_support_t ssl_support)
   {
-    if(std::addressof(get_io_service()) == std::addressof(sock.get_io_service()))
+    if(std::addressof(get_io_service()) == std::addressof(GET_IO_SERVICE(sock)))
     {
-      connection_ptr conn(new connection<t_protocol_handler>(std::move(sock), m_state, m_connection_type, ssl_support, m_ssl_context));
+      connection_ptr conn(new connection<t_protocol_handler>(std::move(sock), m_state, m_connection_type, ssl_support));
       if(conn->start(false, 1 < m_threads_count, std::move(real_remote)))
       {
         conn->get_context(out);
@@ -1294,14 +1296,14 @@ POP_WARNINGS
 
     _dbg3("Connected success to " << adr << ':' << port);
 
-    const epee::net_utils::ssl_support_t ssl_support = new_connection_l->get_ssl_support();
-    if (ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled || ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
+    const ssl_support_t ssl_support = new_connection_l->get_ssl_support();
+    if (ssl_support == ssl_support_t::enabled || ssl_support == ssl_support_t::autodetect)
     {
       // Handshake
       MDEBUG("Handshaking SSL...");
       if (!new_connection_l->handshake(boost::asio::ssl::stream_base::client))
       {
-        if (ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
+        if (ssl_support == ssl_support_t::autodetect)
         {
           boost::system::error_code ignored_ec;
           sock_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
@@ -1321,11 +1323,11 @@ POP_WARNINGS
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::connect(const std::string& adr, const std::string& port, uint32_t conn_timeout, t_connection_context& conn_context, const std::string& bind_ip, epee::net_utils::ssl_support_t ssl_support)
+  bool boosted_tcp_server<t_protocol_handler>::connect(const std::string& adr, const std::string& port, uint32_t conn_timeout, t_connection_context& conn_context, const std::string& bind_ip, ssl_support_t ssl_support)
   {
     TRY_ENTRY();
 
-    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support, m_ssl_context) );
+    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support) );
     connections_mutex.lock();
     connections_.insert(new_connection_l);
     MDEBUG("connections_ size now " << connections_.size());
@@ -1352,12 +1354,12 @@ POP_WARNINGS
     auto try_connect_result = try_connect(new_connection_l, adr, port, sock_, remote_endpoint, bind_ip, conn_timeout, ssl_support);
     if (try_connect_result == CONNECT_FAILURE)
       return false;
-    if (ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect && try_connect_result == CONNECT_NO_SSL)
+    if (ssl_support == ssl_support_t::autodetect && try_connect_result == CONNECT_NO_SSL)
     {
       // we connected, but could not connect with SSL, try without
       MERROR("SSL handshake failed on an autodetect connection, reconnecting without SSL");
       new_connection_l->disable_ssl();
-      try_connect_result = try_connect(new_connection_l, adr, port, sock_, remote_endpoint, bind_ip, conn_timeout, epee::net_utils::ssl_support_t::e_ssl_support_disabled);
+      try_connect_result = try_connect(new_connection_l, adr, port, sock_, remote_endpoint, bind_ip, conn_timeout, ssl_support_t::disabled);
       if (try_connect_result != CONNECT_SUCCESS)
         return false;
     }
@@ -1385,10 +1387,10 @@ POP_WARNINGS
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler> template<class t_callback>
-  bool boosted_tcp_server<t_protocol_handler>::connect_async(const std::string& adr, const std::string& port, uint32_t conn_timeout, const t_callback &cb, const std::string& bind_ip, epee::net_utils::ssl_support_t ssl_support)
+  bool boosted_tcp_server<t_protocol_handler>::connect_async(const std::string& adr, const std::string& port, uint32_t conn_timeout, const t_callback &cb, const std::string& bind_ip, ssl_support_t ssl_support)
   {
     TRY_ENTRY();
-    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support, m_ssl_context) );
+    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support) );
     connections_mutex.lock();
     connections_.insert(new_connection_l);
     MDEBUG("connections_ size now " << connections_.size());

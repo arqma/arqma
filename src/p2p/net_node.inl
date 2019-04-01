@@ -460,6 +460,7 @@ namespace nodetool
       full_addrs.insert("77.93.206.170:19993");
       full_addrs.insert("51.15.50.83:19993");
       full_addrs.insert("51.38.99.79:19993");
+      full_addrs.insert("51.15.253.177:19993");
     }
     return full_addrs;
   }
@@ -674,7 +675,7 @@ namespace nodetool
     std::transform(p2p_ssl_allowed_fingerprints.begin(), p2p_ssl_allowed_fingerprints.end(), allowed_fingerprints.begin(), epee::from_hex::vector);
 
     //try to bind
-    m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_disabled;
+    m_ssl_support = epee::net_utils::ssl_support_t::disabled;
     for (auto& zone : m_network_zones)
     {
       zone.second.m_net_server.get_config_object().set_handler(this);
@@ -684,7 +685,7 @@ namespace nodetool
       {
         zone.second.m_net_server.set_connection_filter(this);
         MINFO("Binding on " << zone.second.m_bind_ip << ":" << zone.second.m_port);
-        res = zone.second.m_net_server.init_server(zone.second.m_port, zone.second.m_bind_ip, epee::net_utils::ssl_support_t::e_ssl_support_disabled);
+        res = zone.second.m_net_server.init_server(zone.second.m_port, zone.second.m_bind_ip, epee::net_utils::ssl_support_t::disabled);
         CHECK_AND_ASSERT_MES(res, false, "Failed to bind server");
       }
     }
