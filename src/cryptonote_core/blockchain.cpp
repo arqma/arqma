@@ -3627,12 +3627,6 @@ leave:
 //------------------------------------------------------------------
 bool Blockchain::prune_blockchain(uint32_t pruning_seed)
 {
-  uint8_t hf_version = m_hardfork->get_current_version();
-  if (hf_version < 11)
-  {
-    MERROR("Most of the Arqma-Network will only be ready for pruned blockchains from v11, not pruning");
-    return false;
-  }
   return m_db->prune_blockchain(pruning_seed);
 }
 //------------------------------------------------------------------
