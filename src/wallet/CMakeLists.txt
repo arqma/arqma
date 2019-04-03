@@ -120,6 +120,7 @@ if (BUILD_GUI_DEPS)
             ringct
             ringct_basic
             checkpoints
+            net
             version)
 
     foreach(lib ${libs_to_merge})
