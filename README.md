@@ -278,7 +278,7 @@ application.
 
 **Preparing the build environment**
 
-1. Download and install the [MSYS2 installer](http://msys2.github.io) 64-bit package, depending on your system.
+1. Download and install the [MSYS2 installer](http://msys2.github.io).
 
 2. Open the MSYS shell via the `MSYS2 MSYS` shortcut at Menu Start
 
@@ -316,15 +316,17 @@ application.
 
 * If you are on a 64-bit system, run:
 
-        make release-static-win64
+        make release-static-win
 
 * The resulting executables can be found in `build/release/bin`
 
 * **Optional**: to build Windows binaries suitable for debugging on a 64-bit system, run:
 
-        make debug-static-win64
+        make debug-static-win
 
 * The resulting executables can be found in `build/debug/bin`
+
+*** Arqma does Not support 32-bit Windows anymore ***
 
 ### On FreeBSD:
 
