@@ -58,10 +58,3 @@ script:
 after_script:
     - echo $TRAVIS_COMMIT_RANGE
     - echo $TRAVIS_COMMIT_LOG
-deploy:
- provider: pages
- skip_cleanup: true
- github_token: $GITHUB_TOKEN # Set in travis-ci.org dashboard
- local_dir: site
- on:
-   branch: master
