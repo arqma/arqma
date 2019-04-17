@@ -64,7 +64,7 @@ namespace
   const command_line::arg_descriptor<bool> arg_restricted = {"restricted-rpc", "Restricts to view-only commands", false};
   const command_line::arg_descriptor<std::string> arg_wallet_dir = {"wallet-dir", "Directory for newly created wallets"};
   const command_line::arg_descriptor<bool> arg_prompt_for_password = {"prompt-for-password", "Prompts for password when not provided", false};
-  const command_line::arg_descriptor<std::string> arg_rpc_ssl = {"rpc-ssl", tools::wallet2::tr("Enable SSL on wallet RPC connections: enabled|disabled|autodetect <- Autodetect Set by Default"), "autodetect"};
+  const command_line::arg_descriptor<std::string> arg_rpc_ssl = {"rpc-ssl", tools::wallet2::tr("Enable SSL on wallet RPC connections: enabled|disabled|autodetect"), "autodetect"};
   const command_line::arg_descriptor<std::string> arg_rpc_ssl_private_key = {"rpc-ssl-private-key", tools::wallet2::tr("Path to a PEM format private key"), ""};
   const command_line::arg_descriptor<std::string> arg_rpc_ssl_certificate = {"rpc-ssl-certificate", tools::wallet2::tr("Path to a PEM format certificate"), ""};
   const command_line::arg_descriptor<std::string> arg_rpc_ssl_ca_certificates = {"rpc-ssl-ca-certificates", tools::wallet2::tr("Path to file containing concatenated PEM format certificate(s) to replace system CA(s).")};
@@ -244,38 +244,34 @@ namespace tools
     auto rpc_ssl_ca_file = command_line::get_arg(vm, arg_rpc_ssl_ca_certificates);
     auto rpc_ssl_allowed_fingerprints = command_line::get_arg(vm, arg_rpc_ssl_allowed_fingerprints);
     auto rpc_ssl = command_line::get_arg(vm, arg_rpc_ssl);
-    epee::net_utils::ssl_options_t rpc_ssl_options = epee::net_utils::ssl_support_t::enabled;
-
-    if (!rpc_ssl_ca_file.empty() || !rpc_ssl_allowed_fingerprints.empty())
-    {
-      std::vector<std::vector<uint8_t>> allowed_fingerprints{ rpc_ssl_allowed_fingerprints.size() };
-      std::transform(rpc_ssl_allowed_fingerprints.begin(), rpc_ssl_allowed_fingerprints.end(), allowed_fingerprints.begin(), epee::from_hex::vector);
-
-      rpc_ssl_options = epee::net_utils::ssl_options_t{
-        std::move(allowed_fingerprints), std::move(rpc_ssl_ca_file)
-      };
-    }
-
-    // user specified CA file or fingeprints implies enabled SSL by default
-    if (rpc_ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl))
-    {
-        if (!epee::net_utils::ssl_support_from_string(rpc_ssl_options.support, rpc_ssl))
-        {
+    epee::net_utils::ssl_options_t rpc_ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_enabled;
+	
+	if (!rpc_ssl_ca_file.empty() || !rpc_ssl_allowed_fingerprints.empty())
+	{
+	  std::vector<std::vector<uint8_t>> allowed_fingerprints{ rpc_ssl_allowed_fingerprints.size() };
+	  std::transform(rpc_ssl_allowed_fingerprints.begin(), rpc_ssl_allowed_fingerprints.end(), allowed_fingerprints.begin(), epee::from_hex::vector);
+	
+	  rpc_ssl_options = epee::net_utils::ssl_options_t{
+	    std::move(allowed_fingerprints), std::move(rpc_ssl_ca_file)
+	  };
+	}
+	
+	if (rpc_ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl))
+	{
+	  if (!epee::net_utils::ssl_support_from_string(rpc_ssl_options.support, rpc_ssl))
+      {
         MERROR("Invalid argument for " << std::string(arg_rpc_ssl.name));
         return false;
       }
     }
 
     rpc_ssl_options.auth = epee::net_utils::ssl_authentication_t{
-      std::move(rpc_ssl_private_key), std::move(rpc_ssl_certificate)
-    };
-
+	  std::move(rpc_ssl_private_key), std::move(rpc_ssl_certificate)
+	};
+	
     m_net_server.set_threads_prefix("RPC");
     auto rng = [](size_t len, uint8_t *ptr) { return crypto::rand(len, ptr); };
-    return epee::http_server_impl_base<wallet_rpc_server, connection_context>::init(
-      rng, std::move(bind_port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login),
-      std::move(rpc_ssl_options)
-    );
+    return epee::http_server_impl_base<wallet_rpc_server, connection_context>::init(rng, std::move(bind_port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login), std::move(rpc_ssl_options));
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::not_open(epee::json_rpc::error& er)
@@ -3576,6 +3572,58 @@ namespace tools
     return false;
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  bool wallet_rpc_server::on_set_daemon(const wallet_rpc::COMMAND_RPC_SET_DAEMON::request& req, wallet_rpc::COMMAND_RPC_SET_DAEMON::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+	if (!m_wallet) return not_open(er);
+	if (m_restricted)
+	{
+	  er.code = WALLET_RPC_ERROR_CODE_DENIED;
+	  er.message = "Command unavailable in restricted mode.";
+	  return false;
+	}
+	
+	std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints;
+	ssl_allowed_fingerprints.reserve(req.ssl_allowed_fingerprints.size());
+	for (const std::string &fp: req.ssl_allowed_fingerprints)
+	{
+	  ssl_allowed_fingerprints.push_back({});
+	  std::vector<uint8_t> &v = ssl_allowed_fingerprints.back();
+	  for (auto c: fp)
+	    v.push_back(c);
+	}
+	
+	epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_enabled;
+	if (req.ssl_allow_any_cert)
+	  ssl_options.verification = epee::net_utils::ssl_verification_t::none;
+	else if (!ssl_allowed_fingerprints.empty() || !req.ssl_ca_file.empty())
+	  ssl_options = epee::net_utils::ssl_options_t{std::move(ssl_allowed_fingerprints), std::move(req.ssl_ca_file)};
+	
+	if (!epee::net_utils::ssl_support_from_string(ssl_options.support, req.ssl_support))
+	{
+	  er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
+	  er.message = std::string("Invalid ssl support mode");
+	  return false;
+	}
+	
+	ssl_options.auth = epee::net_utils::ssl_authentication_t{
+	  std::move(req.ssl_private_key_path), std::move(req.ssl_certificate_path)
+	};
+	
+	if (ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled && !ssl_options.has_strong_verification(boost::string_ref{}))
+	{
+	  er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
+	  er.message = "SSL is enabled but no user certificate or fingerprints were provided";
+	}
+	
+	if (!m_wallet->set_daemon(req.address, boost::none, req.trusted, std::move(ssl_options)))
+	{
+	  er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
+	  er.message = std::string("Unable to set daemon");
+	  return false;
+	}
+	return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_get_version(const wallet_rpc::COMMAND_RPC_GET_VERSION::request& req, wallet_rpc::COMMAND_RPC_GET_VERSION::response& res, epee::json_rpc::error& er, const connection_context *ctx)
   {
     res.version = WALLET_RPC_VERSION;
@@ -3777,7 +3825,7 @@ int main(int argc, char** argv) {
   command_line::add_arg(desc_params, arg_rpc_ssl_certificate);
   command_line::add_arg(desc_params, arg_rpc_ssl_ca_certificates);
   command_line::add_arg(desc_params, arg_rpc_ssl_allowed_fingerprints);
-
+  
   daemonizer::init_options(hidden_options, desc_params);
   desc_params.add(hidden_options);
 

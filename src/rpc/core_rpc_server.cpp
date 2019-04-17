@@ -89,7 +89,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   core_rpc_server::core_rpc_server(
       core& cr
-    , nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> >& p2p
+    , nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>& p2p
     )
     : m_core(cr)
     , m_p2p(p2p)
@@ -118,11 +118,11 @@ namespace cryptonote
         epee::net_utils::http::login login;
         login.username = bootstrap_daemon_login.substr(0, loc);
         login.password = bootstrap_daemon_login.substr(loc + 1);
-        m_http_client.set_server(m_bootstrap_daemon_address, login, epee::net_utils::ssl_support_t::autodetect);
+        m_http_client.set_server(m_bootstrap_daemon_address, login, epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
       }
       else
       {
-        m_http_client.set_server(m_bootstrap_daemon_address, boost::none, epee::net_utils::ssl_support_t::autodetect);
+        m_http_client.set_server(m_bootstrap_daemon_address, boost::none, epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
       }
       m_should_use_bootstrap_daemon = true;
     }
@@ -137,38 +137,36 @@ namespace cryptonote
     if (rpc_config->login)
       http_login.emplace(std::move(rpc_config->login->username), std::move(rpc_config->login->password).password());
 
-    epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::autodetect;
-    if (command_line::get_arg(vm, arg_rpc_ssl_allow_any_cert))
-      ssl_options.verification = epee::net_utils::ssl_verification_t::none;
-    else
-    {
-      std::string ssl_ca_path = command_line::get_arg(vm, arg_rpc_ssl_ca_certificates);
-      const std::vector<std::string> ssl_allowed_fingerprint_strings = command_line::get_arg(vm, arg_rpc_ssl_allowed_fingerprints);
-      std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ ssl_allowed_fingerprint_strings.size() };
-      std::transform(ssl_allowed_fingerprint_strings.begin(), ssl_allowed_fingerprint_strings.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
+    epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_autodetect;
+	if (command_line::get_arg(vm, arg_rpc_ssl_allow_any_cert))
+	  ssl_options.verification = epee::net_utils::ssl_verification_t::none;
+	else
+	{
+	  std::string ssl_ca_path = command_line::get_arg(vm, arg_rpc_ssl_ca_certificates);
+	  const std::vector<std::string> ssl_allowed_fingerprint_strings = command_line::get_arg(vm, arg_rpc_ssl_allowed_fingerprints);
+	  std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ ssl_allowed_fingerprint_strings.size() };
+	  std::transform(ssl_allowed_fingerprint_strings.begin(), ssl_allowed_fingerprint_strings.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
 
       if (!ssl_ca_path.empty() || !ssl_allowed_fingerprints.empty())
-        ssl_options = epee::net_utils::ssl_options_t{std::move(ssl_allowed_fingerprints), std::move(ssl_ca_path)};
-    }
-
-    ssl_options.auth = epee::net_utils::ssl_authentication_t{
-      command_line::get_arg(vm, arg_rpc_ssl_private_key), command_line::get_arg(vm, arg_rpc_ssl_certificate)
-    };
-
-    // user specified CA file or fingeprints implies enabled SSL by default
-    if (ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl))
-    {
-      const std::string ssl = command_line::get_arg(vm, arg_rpc_ssl);
-      if (!epee::net_utils::ssl_support_from_string(ssl_options.support, ssl))
-      {
-        MFATAL("Invalid RPC SSL support: " << ssl);
-        return false;
-      }
-    }
+	    ssl_options = epee::net_utils::ssl_options_t{std::move(ssl_allowed_fingerprints), std::move(ssl_ca_path)};
+	}
+	
+	ssl_options.auth = epee::net_utils::ssl_authentication_t{
+	  command_line::get_arg(vm, arg_rpc_ssl_private_key), command_line::get_arg(vm, arg_rpc_ssl_certificate)
+	};
+	
+	if (ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl))
+	{
+	  const std::string ssl = command_line::get_arg(vm, arg_rpc_ssl);
+	  if (!epee::net_utils::ssl_support_from_string(ssl_options.support, ssl))
+	  {
+	    MFATAL("Invalid RPC SSL support: " << ssl);
+	    return false;
+	  }
+	}
 
     auto rng = [](size_t len, uint8_t *ptr){ return crypto::rand(len, ptr); };
-    return epee::http_server_impl_base<core_rpc_server, connection_context>::init(rng, std::move(port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login), std::move(ssl_options)
-    );
+    return epee::http_server_impl_base<core_rpc_server, connection_context>::init(rng, std::move(port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login), std::move(ssl_options));
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::check_core_ready()
@@ -2356,19 +2354,19 @@ namespace cryptonote
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl = {
       "rpc-ssl"
-    , "Enable SSL on RPC Connections: enabled|disabled|autodetect <- Autodetect set by Default!"
+    , "Enable SSL on RPC connections: enabled|disabled|autodetect"
     , "autodetect"
     };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl_private_key = {
       "rpc-ssl-private-key"
-    , "Path to Certificate Private Key in PEM format"
+    , "Path to a PEM format private key"
     , ""
     };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl_certificate = {
       "rpc-ssl-certificate"
-    , "Path to Certificate in PEM format"
+    , "Path to a PEM format certificate"
     , ""
     };
 
@@ -2379,12 +2377,12 @@ namespace cryptonote
 
   const command_line::arg_descriptor<std::vector<std::string>> core_rpc_server::arg_rpc_ssl_allowed_fingerprints = {
       "rpc-ssl-allowed-fingerprints"
-    , "Path to list with Certificate Fingerprints to allow"
+    , "List of certificate fingerprints to allow"
     };
 
   const command_line::arg_descriptor<bool> core_rpc_server::arg_rpc_ssl_allow_any_cert = {
       "rpc-ssl-allow-any-cert"
-    , "Allow any Certificate used by peer."
+    , "Allow any peer certificate"
     , false
     };
 

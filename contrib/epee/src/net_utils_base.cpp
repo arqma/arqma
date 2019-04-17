@@ -70,8 +70,8 @@ namespace epee { namespace net_utils
     return ss.str();
   }
 
-	const char* zone_to_string(zone value) noexcept
-	{
+  const char* zone_to_string(zone value) noexcept
+  {
     switch (value)
     {
     case zone::public_:
@@ -87,7 +87,7 @@ namespace epee { namespace net_utils
   }
 
   zone zone_from_string(const boost::string_ref value) noexcept
-	{
+  {
     if (value == "public")
       return zone::public_;
     if (value == "i2p")
