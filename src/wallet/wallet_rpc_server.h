@@ -139,7 +139,7 @@ namespace tools
         MAP_JON_RPC_WE("open_wallet",                    on_open_wallet,                    wallet_rpc::COMMAND_RPC_OPEN_WALLET)
         MAP_JON_RPC_WE("close_wallet",                   on_close_wallet,                   wallet_rpc::COMMAND_RPC_CLOSE_WALLET)
         MAP_JON_RPC_WE("change_wallet_password",         on_change_wallet_password,         wallet_rpc::COMMAND_RPC_CHANGE_WALLET_PASSWORD)
-        MAP_JON_RPC_WE("generate_from_keys", on_generate_from_keys, wallet_rpc::COMMAND_RPC_GENERATE_FROM_KEYS)
+        MAP_JON_RPC_WE("generate_from_keys",             on_generate_from_keys,             wallet_rpc::COMMAND_RPC_GENERATE_FROM_KEYS)
         MAP_JON_RPC_WE("restore_deterministic_wallet",   on_restore_deterministic_wallet,   wallet_rpc::COMMAND_RPC_RESTORE_DETERMINISTIC_WALLET)
         MAP_JON_RPC_WE("is_multisig",                    on_is_multisig,                    wallet_rpc::COMMAND_RPC_IS_MULTISIG)
         MAP_JON_RPC_WE("prepare_multisig",               on_prepare_multisig,               wallet_rpc::COMMAND_RPC_PREPARE_MULTISIG)
@@ -150,6 +150,8 @@ namespace tools
         MAP_JON_RPC_WE("sign_multisig",                  on_sign_multisig,                  wallet_rpc::COMMAND_RPC_SIGN_MULTISIG)
         MAP_JON_RPC_WE("submit_multisig",                on_submit_multisig,                wallet_rpc::COMMAND_RPC_SUBMIT_MULTISIG)
         MAP_JON_RPC_WE("validate_address",               on_validate_address,               wallet_rpc::COMMAND_RPC_VALIDATE_ADDRESS)
+        MAP_JON_RPC_WE("set_log_level",                  on_set_log_level,                  wallet_rpc::COMMAND_RPC_SET_LOG_LEVEL)
+        MAP_JON_RPC_WE("set_log_categories",             on_set_log_categories,             wallet_rpc::COMMAND_RPC_SET_LOG_CATEGORIES)
         MAP_JON_RPC_WE("get_version",                    on_get_version,                    wallet_rpc::COMMAND_RPC_GET_VERSION)
       END_JSON_RPC_MAP()
     END_URI_MAP2()
@@ -231,6 +233,8 @@ namespace tools
       bool on_sign_multisig(const wallet_rpc::COMMAND_RPC_SIGN_MULTISIG::request& req, wallet_rpc::COMMAND_RPC_SIGN_MULTISIG::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
       bool on_submit_multisig(const wallet_rpc::COMMAND_RPC_SUBMIT_MULTISIG::request& req, wallet_rpc::COMMAND_RPC_SUBMIT_MULTISIG::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
       bool on_validate_address(const wallet_rpc::COMMAND_RPC_VALIDATE_ADDRESS::request& req, wallet_rpc::COMMAND_RPC_VALIDATE_ADDRESS::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
+      bool on_set_log_level(const wallet_rpc::COMMAND_RPC_SET_LOG_LEVEL::request& req, wallet_rpc::COMMAND_RPC_SET_LOG_LEVEL::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
+      bool on_set_log_categories(const wallet_rpc::COMMAND_RPC_SET_LOG_CATEGORIES::request& req, wallet_rpc::COMMAND_RPC_SET_LOG_CATEGORIES::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
       bool on_get_version(const wallet_rpc::COMMAND_RPC_GET_VERSION::request& req, wallet_rpc::COMMAND_RPC_GET_VERSION::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
 
       //json rpc v2
