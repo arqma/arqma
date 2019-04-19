@@ -275,23 +275,23 @@ namespace net_utils
 
     boost::asio::io_service& get_io_service(){return io_service_;}
 
-    struct idle_callback_conext_base
+    struct idle_callback_context_base
     {
-      virtual ~idle_callback_conext_base(){}
+      virtual ~idle_callback_context_base(){}
 
       virtual bool call_handler(){return true;}
 
-      idle_callback_conext_base(boost::asio::io_service& io_service)
+      idle_callback_context_base(boost::asio::io_service& io_service)
         : m_timer(io_service)
       {}
       boost::asio::deadline_timer m_timer;
     };
 
     template <class t_handler>
-    struct idle_callback_conext: public idle_callback_conext_base
+    struct idle_callback_context: public idle_callback_context_base
     {
-      idle_callback_conext(boost::asio::io_service& io_service, t_handler& h, uint64_t period)
-        : idle_callback_conext_base(io_service), m_handler(h){this->m_period = period;}
+      idle_callback_context(boost::asio::io_service& io_service, t_handler& h, uint64_t period)
+        : idle_callback_context_base(io_service), m_handler(h){this->m_period = period;}
 
       t_handler m_handler;
       virtual bool call_handler()
@@ -304,7 +304,7 @@ namespace net_utils
     template<class t_handler>
     bool add_idle_handler(t_handler t_callback, uint64_t timeout_ms)
       {
-        boost::shared_ptr<idle_callback_conext<t_handler>> ptr(new idle_callback_conext<t_handler>(io_service_, t_callback, timeout_ms));
+        boost::shared_ptr<idle_callback_context<t_handler>> ptr(new idle_callback_context<t_handler>(io_service_, t_callback, timeout_ms));
         //needed call handler here ?...
         ptr->m_timer.expires_from_now(boost::posix_time::milliseconds(ptr->m_period));
         ptr->m_timer.async_wait(boost::bind(&boosted_tcp_server<t_protocol_handler>::global_timer_handler<t_handler>, this, ptr));
@@ -312,7 +312,7 @@ namespace net_utils
       }
 
       template<class t_handler>
-      bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_conext<t_handler>> ptr)
+      bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_context<t_handler>> ptr)
     {
       //if handler return false - he don't want to be called anymore
       if(!ptr->call_handler())
