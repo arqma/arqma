@@ -57,6 +57,8 @@ using namespace epee;
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "wallet.rpc"
 
+#define DEFAULT_AUTO_REFRESH_PERIOD 20 // seconds
+
 namespace
 {
   const command_line::arg_descriptor<std::string, true> arg_rpc_bind_port = {"rpc-bind-port", "Sets bind port for server"};
@@ -125,13 +127,18 @@ namespace tools
   {
     m_stop = false;
     m_net_server.add_idle_handler([this](){
+      if (m_auto_refresh_period == 0) // disabled
+        return true;
+      if (boost::posix_time::microsec_clock::universal_time() < m_last_auto_refresh_time + boost::posix_time::seconds(m_auto_refresh_period))
+        return true;
       try {
         if (m_wallet) m_wallet->refresh(m_wallet->is_trusted_daemon());
       } catch (const std::exception& ex) {
         LOG_ERROR("Exception at while refreshing, what=" << ex.what());
       }
+      m_last_auto_refresh_time = boost::posix_time::microsec_clock::universal_time();
       return true;
-    }, 20000);
+    }, 1000);
     m_net_server.add_idle_handler([this](){
       if (m_stop.load(std::memory_order_relaxed))
       {
@@ -269,6 +276,9 @@ namespace tools
     rpc_ssl_options.auth = epee::net_utils::ssl_authentication_t{
       std::move(rpc_ssl_private_key), std::move(rpc_ssl_certificate)
     };
+
+    m_auto_refresh_period = DEFAULT_AUTO_REFRESH_PERIOD;
+    m_last_auto_refresh_time = boost::posix_time::min_date_time;
 
     m_net_server.set_threads_prefix("RPC");
     auto rng = [](size_t len, uint8_t *ptr) { return crypto::rand(len, ptr); };
@@ -2770,6 +2780,28 @@ namespace tools
     try
     {
       m_wallet->refresh(m_wallet->is_trusted_daemon(), req.start_height, res.blocks_fetched, res.received_money);
+      return true;
+    }
+    catch (const std::exception& e)
+    {
+      handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
+      return false;
+    }
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool wallet_rpc_server::on_auto_refresh(const wallet_rpc::COMMAND_RPC_AUTO_REFRESH::request& req, wallet_rpc::COMMAND_RPC_AUTO_REFRESH::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    if (m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Command unavailable in restricted mode.";
+      return false;
+    }
+    try
+    {
+      m_auto_refresh_period = req.enable ? req.period ? req.period : DEFAULT_AUTO_REFRESH_PERIOD : 0;
+      MINFO("Auto refresh now " << (m_auto_refresh_period ? std::to_string(m_auto_refresh_period) + " seconds" : std::string("disabled")));
       return true;
     }
     catch (const std::exception& e)
