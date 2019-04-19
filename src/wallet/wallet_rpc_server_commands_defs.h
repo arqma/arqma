@@ -48,7 +48,7 @@
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define WALLET_RPC_VERSION_MAJOR 1
-#define WALLET_RPC_VERSION_MINOR 7
+#define WALLET_RPC_VERSION_MINOR 8
 #define MAKE_WALLET_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define WALLET_RPC_VERSION MAKE_WALLET_RPC_VERSION(WALLET_RPC_VERSION_MAJOR, WALLET_RPC_VERSION_MINOR)
 namespace tools
@@ -2073,6 +2073,47 @@ namespace wallet_rpc
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
+  struct COMMAND_RPC_RESTORE_DETERMINISTIC_WALLET
+  {
+    struct request_t
+    {
+      uint64_t restore_height;
+      std::string filename;
+      std::string seed;
+      std::string seed_offset;
+      std::string password;
+      std::string language;
+      bool autosave_current;
+
+      BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE_OPT(restore_height, (uint64_t)0)
+      KV_SERIALIZE(filename)
+      KV_SERIALIZE(seed)
+      KV_SERIALIZE(seed_offset)
+      KV_SERIALIZE(password)
+      KV_SERIALIZE(language)
+      KV_SERIALIZE_OPT(autosave_current, true)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::string address;
+      std::string seed;
+      std::string info;
+      bool was_deprecated;
+
+      BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(address)
+      KV_SERIALIZE(seed)
+      KV_SERIALIZE(info)
+      KV_SERIALIZE(was_deprecated)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+  
   struct COMMAND_RPC_IS_MULTISIG
   {
     struct request_t
