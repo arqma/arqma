@@ -3921,6 +3921,7 @@ namespace tools
     };
     for (const auto &net_type: net_types)
     {
+      if (!req.any_net_type && !m_wallet) return not_open(er);
       if (!req.any_net_type && net_type.type != m_wallet->nettype())
         continue;
       if (req.allow_openalias)
