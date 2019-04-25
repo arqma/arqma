@@ -3913,6 +3913,9 @@ namespace tools
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_validate_address(const wallet_rpc::COMMAND_RPC_VALIDATE_ADDRESS::request& req, wallet_rpc::COMMAND_RPC_VALIDATE_ADDRESS::response& res, epee::json_rpc::error& er, const connection_context *ctx)
   {
+
+    if (!req.any_net_type && !m_wallet) return not_open(er);
+
     cryptonote::address_parse_info info;
     static const struct { cryptonote::network_type type; const char *stype; } net_types[] = {
       { cryptonote::MAINNET, "mainnet" },
@@ -3921,8 +3924,7 @@ namespace tools
     };
     for (const auto &net_type: net_types)
     {
-      if (!req.any_net_type && !m_wallet) return not_open(er);
-      if (!req.any_net_type && net_type.type != m_wallet->nettype())
+      if (!req.any_net_type && (!m_wallet || net_type.type != m_wallet->nettype()))
         continue;
       if (req.allow_openalias)
       {
