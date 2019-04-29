@@ -27,6 +27,8 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+set(CMAKE_CXX_STANDARD 11)
+
 set(crypto_sources
   aesb.c
   blake256.c
@@ -45,7 +47,8 @@ set(crypto_sources
   oaes_lib.c
   random.c
   skein.c
-  slow-hash.c
+  cn_arqma_hash.c
+  cn_turtle_hash.c
   tree-hash.c)
 
 set(crypto_headers)

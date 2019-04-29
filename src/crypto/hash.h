@@ -39,6 +39,9 @@
 #include "hex.h"
 #include "span.h"
 
+#define CN_TURTLE_PAGE_SIZE 262144
+#define CN_TURTLE_SCRATCHPAD 262144
+#define CN_TURTLE_ITERATIONS 131072
 namespace crypto {
 
   extern "C" {
@@ -54,8 +57,6 @@ namespace crypto {
   };
 #pragma pack(pop)
 
-  static_assert(sizeof(hash) == HASH_SIZE, "Invalid structure size");
-  static_assert(sizeof(hash8) == 8, "Invalid structure size");
 
   /*
     Cryptonight hash functions
@@ -71,12 +72,16 @@ namespace crypto {
     return h;
   }
 
-  inline void cn_slow_hash(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 0);
+  inline void cn_arqma_hash(const void *data, std::size_t length, hash &hash, int variant = 0) {
+    cn_arqma_hash(data, length, reinterpret_cast<char *>(&hash), variant, 0);
   }
 
-  inline void cn_slow_hash_prehashed(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 1);
+  inline void cn_arqma_hash_prehashed(const void *data, std::size_t length, hash &hash, int variant = 0) {
+    cn_arqma_hash(data, length, reinterpret_cast<char *>(&hash), variant, 1);
+  }
+
+  inline void cn_turtle_hash(const void *data, size_t length, hash &hash) {
+    cn_turtle_hash(data, length, reinterpret_cast<char *>(&hash), 1, 2, 0, CN_TURTLE_PAGE_SIZE, CN_TURTLE_SCRATCHPAD, CN_TURTLE_ITERATIONS);
   }
 
   inline void tree_hash(const hash *hashes, std::size_t count, hash &root_hash) {
