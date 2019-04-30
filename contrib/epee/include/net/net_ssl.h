@@ -37,6 +37,8 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/system/error_code.hpp>
 
+#define SSL_FINGERPRINT_SIZE 32
+
 namespace epee
 {
 namespace net_utils
@@ -46,7 +48,7 @@ namespace net_utils
 		e_ssl_support_enabled,
 		e_ssl_support_autodetect,
 	};
-	
+
 enum class ssl_verification_t : uint8_t
 {
   none = 0,  //!< Do not Verify peer
@@ -54,32 +56,32 @@ enum class ssl_verification_t : uint8_t
   user_certificates, //!< Verify peer via user certificate(s) only.
   user_ca
 };
-	
+
 struct ssl_authentication_t
 {
   std::string private_key_path; //!< Private key used for authentication
   std::string certificate_path; //!< Certificate used for authentication to peer.
-	
+
   //! Load `private_key_path` and `certificate_path` into `ssl_context`.
   void use_ssl_certificate(boost::asio::ssl::context &ssl_context) const;
 };
-	
+
   /*!
 	\note `verification != disabled && support == disabled` is currently
 	"allowed" via public interface but obviously invalid configuation.
   */
-  
+
 class ssl_options_t
 {
   // force sorted behavior in private
   std::vector<std::vector<std::uint8_t>> fingerprints_;
-	
+
   public:
     std::string ca_path;
 	ssl_authentication_t auth;
 	ssl_support_t support;
 	ssl_verification_t verification;
-	
+
 	//! Verification is set to system ca unless SSL is disabled.
 	ssl_options_t(ssl_support_t support)
 	  : fingerprints_(),
@@ -88,27 +90,27 @@ class ssl_options_t
 	    support(support),
 	    verification(support == ssl_support_t::e_ssl_support_disabled ? ssl_verification_t::none : ssl_verification_t::system_ca)
 	{}
-	
+
 	//! Provide user fingerprints and/or ca path. Enables SSL and user_certificate verification
 	ssl_options_t(std::vector<std::vector<std::uint8_t>> fingerprints, std::string ca_path);
-	
+
 	ssl_options_t(const ssl_options_t&) = default;
 	ssl_options_t(ssl_options_t&&) = default;
-	
+
 	ssl_options_t& operator=(const ssl_options_t&) = default;
 	ssl_options_t& operator=(ssl_options_t&&) = default;
-	
+
 	//! \return False iff ssl is disabled, otherwise true.
 	explicit operator bool() const noexcept { return support != ssl_support_t::e_ssl_support_disabled; }
-	
+
 	//! \retrurn True if `host` can be verified using `this` configuration WITHOUT system "root" CAs.
 	bool has_strong_verification(boost::string_ref host) const noexcept;
-	
+
 	//! Search against internal fingerprints. Always false if `behavior() != user_certificate_check`.
 	bool has_fingerprint(boost::asio::ssl::verify_context &ctx) const;
-	
+
 	boost::asio::ssl::context create_context() const;
-	
+
 	bool handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type) const;
 };
 

@@ -180,7 +180,7 @@ ssl_options_t::ssl_options_t(std::vector<std::vector<std::uint8_t>> fingerprints
 {
   std::sort(fingerprints_.begin(), fingerprints_.end());
 }
-	
+
   boost::asio::ssl::context ssl_options_t::create_context() const
   {
 	boost::asio::ssl::context ssl_context{boost::asio::ssl::context::tlsv12};
@@ -304,8 +304,10 @@ bool ssl_options_t::has_fingerprint(boost::asio::ssl::verify_context &ctx) const
       MERROR("Error getting verify_context handle");
       return false;
     }
-    X509 *cert =X509_STORE_CTX_get_current_cert(sctx);
-    if (!cert)
+
+    X509* cert = nullptr;
+    const STACK_OF(X509)* chain = X509_STORE_CTX_get_chain(sctx);
+    if (!chain || sk_X509_num(chain) < 1 || !(cert = sk_X509_value(chain, 0)))
     {
       MERROR("No certificate found in verify_context");
       return false;
@@ -316,7 +318,7 @@ bool ssl_options_t::has_fingerprint(boost::asio::ssl::verify_context &ctx) const
     unsigned int size{ 0 };
 
     // create the digest from the certificate
-    if (!X509_digest(cert, EVP_sha1(), digest.data(), &size)) {
+    if (!X509_digest(cert, EVP_sha256(), digest.data(), &size)) {
       MERROR("Failed to create certificate fingerprint");
       return false;
     }
@@ -334,10 +336,10 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
 {
   bool verified = false;
   socket.next_layer().set_option(boost::asio::ip::tcp::no_delay(true));
-  
+
   const bool no_verification = verification == ssl_verification_t::none ||
     (type == boost::asio::ssl::stream_base::server && fingerprints_.empty() && ca_path.empty());
-    
+
   if (no_verification)
     socket.set_verify_mode(boost::asio::ssl::verify_none);
   else

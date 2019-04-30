@@ -41,6 +41,7 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+#include <boost/preprocessor/stringize.hpp>
 #include "include_base_utils.h"
 using namespace epee;
 
@@ -243,11 +244,15 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   // user specified CA file or fingeprints implies enabled SSL by default
   epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_enabled;
   if (command_line::get_arg(vm, opts.daemon_ssl_allow_any_cert))
-	ssl_options.verification = epee::net_utils::ssl_verification_t::none;
+    ssl_options.verification = epee::net_utils::ssl_verification_t::none;
   else if (!daemon_ssl_ca_file.empty() || !daemon_ssl_allowed_fingerprints.empty())
   {
     std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ daemon_ssl_allowed_fingerprints.size() };
     std::transform(daemon_ssl_allowed_fingerprints.begin(), daemon_ssl_allowed_fingerprints.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
+    for (const auto &fpr: daemon_ssl_allowed_fingerprints)
+    {
+      THROW_WALLET_EXCEPTION_IF(fpr.size() != SSL_FINGERPRINT_SIZE, tools::error::wallet_internal_error, "SHA-256 fingerprint should be " BOOST_PP_STRINGIZE(SSL_FINGERPRINT_SIZE) " bytes long.");
+    }
 
     ssl_options = epee::net_utils::ssl_options_t{
       std::move(ssl_allowed_fingerprints), std::move(daemon_ssl_ca_file)
@@ -297,7 +302,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
 
     const bool verification_required =
 	      ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled || use_proxy;
-	
+
     THROW_WALLET_EXCEPTION_IF(
       verification_required && !ssl_options.has_strong_verification(real_daemon),
       tools::error::wallet_internal_error,
@@ -305,7 +310,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
 	    opts.daemon_ssl_ca_certificates.name + tools::wallet2::tr(" or --") + opts.daemon_ssl_allowed_fingerprints.name + tools::wallet2::tr(" or use of a .onion/.i2p domain")
     );
   }
-	
+
   boost::asio::ip::tcp::endpoint proxy{};
   if (use_proxy)
   {

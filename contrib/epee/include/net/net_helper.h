@@ -440,10 +440,11 @@ namespace net_utils
                   {
                     MTRACE("Connection err_code eof.");
                     //connection closed there, empty
-                  return true;
+                    buff.clear();
+                    return true;
                   }
 
-					MDEBUG("Problems at read: " << ec.message());
+                    MDEBUG("Problems at read: " << ec.message());
                     m_connected = false;
 					return false;
 				}else
