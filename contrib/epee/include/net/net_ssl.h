@@ -78,41 +78,41 @@ class ssl_options_t
 
   public:
     std::string ca_path;
-	ssl_authentication_t auth;
-	ssl_support_t support;
-	ssl_verification_t verification;
+    ssl_authentication_t auth;
+    ssl_support_t support;
+    ssl_verification_t verification;
 
-	//! Verification is set to system ca unless SSL is disabled.
-	ssl_options_t(ssl_support_t support)
-	  : fingerprints_(),
-	    ca_path(),
-	    auth(),
-	    support(support),
-	    verification(support == ssl_support_t::e_ssl_support_disabled ? ssl_verification_t::none : ssl_verification_t::system_ca)
-	{}
+    //! Verification is set to system ca unless SSL is disabled.
+    ssl_options_t(ssl_support_t support)
+      : fingerprints_(),
+        ca_path(),
+        auth(),
+        support(support),
+        verification(support == ssl_support_t::e_ssl_support_disabled ? ssl_verification_t::none : ssl_verification_t::system_ca)
+    {}
 
-	//! Provide user fingerprints and/or ca path. Enables SSL and user_certificate verification
-	ssl_options_t(std::vector<std::vector<std::uint8_t>> fingerprints, std::string ca_path);
+    //! Provide user fingerprints and/or ca path. Enables SSL and user_certificate verification
+    ssl_options_t(std::vector<std::vector<std::uint8_t>> fingerprints, std::string ca_path);
 
-	ssl_options_t(const ssl_options_t&) = default;
-	ssl_options_t(ssl_options_t&&) = default;
+    ssl_options_t(const ssl_options_t&) = default;
+    ssl_options_t(ssl_options_t&&) = default;
 
-	ssl_options_t& operator=(const ssl_options_t&) = default;
-	ssl_options_t& operator=(ssl_options_t&&) = default;
+    ssl_options_t& operator=(const ssl_options_t&) = default;
+    ssl_options_t& operator=(ssl_options_t&&) = default;
 
-	//! \return False iff ssl is disabled, otherwise true.
-	explicit operator bool() const noexcept { return support != ssl_support_t::e_ssl_support_disabled; }
+    //! \return False iff ssl is disabled, otherwise true.
+    explicit operator bool() const noexcept { return support != ssl_support_t::e_ssl_support_disabled; }
 
-	//! \retrurn True if `host` can be verified using `this` configuration WITHOUT system "root" CAs.
-	bool has_strong_verification(boost::string_ref host) const noexcept;
+    //! \retrurn True if `host` can be verified using `this` configuration WITHOUT system "root" CAs.
+    bool has_strong_verification(boost::string_ref host) const noexcept;
 
-	//! Search against internal fingerprints. Always false if `behavior() != user_certificate_check`.
-	bool has_fingerprint(boost::asio::ssl::verify_context &ctx) const;
+    //! Search against internal fingerprints. Always false if `behavior() != user_certificate_check`.
+    bool has_fingerprint(boost::asio::ssl::verify_context &ctx) const;
 
-	boost::asio::ssl::context create_context() const;
+    boost::asio::ssl::context create_context() const;
 
-	bool handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type) const;
-};
+    bool handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, const std::string& host = {}) const;
+	};
 
   // https://security.stackexchange.com/questions/34780/checking-client-hello-for-https-classification
   constexpr size_t get_ssl_magic_size() { return 9; }

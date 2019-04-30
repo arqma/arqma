@@ -173,16 +173,16 @@ bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
 
 ssl_options_t::ssl_options_t(std::vector<std::vector<std::uint8_t>> fingerprints, std::string ca_path)
   : fingerprints_(std::move(fingerprints)),
-	ca_path(std::move(ca_path)),
-	auth(),
-	support(ssl_support_t::e_ssl_support_enabled),
-	verification(ssl_verification_t::user_certificates)
+    ca_path(std::move(ca_path)),
+    auth(),
+    support(ssl_support_t::e_ssl_support_enabled),
+    verification(ssl_verification_t::user_certificates)
 {
   std::sort(fingerprints_.begin(), fingerprints_.end());
 }
 
-  boost::asio::ssl::context ssl_options_t::create_context() const
-  {
+boost::asio::ssl::context ssl_options_t::create_context() const
+{
 	boost::asio::ssl::context ssl_context{boost::asio::ssl::context::tlsv12};
 	if (!bool(*this))
 	  return ssl_context;
@@ -218,18 +218,20 @@ ssl_options_t::ssl_options_t(std::vector<std::vector<std::uint8_t>> fingerprints
   switch (verification)
   {
     case ssl_verification_t::system_ca:
-	  ssl_context.set_default_verify_paths();
-	  break;
-	case ssl_verification_t::user_certificates:
-	  if (!ca_path.empty())
-	    {
-	      const boost::system::error_code err = load_ca_file(ssl_context, ca_path);
-	      if (err)
-	        throw boost::system::system_error{err, "Failed to load user CA file at " + ca_path};
-	    }
-	    break;
-	  default:
-	    break;
+      ssl_context.set_default_verify_paths();
+      break;
+    case ssl_verification_t::user_certificates:
+      ssl_context.set_verify_depth(0);
+    case ssl_verification_t::user_ca:
+      if (!ca_path.empty())
+      {
+        const boost::system::error_code err = load_ca_file(ssl_context, ca_path);
+        if (err)
+          throw boost::system::system_error{err, "Failed to load user CA file at " + ca_path};
+      }
+      break;
+    default:
+      break;
   }
 
   CHECK_AND_ASSERT_THROW_MES(auth.private_key_path.empty() == auth.certificate_path.empty(), "private key and certificate must be either both given or both empty");
@@ -252,7 +254,7 @@ ssl_options_t::ssl_options_t(std::vector<std::vector<std::uint8_t>> fingerprints
 void ssl_authentication_t::use_ssl_certificate(boost::asio::ssl::context &ssl_context) const
 {
   ssl_context.use_private_key_file(private_key_path, boost::asio::ssl::context::pem);
-  ssl_context.use_certificate_file(certificate_path, boost::asio::ssl::context::pem);
+  ssl_context.use_certificate_chain_file(certificate_path);
 }
 
 bool is_ssl(const unsigned char *data, size_t len)
@@ -332,9 +334,8 @@ bool ssl_options_t::has_fingerprint(boost::asio::ssl::verify_context &ctx) const
   return false;
 }
 
-bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type) const
+bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, const std::string& host) const
 {
-  bool verified = false;
   socket.next_layer().set_option(boost::asio::ip::tcp::no_delay(true));
 
   const bool no_verification = verification == ssl_verification_t::none ||
@@ -345,15 +346,28 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
   else
   {
     socket.set_verify_mode(boost::asio::ssl::verify_peer);
-    socket.set_verify_callback([&](bool preverified, boost::asio::ssl::verify_context &ctx)
+
+    // in case server is doing "virtual" domains, set hostname
+    SSL* const ssl_ctx = socket.native_handle();
+    if (type == boost::asio::ssl::stream_base::client && !host.empty() && ssl_ctx)
+      SSL_set_tlsext_host_name(ssl_ctx, host.c_str());
+
+    socket.set_verify_callback([&](const bool preverified, boost::asio::ssl::verify_context &ctx)
     {
       // preverified means it passed system or user CA check. System CA is never loaded
       // when fingerprints are whitelisted.
-      if (!preverified && verification == ssl_verification_t::user_certificates && !has_fingerprint(ctx)) {
-        MERROR("Certificate is not in the allowed list, connection droppped");
-        return false;
+      const bool verified = preverified && (verification != ssl_verification_t::system_ca || host.empty() || boost::asio::ssl::rfc2818_verification(host)(preverified, ctx));
+
+      if (!verified && !has_fingerprint(ctx))
+      {
+        // autodetect will reconnect without SSL - warn and keep connection encrypted
+        if (support != ssl_support_t::e_ssl_support_autodetect)
+        {
+          MERROR("Certificate is not in the allowed list, connection droppped");
+          return false;
+        }
+        MWARNING("SSL peer has not been verified");
       }
-      verified = true;
       return true;
     });
   }
@@ -362,12 +376,7 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
   socket.handshake(type, ec);
   if (ec)
   {
-    MERROR("handshake failed, connection dropped: " << ec.message());
-    return false;
-  }
-  if (verification == ssl_verification_t::none && !verified)
-  {
-    MERROR("Peer did not provide a certificate in the allowed list, connection dropped");
+    MERROR("SSL handshake failed, connection dropped: " << ec.message());
     return false;
   }
   MDEBUG("SSL handshake success");
