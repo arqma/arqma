@@ -297,7 +297,7 @@ namespace net_utils
 			const std::string &get_host() const { return m_host_buff; };
 			const std::string &get_port() const { return m_port; };
 
-			bool set_server(const std::string& address, boost::optional<login> user, ssl_options_t ssl_options = ssl_support_t::autodetect)
+			bool set_server(const std::string& address, boost::optional<login> user, ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect)
 			{
 				http::url_content parsed{};
 				const bool r = parse_url(address, parsed);
@@ -306,7 +306,7 @@ namespace net_utils
 				return true;
 			}
 
-			void set_server(std::string host, std::string port, boost::optional<login> user, ssl_options_t ssl_options = ssl_support_t::autodetect)
+			void set_server(std::string host, std::string port, boost::optional<login> user, ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect)
 			{
 				CRITICAL_REGION_LOCAL(m_lock);
 				disconnect();
@@ -316,10 +316,17 @@ namespace net_utils
 				m_net_client.set_ssl(std::move(ssl_options));
 			}
 
+			template<typename F>
+			void set_connector(F connector)
+			{
+				CRITICAL_REGION_LOCAL(m_lock);
+				m_net_client.set_connector(std::move(connector));
+			}
+
       bool connect(std::chrono::milliseconds timeout)
       {
         CRITICAL_REGION_LOCAL(m_lock);
-        return m_net_client.connect(m_host_buff, m_port, timeout, "0.0.0.0");
+        return m_net_client.connect(m_host_buff, m_port, timeout);
       }
 			//---------------------------------------------------------------------------
 			bool disconnect()
