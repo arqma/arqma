@@ -47,6 +47,9 @@ public:
     static threadpool instance;
     return instance;
   }
+  static threadpool *getNewForUnitTests(unsigned max_threads = 0) {
+    return new threadpool(max_threads);
+  }
 
   // The waiter lets the caller know when all of its
   // tasks are completed.
@@ -67,11 +70,12 @@ public:
   // task to finish.
   void submit(waiter *waiter, std::function<void()> f, bool leaf = false);
 
-  int get_max_concurrency();
+  unsigned int get_max_concurrency() const;
+
+  ~threadpool();
 
   private:
-    threadpool();
-    ~threadpool();
+    threadpool(unsigned int max_threads = 0);
     typedef struct entry {
       waiter *wo;
       std::function<void()> f;
@@ -81,8 +85,8 @@ public:
     boost::condition_variable has_work;
     boost::mutex mutex;
     std::vector<boost::thread> threads;
-    int active;
-    int max;
+    unsigned int active;
+    unsigned int max;
     bool running;
     void run(bool flush = false);
 };
