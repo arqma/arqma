@@ -285,7 +285,7 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
     // should be a valid DNSSEC record, and switch to known good
 	// DNSSEC resolvers if verification fails
 	bool available, valid;
-	static const char *probe_hostname = "";
+	static const char *probe_hostname = "updates.arqma.com";
 	auto records = get_txt_record(probe_hostname, available, valid);
 	if (!valid)
 	{
@@ -330,7 +330,7 @@ std::vector<std::string> DNSResolver::get_record(const std::string& url, int rec
   // call DNS resolver, blocking.  if return value not zero, something went wrong
   if (!ub_resolve(m_data->m_ub_context, string_copy(url.c_str()), record_type, DNS_CLASS_IN, &result))
   {
-    dnssec_available = (result->secure || (!result->secure && result->bogus));
+    dnssec_available = (result->secure || result->bogus);
     dnssec_valid = result->secure && !result->bogus;
     if (result->havedata)
     {

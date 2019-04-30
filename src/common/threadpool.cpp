@@ -26,8 +26,13 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #include "misc_log_ex.h"
 #include "common/threadpool.h"
+
+#include <cassert>
+#include <limits>
+#include <stdexcept>
 
 #include "cryptonote_config.h"
 #include "common/util.h"
@@ -37,10 +42,10 @@ static __thread bool is_leaf = false;
 
 namespace tools
 {
-threadpool::threadpool() : running(true), active(0) {
+threadpool::threadpool(unsigned int max_threads) : running(true), active(0) {
   boost::thread::attributes attrs;
   attrs.set_stack_size(THREAD_STACK_SIZE);
-  max = tools::get_max_concurrency();
+  max = max_threads ? max_threads : tools::get_max_concurrency();
   size_t i = max ? max - 1 : 0;
   while(i--) {
     threads.push_back(boost::thread(attrs, boost::bind(&threadpool::run, this, false)));
@@ -48,20 +53,12 @@ threadpool::threadpool() : running(true), active(0) {
 }
 
 threadpool::~threadpool() {
-  try
   {
     const boost::unique_lock<boost::mutex> lock(mutex);
     running = false;
     has_work.notify_all();
   }
-  catch (...)
-  {
-    // if the lock throws, we're just do it without a lock and hope,
-    // since the alternative is terminate
-    running = false;
-    has_work.notify_all();
-  }
-  for (size_t i = 0; i<threads.size(); i++) {
+  for (size_t i = 0; i < threads.size(); i++) {
     try { threads[i].join(); }
     catch (...) { /* ignore */ }
   }
@@ -90,19 +87,18 @@ void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
   }
 }
 
-int threadpool::get_max_concurrency() {
+unsigned int threadpool::get_max_concurrency() const
+{
   return max;
 }
 
 threadpool::waiter::~waiter()
 {
-  try
   {
     boost::unique_lock<boost::mutex> lock(mt);
     if (num)
       MERROR("wait should have been called before waiter dtor - waiting now");
   }
-  catch (...) { /* ignore */ }
   try
   {
     wait(NULL);
@@ -113,7 +109,8 @@ threadpool::waiter::~waiter()
   }
 }
 
-void threadpool::waiter::wait(threadpool *tpool) {
+void threadpool::waiter::wait(threadpool *tpool)
+{
   if (tpool)
     tpool->run(true);
   boost::unique_lock<boost::mutex> lock(mt);
@@ -121,19 +118,22 @@ void threadpool::waiter::wait(threadpool *tpool) {
     cv.wait(lock);
 }
 
-void threadpool::waiter::inc() {
+void threadpool::waiter::inc()
+{
   const boost::unique_lock<boost::mutex> lock(mt);
   num++;
 }
 
-void threadpool::waiter::dec() {
+void threadpool::waiter::dec()
+{
   const boost::unique_lock<boost::mutex> lock(mt);
   num--;
   if (!num)
     cv.notify_all();
 }
 
-void threadpool::run(bool flush) {
+void threadpool::run(bool flush)
+{
   boost::unique_lock<boost::mutex> lock(mutex);
   while (running) {
     entry e;
