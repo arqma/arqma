@@ -70,7 +70,7 @@ namespace cryptonote
 
     core_rpc_server(
         core& cr
-      , nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> >& p2p
+      , nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>& p2p
       );
 
     static void init_options(boost::program_options::options_description& desc);

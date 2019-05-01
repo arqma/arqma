@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_service.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 #include <boost/utility/string_ref.hpp>
@@ -93,6 +94,7 @@ namespace socks
     class client
     {
         boost::asio::ip::tcp::socket proxy_;
+        boost::asio::io_service::strand strand_;
         std::uint16_t buffer_size_;
         std::uint8_t buffer_[1024];
         socks::version ver_;
@@ -169,6 +171,8 @@ namespace socks
 
             \note Must use one of the `self->set_*_command` calls before using
                 this function.
+            \note Only `async_close` can be invoked on `self` until the `done`
+                callback is invoked.
 
             \param self ownership of object is given to function.
             \param proxy_address of the socks server.
@@ -183,11 +187,21 @@ namespace socks
 
             \note Must use one of the `self->set_*_command` calls before using
                 the function.
+            \note Only `async_close` can be invoked on `self` until the `done`
+                callback is invoked.
 
             \param self ownership of object is given to function.
             \return False if `self->buffer().empty()` (no command set).
         */
         static bool send(std::shared_ptr<client> self);
+
+        /*! Callback for closing socket. Thread-safe with `*send` functions;
+            never blocks (uses strands). */
+        struct async_close
+        {
+            std::shared_ptr<client> self_;
+            void operator()(boost::system::error_code error = boost::system::error_code{});
+        };
     };
 
     template<typename Handler>

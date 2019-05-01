@@ -89,7 +89,7 @@ int spawn(const char *filename, const std::vector<std::string>& args, bool wait)
   MINFO("Child exited with " << exitCode);
   return static_cast<int>(exitCode);
 #else
-  std::vector<char*> argv(args.size() + 1);
+  char **argv = (char**)alloca(sizeof(char*) * (args.size() + 1));
   for (size_t n = 0; n < args.size(); ++n)
     argv[n] = (char*)args[n].c_str();
   argv[args.size()] = NULL;
@@ -107,7 +107,7 @@ int spawn(const char *filename, const std::vector<std::string>& args, bool wait)
     tools::closefrom(3);
     close(0);
     char *envp[] = {NULL};
-    execve(filename, argv.data(), envp);
+    execve(filename, argv, envp);
     MERROR("Failed to execve: " << strerror(errno));
     return -1;
   }

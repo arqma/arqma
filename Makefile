@@ -72,7 +72,7 @@ debug-static-all:
 	mkdir -p $(builddir)/debug
 	cd $(builddir)/debug && cmake -D BUILD_TESTS=OFF -D STATIC=ON -D CMAKE_BUILD_TYPE=Debug $(topdir) && $(MAKE)
 
-debug-static-win64:
+debug-static-win:
 	mkdir -p $(builddir)/debug
 	cd $(builddir)/debug && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Debug -D BUILD_TAG="win-x64" -D CMAKE_TOOLCHAIN_FILE$(topdir)/cmake/64-bit-toolchain.cmake -D MSYS2_FOLDER=c:/msys64 $(topdir) && $(MAKE)
 
@@ -83,9 +83,13 @@ cmake-release:
 release: cmake-release
 	cd $(builddir)/release && $(MAKE)
 
-#release-test:
-#	mkdir -p $(builddir)/release
-#	cd $(builddir)/release && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=release $(topdir) && $(MAKE) && $(MAKE) test
+release-asan:
+	mkdir -p $(builddir)/release-asan
+	cd $(builddir)/release-asan && cmake -D SANITIZE=ON -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=release $(topdir) && $(MAKE)
+
+debug-asan:
+	mkdir -p $(builddir)/debug-asan
+	cd $(builddir)/debug-asan && cmake -D SANITIZE=ON -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Debug $(topdir) && $(MAKE)
 
 release-all:
 	mkdir -p $(builddir)/release
@@ -139,7 +143,7 @@ release-static-linux-i686:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -D STATIC=ON -D ARCH="i686" -D BUILD_64=OFF -D CMAKE_BUILD_TYPE=release -D BUILD_TAG="linux-x86" $(topdir) && $(MAKE)
 
-release-static-win64:
+release-static-win:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="win-x64" -D CMAKE_TOOLCHAIN_FILE=$(topdir)/cmake/64-bit-toolchain.cmake -D MSYS2_FOLDER=c:/msys64 $(topdir) && $(MAKE)
 

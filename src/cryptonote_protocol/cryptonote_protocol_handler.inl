@@ -457,7 +457,7 @@ namespace cryptonote
       context.m_state = cryptonote_connection_context::state_synchronizing;
       NOTIFY_REQUEST_CHAIN::request r = boost::value_initialized<NOTIFY_REQUEST_CHAIN::request>();
       m_core.get_short_chain_history(r.block_ids);
-      handler_request_blocks_history( r.block_ids ); // change the limit(?), sleep(?)
+      handler_request_blocks_history(r.block_ids); // change the limit(?), sleep(?)
       MLOG_P2P_MESSAGE("-->>NOTIFY_REQUEST_CHAIN: m_block_ids.size()=" << r.block_ids.size() );
       post_notify<NOTIFY_REQUEST_CHAIN>(r, context);
       MLOG_PEER_STATE("requesting chain");
@@ -708,13 +708,13 @@ namespace cryptonote
         }
         m_core.resume_mine();
 
-        if( bvc.m_verifivation_failed )
+        if(bvc.m_verifivation_failed)
         {
           LOG_PRINT_CCONTEXT_L0("Block verification failed, dropping connection");
           drop_connection(context, true, false);
           return 1;
         }
-        if( bvc.m_added_to_main_chain )
+        if(bvc.m_added_to_main_chain)
         {
           //TODO: Add here announce protocol usage
           NOTIFY_NEW_BLOCK::request reg_arg = AUTO_VAL_INIT(reg_arg);
@@ -722,13 +722,13 @@ namespace cryptonote
           reg_arg.b = b;
           relay_block(reg_arg, context);
         }
-        else if( bvc.m_marked_as_orphaned )
+        else if(bvc.m_marked_as_orphaned)
         {
           context.m_needed_objects.clear();
           context.m_state = cryptonote_connection_context::state_synchronizing;
           NOTIFY_REQUEST_CHAIN::request r = boost::value_initialized<NOTIFY_REQUEST_CHAIN::request>();
           m_core.get_short_chain_history(r.block_ids);
-          handler_request_blocks_history( r.block_ids ); // change the limit(?), sleep(?)
+          handler_request_blocks_history(r.block_ids); // change the limit(?), sleep(?)
           MLOG_P2P_MESSAGE("-->>NOTIFY_REQUEST_CHAIN: m_block_ids.size()=" << r.block_ids.size() );
           post_notify<NOTIFY_REQUEST_CHAIN>(r, context);
           MLOG_PEER_STATE("requesting chain");
