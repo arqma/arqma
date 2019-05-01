@@ -73,7 +73,7 @@ namespace tools
     }
 #else
     std::ofstream data_file;
-    data_file.open(file_path , std::ios_base::binary | std::ios_base::out| std::ios::trunc);
+    data_file.open(file_path , std::ios_base::binary | std::ios_base::out | std::ios::trunc);
     if (data_file.fail())
       return false;
 #endif

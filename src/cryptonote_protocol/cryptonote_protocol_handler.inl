@@ -173,8 +173,7 @@ namespace cryptonote
     {
       bool local_ip = cntxt.m_remote_address.is_local();
       auto connection_time = time(NULL) - cntxt.m_started;
-      ss << std::setw(30) << std::left << std::string(cntxt.m_is_income ? " [INC]":"[OUT]") +
-        cntxt.m_remote_address.str()
+      ss << std::setw(30) << std::left << std::string(cntxt.m_is_income ? " [INC]":"[OUT]") + cntxt.m_remote_address.str()
         << std::setw(20) << std::hex << peer_id
         << std::setw(20) << std::hex << support_flags
         << std::setw(30) << std::to_string(cntxt.m_recv_cnt)+ "(" + std::to_string(time(NULL) - cntxt.m_last_recv) + ")" + "/" + std::to_string(cntxt.m_send_cnt) + "(" + std::to_string(time(NULL) - cntxt.m_last_send) + ")"
