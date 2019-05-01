@@ -118,7 +118,7 @@ class connection_basic { // not-templated base class for rapid developmet of som
     public:
       // first counter is the ++/-- count of current sockets, the other socket_number is only-increasing ++ number generator
       connection_basic(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support);
-      connection_basic(boost::asio::io_service &io_service, boost::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support);
+      connection_basic(boost::asio::io_service& io_service, boost::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support);
 
       virtual ~connection_basic() noexcept(false);
 
@@ -138,7 +138,7 @@ class connection_basic { // not-templated base class for rapid developmet of som
       template<typename MutableBufferSequence, typename ReadHandler>
       void async_read_some(const MutableBufferSequence &buffers, ReadHandler &&handler)
       {
-        if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+        if(m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
           socket_.async_read_some(buffers, std::forward<ReadHandler>(handler));
         else
           socket().async_read_some(buffers, std::forward<ReadHandler>(handler));
@@ -147,7 +147,7 @@ class connection_basic { // not-templated base class for rapid developmet of som
       template<typename ConstBufferSequence, typename WriteHandler>
       void async_write_some(const ConstBufferSequence &buffers, WriteHandler &&handler)
       {
-        if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+        if(m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
           socket_.async_write_some(buffers, std::forward<WriteHandler>(handler));
         else
           socket().async_write_some(buffers, std::forward<WriteHandler>(handler));
@@ -156,7 +156,7 @@ class connection_basic { // not-templated base class for rapid developmet of som
       template<typename ConstBufferSequence, typename WriteHandler>
       void async_write(const ConstBufferSequence &buffers, WriteHandler &&handler)
       {
-        if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+        if(m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
           boost::asio::async_write(socket_, buffers, std::forward<WriteHandler>(handler));
         else
           boost::asio::async_write(socket(), buffers, std::forward<WriteHandler>(handler));
