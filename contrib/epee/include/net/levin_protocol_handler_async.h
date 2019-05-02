@@ -161,7 +161,7 @@ public:
   template <class callback_t>
   struct anvoke_handler: invoke_response_handler_base
   {
-    anvoke_handler(const callback_t& cb, uint64_t timeout,  async_protocol_handler& con, int command)
+    anvoke_handler(const callback_t& cb, uint64_t timeout, async_protocol_handler& con, int command)
       :m_cb(cb), m_timeout(timeout), m_con(con), m_timer(con.m_pservice_endpoint->get_io_service()), m_timer_started(false),
       m_cancel_timer_called(false), m_timer_cancelled(false), m_command(command)
     {

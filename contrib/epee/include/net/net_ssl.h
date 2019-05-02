@@ -118,6 +118,8 @@ class ssl_options_t
   constexpr size_t get_ssl_magic_size() { return 9; }
   bool is_ssl(const unsigned char *data, size_t len);
   bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s);
+
+	bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
 }
 }
 

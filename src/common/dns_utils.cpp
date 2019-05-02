@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include "include_base_utils.h"
 #include "common/threadpool.h"
-#include <random>
+#include "crypto/crypto.h"
 #include <boost/thread/mutex.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/optional.hpp>
@@ -285,7 +285,7 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
     // should be a valid DNSSEC record, and switch to known good
 	// DNSSEC resolvers if verification fails
 	bool available, valid;
-	static const char *probe_hostname = "";
+	static const char *probe_hostname = "updates.arqma.com";
 	auto records = get_txt_record(probe_hostname, available, valid);
 	if (!valid)
 	{
@@ -330,7 +330,7 @@ std::vector<std::string> DNSResolver::get_record(const std::string& url, int rec
   // call DNS resolver, blocking.  if return value not zero, something went wrong
   if (!ub_resolve(m_data->m_ub_context, string_copy(url.c_str()), record_type, DNS_CLASS_IN, &result))
   {
-    dnssec_available = (result->secure || (!result->secure && result->bogus));
+    dnssec_available = (result->secure || result->bogus);
     dnssec_valid = result->secure && !result->bogus;
     if (result->havedata)
     {
@@ -517,10 +517,7 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
   std::vector<std::vector<std::string> > records;
   records.resize(dns_urls.size());
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<int> dis(0, dns_urls.size() - 1);
-  size_t first_index = dis(gen);
+  size_t first_index = crypto::rand_idx(dns_urls.size());
 
   // send all requests in parallel
   std::deque<bool> avail(dns_urls.size(), false), valid(dns_urls.size(), false);

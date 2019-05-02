@@ -101,11 +101,6 @@ namespace nodetool
     command_line::add_arg(desc, arg_p2p_add_priority_node);
     command_line::add_arg(desc, arg_p2p_add_exclusive_node);
     command_line::add_arg(desc, arg_p2p_seed_node);
-    command_line::add_arg(desc, arg_p2p_ssl);
-    command_line::add_arg(desc, arg_p2p_ssl_private_key);
-    command_line::add_arg(desc, arg_p2p_ssl_certificate);
-    command_line::add_arg(desc, arg_p2p_ssl_allowed_certificates);
-    command_line::add_arg(desc, arg_p2p_ssl_allowed_fingerprints);
     command_line::add_arg(desc, arg_proxy);
     command_line::add_arg(desc, arg_anonymous_inbound);
     command_line::add_arg(desc, arg_p2p_hide_my_port);
@@ -648,31 +643,6 @@ namespace nodetool
     // from here onwards, it's online stuff
     if (m_offline)
       return res;
-
-    const std::string ssl = command_line::get_arg(vm, arg_p2p_ssl);
-    if (!epee::net_utils::ssl_support_from_string(m_ssl_support, ssl))
-    {
-      MFATAL("Invalid P2P SSL support: " << ssl);
-      return false;
-    }
-    const std::string ssl_private_key = command_line::get_arg(vm, arg_p2p_ssl_private_key);
-    const std::string ssl_certificate = command_line::get_arg(vm, arg_p2p_ssl_certificate);
-    auto p2p_ssl_allowed_certificates = command_line::get_arg(vm, arg_p2p_ssl_allowed_certificates);
-    auto p2p_ssl_allowed_fingerprints = command_line::get_arg(vm, arg_p2p_ssl_allowed_fingerprints);
-
-    std::list<std::string> allowed_certificates;
-    for (const std::string &path: p2p_ssl_allowed_certificates)
-    {
-        allowed_certificates.push_back({});
-        if (!epee::file_io_utils::load_file_to_string(path, allowed_certificates.back()))
-        {
-          MERROR("Failed to load certificate: " << path);
-          allowed_certificates.back() = std::string();
-        }
-    }
-
-    std::vector<std::vector<uint8_t>> allowed_fingerprints{ p2p_ssl_allowed_fingerprints.size() };
-    std::transform(p2p_ssl_allowed_fingerprints.begin(), p2p_ssl_allowed_fingerprints.end(), allowed_fingerprints.begin(), epee::from_hex::vector);
 
     //try to bind
     m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_disabled;
@@ -1271,7 +1241,7 @@ namespace nodetool
         }
       }
       else
-        random_index = crypto::rand<size_t>() % filtered.size();
+        random_index = crypto::rand_idx(filtered.size());
 
       CHECK_AND_ASSERT_MES(random_index < filtered.size(), false, "random_index < filtered.size() failed!!");
       random_index = filtered[random_index];
@@ -1321,7 +1291,7 @@ namespace nodetool
         return true;
 
       size_t try_count = 0;
-      size_t current_index = crypto::rand<size_t>()%m_seed_nodes.size();
+      size_t current_index = crypto::rand_idx(m_seed_nodes.size());
       const net_server& server = m_network_zones.at(epee::net_utils::zone::public_).m_net_server;
       while(true)
       {

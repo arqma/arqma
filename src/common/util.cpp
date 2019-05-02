@@ -59,6 +59,7 @@
 #include "include_base_utils.h"
 #include "file_io_utils.h"
 #include "wipeable_string.h"
+#include "misc_os_dependent.h"
 using namespace epee;
 
 #include "crypto/crypto.h"
@@ -90,13 +91,13 @@ using namespace epee;
 
 namespace
 {
-	
+
 #ifndef _WIN32
 static int flock_exnb(int fd)
 {
   struct flock fl;
   int ret;
-	
+
   memset(&fl, 0, sizeof(fl));
   fl.l_type = F_WRLCK;
   fl.l_whence = SEEK_SET;
@@ -108,7 +109,7 @@ static int flock_exnb(int fd)
   return ret;
 }
 #endif
-	
+
 }
 
 namespace tools
@@ -773,7 +774,7 @@ std::string get_nix_version_display_string()
 	return -1;
 #endif
   }
-	
+
   bool on_startup()
   {
     mlog_configure("", true);
