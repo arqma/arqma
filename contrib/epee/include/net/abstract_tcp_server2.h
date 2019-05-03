@@ -220,7 +220,7 @@ namespace net_utils
     explicit boosted_tcp_server(boost::asio::io_service& external_io_service, t_connection_type connection_type);
     ~boosted_tcp_server();
 
-    std::map<std::string t_connection_type> server_type_map;
+    std::map<std::string, t_connection_type> server_type_map;
     void create_server_type_map();
 
     bool init_server(uint32_t port, const std::string address = "0.0.0.0", ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);

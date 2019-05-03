@@ -53,6 +53,7 @@ threadpool::threadpool(unsigned int max_threads) : running(true), active(0) {
 }
 
 threadpool::~threadpool() {
+  try
   {
     const boost::unique_lock<boost::mutex> lock(mutex);
     running = false;
@@ -74,7 +75,7 @@ threadpool::~threadpool() {
 void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
   CHECK_AND_ASSERT_THROW_MES(!is_leaf, "A leaf routine is using a thread pool");
   boost::unique_lock<boost::mutex> lock(mutex);
-  if (!leaf && ((active == max && !queue.empty()) || depth > 0)) {
+  if(!leaf && ((active == max && !queue.empty()) || depth > 0)) {
     // if all available threads are already running
     // and there's work waiting, just run in current thread
     lock.unlock();
@@ -84,9 +85,9 @@ void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
     --depth;
     is_leaf = false;
   } else {
-    if (obj)
+    if(obj)
       obj->inc();
-    if (leaf)
+    if(leaf)
       queue.push_front({obj, f, leaf});
     else
       queue.push_back({obj, f, leaf});
@@ -101,11 +102,13 @@ unsigned int threadpool::get_max_concurrency() const
 
 threadpool::waiter::~waiter()
 {
+  try
   {
     boost::unique_lock<boost::mutex> lock(mt);
-    if (num)
+    if(num)
       MERROR("wait should have been called before waiter dtor - waiting now");
   }
+  catch (...) { /* ignore */ }
   try
   {
     wait(NULL);
