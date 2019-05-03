@@ -72,7 +72,7 @@ class network_throttle : public i_network_throttle {
 
 	// each sample is now 1 second
 	public:
-		network_throttle(const std::string &nameshort, const std::string &name, int window_size=-1);
+		network_throttle(const std::string &nameshort, const std::string &name, int window_size = -1);
 		virtual ~network_throttle();
 		virtual void set_name(const std::string &name);
 		virtual void set_target_speed( network_speed_kbps target );

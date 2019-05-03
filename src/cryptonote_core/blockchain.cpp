@@ -99,6 +99,7 @@ static const struct {
  { 9, 7000, 0, 1530320400 },
  { 10, 61250, 0, 1543615200 },
  { 11, 131650, 0, 1552424400 },
+ { 12, 178000, 0, 1558051200 },
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 1;
 
@@ -115,6 +116,7 @@ static const struct {
  { 9, 20, 0, 1530248400 },
  { 10, 100, 0, 1538352000 },
  { 11, 800, 0, 1552424400 },
+ { 12, 1000, 0, 1552824400 },
 };
 static const uint64_t testnet_hard_fork_version_1_till = 1;
 

@@ -58,8 +58,7 @@ namespace epee
     {
       // Allow exact matches or `T*` -> `const T*`.
       using with_const = typename std::add_const<U>::type;
-      return std::is_same<T, U>() ||
-        (std::is_const<T>() && std::is_same<T, with_const>());
+      return std::is_same<T, U>() || (std::is_const<T>() && std::is_same<T, with_const>());
     }
 
   public:
