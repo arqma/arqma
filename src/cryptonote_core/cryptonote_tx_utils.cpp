@@ -278,7 +278,7 @@ namespace cryptonote
     uint64_t summary_inputs_money = 0;
     //fill inputs
     int idx = -1;
-    for(const tx_source_entry& src_entr:  sources)
+    for(const tx_source_entry& src_entr: sources)
     {
       ++idx;
       if(src_entr.real_output >= src_entr.outputs.size())

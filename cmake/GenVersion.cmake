@@ -46,17 +46,17 @@ else()
 
     if(NOT TAGGEDCOMMIT)
         message(WARNING "Cannot determine most recent tag. Make sure that you are building either from a Git working tree or from a source archive.")
-        set(VERSIONTAG "No_Info::${COMMIT}")
+        set(VERSIONTAG "${COMMIT}")
     else()
         message(STATUS "The most recent tag was at ${TAGGEDCOMMIT}")
 
         # Check if we're building that tagged commit or a different one
         if(COMMIT STREQUAL TAGGEDCOMMIT)
             message(STATUS "You are building a tagged release")
-            set(VERSIONTAG "Tagged_Release::${COMMIT}")
+            set(VERSIONTAG "release")
         else()
             message(STATUS "You are ahead of or behind a tagged release")
-            set(VERSIONTAG "Non_Release::${COMMIT}")
+            set(VERSIONTAG "${COMMIT}")
         endif()
     endif()
 

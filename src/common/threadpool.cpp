@@ -58,6 +58,13 @@ threadpool::~threadpool() {
     running = false;
     has_work.notify_all();
   }
+  catch (...)
+  {
+    // if the lock throws, we're just do it without a lock and hope,
+    // since the alternative is terminate
+    running = false;
+    has_work.notify_all();
+  }
   for (size_t i = 0; i < threads.size(); i++) {
     try { threads[i].join(); }
     catch (...) { /* ignore */ }

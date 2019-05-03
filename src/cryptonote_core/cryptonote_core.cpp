@@ -65,22 +65,22 @@ DISABLE_VS_WARNINGS(4355)
 
 namespace cryptonote
 {
-  const command_line::arg_descriptor<bool, false> arg_testnet_on  = {
+  const command_line::arg_descriptor<bool, false> arg_testnet_on = {
     "testnet"
   , "Run on testnet. The wallet must be launched with --testnet flag."
   , false
   };
-  const command_line::arg_descriptor<bool, false> arg_stagenet_on  = {
+  const command_line::arg_descriptor<bool, false> arg_stagenet_on = {
     "stagenet"
   , "Run on stagenet. The wallet must be launched with --stagenet flag."
   , false
   };
-  const command_line::arg_descriptor<bool> arg_regtest_on  = {
+  const command_line::arg_descriptor<bool> arg_regtest_on = {
     "regtest"
   , "Run in a regression testing mode."
   , false
   };
-  const command_line::arg_descriptor<difficulty_type> arg_fixed_difficulty  = {
+  const command_line::arg_descriptor<difficulty_type> arg_fixed_difficulty = {
     "fixed-difficulty"
   , "Fixed difficulty used for testing."
   , 0
@@ -106,7 +106,7 @@ namespace cryptonote
     "disable-dns-checkpoints"
   , "Do not retrieve checkpoints from DNS - OBSOLETE. Enabled by Default"
   };
-  const command_line::arg_descriptor<size_t> arg_block_download_max_size  = {
+  const command_line::arg_descriptor<size_t> arg_block_download_max_size = {
     "block-download-max-size"
   , "Set maximum size of block download queue in bytes (0 for default)"
   , 0
@@ -126,7 +126,7 @@ namespace cryptonote
   , "Sleep time in ms, defaults to 0 (off), used to debug before/after locking mutex. Values 100 to 1000 are good for tests."
   , 0
   };
-  static const command_line::arg_descriptor<bool> arg_dns_checkpoints  = {
+  static const command_line::arg_descriptor<bool> arg_dns_checkpoints = {
     "enforce-dns-checkpointing"
   , "checkpoints from DNS server will be enforced - Obsolete. ON by Default"
   , true
@@ -141,12 +141,12 @@ namespace cryptonote
   , "Max number of threads to use when preparing block hashes in groups."
   , 4
   };
-  static const command_line::arg_descriptor<uint64_t> arg_show_time_stats  = {
+  static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
   , "Show time-stats when processing blocks/txs and disk synchronization."
   , 0
   };
-  static const command_line::arg_descriptor<size_t> arg_block_sync_size  = {
+  static const command_line::arg_descriptor<size_t> arg_block_sync_size = {
     "block-sync-size"
   , "How many blocks to sync at once during chain synchronization (0 = adaptive)."
   , 0
@@ -156,22 +156,22 @@ namespace cryptonote
   , "Check for new versions of arqma: [disabled|notify|download|update]"
   , "notify"
   };
-  static const command_line::arg_descriptor<bool> arg_fluffy_blocks  = {
+  static const command_line::arg_descriptor<bool> arg_fluffy_blocks = {
     "fluffy-blocks"
   , "Relay blocks as fluffy blocks (obsolete, now default)"
   , true
   };
-  static const command_line::arg_descriptor<bool> arg_no_fluffy_blocks  = {
+  static const command_line::arg_descriptor<bool> arg_no_fluffy_blocks = {
     "no-fluffy-blocks"
   , "Relay blocks as normal blocks"
   , false
   };
-  static const command_line::arg_descriptor<bool> arg_pad_transactions  = {
+  static const command_line::arg_descriptor<bool> arg_pad_transactions = {
     "pad-transactions"
   , "Pad relayed transactions to help defend against traffic volume analysis"
   , false
   };
-  static const command_line::arg_descriptor<size_t> arg_max_txpool_size  = {
+  static const command_line::arg_descriptor<size_t> arg_max_txpool_size = {
     "max-txpool-size"
   , "Set maximum txpool size in bytes."
   , DEFAULT_TXPOOL_MAX_SIZE
@@ -181,7 +181,7 @@ namespace cryptonote
   , "Run a program for each new block, '%s' will be replaced by the block hash"
   , ""
   };
-  static const command_line::arg_descriptor<bool> arg_prune_blockchain  = {
+  static const command_line::arg_descriptor<bool> arg_prune_blockchain = {
     "prune-blockchain"
   , "Prune BlockChain"
   , false
@@ -201,6 +201,7 @@ namespace cryptonote
               m_disable_dns_checkpoints(false),
               m_update_download(0),
               m_nettype(UNDEFINED),
+              m_update_available(false),
               m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
@@ -1236,7 +1237,7 @@ namespace cryptonote
 
       block_to_blob(b, arg.b.block);
       //pack transactions
-      for(auto& tx:  txs)
+      for(auto& tx: txs)
         arg.b.txs.push_back(tx);
 
       m_pprotocol->relay_block(arg, exclude_context);
@@ -1550,10 +1551,14 @@ namespace cryptonote
       return false;
 
     if (tools::vercmp(version.c_str(), ARQMA_VERSION) <= 0)
+    {
+      m_update_available = false;
       return true;
+    }
 
     std::string url = tools::get_update_url(software, subdir, buildtag, version, true);
     MCLOG_CYAN(el::Level::Info, "global", "Version " << version << " of " << software << " for " << buildtag << " is available: " << url << ", SHA256 hash " << hash);
+    m_update_available = true;
 
     if (check_updates_level == UPDATES_NOTIFY)
       return true;

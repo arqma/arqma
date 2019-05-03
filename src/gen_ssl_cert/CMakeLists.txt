@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2019, The Arqma Network
+# Copyright (c) 2017-2019, The Monero Project
 #
 # All rights reserved.
 #
@@ -27,27 +27,24 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-function (write_static_version_header hash)
-  set(VERSIONTAG "${hash}")
-  configure_file("${CMAKE_SOURCE_DIR}/src/version.cpp.in" "${CMAKE_BINARY_DIR}/version.cpp")
-endfunction ()
+set(gen_ssl_cert_sources
+  gen_ssl_cert.cpp)
 
-find_package(Git QUIET)
-if ("$Format:$" STREQUAL "")
-  # We're in a tarball; use hard-coded variables.
-  write_static_version_header("release")
-elseif (GIT_FOUND OR Git_FOUND)
-  message(STATUS "Found Git: ${GIT_EXECUTABLE}")
-  add_custom_command(
-    OUTPUT            "${CMAKE_BINARY_DIR}/version.cpp"
-    COMMAND           "${CMAKE_COMMAND}"
-                      "-D" "GIT=${GIT_EXECUTABLE}"
-                      "-D" "TO=${CMAKE_BINARY_DIR}/version.cpp"
-                      "-P" "cmake/GenVersion.cmake"
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-else()
-  message(STATUS "WARNING: Git was not found!")
-  write_static_version_header("unknown")
-endif ()
-add_custom_target(genversion ALL
-  DEPENDS "${CMAKE_BINARY_DIR}/version.cpp")
+arqma_add_executable(gen_ssl_cert
+  ${gen_ssl_cert_sources})
+target_link_libraries(gen_ssl_cert
+  PRIVATE
+    common
+    epee
+    version
+    ${EPEE_READLINE}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
+add_dependencies(gen_ssl_cert
+  version)
+set_property(TARGET gen_ssl_cert
+  PROPERTY
+    OUTPUT_NAME "arqma-generate-ssl-certificate")
+install(TARGETS gen_ssl_cert DESTINATION bin)

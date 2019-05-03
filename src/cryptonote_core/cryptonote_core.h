@@ -747,6 +747,8 @@ namespace cryptonote
       * @return which network are we on?
       */
      network_type get_nettype() const { return m_nettype; };
+     
+     bool is_update_available() const { return m_update_available; }
 
      /**
       * @brief get whether fluffy blocks are enabled
@@ -1010,6 +1012,8 @@ namespace cryptonote
      uint64_t m_target_blockchain_height; //!< blockchain height target
 
      network_type m_nettype; //!< which network are we on?
+     
+     std::atomic<bool> m_update_available;
 
      std::string m_checkpoints_path; //!< path to json checkpoints file
      time_t m_last_dns_checkpoints_update; //!< time when dns checkpoints were last updated

@@ -477,11 +477,6 @@ namespace nodetool
     extern const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_priority_node;
     extern const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_exclusive_node;
     extern const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_seed_node;
-    extern const command_line::arg_descriptor<std::string> arg_p2p_ssl;
-    extern const command_line::arg_descriptor<std::string> arg_p2p_ssl_private_key;
-    extern const command_line::arg_descriptor<std::string> arg_p2p_ssl_certificate;
-    extern const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_ssl_allowed_certificates;
-    extern const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_ssl_allowed_fingerprints;
     extern const command_line::arg_descriptor<std::vector<std::string>> arg_proxy;
     extern const command_line::arg_descriptor<std::vector<std::string>> arg_anonymous_inbound;
     extern const command_line::arg_descriptor<bool> arg_p2p_hide_my_port;

@@ -67,7 +67,7 @@ namespace net_utils
     std::atomic<long> sock_number;
 
     connection_basic_shared_state()
-      : ssl_options_(ssl_support_t::disabled),
+      : ssl_options_(ssl_support_t::e_ssl_support_disabled),
         ssl_context(boost::asio::ssl::context::tlsv12),
         sock_count(0),
         sock_number(0)
@@ -98,10 +98,9 @@ class connection_basic_pimpl; // PIMPL for this class
   std::string to_string(t_connection_type type);
 
 class connection_basic { // not-templated base class for rapid developmet of some code parts
-                         // beware of removing const, net_utils::connection is sketchily doing a cast to prevent storing ptr twice
-                        const boost::shared_ptr<connection_basic_shared_state> m_state;
+  // beware of removing const, net_utils::connection is sketchily doing a cast to prevent storing ptr twice
+  const boost::shared_ptr<connection_basic_shared_state> m_state;
     public:
-
       std::unique_ptr< connection_basic_pimpl > mI; // my Implementation
 
       // moved here from orginal connecton<> - common member variables that do not depend on template in connection<>
@@ -119,28 +118,27 @@ class connection_basic { // not-templated base class for rapid developmet of som
     public:
       // first counter is the ++/-- count of current sockets, the other socket_number is only-increasing ++ number generator
       connection_basic(boost::asio::ip::tcp::socket&& socket, boost::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support);
-		  connection_basic(boost::asio::io_service &io_service, boost::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support);
+      connection_basic(boost::asio::io_service& io_service, boost::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support);
 
       virtual ~connection_basic() noexcept(false);
 
       //! \return `shared_state` object passed in construction (ptr never changes).
-		  connection_basic_shared_state& get_state() noexcept { return *m_state; /* verified in constructor */ }
-		  connection_basic(boost::asio::io_service& io_service, std::atomic<long> &ref_sock_count, std::atomic<long> &sock_number, ssl_support_t ssl);
+      connection_basic_shared_state& get_state() noexcept { return *m_state; /* verified in constructor */ }
+      connection_basic(boost::asio::io_service& io_service, std::atomic<long> &ref_sock_count, std::atomic<long> &sock_number, ssl_support_t ssl);
 
       boost::asio::ip::tcp::socket& socket() { return socket_.next_layer(); }
       ssl_support_t get_ssl_support() const { return m_ssl_support; }
-      void disable_ssl() { m_ssl_support = ssl_support_t::disabled; }
+      void disable_ssl() { m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_disabled; }
 
       bool handshake(boost::asio::ssl::stream_base::handshake_type type)
       {
-        //m_state != nullptr verified in constructor
         return m_state->ssl_options().handshake(socket_, type);
       }
 
       template<typename MutableBufferSequence, typename ReadHandler>
       void async_read_some(const MutableBufferSequence &buffers, ReadHandler &&handler)
       {
-        if (m_ssl_support == ssl_support_t::enabled)
+        if(m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
           socket_.async_read_some(buffers, std::forward<ReadHandler>(handler));
         else
           socket().async_read_some(buffers, std::forward<ReadHandler>(handler));
@@ -149,7 +147,7 @@ class connection_basic { // not-templated base class for rapid developmet of som
       template<typename ConstBufferSequence, typename WriteHandler>
       void async_write_some(const ConstBufferSequence &buffers, WriteHandler &&handler)
       {
-        if (m_ssl_support == ssl_support_t::enabled)
+        if(m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
           socket_.async_write_some(buffers, std::forward<WriteHandler>(handler));
         else
           socket().async_write_some(buffers, std::forward<WriteHandler>(handler));
@@ -158,7 +156,7 @@ class connection_basic { // not-templated base class for rapid developmet of som
       template<typename ConstBufferSequence, typename WriteHandler>
       void async_write(const ConstBufferSequence &buffers, WriteHandler &&handler)
       {
-        if (m_ssl_support == ssl_support_t::enabled)
+        if(m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
           boost::asio::async_write(socket_, buffers, std::forward<WriteHandler>(handler));
         else
           boost::asio::async_write(socket(), buffers, std::forward<WriteHandler>(handler));
