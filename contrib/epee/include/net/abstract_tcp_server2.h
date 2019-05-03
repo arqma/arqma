@@ -281,8 +281,8 @@ namespace net_utils
 
       virtual bool call_handler(){return true;}
 
-      idle_callback_context_base(boost::asio::io_service& io_service)
-        : m_timer(io_service)
+      idle_callback_context_base(boost::asio::io_service& io_serice)
+        : m_timer(io_serice)
       {}
       boost::asio::deadline_timer m_timer;
     };
@@ -290,8 +290,8 @@ namespace net_utils
     template <class t_handler>
     struct idle_callback_context: public idle_callback_context_base
     {
-      idle_callback_context(boost::asio::io_service& io_service, t_handler& h, uint64_t period)
-        : idle_callback_context_base(io_service), m_handler(h){this->m_period = period;}
+      idle_callback_context(boost::asio::io_service& io_serice, t_handler& h, uint64_t period)
+        : idle_callback_context_base(io_serice), m_handler(h){this->m_period = period;}
 
       t_handler m_handler;
       virtual bool call_handler()
