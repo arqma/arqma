@@ -2036,10 +2036,10 @@ namespace cryptonote
     static const char software[] = "arqma";
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
-    static const char subdir[] = "cli";
+//    static const char subdir[] = "cli";
 #else
     static const char buildtag[] = "source";
-    static const char subdir[] = "source";
+//    static const char subdir[] = "source";
 #endif
 
     if (req.command != "check" && req.command != "download" && req.command != "update")
@@ -2062,8 +2062,8 @@ namespace cryptonote
     }
     res.update = true;
     res.version = version;
-    res.user_uri = tools::get_update_url(software, subdir, buildtag, version, true);
-    res.auto_uri = tools::get_update_url(software, subdir, buildtag, version, false);
+    res.user_uri = tools::get_update_url(software, buildtag, version, true);
+    res.auto_uri = tools::get_update_url(software, buildtag, version, false);
     res.hash = hash;
     if (req.command == "check")
     {

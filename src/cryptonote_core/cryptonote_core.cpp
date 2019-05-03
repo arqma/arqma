@@ -1533,10 +1533,10 @@ namespace cryptonote
     static const char software[] = "arqma";
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
-    static const char subdir[] = "cli"; // because it can never be simple
+//    static const char subdir[] = "cli"; // because it can never be simple
 #else
     static const char buildtag[] = "source";
-    static const char subdir[] = "source"; // because it can never be simple
+//    static const char subdir[] = "source"; // because it can never be simple
 #endif
 
     if (m_offline)
@@ -1556,14 +1556,14 @@ namespace cryptonote
       return true;
     }
 
-    std::string url = tools::get_update_url(software, subdir, buildtag, version, true);
+    std::string url = tools::get_update_url(software, buildtag, version, true);
     MCLOG_CYAN(el::Level::Info, "global", "Version " << version << " of " << software << " for " << buildtag << " is available: " << url << ", SHA256 hash " << hash);
     m_update_available = true;
 
     if (check_updates_level == UPDATES_NOTIFY)
       return true;
 
-    url = tools::get_update_url(software, subdir, buildtag, version, false);
+    url = tools::get_update_url(software, buildtag, version, false);
     std::string filename;
     const char *slash = strrchr(url.c_str(), '/');
     if (slash)

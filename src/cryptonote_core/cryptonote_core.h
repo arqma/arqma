@@ -747,7 +747,7 @@ namespace cryptonote
       * @return which network are we on?
       */
      network_type get_nettype() const { return m_nettype; };
-     
+
      bool is_update_available() const { return m_update_available; }
 
      /**
