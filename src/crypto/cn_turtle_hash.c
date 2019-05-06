@@ -559,7 +559,7 @@ STATIC INLINE void aes_pseudo_round_xor(const uint8_t *in, uint8_t *out, const u
         _mm_storeu_si128((R128(out + i * AES_BLOCK_SIZE)), d);
     }
 }
-
+/**
 #if defined(_MSC_VER) || defined(__MINGW32__)
 BOOL SetLockPagesPrivilege(HANDLE hProcess, BOOL bEnable)
 {
@@ -590,7 +590,7 @@ BOOL SetLockPagesPrivilege(HANDLE hProcess, BOOL bEnable)
   return TRUE;
 }
 #endif
-
+**/
 /**
  * @brief allocate the 2MB scratch buffer using OS support for huge pages, if available
  *
