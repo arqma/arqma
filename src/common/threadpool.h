@@ -42,18 +42,21 @@ namespace tools
 //! A global thread pool
 class threadpool
 {
-public:
-  static threadpool& getInstance() {
+ public:
+  static threadpool& getInstance()
+  {
     static threadpool instance;
     return instance;
   }
-  static threadpool *getNewForUnitTests(unsigned max_threads = 0) {
+  static threadpool *getNewForUnitTests(unsigned max_threads = 0)
+  {
     return new threadpool(max_threads);
   }
 
   // The waiter lets the caller know when all of its
   // tasks are completed.
-  class waiter {
+  class waiter
+  {
     boost::mutex mt;
     boost::condition_variable cv;
     int num;
@@ -76,7 +79,8 @@ public:
 
   private:
     threadpool(unsigned int max_threads = 0);
-    typedef struct entry {
+    typedef struct entry
+    {
       waiter *wo;
       std::function<void()> f;
       bool leaf;

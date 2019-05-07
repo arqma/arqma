@@ -147,7 +147,7 @@ namespace misc_utils
     {}
     ~call_befor_die()
     {
-			try { m_func(); }
+      try { m_func(); }
       catch (...) { /* ignore */ }
     }
   };

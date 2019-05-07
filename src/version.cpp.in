@@ -1,6 +1,6 @@
 #define DEF_ARQMA_VERSION_TAG "@VERSIONTAG@"
-#define DEF_ARQMA_VERSION "0.3.2"
-#define DEF_ARQMA_RELEASE_NAME "Devil's Cauldron"
+#define DEF_ARQMA_VERSION "0.4.0.0"
+#define DEF_ARQMA_RELEASE_NAME "Devil's Cipher"
 #define DEF_ARQMA_VERSION_FULL DEF_ARQMA_VERSION "-" DEF_ARQMA_VERSION_TAG
 
 #include "version.h"

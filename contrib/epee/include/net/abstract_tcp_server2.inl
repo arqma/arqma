@@ -312,8 +312,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  void connection<t_protocol_handler>::handle_read(const boost::system::error_code& e,
-    std::size_t bytes_transferred)
+  void connection<t_protocol_handler>::handle_read(const boost::system::error_code& e, std::size_t bytes_transferred)
   {
     TRY_ENTRY();
     //_info("[sock " << socket().native_handle() << "] Async read calledback.");
@@ -327,7 +326,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
         context.m_max_speed_down = std::max(context.m_max_speed_down, context.m_current_speed_down);
       }
       {
-        CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in );
+        CRITICAL_REGION_LOCAL(epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in);
         epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
       }
 
@@ -338,7 +337,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
         do // keep sleeping if we should sleep
         {
           { //_scope_dbg1("CRITICAL_REGION_LOCAL");
-            CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in );
+            CRITICAL_REGION_LOCAL(epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in);
             delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
           }
 
@@ -405,8 +404,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  void connection<t_protocol_handler>::handle_receive(const boost::system::error_code& e,
-    std::size_t bytes_transferred)
+  void connection<t_protocol_handler>::handle_receive(const boost::system::error_code& e, std::size_t bytes_transferred)
   {
     TRY_ENTRY();
     if(e)
@@ -519,7 +517,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     const t_safe chunksize_max = chunksize_good * 2 ;
     const bool allow_split = (m_connection_type == e_connection_type_RPC) ? false : true; // do not split RPC data
 
-    CHECK_AND_ASSERT_MES(! (chunksize_max < 0), false, "Negative chunksize_max" ); // make sure it is unsigned before removin sign with cast:
+    CHECK_AND_ASSERT_MES(!(chunksize_max < 0), false, "Negative chunksize_max" ); // make sure it is unsigned before removin sign with cast:
     long long unsigned int chunksize_max_unsigned = static_cast<long long unsigned int>( chunksize_max ) ;
 
     if(allow_split && (cb > chunksize_max_unsigned))
@@ -541,7 +539,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
         while(pos < all)
         {
           t_safe lenall = all-pos; // length from here to end
-          t_safe len = std::min( chunksize_good , lenall); // take a smaller part
+          t_safe len = std::min(chunksize_good, lenall); // take a smaller part
           CHECK_AND_ASSERT_MES(len<=chunksize_good, false, "len too large");
           // pos=8; len=4; all=10;	len=3;
 
@@ -663,11 +661,11 @@ PRAGMA_WARNING_DISABLE_VS(4355)
         auto size_now = m_send_que.front().size();
         MDEBUG("do_send_chunk() NOW SENSD: packet=" << size_now <<" B");
         if(speed_limit_is_enabled())
-        do_send_handler_write( ptr , size_now ); // (((H)))
+        do_send_handler_write(ptr, size_now); // (((H)))
 
-        CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), false, "Unexpected queue size");
+        CHECK_AND_ASSERT_MES(size_now == m_send_que.front().size(), false, "Unexpected queue size");
         reset_timer(get_default_timeout(), false);
-        async_write(boost::asio::buffer(m_send_que.front().data(), size_now ),
+        async_write(boost::asio::buffer(m_send_que.front().data(), size_now),
                                  strand_.wrap(
                                  boost::bind(&connection<t_protocol_handler>::handle_write, self, _1, _2)
                                  )
@@ -858,7 +856,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     MDEBUG("handle_write() NOW SENDS: packet=" << size_now << " B" << ", from  queue size=" << m_send_que.size());
     if (speed_limit_is_enabled())
       do_send_handler_write_from_queue(e, m_send_que.front().size() , m_send_que.size()); // (((H)))
-    CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), void(), "Unexpected queue size");
+    CHECK_AND_ASSERT_MES(size_now == m_send_que.front().size(), void(), "Unexpected queue size");
     async_write(boost::asio::buffer(m_send_que.front().data(), size_now) ,
          strand_.wrap(
           boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), _1, _2)

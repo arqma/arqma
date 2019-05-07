@@ -64,7 +64,7 @@ class async_protocol_handler;
 template<class t_connection_context>
 class async_protocol_handler_config
 {
-  typedef boost::unordered_map<boost::uuids::uuid, async_protocol_handler<t_connection_context>* > connections_map;
+  typedef boost::unordered_map<boost::uuids::uuid, async_protocol_handler<t_connection_context>*> connections_map;
   critical_section m_connects_lock;
   connections_map m_connects;
 
@@ -247,10 +247,10 @@ public:
     }
   };
   critical_section m_invoke_response_handlers_lock;
-  std::list<boost::shared_ptr<invoke_response_handler_base> > m_invoke_response_handlers;
+  std::list<boost::shared_ptr<invoke_response_handler_base>> m_invoke_response_handlers;
 
   template<class callback_t>
-  bool add_invoke_response_handler(const callback_t &cb, uint64_t timeout,  async_protocol_handler& con, int command)
+  bool add_invoke_response_handler(const callback_t &cb, uint64_t timeout, async_protocol_handler& con, int command)
   {
     CRITICAL_REGION_LOCAL(m_invoke_response_handlers_lock);
     boost::shared_ptr<invoke_response_handler_base> handler(boost::make_shared<anvoke_handler<callback_t>>(cb, timeout, con, command));
@@ -374,10 +374,10 @@ public:
       return false;
     }
 
-    if(m_cache_in_buffer.size() +  cb > m_config.m_max_packet_size)
+    if(m_cache_in_buffer.size() + cb > m_config.m_max_packet_size)
     {
       MWARNING(m_connection_context << "Maximum packet size exceed!, m_max_packet_size = " << m_config.m_max_packet_size
-                          << ", packet received " << m_cache_in_buffer.size() +  cb
+                          << ", packet received " << m_cache_in_buffer.size() + cb
                           << ", connection will be closed.");
       return false;
     }

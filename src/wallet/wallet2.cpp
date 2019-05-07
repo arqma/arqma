@@ -120,9 +120,9 @@ using namespace cryptonote;
 
 #define OUTPUT_EXPORT_FILE_MAGIC "ArQmA output export\003"
 
-#define SEGREGATION_FORK_HEIGHT 30000
-#define TESTNET_SEGREGATION_FORK_HEIGHT 500
-#define STAGENET_SEGREGATION_FORK_HEIGHT 1000
+#define SEGREGATION_FORK_HEIGHT 9999999999999
+#define TESTNET_SEGREGATION_FORK_HEIGHT 9999999999999
+#define STAGENET_SEGREGATION_FORK_HEIGHT 9999999999999
 #define SEGREGATION_FORK_VICINITY 1500 /* blocks */
 
 #define FIRST_REFRESH_GRANULARITY 1024
@@ -1105,7 +1105,7 @@ bool wallet2::get_multisig_seed(epee::wipeable_string& seed, const epee::wipeabl
   if (!passphrase.empty())
   {
     crypto::secret_key key;
-    crypto::cn_slow_hash(passphrase.data(), passphrase.size(), (crypto::hash&)key);
+    crypto::cn_arqma_hash_v0(passphrase.data(), passphrase.size(), (crypto::hash&)key);
     sc_reduce32((unsigned char*)key.data);
     data = encrypt(data, key, true);
   }

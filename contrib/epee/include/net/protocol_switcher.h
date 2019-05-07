@@ -47,7 +47,7 @@ namespace net_utils
 	
 	struct i_protocol_handler
 	{
-		virtual bool handle_recv(const void* ptr, size_t cb)=0;
+		virtual bool handle_recv(const void* ptr, size_t cb) = 0;
 	};
 
 	template<class t>
