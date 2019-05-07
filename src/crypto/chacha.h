@@ -75,7 +75,7 @@ namespace crypto {
     epee::mlocked<tools::scrubbed_arr<char, HASH_SIZE>> pwd_hash;
     cn_slow_hash(data, size, reinterpret_cast<char *>(pwd_hash.data()), 0, 0, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
     for (uint64_t n = 1; n < kdf_rounds; ++n)
-      cn_slow_hash(pwd_hash.data(), pwd_hash.size(), reinterpret_cast<char *>(pwd_hash.data()), 1, 0, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
+      cn_slow_hash(pwd_hash.data(), pwd_hash.size(), reinterpret_cast<char *>(pwd_hash.data()), 0, 0, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
     memcpy(&unwrap(unwrap(key)), pwd_hash.data(), sizeof(key));
   }
 
@@ -84,7 +84,7 @@ namespace crypto {
     epee::mlocked<tools::scrubbed_arr<char, HASH_SIZE>> pwd_hash;
     cn_slow_hash(data, size, reinterpret_cast<char *>(pwd_hash.data()), 0, 0, 1, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
     for (uint64_t n = 1; n < kdf_rounds; ++n)
-      cn_slow_hash(pwd_hash.data(), pwd_hash.size(), reinterpret_cast<char *>(pwd_hash.data()), 1, 0, 1, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
+      cn_slow_hash(pwd_hash.data(), pwd_hash.size(), reinterpret_cast<char *>(pwd_hash.data()), 0, 0, 1, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
     memcpy(&unwrap(unwrap(key)), pwd_hash.data(), sizeof(key));
   }
 
