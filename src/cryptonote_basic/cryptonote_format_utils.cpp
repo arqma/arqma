@@ -1091,11 +1091,11 @@ namespace cryptonote
     }
     else if(b.major_version >= 7)
     {
-      crypto::cn_arqma_hash(bd.data(), bd.size(), res, 1);
+      crypto::cn_arqma_hash_v1(bd.data(), bd.size(), res);
     }
     else
     {
-      crypto::cn_arqma_hash(bd.data(), bd.size(), res, 0);
+      crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
     }
     return true;
   }
@@ -1201,7 +1201,7 @@ namespace cryptonote
   crypto::secret_key encrypt_key(crypto::secret_key key, const epee::wipeable_string &passphrase)
   {
     crypto::hash hash;
-    crypto::cn_arqma_hash(passphrase.data(), passphrase.size(), hash);
+    crypto::cn_arqma_hash_v0(passphrase.data(), passphrase.size(), hash);
     sc_add((unsigned char*)key.data, (const unsigned char*)key.data, (const unsigned char*)hash.data);
     return key;
   }
@@ -1209,7 +1209,7 @@ namespace cryptonote
   crypto::secret_key decrypt_key(crypto::secret_key key, const epee::wipeable_string &passphrase)
   {
     crypto::hash hash;
-    crypto::cn_arqma_hash(passphrase.data(), passphrase.size(), hash);
+    crypto::cn_arqma_hash_v0(passphrase.data(), passphrase.size(), hash);
     sc_sub((unsigned char*)key.data, (const unsigned char*)key.data, (const unsigned char*)hash.data);
     return key;
   }

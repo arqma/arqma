@@ -1,3 +1,4 @@
+// Copyrught (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 // 
 // All rights reserved.
@@ -39,6 +40,10 @@
 #include "hex.h"
 #include "span.h"
 
+#define CN_ARQMA_PAGE_SIZE 1048576
+#define CN_ARQMA_SCRATCHPAD 1048576
+#define CN_ARQMA_ITERATIONS 524288
+
 #define CN_TURTLE_PAGE_SIZE 262144
 #define CN_TURTLE_SCRATCHPAD 262144
 #define CN_TURTLE_ITERATIONS 131072
@@ -62,26 +67,26 @@ namespace crypto {
     Cryptonight hash functions
   */
 
-  inline void cn_fast_hash(const void *data, std::size_t length, hash &hash) {
+  inline void cn_fast_hash(const void *data, size_t length, hash &hash) {
     cn_fast_hash(data, length, reinterpret_cast<char *>(&hash));
   }
 
-  inline hash cn_fast_hash(const void *data, std::size_t length) {
+  inline hash cn_fast_hash(const void *data, size_t length) {
     hash h;
     cn_fast_hash(data, length, reinterpret_cast<char *>(&h));
     return h;
   }
 
-  inline void cn_arqma_hash(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    cn_arqma_hash(data, length, reinterpret_cast<char *>(&hash), variant, 0);
+  inline void cn_arqma_hash_v0(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 0, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
   }
 
-  inline void cn_arqma_hash_prehashed(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    cn_arqma_hash(data, length, reinterpret_cast<char *>(&hash), variant, 1);
+  inline void cn_arqma_hash_v1(const void *data, size_t length, hash &hash) {
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 1, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
   }
 
   inline void cn_turtle_hash(const void *data, size_t length, hash &hash) {
-    cn_turtle_hash(data, length, reinterpret_cast<char *>(&hash), 1, 2, 0, CN_TURTLE_PAGE_SIZE, CN_TURTLE_SCRATCHPAD, CN_TURTLE_ITERATIONS);
+    cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 1, 2, 0, CN_TURTLE_PAGE_SIZE, CN_TURTLE_SCRATCHPAD, CN_TURTLE_ITERATIONS);
   }
 
   inline void tree_hash(const hash *hashes, std::size_t count, hash &root_hash) {

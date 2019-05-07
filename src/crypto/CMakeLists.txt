@@ -47,8 +47,7 @@ set(crypto_sources
   oaes_lib.c
   random.c
   skein.c
-  cn_arqma_hash.c
-  cn_turtle_hash.c
+  slow-hash.c
   tree-hash.c)
 
 set(crypto_headers)
