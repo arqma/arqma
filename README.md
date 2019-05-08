@@ -461,7 +461,7 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 
 * ```make depends target=x86_64-linux-gnu``` for 64-bit linux binaries.
 * ```make depends target=x86_64-w64-mingw32``` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
-* ```make depends target=x86_64-apple-darwin14``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python3-dev curl libtiff-tools bsdmainutils libbz2-dev python3-setuptools-git
+* ```make depends target=x86_64-apple-darwin14``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python3-dev curl libtiff-tools bsdmainutils libbz2-dev python3-setuptools
 * ```make depends target=i686-linux-gnu``` for 32-bit linux binaries. Requires: g++-multilib bc
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
