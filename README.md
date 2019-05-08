@@ -284,7 +284,7 @@ application.
 
 3. Update packages using pacman:  
 
-        pacman -Syuu  
+        pacman -Syu    
 
 4. Exit the MSYS shell using Alt+F4 or by clicking X at top-right corner. It is Very Important to do not exit to shell!!.
 
@@ -292,7 +292,7 @@ application.
 
 6. Update packages again using pacman:  
 
-        pacman -Syuu  
+        pacman -Syu    
 
 7. Install dependencies:
 
@@ -308,7 +308,7 @@ application.
 
 * Change branch to last Release:
 
-	`cd arqma && git checkout release-v0.3.2.1`    
+	`cd arqma && git checkout release-v0.4.0.0`    
 
 * Activate and update submodules:
 
@@ -461,7 +461,7 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 
 * ```make depends target=x86_64-linux-gnu``` for 64-bit linux binaries.
 * ```make depends target=x86_64-w64-mingw32``` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
-* ```make depends target=x86_64-apple-darwin11``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python-dev curl libtiff-tools bsdmainutils libbz2-dev python3-setuptools
+* ```make depends target=x86_64-apple-darwin14``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python3-dev curl libtiff-tools bsdmainutils libbz2-dev python3-setuptools-git
 * ```make depends target=i686-linux-gnu``` for 32-bit linux binaries. Requires: g++-multilib bc
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
@@ -470,9 +470,7 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 
 * ```git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs ```    
 
-You can download SDK at https://github.com/malbit/MacOSX-SDKs/archive/MacOSX10.11.sdk.tar.gz and unpack it and put to contrib/depends/SDKs    
-
-*** Do not forget to change MacOS SDK folder name to "MacOSX10.11.sdk" ***    
+You can download SDK at https://github.com/malbit/MacOSX-SDKs/releases/download/MacOSX10.11.sdk.arqma/MacOSX10.11.sdk.tar.gz and unpack it and put to contrib/depends/SDKs    
 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
