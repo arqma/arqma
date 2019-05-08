@@ -32,6 +32,9 @@
 #include "enableable.h"
 #include "keyvalue_serialization_overloads.h"
 
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "serialization"
+
 namespace epee
 {
   /************************************************************************/
@@ -106,7 +109,3 @@ public: \
 #define KV_SERIALIZE_OPT(variable,default_value)          KV_SERIALIZE_OPT_N(variable, #variable, default_value)
 
 }
-
-
-
-

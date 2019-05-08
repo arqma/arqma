@@ -119,7 +119,8 @@ class ssl_options_t
   bool is_ssl(const unsigned char *data, size_t len);
   bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s);
 
-	bool create_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
+	bool create_ec_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
+	bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
 }
 }
 
