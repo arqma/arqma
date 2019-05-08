@@ -21,7 +21,7 @@ created. To use it for Arqma:
 Common `host-platform-triplets` for cross compilation are:
 
 - `x86_64-w64-mingw32` for Win64
-- `x86_64-apple-darwin11` for MacOSX
+- `x86_64-apple-darwin14` for MacOSX
 - `arm-linux-gnueabihf` for Linux ARM 32 bit
 - `aarch64-linux-gnu` for Linux ARM 64 bit
 
