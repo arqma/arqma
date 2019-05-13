@@ -621,7 +621,7 @@ namespace cryptonote
           e.prunable_as_hex = string_tools::buff_to_hex_nodelimer(std::get<3>(tx));
         if (req.decode_as_json)
         {
-          cyrptonote::blobdata tx_data;
+          cryptonote::blobdata tx_data;
           cryptonote::transaction t;
           if (req.prune || std::get<3>(tx).empty())
           {
