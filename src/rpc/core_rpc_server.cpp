@@ -615,22 +615,17 @@ namespace cryptonote
       e.prunable_hash = epee::string_tools::pod_to_hex(std::get<2>(tx));
       if (req.split || req.prune || std::get<3>(tx).empty())
       {
+        //use splitted form with pruned and prunable
         e.pruned_as_hex = string_tools::buff_to_hex_nodelimer(std::get<1>(tx));
         if (!req.prune)
           e.prunable_as_hex = string_tools::buff_to_hex_nodelimer(std::get<3>(tx));
-      }
-      {
-        cryptonote::blobdata tx_data;
-        if (req.prune)
-          tx_data = std::get<1>(tx);
-        else
-          tx_data = std::get<1>(tx) + std::get<3>(tx);
-        e.as_hex = string_tools::buff_to_hex_nodelimer(tx_data);
-        if (req.decode_as_json && !tx_data.empty())
+        if (req.decode_as_json)
         {
+          cyrptonote::blobdata tx_data;
           cryptonote::transaction t;
-          if (req.prune)
+          if (req.prune || std::get<3>(tx).empty())
           {
+            tx_data = std::get<1>(tx);
             if (cryptonote::parse_and_validate_tx_base_from_blob(tx_data, t))
             {
               pruned_transaction pruned_tx{t};
@@ -644,15 +639,34 @@ namespace cryptonote
           }
           else
           {
+            tx_data = std::get<1>(tx) + std::get<3>(tx);
             if (cryptonote::parse_and_validate_tx_from_blob(tx_data, t))
             {
               e.as_json = obj_to_json_str(t);
-	    }
+	          }
             else
             {
               res.status = "Failed to parse and validate tx from blob";
               return true;
             }
+          }
+        }
+      }
+      else
+      {
+      cryptonote::blobdata tx_data = std::get<1>(tx) + std::get<3>(tx);
+      e.as_hex = string_tools::buff_to_hex_nodelimer(tx_data);
+        if (req.decode_as_json)
+        {
+          cryptonote::transaction t;
+          if (cryptonote::parse_and_validate_tx_from_blob(tx_data, t))
+          {
+            e.as_json = obj_to_json_str(t);
+          }
+          else
+          {
+            res.status = "Failed to parse and validate tx from blob";
+            return true;
           }
         }
       }
@@ -2323,6 +2337,7 @@ namespace cryptonote
         return false;
       }
       res.pruning_seed = m_core.get_blockchain_pruning_seed();
+      res.pruned = res.pruning_seed != 0;
     }
     catch (const std::exception &e)
     {
