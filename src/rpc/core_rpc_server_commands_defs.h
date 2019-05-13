@@ -2311,8 +2311,6 @@ namespace cryptonote
 
     struct response_t
     {
-      bool pruned;
-      uint32_t pruning_seed;
       std::string status;
       uint64_t height;
       uint64_t target_height;
@@ -2323,8 +2321,6 @@ namespace cryptonote
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
-        KV_SERIALIZE(pruned)
-        KV_SERIALIZE(pruning_seed)
         KV_SERIALIZE(height)
         KV_SERIALIZE(target_height)
         KV_SERIALIZE(next_needed_pruning_seed)
@@ -2430,11 +2426,13 @@ namespace cryptonote
 
     struct response_t
     {
+      bool pruned;
       uint32_t pruning_seed;
       std::string status;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
+        KV_SERIALIZE(pruned)
         KV_SERIALIZE(pruning_seed)
       END_KV_SERIALIZE_MAP()
     };
