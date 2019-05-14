@@ -99,7 +99,7 @@ static const struct {
  { 9, 7000, 0, 1530320400 },
  { 10, 61250, 0, 1543615200 },
  { 11, 131650, 0, 1552424400 },
- { 12, 178000, 0, 1558051200 },
+ { 12, 183700, 0, 1558656000 },
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 1;
 
@@ -596,7 +596,7 @@ block Blockchain::pop_block_from_blockchain()
   std::vector<transaction> popped_txs;
 
   CHECK_AND_ASSERT_THROW_MES(m_db->height() > 1, "It is forbidden to remove ArQmA Genesis Block.");
-  
+
   try
   {
     m_db->pop_block(popped_block, popped_txs);
