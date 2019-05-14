@@ -52,7 +52,10 @@ namespace Language
   class Russian: public Base
   {
   public:
-    Russian(): Base("русский язык", "Russian", std::vector<std::string>({
+    Russian(): Base("русский язык", "Russian", {}, 4)
+    {
+      static constexpr const char * const words[NWORDS] =
+      {
         "абажур",
         "абзац",
         "абонент",
@@ -1679,8 +1682,8 @@ namespace Language
         "яхта",
         "ячейка",
         "ящик"
-      }), 4)
-    {
+      };
+      set_words(words);
       populate_maps();
     }
   };
