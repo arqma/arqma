@@ -50,7 +50,10 @@ namespace Language
   class Dutch: public Base
   {
   public:
-    Dutch(): Base("Nederlands", "Dutch", std::vector<std::string>({
+    Dutch(): Base("Nederlands", "Dutch", {}, 4)
+    {
+      static constexpr const char * const words[NWORDS] =
+      {
         "aalglad",
         "aalscholver",
         "aambeeld",
@@ -1677,8 +1680,8 @@ namespace Language
         "zwiep",
         "zwijmel",
         "zworen"
-      }), 4)
-    {
+      };
+      set_words(words);
       populate_maps();
     }
   };

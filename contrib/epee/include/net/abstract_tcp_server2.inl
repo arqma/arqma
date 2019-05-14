@@ -192,18 +192,9 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     // first read on the raw socket to detect SSL for the server
     buffer_ssl_init_fill = 0;
     if (is_income && m_ssl_support != epee::net_utils::ssl_support_t::e_ssl_support_disabled)
-      socket().async_receive(boost::asio::buffer(buffer_),
-        boost::asio::socket_base::message_peek,
-        strand_.wrap(
-          boost::bind(&connection<t_protocol_handler>::handle_receive, self,
-            boost::asio::placeholders::error,
-            boost::asio::placeholders::bytes_transferred)));
+      socket().async_receive(boost::asio::buffer(buffer_), boost::asio::socket_base::message_peek, strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_receive, self, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
     else
-      async_read_some(boost::asio::buffer(buffer_),
-        strand_.wrap(
-          boost::bind(&connection<t_protocol_handler>::handle_read, self,
-            boost::asio::placeholders::error,
-            boost::asio::placeholders::bytes_transferred)));
+      async_read_some(boost::asio::buffer(buffer_), strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_read, self, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
 #if !defined(_WIN32) || !defined(__i686)
     // not supported before Windows7, too lazy for runtime check
     // Just exclude for 32bit windows builds
@@ -319,12 +310,14 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
     if(!e)
     {
+      double current_speed_down;
       {
         CRITICAL_REGION_LOCAL(m_throttle_speed_in_mutex);
         m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
-        context.m_current_speed_down = m_throttle_speed_in.get_current_speed();
-        context.m_max_speed_down = std::max(context.m_max_speed_down, context.m_current_speed_down);
+        current_speed_down = m_throttle_speed_in.get_current_speed();
       }
+      context.m_current_speed_down = current_speed_down;
+      context.m_max_speed_down = std::max(context.m_max_speed_down, current_speed_down);
       {
         CRITICAL_REGION_LOCAL(epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in);
         epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
@@ -338,7 +331,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
         {
           { //_scope_dbg1("CRITICAL_REGION_LOCAL");
             CRITICAL_REGION_LOCAL(epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in);
-            delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
+            delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick(bytes_transferred);
           }
 
           delay *= 0.5;
@@ -373,11 +366,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       } else
       {
         reset_timer(get_timeout_from_bytes_read(bytes_transferred), false);
-        async_read_some(boost::asio::buffer(buffer_),
-          strand_.wrap(
-            boost::bind(&connection<t_protocol_handler>::handle_read, connection<t_protocol_handler>::shared_from_this(),
-              boost::asio::placeholders::error,
-              boost::asio::placeholders::bytes_transferred)));
+        async_read_some(boost::asio::buffer(buffer_), strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_read, connection<t_protocol_handler>::shared_from_this(), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
         //_info("[sock " << socket().native_handle() << "]Async read requested.");
       }
     } else
@@ -419,12 +408,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     buffer_ssl_init_fill += bytes_transferred;
     if(buffer_ssl_init_fill <= get_ssl_magic_size())
     {
-      socket().async_receive(boost::asio::buffer(buffer_.data() + buffer_ssl_init_fill, buffer_.size() - buffer_ssl_init_fill),
-        boost::asio::socket_base::message_peek,
-        strand_.wrap(
-          boost::bind(&connection<t_protocol_handler>::handle_receive, connection<t_protocol_handler>::shared_from_this(),
-            boost::asio::placeholders::error,
-            boost::asio::placeholders::bytes_transferred)));
+      socket().async_receive(boost::asio::buffer(buffer_.data() + buffer_ssl_init_fill, buffer_.size() - buffer_ssl_init_fill), boost::asio::socket_base::message_peek, strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_receive, connection<t_protocol_handler>::shared_from_this(), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
       return;
     }
 
@@ -461,11 +445,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       }
     }
 
-    async_read_some(boost::asio::buffer(buffer_),
-      strand_.wrap(
-        boost::bind(&connection<t_protocol_handler>::handle_read, connection<t_protocol_handler>::shared_from_this(),
-          boost::asio::placeholders::error,
-          boost::asio::placeholders::bytes_transferred)));
+    async_read_some(boost::asio::buffer(buffer_), strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_read, connection<t_protocol_handler>::shared_from_this(), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
 
     // If an error occurs then no new asynchronous operations are started. This
     // means that all shared_ptr references to the connection object will
@@ -570,7 +550,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
           // (in catch block, or uniq pointer) delete buf;
         } // each chunk
 
-        MDEBUG("do_send() DONE SPLIT from packet= "<< cb << " B for ptr= " << ptr);
+        MDEBUG("do_send() DONE SPLIT from packet= " << cb << " B for ptr= " << ptr);
         MDEBUG("do_send() m_connection_type = " << m_connection_type);
 
         return all_ok; // done - e.g. queued - all the chunks of current do_send call
@@ -594,12 +574,14 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       return false;
     if(m_was_shutdown)
       return false;
+    double current_speed_up;
     {
       CRITICAL_REGION_LOCAL(m_throttle_speed_out_mutex);
       m_throttle_speed_out.handle_trafic_exact(cb);
-      context.m_current_speed_up = m_throttle_speed_out.get_current_speed();
-      context.m_max_speed_up = std::max(context.m_max_speed_up, context.m_current_speed_up);
+      current_speed_up = m_throttle_speed_out.get_current_speed();
     }
+    context.m_current_speed_up = current_speed_up;
+    context.m_max_speed_up = std::max(context.m_max_speed_up, current_speed_up);
 
     //_info("[sock " << socket().native_handle() << "] SEND " << cb);
     context.m_last_send = time(NULL);
@@ -644,7 +626,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     if(m_send_que.size() > 1)
     { // active operation should be in progress, nothing to do, just wait last operation callback
         auto size_now = cb;
-        MDEBUG("do_send_chunk() NOW just queues: packet="<< size_now <<" B, is added to queue-size=" << m_send_que.size());
+        MDEBUG("do_send_chunk() NOW just queues: packet=" << size_now << " B, is added to queue-size=" << m_send_que.size());
         //do_send_handler_delayed( ptr , size_now ); // (((H))) // empty function
 
       LOG_TRACE_CC(context, "[sock " << socket().native_handle() << "] Async send requested " << m_send_que.front().size());
@@ -665,11 +647,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
         CHECK_AND_ASSERT_MES(size_now == m_send_que.front().size(), false, "Unexpected queue size");
         reset_timer(get_default_timeout(), false);
-        async_write(boost::asio::buffer(m_send_que.front().data(), size_now),
-                                 strand_.wrap(
-                                 boost::bind(&connection<t_protocol_handler>::handle_write, self, _1, _2)
-                                 )
-                                 );
+        async_write(boost::asio::buffer(m_send_que.front().data(), size_now), strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_write, self, _1, _2)));
         //_dbg3("(chunk): " << size_now);
         //logger_handle_net_write(size_now);
         //_info("[sock " << socket().native_handle() << "] Async send requested " << m_send_que.front().size());
@@ -855,13 +833,9 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     auto size_now = m_send_que.front().size();
     MDEBUG("handle_write() NOW SENDS: packet=" << size_now << " B" << ", from  queue size=" << m_send_que.size());
     if (speed_limit_is_enabled())
-      do_send_handler_write_from_queue(e, m_send_que.front().size() , m_send_que.size()); // (((H)))
+      do_send_handler_write_from_queue(e, m_send_que.front().size(), m_send_que.size()); // (((H)))
     CHECK_AND_ASSERT_MES(size_now == m_send_que.front().size(), void(), "Unexpected queue size");
-    async_write(boost::asio::buffer(m_send_que.front().data(), size_now) ,
-         strand_.wrap(
-          boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), _1, _2)
-         )
-        );
+    async_write(boost::asio::buffer(m_send_que.front().data(), size_now), strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), _1, _2)));
       //_dbg3("(normal)" << size_now);
     }
     CRITICAL_REGION_END();
@@ -961,9 +935,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     m_port = binded_endpoint.port();
     MDEBUG("start accept");
     new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, m_state->ssl_options().support));
-    acceptor_.async_accept(new_connection_->socket(),
-      boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this,
-      boost::asio::placeholders::error));
+    acceptor_.async_accept(new_connection_->socket(), boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept, this, boost::asio::placeholders::error));
 
     return true;
     }
