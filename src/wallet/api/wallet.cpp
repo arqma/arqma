@@ -873,7 +873,7 @@ bool WalletImpl::lightWalletImportWalletRequest(std::string &payment_id, uint64_
 {
   try
   {
-    tools::COMMAND_RPC_IMPORT_WALLET_REQUEST::response response;
+    cryptonote::COMMAND_RPC_IMPORT_WALLET_REQUEST::response response;
     if(!m_wallet->light_wallet_import_wallet_request(response)){
       setStatusError(tr("Failed to send import wallet request"));
       return false;
