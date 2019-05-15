@@ -367,6 +367,8 @@ struct WalletListener
      * @brief refreshed - called when wallet refreshed by background thread or explicitly refreshed by calling "refresh" synchronously
      */
     virtual void refreshed() = 0;
+    
+    virtual void onSetWallet(Wallet * wallet) { (void)wallet; };
 };
 
 
