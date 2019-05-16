@@ -58,9 +58,14 @@ Wallet *WalletManagerImpl::createWallet(const std::string &path, const std::stri
     return wallet;
 }
 
-Wallet *WalletManagerImpl::openWallet(const std::string &path, const std::string &password, NetworkType nettype, uint64_t kdf_rounds)
+Wallet *WalletManagerImpl::openWallet(const std::string &path, const std::string &password, NetworkType nettype, uint64_t kdf_rounds, WalletListener * listener)
 {
     WalletImpl * wallet = new WalletImpl(nettype, kdf_rounds);
+    wallet->setListener(listener);
+    if (listener) {
+      listener->onSetWallet(wallet);
+    }
+
     wallet->open(path, password);
     //Refresh addressBook
     wallet->addressBook()->refresh();
@@ -123,9 +128,15 @@ Wallet *WalletManagerImpl::createWalletFromDevice(const std::string &path,
                                                   const std::string &deviceName,
                                                   uint64_t restoreHeight,
                                                   const std::string &subaddressLookahead,
-                                                  uint64_t kdf_rounds)
+                                                  uint64_t kdf_rounds,
+                                                  WalletListener * listener)
 {
     WalletImpl * wallet = new WalletImpl(nettype, kdf_rounds);
+    wallet->setListener(listener);
+    if (listener) {
+      listener->onSetWallet(wallet);
+    }
+
     if(restoreHeight > 0){
         wallet->setRefreshFromBlockHeight(restoreHeight);
     } else {
@@ -335,7 +346,7 @@ std::string WalletManagerImpl::resolveOpenAlias(const std::string &address, bool
     return addresses.front();
 }
 
-std::tuple<bool, std::string, std::string, std::string> WalletManager::checkUpdates(const std::string &software)
+std::tuple<bool, std::string, std::string, std::string, std::string> WalletManager::checkUpdates(const std::string &software)
 {
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
@@ -356,7 +367,7 @@ std::tuple<bool, std::string, std::string, std::string> WalletManager::checkUpda
       MGINFO("Version " << version << " of " << software << " for " << buildtag << " is available: " << user_url << ", SHA256 hash " << hash);
       return std::make_tuple(true, version, hash, user_url, auto_url);
     }
-    return std::make_tuple(false, "", "", "");
+    return std::make_tuple(false, "", "", "", "");
 }
 
 
