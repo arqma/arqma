@@ -65,7 +65,7 @@ Wallet *WalletManagerImpl::openWallet(const std::string &path, const std::string
     if (listener) {
       listener->onSetWallet(wallet);
     }
-    
+
     wallet->open(path, password);
     //Refresh addressBook
     wallet->addressBook()->refresh();
@@ -128,7 +128,7 @@ Wallet *WalletManagerImpl::createWalletFromDevice(const std::string &path,
                                                   const std::string &deviceName,
                                                   uint64_t restoreHeight,
                                                   const std::string &subaddressLookahead,
-                                                  uint64_t kdf_rounds
+                                                  uint64_t kdf_rounds,
                                                   WalletListener * listener)
 {
     WalletImpl * wallet = new WalletImpl(nettype, kdf_rounds);
@@ -136,7 +136,7 @@ Wallet *WalletManagerImpl::createWalletFromDevice(const std::string &path,
     if (listener) {
       listener->onSetWallet(wallet);
     }
-    
+
     if(restoreHeight > 0){
         wallet->setRefreshFromBlockHeight(restoreHeight);
     } else {
