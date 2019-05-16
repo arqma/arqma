@@ -346,7 +346,7 @@ std::string WalletManagerImpl::resolveOpenAlias(const std::string &address, bool
     return addresses.front();
 }
 
-std::tuple<bool, std::string, std::string, std::string> WalletManager::checkUpdates(const std::string &software)
+std::tuple<bool, std::string, std::string, std::string, std::string> WalletManager::checkUpdates(const std::string &software)
 {
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
@@ -367,7 +367,7 @@ std::tuple<bool, std::string, std::string, std::string> WalletManager::checkUpda
       MGINFO("Version " << version << " of " << software << " for " << buildtag << " is available: " << user_url << ", SHA256 hash " << hash);
       return std::make_tuple(true, version, hash, user_url, auto_url);
     }
-    return std::make_tuple(false, "", "", "");
+    return std::make_tuple(false, "", "", "", "");
 }
 
 
