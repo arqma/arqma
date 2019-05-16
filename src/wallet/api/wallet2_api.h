@@ -367,7 +367,7 @@ struct WalletListener
      * @brief refreshed - called when wallet refreshed by background thread or explicitly refreshed by calling "refresh" synchronously
      */
     virtual void refreshed() = 0;
-    
+
     virtual void onSetWallet(Wallet * wallet) { (void)wallet; };
 };
 
@@ -1188,7 +1188,7 @@ struct WalletManager
     virtual std::string resolveOpenAlias(const std::string &address, bool &dnssec_valid) const = 0;
 
     //! checks for an update and returns version, hash and url
-    static std::tuple<bool, std::string, std::string, std::string> checkUpdates(const std::string &software);
+    static std::tuple<bool, std::string, std::string, std::string, std::string> checkUpdates(const std::string &software);
 };
 
 
