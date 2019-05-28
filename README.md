@@ -466,7 +466,7 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
-*** For `x86_64-apple-darwin11` you need to download SDK first ***    
+*** For `x86_64-apple-darwin14` you need to download SDK first ***    
 
 * ```git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs ```    
 
@@ -476,7 +476,10 @@ The required packages are the names for each toolchain on apt. Depending on your
 
 Using `depends` might also be easier to compile Arqma on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
 
-The produced binaries still link libc dynamically. If the binary is compiled on a current distribution, it might not run on an older distribution with an older installation of libc. Passing `-DBACKCOMPAT=ON` to cmake will make sure that the binary will run on systems having at least libc version 2.17.
+### Compability with older Linux Versions < GLIBC_2.25
+
+* ```make depends-compat target=x86_64-linux-gnu``` for 64-bit linux binaries.
+
 
 ## Running arqmad
 
