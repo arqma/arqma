@@ -685,7 +685,7 @@ namespace cryptonote
     return false;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, crypto::hash &tx_prefixt_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
     tvc = boost::value_initialized<tx_verification_context>();
 
@@ -698,9 +698,8 @@ namespace cryptonote
     }
 
     tx_hash = crypto::null_hash;
-    tx_prefixt_hash = crypto::null_hash;
 
-    if(!parse_tx_from_blob(tx, tx_hash, tx_prefixt_hash, tx_blob))
+    if(!parse_tx_from_blob(tx, tx_hash, tx_blob))
     {
       LOG_PRINT_L1("WRONG TRANSACTION BLOB, Failed to parse, rejected");
       tvc.m_verifivation_failed = true;
@@ -733,7 +732,7 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, crypto::hash &tx_prefixt_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
     if(!check_tx_syntax(tx))
     {
@@ -769,7 +768,7 @@ namespace cryptonote
     TRY_ENTRY();
     CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
 
-    struct result { bool res; cryptonote::transaction tx; crypto::hash hash; crypto::hash prefix_hash; bool in_txpool; bool in_blockchain; };
+    struct result { bool res; cryptonote::transaction tx; crypto::hash hash; bool in_txpool; bool in_blockchain; };
     std::vector<result> results(tx_blobs.size());
 
     tvc.resize(tx_blobs.size());
@@ -780,7 +779,7 @@ namespace cryptonote
       tpool.submit(&waiter, [&, i, it] {
         try
         {
-          results[i].res = handle_incoming_tx_pre(*it, tvc[i], results[i].tx, results[i].hash, results[i].prefix_hash, keeped_by_block, relayed, do_not_relay);
+          results[i].res = handle_incoming_tx_pre(*it, tvc[i], results[i].tx, results[i].hash, keeped_by_block, relayed, do_not_relay);
         }
         catch (const std::exception &e)
         {
@@ -810,7 +809,7 @@ namespace cryptonote
         tpool.submit(&waiter, [&, i, it] {
           try
           {
-            results[i].res = handle_incoming_tx_post(*it, tvc[i], results[i].tx, results[i].hash, results[i].prefix_hash, keeped_by_block, relayed, do_not_relay);
+            results[i].res = handle_incoming_tx_post(*it, tvc[i], results[i].tx, results[i].hash, keeped_by_block, relayed, do_not_relay);
           }
           catch (const std::exception &e)
           {
@@ -835,7 +834,7 @@ namespace cryptonote
       if (already_have[i])
         continue;
 
-      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], results[i].prefix_hash, it->size(), tvc[i], keeped_by_block, relayed, do_not_relay);
+      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], it->size(), tvc[i], keeped_by_block, relayed, do_not_relay);
       if(tvc[i].m_verifivation_failed)
       {MERROR_VER("Transaction verification failed: " << results[i].hash);}
       else if(tvc[i].m_verifivation_impossible)
@@ -1076,10 +1075,9 @@ namespace cryptonote
   bool core::add_new_tx(transaction& tx, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
     crypto::hash tx_hash = get_transaction_hash(tx);
-    crypto::hash tx_prefix_hash = get_transaction_prefix_hash(tx);
     blobdata bl;
     t_serializable_object_to_blob(tx, bl);
-    return add_new_tx(tx, tx_hash, bl, tx_prefix_hash, bl.size(), tvc, keeped_by_block, relayed, do_not_relay);
+    return add_new_tx(tx, tx_hash, bl, bl.size(), tvc, keeped_by_block, relayed, do_not_relay);
   }
   //-----------------------------------------------------------------------------------------------
   size_t core::get_blockchain_total_transactions() const
@@ -1087,7 +1085,7 @@ namespace cryptonote
     return m_blockchain_storage.get_total_transactions();
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, const crypto::hash& tx_prefix_hash, size_t blob_size, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, size_t blob_size, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
     if(m_mempool.have_tx(tx_hash))
     {
@@ -1128,8 +1126,8 @@ namespace cryptonote
   {
     std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
     cryptonote::transaction tx;
-    crypto::hash tx_hash, tx_prefix_hash;
-    if (!parse_and_validate_tx_from_blob(tx_blob, tx, tx_hash, tx_prefix_hash))
+    crypto::hash tx_hash;
+    if (!parse_and_validate_tx_from_blob(tx_blob, tx, tx_hash))
     {
       LOG_ERROR("Failed to parse relayed transaction");
       return;
@@ -1344,9 +1342,9 @@ namespace cryptonote
     return m_blockchain_storage.have_block(id);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::parse_tx_from_blob(transaction& tx, crypto::hash& tx_hash, crypto::hash& tx_prefix_hash, const blobdata& blob) const
+  bool core::parse_tx_from_blob(transaction& tx, crypto::hash& tx_hash, const blobdata& blob) const
   {
-    return parse_and_validate_tx_from_blob(blob, tx, tx_hash, tx_prefix_hash);
+    return parse_and_validate_tx_from_blob(blob, tx, tx_hash);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::check_tx_syntax(const transaction& tx) const
