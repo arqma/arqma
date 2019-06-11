@@ -74,9 +74,11 @@
 
 #define FEE_PER_KB_OLD                                  ((uint64_t)(COIN) / 100)
 #define FEE_PER_KB                                      ((uint64_t)2 * (COIN) / 100000)
+#define FEE_PER_BYTE                                    ((uint64_t)300)
 #define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)2 * (COIN) / 100000)
 #define DYNAMIC_FEE_PER_KB_BASE_BLOCK_REWARD            ((uint64_t)10000000000)
 #define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)20000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
+#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)3)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
@@ -164,12 +166,13 @@
 #define HF_VERSION_MIN_MIXIN_6                          7
 #define HF_VERSION_ENFORCE_RCT                          6
 #define HF_VERSION_LOWER_FEE                            10
+#define HF_VERSION_PER_BYTE_FEE                         13
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
 #define HASH_OF_HASHES_STEP                             256
 
-#define DEFAULT_TXPOOL_MAX_SIZE                         648000000ull // 3 days at 300000, in bytes
+#define DEFAULT_TXPOOL_MAX_WEIGHT                       648000000ull // 3 days at 300000, in bytes
 
 #define BULLETPROOF_MAX_OUTPUTS                         16
 

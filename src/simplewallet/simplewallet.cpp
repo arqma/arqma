@@ -788,23 +788,25 @@ bool simple_wallet::print_fee_info(const std::vector<std::string> &args/* = std:
   }
 
   const bool low_fee = m_wallet->use_fork_rules(HF_VERSION_LOWER_FEE);
-  const uint64_t per_kb_fee = m_wallet->get_per_kb_fee();
-  const uint64_t typical_size_kb = low_fee ? 4 : 13;
-
-
-  message_writer() << (boost::format(tr("Current fee is %s %s per kB")) % print_money(per_kb_fee) % cryptonote::get_unit(cryptonote::get_default_decimal_point())).str();
+  //const uint64_t typical_size_kb = low_fee ? 4 : 13;
+  const bool per_byte = m_wallet->use_fork_rules(HF_VERSION_PER_BYTE_FEE);
+  const uint64_t base_fee = m_wallet->get_base_fee();
+  const char *base = per_byte ? "byte" : "kB";
+  const uint64_t typical_size = per_byte ? 2500 : low_fee ? 4 : 13;
+  const uint64_t size_granularity = per_byte ? 1 : 1024;
+  message_writer() << (boost::format(tr("Current fee is %s %s per %s")) % print_money(base_fee) % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % base).str();
 
   std::vector<uint64_t> fees;
   for (uint32_t priority = 1; priority <= 4; ++priority)
   {
     uint64_t mult = m_wallet->get_fee_multiplier(priority);
-    fees.push_back(per_kb_fee * typical_size_kb * mult);
+    fees.push_back(base_fee * typical_size * mult);
   }
   std::vector<std::pair<uint64_t, uint64_t>> blocks;
   try
   {
-    uint64_t base_size = typical_size_kb * 1024;
-    blocks = m_wallet->estimate_backlog(base_size, base_size + 1023, fees);
+    uint64_t base_size = typical_size * size_granularity;
+    blocks = m_wallet->estimate_backlog(base_size, base_size + size_granularity - 1, fees);
   }
   catch (const std::exception &e)
   {

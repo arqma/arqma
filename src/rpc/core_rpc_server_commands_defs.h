@@ -50,7 +50,7 @@ namespace cryptonote
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define CORE_RPC_VERSION_MAJOR 2
-#define CORE_RPC_VERSION_MINOR 8
+#define CORE_RPC_VERSION_MINOR 9
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -925,7 +925,9 @@ namespace cryptonote
       std::string top_block_hash;
       uint64_t cumulative_difficulty;
       uint64_t block_size_limit;
+      uint64_t block_weight_limit;
       uint64_t block_size_median;
+      uint64_t block_weight_median;
       uint64_t start_time;
       uint64_t free_space;
       bool offline;
@@ -957,7 +959,9 @@ namespace cryptonote
         KV_SERIALIZE(top_block_hash)
         KV_SERIALIZE(cumulative_difficulty)
         KV_SERIALIZE(block_size_limit)
+        KV_SERIALIZE_OPT(block_weight_limit, (uint64_t)0)
         KV_SERIALIZE(block_size_median)
+        KV_SERIALIZE_OPT(block_weight_median, (uint64_t)0)
         KV_SERIALIZE(start_time)
         KV_SERIALIZE(free_space)
         KV_SERIALIZE(offline)
@@ -1176,6 +1180,7 @@ namespace cryptonote
       difficulty_type cumulative_difficulty;
       uint64_t reward;
       uint64_t block_size;
+      uint64_t block_weight;
       uint64_t num_txes;
       std::string pow_hash;
 
@@ -1193,6 +1198,7 @@ namespace cryptonote
         KV_SERIALIZE(cumulative_difficulty)
         KV_SERIALIZE(reward)
         KV_SERIALIZE(block_size)
+        KV_SERIALIZE_OPT(block_weight, (uint64_t)0)
         KV_SERIALIZE(num_txes)
         KV_SERIALIZE(pow_hash)
       END_KV_SERIALIZE_MAP()
@@ -1448,6 +1454,7 @@ namespace cryptonote
     std::string id_hash;
     std::string tx_json; // TODO - expose this data directly
     uint64_t blob_size;
+    uint64_t weight;
     uint64_t fee;
     std::string max_used_block_id_hash;
     uint64_t max_used_block_height;
@@ -1465,6 +1472,7 @@ namespace cryptonote
       KV_SERIALIZE(id_hash)
       KV_SERIALIZE(tx_json)
       KV_SERIALIZE(blob_size)
+      KV_SERIALIZE_OPT(weight, (uint64_t)0)
       KV_SERIALIZE(fee)
       KV_SERIALIZE(max_used_block_id_hash)
       KV_SERIALIZE(max_used_block_height)
@@ -1567,7 +1575,7 @@ namespace cryptonote
 
   struct tx_backlog_entry
   {
-    uint64_t blob_size;
+    uint64_t weight;
     uint64_t fee;
     uint64_t time_in_pool;
   };
@@ -2144,7 +2152,7 @@ namespace cryptonote
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
-  struct COMMAND_RPC_GET_PER_KB_FEE_ESTIMATE
+  struct COMMAND_RPC_GET_BASE_FEE_ESTIMATE
   {
     struct request_t
     {
@@ -2160,11 +2168,13 @@ namespace cryptonote
     {
       std::string status;
       uint64_t fee;
+      uint64_t quantization_mask;
       bool untrusted;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE(fee)
+        KV_SERIALIZE_OPT(quantization_mask, (uint64_t)1)
         KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()
     };

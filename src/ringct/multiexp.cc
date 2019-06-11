@@ -35,6 +35,7 @@ extern "C"
 {
 #include "crypto/crypto-ops.h"
 }
+#include "common/aligned.h"
 #include "rctOps.h"
 #include "multiexp.h"
 
