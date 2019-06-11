@@ -2542,7 +2542,7 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
   }
 
   if (hf_version < 8) {
-    const bool bulletproof = tx.rct_signatures.type == rct::RCTTypeFullBulletproof || tx.rct_signatures.type == rct::RCTTypeSimpleBulletproof;
+    const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
     if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
     {
       MERROR("Bulletproofs are not allowed before v8");
@@ -2576,7 +2576,7 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
   rv.message = rct::hash2rct(tx_prefix_hash);
 
   // mixRing - full and simple store it in opposite ways
-  if (rv.type == rct::RCTTypeFull || rv.type == rct::RCTTypeFullBulletproof)
+  if (rv.type == rct::RCTTypeFull)
   {
     CHECK_AND_ASSERT_MES(!pubkeys.empty() && !pubkeys[0].empty(), false, "empty pubkeys");
     rv.mixRing.resize(pubkeys[0].size());
@@ -2591,7 +2591,7 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
       }
     }
   }
-  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeSimpleBulletproof)
+  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof)
   {
     CHECK_AND_ASSERT_MES(!pubkeys.empty() && !pubkeys[0].empty(), false, "empty pubkeys");
     rv.mixRing.resize(pubkeys.size());
@@ -2610,14 +2610,14 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
   }
 
   // II
-  if (rv.type == rct::RCTTypeFull || rv.type == rct::RCTTypeFullBulletproof)
+  if (rv.type == rct::RCTTypeFull)
   {
     rv.p.MGs.resize(1);
     rv.p.MGs[0].II.resize(tx.vin.size());
     for (size_t n = 0; n < tx.vin.size(); ++n)
       rv.p.MGs[0].II[n] = rct::ki2rct(boost::get<txin_to_key>(tx.vin[n]).k_image);
   }
-  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeSimpleBulletproof)
+  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof)
   {
     CHECK_AND_ASSERT_MES(rv.p.MGs.size() == tx.vin.size(), false, "Bad MGs size");
     for (size_t n = 0; n < tx.vin.size(); ++n)
@@ -2883,7 +2883,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       return false;
     }
     case rct::RCTTypeSimple:
-    case rct::RCTTypeSimpleBulletproof:
+    case rct::RCTTypeBulletproof:
     {
       // check all this, either reconstructed (so should really pass), or not
       {
@@ -2941,7 +2941,6 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       break;
     }
     case rct::RCTTypeFull:
-    case rct::RCTTypeFullBulletproof:
     {
       // check all this, either reconstructed (so should really pass), or not
       {
@@ -3006,7 +3005,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
     }
 
     // for bulletproofs, check they're only multi-output after v8
-    if (rv.type == rct::RCTTypeFullBulletproof || rv.type == rct::RCTTypeSimpleBulletproof)
+    if (rct::is_rct_bulletproof(rv.type))
     {
       if (hf_version < 13)
       {

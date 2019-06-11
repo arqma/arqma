@@ -897,9 +897,12 @@ namespace cryptonote
       * @return true if all the checks pass, otherwise false
       */
      bool check_tx_semantic(const transaction& tx, bool keeped_by_block) const;
+     void set_semantics_failed(const crypto::hash &tx_hash);
 
      bool handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay);
      bool handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay);
+     struct tx_verification_batch_info { const cryptonote::transaction *tx; crypto::hash tx_hash; tx_verification_context &tvc; bool &result; };
+     bool handle_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool keeped_by_block);
 
      /**
       * @copydoc miner::on_block_chain_update
@@ -1011,7 +1014,7 @@ namespace cryptonote
      uint64_t m_target_blockchain_height; //!< blockchain height target
 
      network_type m_nettype; //!< which network are we on?
-     
+
      std::atomic<bool> m_update_available;
 
      std::string m_checkpoints_path; //!< path to json checkpoints file
