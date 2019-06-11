@@ -31,12 +31,14 @@ set(ringct_basic_sources
   rctOps.cpp
   rctTypes.cpp
   rctCryptoOps.c
-  bulletproofs.cc
-  bulletproofs_old.cc)
+  multiexp.cc
+  bulletproofs.cc)
+  # bulletproofs_old.cc) // switched off for tests
 
 set(ringct_basic_private_headers
   rctOps.h
   rctTypes.h
+  multiexp.h
   bulletproofs.h)
 
 arqma_private_headers(ringct_basic
