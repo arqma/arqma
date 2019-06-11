@@ -53,8 +53,9 @@ struct MultiexpData {
   }
 };
 
-rct::key bos_coster_heap_conv(std::vector<MultiexpData> &data);
-rct::key bos_coster_heap_conv_robust(std::vector<MultiexpData> &data);
+rct::key bos_coster_heap_conv(std::vector<MultiexpData> data);
+rct::key bos_coster_heap_conv_robust(std::vector<MultiexpData> data);
+rct::key straus(const std::vector<MultiexpData> &data, bool HiGi = false);
 
 }
 
