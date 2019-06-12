@@ -37,8 +37,8 @@ namespace epee
 {
 namespace net_utils
 {
-	typedef boosted_tcp_server<levin::protocol_handler<> > boosted_levin_server;
-  typedef boosted_tcp_server<levin::async_protocol_handler<> > boosted_levin_async_server;
+  typedef boosted_tcp_server<levin::protocol_handler<>> boosted_levin_server;
+  typedef boosted_tcp_server<levin::async_protocol_handler<>> boosted_levin_async_server;
 }
 }
 

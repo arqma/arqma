@@ -78,8 +78,6 @@ using namespace crypto;
 
 using namespace cryptonote;
 using epee::string_tools::pod_to_hex;
-extern "C" void slow_hash_allocate_state();
-extern "C" void slow_hash_free_state();
 
 DISABLE_VS_WARNINGS(4267)
 
@@ -101,6 +99,7 @@ static const struct {
  { 9, 7000, 0, 1530320400 },
  { 10, 61250, 0, 1543615200 },
  { 11, 131650, 0, 1552424400 },
+ { 12, 183700, 0, 1558656000 },
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 1;
 
@@ -117,6 +116,7 @@ static const struct {
  { 9, 20, 0, 1530248400 },
  { 10, 100, 0, 1538352000 },
  { 11, 800, 0, 1552424400 },
+ { 12, 1000, 0, 1552824400 },
 };
 static const uint64_t testnet_hard_fork_version_1_till = 1;
 
@@ -129,17 +129,18 @@ static const struct {
  // version 1 from the start of the blockchain
  { 1, 0, 0, 1341378000 },
  { 7, 1, 0, 1528750800 },
- { 8, 100, 0, 1528751200 },
- { 9, 200, 0, 1530248400 },
- { 10, 500, 0, 1538352000 },
- { 11, 800, 0, 1552424400 },
+ { 8, 10, 0, 1528751200 },
+ { 9, 20, 0, 1530248400 },
+ { 10, 30, 0, 1538352000 },
+ { 11, 40, 0, 1552424400 },
+ { 12, 50, 0, 1552824400 },
 };
 static const uint64_t stagenet_hard_fork_version_1_till = 1;
 
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool) :
   m_db(), m_tx_pool(tx_pool), m_hardfork(NULL), m_timestamps_and_difficulties_height(0), m_current_block_cumul_sz_limit(0), m_current_block_cumul_sz_median(0),
-  m_enforce_dns_checkpoints(true), m_max_prepare_blocks_threads(4), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false), m_fast_sync(true), m_show_time_stats(false), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
+  m_enforce_dns_checkpoints(true), m_max_prepare_blocks_threads(4), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false), m_fast_sync(true), m_show_time_stats(true), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
   m_difficulty_for_next_block_top_hash(crypto::null_hash),
   m_difficulty_for_next_block(1),
   m_btc_valid(false)
@@ -224,7 +225,7 @@ bool Blockchain::scan_outputkeys_for_indexes(size_t tx_version, const txin_to_ke
     if (outputs.size() < absolute_offsets.size() && outputs.size() > 0)
     {
       MDEBUG("Additional outputs needed: " << absolute_offsets.size() - outputs.size());
-      std::vector < uint64_t > add_offsets;
+      std::vector<uint64_t> add_offsets;
       std::vector<output_data_t> add_outputs;
       add_outputs.reserve(absolute_offsets.size() - outputs.size());
       for (size_t i = outputs.size(); i < absolute_offsets.size(); i++)
@@ -284,7 +285,6 @@ bool Blockchain::scan_outputkeys_for_indexes(size_t tx_version, const txin_to_ke
           *pmax_related_block_height = h;
         }
       }
-
     }
     catch (const OUTPUT_DNE& e)
     {
@@ -296,9 +296,7 @@ bool Blockchain::scan_outputkeys_for_indexes(size_t tx_version, const txin_to_ke
       MERROR_VER("Transaction does not exist: " << e.what());
       return false;
     }
-
   }
-
   return true;
 }
 //------------------------------------------------------------------
@@ -571,7 +569,7 @@ void Blockchain::pop_blocks(uint64_t nblocks)
 
   try
   {
-    for (i=0; i < nblocks; ++i)
+    for(i = 0; i < nblocks; ++i)
     {
       pop_block_from_blockchain();
     }
@@ -596,6 +594,8 @@ block Blockchain::pop_block_from_blockchain()
 
   block popped_block;
   std::vector<transaction> popped_txs;
+
+  CHECK_AND_ASSERT_THROW_MES(m_db->height() > 1, "It is forbidden to remove ArQmA Genesis Block.");
 
   try
   {
@@ -948,6 +948,23 @@ bool Blockchain::rollback_blockchain_switching(std::list<block>& original_chain,
   return true;
 }
 //------------------------------------------------------------------
+// Calculate ln(p) of Poisson distribution
+// Original idea : https://stackoverflow.com/questions/30156803/implementing-poisson-distribution-in-c
+// Using logarithms avoids dealing with very large (k!) and very small (p < 10^-44) numbers
+// lam     - lambda parameter - in our case, how many blocks, on average, you would expect to see in the interval
+// k       - k parameter - in our case, how many blocks we have actually seen
+//           !!! k must not be zero
+// return  - ln(p)
+double calc_poisson_ln(double lam, uint64_t k)
+{
+	double logx = -lam + k * log(lam);
+	do
+	{
+		logx -= log(k); // This can be tabulated
+	} while(--k > 0);
+	return logx;
+}
+//------------------------------------------------------------------
 // This function attempts to switch to an alternate chain, returning
 // boolean based on success therein.
 bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::iterator>& alt_chain, bool discard_disconnected_chain)
@@ -965,6 +982,69 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::
   {
     LOG_ERROR("Attempting to move to an alternate chain, but it doesn't appear to connect to the main chain!");
     return false;
+  }
+
+  // For longer reorgs, check if the timestamps are probable - if they aren't the diff algo has failed
+  // This check is meant to detect an offline bypass of timestamp < time() + ftl check
+  // It doesn't need to be very strict as it synergises with the median check
+  if(alt_chain.size() >= POISSON_CHECK_TRIGGER)
+  {
+    uint64_t alt_chain_size = alt_chain.size();
+    uint64_t high_timestamp = alt_chain.back()->second.bl.timestamp;
+    crypto::hash low_block = alt_chain.front()->second.bl.prev_id;
+
+    //Make sure that the high_timestamp is really highest
+	  for(const blocks_ext_by_hash::iterator &it : alt_chain)
+    {
+	    if(high_timestamp < it->second.bl.timestamp)
+		     high_timestamp = it->second.bl.timestamp;
+	  }
+
+	  // This would fail later anyway
+	  if(high_timestamp > get_adjusted_time() + CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11)
+	  {
+	    LOG_ERROR("Attempting to move to an alternate chain, but it failed FTL check! timestamp: " << high_timestamp <<
+				  " limit: " << get_adjusted_time() + CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11);
+	    return false;
+	  }
+
+	  LOG_PRINT_L1("Poisson check triggered by reorg size of " << alt_chain_size);
+
+	  uint64_t failed_checks = 0, i = 1;
+	  constexpr crypto::hash zero_hash = {{0}};
+	  for(; i <= POISSON_CHECK_DEPTH; i++)
+	  {
+	    // This means we reached the genesis block
+	    if(low_block == zero_hash)
+  	    break;
+
+	    block_header bhd = m_db->get_block_header(low_block);
+	    uint64_t low_timestamp = bhd.timestamp;
+	    low_block = bhd.prev_id;
+
+	    if(low_timestamp >= high_timestamp)
+	    {
+	      LOG_PRINT_L1("Skipping check at depth " << i << " due to tampered timestamp on main chain.");
+	      failed_checks++;
+	      continue;
+	    }
+
+	    double lam = double(high_timestamp - low_timestamp) / double(DIFFICULTY_TARGET_V11);
+	    if(calc_poisson_ln(lam, alt_chain_size + i) < POISSON_LOG_P_REJECT)
+	    {
+	      LOG_PRINT_L1("Poisson check at depth " << i << " failed! delta_t: " << (high_timestamp - low_timestamp) << " size: " << alt_chain_size + i);
+	      failed_checks++;
+	    }
+    }
+
+    i--; //Convert to number of checks
+    LOG_PRINT_L1("Poisson check result " << failed_checks << " fails out of " << i);
+
+    if(failed_checks > i / 2)
+    {
+      LOG_ERROR("Attempting to move to an alternate chain, but it failed Poisson check! " << failed_checks << " fails out of " << i << " alt_chain_size: " << alt_chain_size);
+	  return false;
+    }
   }
 
   // pop blocks from the blockchain until the top block is the parent
@@ -1254,6 +1334,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
       m_btc.timestamp = time(NULL); // update timestamp unconditionally
       b = m_btc;
       diffic = m_btc_difficulty;
+      height = m_btc_height;
       expected_reward = m_btc_expected_reward;
       return true;
     }
@@ -1414,7 +1495,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
         ", cumulative size " << cumulative_size << " is now good");
 #endif
 
-    cache_block_template(b, miner_address, ex_nonce, diffic, expected_reward, pool_cookie);
+    cache_block_template(b, miner_address, ex_nonce, diffic, height, expected_reward, pool_cookie);
     return true;
   }
   LOG_ERROR("Failed to create_block_template with " << 10 << " tries");
@@ -2099,7 +2180,7 @@ bool Blockchain::get_transactions(const t_ids_container& txs_ids, t_tx_container
 // Find the split point between us and foreign blockchain and return
 // (by reference) the most recent common block hash along with up to
 // BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT additional (more recent) hashes.
-bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qblock_ids, std::vector<crypto::hash>& hashes, uint64_t& start_height, uint64_t& current_height) const
+bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qblock_ids, std::vector<crypto::hash>& hashes, uint64_t& start_height, uint64_t& current_height, bool clip_pruned) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
@@ -2112,9 +2193,13 @@ bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qbloc
 
   m_db->block_txn_start(true);
   current_height = get_current_blockchain_height();
-  const uint32_t pruning_seed = get_blockchain_pruning_seed();
-  start_height = tools::get_next_unpruned_block_height(start_height, current_height, pruning_seed);
-  uint64_t stop_height = tools::get_next_pruned_block_height(start_height, current_height, pruning_seed);
+  uint64_t stop_height = current_height;
+  if (clip_pruned)
+  {
+    const uint32_t pruning_seed = get_blockchain_pruning_seed();
+    start_height = tools::get_next_unpruned_block_height(start_height, current_height, pruning_seed);
+    stop_height = tools::get_next_pruned_block_height(start_height, current_height, pruning_seed);
+  }
   size_t count = 0;
   hashes.reserve(std::min((size_t)(stop_height - start_height), (size_t)BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT));
   for(size_t i = start_height; i < stop_height && count < BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT; i++, count++)
@@ -2131,7 +2216,7 @@ bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qbloc
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
 
-  bool result = find_blockchain_supplement(qblock_ids, resp.m_block_ids, resp.start_height, resp.total_height);
+  bool result = find_blockchain_supplement(qblock_ids, resp.m_block_ids, resp.start_height, resp.total_height, true);
   if (result)
     resp.cumulative_difficulty = m_db->get_block_cumulative_difficulty(resp.total_height - 1);
 
@@ -3085,7 +3170,7 @@ bool Blockchain::check_tx_input(size_t tx_version, const txin_to_key& txin, cons
 
   struct outputs_visitor
   {
-    std::vector<rct::ctkey >& m_output_keys;
+    std::vector<rct::ctkey>& m_output_keys;
     const Blockchain& m_bch;
     outputs_visitor(std::vector<rct::ctkey>& output_keys, const Blockchain& bch) :
       m_output_keys(output_keys), m_bch(bch)
@@ -3295,8 +3380,8 @@ leave:
     const el::Level level = el::Level::Warning;
     MCLOG_RED(level, "global", "**********************************************************************");
     MCLOG_RED(level, "global", "A block was seen on the network with a version higher than the last");
-    MCLOG_RED(level, "global", "known one. This may be an old version of the daemon, and a software");
-    MCLOG_RED(level, "global", "update may be required to sync further. Try running: update check");
+    MCLOG_RED(level, "global", "known one. This may be an old version of the Arqma daemon, and a software");
+    MCLOG_RED(level, "global", "update may be required to sync further. ");
     MCLOG_RED(level, "global", "**********************************************************************");
   }
 
@@ -3625,12 +3710,7 @@ leave:
 //------------------------------------------------------------------
 bool Blockchain::prune_blockchain(uint32_t pruning_seed)
 {
-  uint8_t hf_version = m_hardfork->get_current_version();
-  if (hf_version < 11)
-  {
-    MERROR("Most of the Arqma-Network will only be ready for pruned blockchains from v11, not pruning");
-    return false;
-  }
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
   return m_db->prune_blockchain(pruning_seed);
 }
 //------------------------------------------------------------------
@@ -3786,7 +3866,6 @@ void Blockchain::set_enforce_dns_checkpoints(bool enforce_checkpoints)
 void Blockchain::block_longhash_worker(uint64_t height, const std::vector<block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const
 {
   TIME_MEASURE_START(t);
-  slow_hash_allocate_state();
 
   for (const auto & block : blocks)
   {
@@ -3797,7 +3876,6 @@ void Blockchain::block_longhash_worker(uint64_t height, const std::vector<block>
     map.emplace(id, pow);
   }
 
-  slow_hash_free_state();
   TIME_MEASURE_FINISH(t);
 }
 
@@ -4054,7 +4132,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     int extra = blocks_entry.size() % threads;
     MDEBUG("block_batches: " << batches);
     std::vector<std::unordered_map<crypto::hash, crypto::hash>> maps(threads);
-    std::vector < std::vector < block >> blocks(threads);
+    std::vector<std::vector<block>> blocks(threads);
     auto it = blocks_entry.begin();
 
     for (uint64_t i = 0; i < threads; i++)
@@ -4158,7 +4236,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
   TIME_MEASURE_START(scantable);
 
   // [input] stores all unique amounts found
-  std::vector < uint64_t > amounts;
+  std::vector<uint64_t> amounts;
   // [input] stores all absolute_offsets for each amount
   std::map<uint64_t, std::vector<uint64_t>> offset_map;
   // [output] stores all output_data_t for each absolute_offset
@@ -4202,7 +4280,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
       // get all amounts from tx.vin(s)
       for (const auto &txin : tx.vin)
       {
-        const txin_to_key &in_to_key = boost::get < txin_to_key > (txin);
+        const txin_to_key &in_to_key = boost::get<txin_to_key>(txin);
 
         // check for duplicate
         auto it = its->second.find(in_to_key.k_image);
@@ -4230,7 +4308,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
       // add new absolute_offsets to offset_map
       for (const auto &txin : tx.vin)
       {
-        const txin_to_key &in_to_key = boost::get < txin_to_key > (txin);
+        const txin_to_key &in_to_key = boost::get<txin_to_key>(txin);
         // no need to check for duplicate here.
         auto absolute_offsets = relative_output_offsets_to_absolute(in_to_key.key_offsets);
         for (const auto & offset : absolute_offsets)
@@ -4294,7 +4372,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
 
       for (const auto &txin : tx.vin)
       {
-        const txin_to_key &in_to_key = boost::get < txin_to_key > (txin);
+        const txin_to_key &in_to_key = boost::get<txin_to_key>(txin);
         auto needed_offsets = relative_output_offsets_to_absolute(in_to_key.key_offsets);
 
         std::vector<output_data_t> outputs;
@@ -4627,13 +4705,14 @@ void Blockchain::invalidate_block_template_cache()
   m_btc_valid = false;
 }
 
-void Blockchain::cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t expected_reward, uint64_t pool_cookie)
+void Blockchain::cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t height, uint64_t expected_reward, uint64_t pool_cookie)
 {
   MDEBUG("Setting block template cache");
   m_btc = b;
   m_btc_address = address;
   m_btc_nonce = nonce;
   m_btc_difficulty = diff;
+  m_btc_height = height;
   m_btc_expected_reward = expected_reward;
   m_btc_pool_cookie = pool_cookie;
   m_btc_valid = true;

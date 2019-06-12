@@ -269,6 +269,17 @@ int main(int argc, char const * argv[])
 
     // after logs initialized
     tools::create_directories_if_necessary(data_dir.string());
+    
+#ifdef STACK_TRACE
+	tools::set_stack_trace_log(log_file_path.filename().string());
+#endif // STACK_TRACE
+	
+	if (!command_line::is_arg_defaulted(vm, daemon_args::arg_max_concurrency))
+	  tools::set_max_concurrency(command_line::get_arg(vm, daemon_args::arg_max_concurrency));
+	
+	// logging is now set up
+	MGINFO("Arqma '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")");
+	
 
     // If there are positional options, we're running a daemon command
     {
@@ -314,7 +325,11 @@ int main(int argc, char const * argv[])
           }
         }
 
-        daemonize::t_command_server rpc_commands{rpc_ip, rpc_port, std::move(login)};
+        auto ssl_options = cryptonote::rpc_args::process_ssl(vm, true);
+	if (!ssl_options)
+          return 1;
+
+        daemonize::t_command_server rpc_commands{rpc_ip, rpc_port, std::move(login), std::move(*ssl_options)};
         if (rpc_commands.process_command_vec(command))
         {
           return 0;
@@ -329,16 +344,6 @@ int main(int argc, char const * argv[])
         }
       }
     }
-
-#ifdef STACK_TRACE
-    tools::set_stack_trace_log(log_file_path.filename().string());
-#endif // STACK_TRACE
-
-    if (!command_line::is_arg_defaulted(vm, daemon_args::arg_max_concurrency))
-      tools::set_max_concurrency(command_line::get_arg(vm, daemon_args::arg_max_concurrency));
-
-    // logging is now set up
-    MGINFO("ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")");
 
     MINFO("Moving from main() into the daemonize now.");
 

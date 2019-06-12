@@ -52,7 +52,10 @@ namespace Language
   class German: public Base
   {
   public:
-    German(): Base("Deutsch", "German", std::vector<std::string>({
+    German(): Base("Deutsch", "German", {}, 4)
+    {
+      static constexpr const char * const words[NWORDS] =
+      {
         "Abakus",
         "Abart",
         "abbilden",
@@ -1679,8 +1682,8 @@ namespace Language
         "Zündung",
         "Zweck",
         "Zyklop"
-      }), 4)
-    {
+      };
+      set_words(words);
       populate_maps();
     }
   };

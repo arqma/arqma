@@ -47,10 +47,10 @@ namespace tools
 
     // All four ArQ-Net domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
-//        "updates.arqma.com",
-//        "updates.myarqma.com",
-//        "updates.supportarqma.com",
-//        "updates.supportarqma.eu"
+      "updates.arqma.com",
+      "updates.myarqma.com",
+      "updates.suppoerarqma.com",
+      "updates.supportarqma.com"
     };
 
     if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls))
@@ -98,21 +98,19 @@ namespace tools
     return found;
   }
 
-  std::string get_update_url(const std::string &software, const std::string &subdir, const std::string &buildtag, const std::string &version, bool user)
+  std::string get_update_url(const std::string &software, const std::string &buildtag, const std::string &version, bool user)
   {
-    const char *base = user ? "https://downloads.arqma.com/" : "https://updates.arqma.com/";
+    const char *base = user ? "https://downloads.arqma.com" : "https://get.arqma.com";
 #ifdef _WIN32
     static const char *extension = strncmp(buildtag.c_str(), "install-", 8) ? ".zip" : ".exe";
 #else
-    static const char extension[] = ".tar.bz2";
+    static const char extension[] = ".tar.gz";
 #endif
 
     std::string url;
+    url = base;
 
-    url =  base;
-    if (!subdir.empty())
-      url += subdir + "/";
-    url = url + software + "-" + buildtag + "-v" + version + extension;
+    url = url + "/" + software + "-" + buildtag + "-v" + version + extension;
     return url;
   }
 }

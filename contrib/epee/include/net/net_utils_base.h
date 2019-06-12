@@ -44,6 +44,12 @@
 #define MAKE_IP( a1, a2, a3, a4 )	(a1|(a2<<8)|(a3<<16)|(a4<<24))
 #endif
 
+#if BOOST_VERSION >= 107000
+#define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
+#else
+#define GET_IO_SERVICE(s) ((s).get_io_service())
+#endif
+
 namespace net
 {
 	class tor_address;
@@ -245,7 +251,7 @@ namespace net_utils
     const network_address m_remote_address;
     const bool     m_is_income;
     const time_t   m_started;
-    const time_t   m_ssl;
+    const bool     m_ssl;
     time_t   m_last_recv;
     time_t   m_last_send;
     uint64_t m_recv_cnt;
@@ -311,15 +317,15 @@ namespace net_utils
 	/************************************************************************/
 	struct i_service_endpoint
 	{
-		virtual bool do_send(const void* ptr, size_t cb)=0;
-    virtual bool close()=0;
-    virtual bool send_done()=0;
-    virtual bool call_run_once_service_io()=0;
-    virtual bool request_callback()=0;
-    virtual boost::asio::io_service& get_io_service()=0;
+	virtual bool do_send(const void* ptr, size_t cb) = 0;
+    virtual bool close() = 0;
+    virtual bool send_done() = 0;
+    virtual bool call_run_once_service_io() = 0;
+    virtual bool request_callback() = 0;
+    virtual boost::asio::io_service& get_io_service() = 0;
     //protect from deletion connection object(with protocol instance) during external call "invoke"
-    virtual bool add_ref()=0;
-    virtual bool release()=0;
+    virtual bool add_ref() = 0;
+    virtual bool release() = 0;
   protected:
     virtual ~i_service_endpoint() noexcept(false) {}
 	};

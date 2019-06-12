@@ -1,6 +1,6 @@
 ## Arqma Network
 
-Copyright (c) 2018-2019 The Arqma Network.     
+Copyright (c) 2018-2019 The Arqma Network.    
 Copyright (c) 2014-2018 The Monero Project.  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
@@ -151,7 +151,8 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git submodule init && git submodule update`
+`$ cd arqma && git checkout release-v0.4.0.0`    
+`$ git submodule init && git submodule update`    
 
 ### Build instructions
 
@@ -277,13 +278,13 @@ application.
 
 **Preparing the build environment**
 
-1. Download and install the [MSYS2 installer](http://msys2.github.io) 64-bit package, depending on your system.
+1. Download and install the [MSYS2 installer](http://msys2.github.io).
 
 2. Open the MSYS shell via the `MSYS2 MSYS` shortcut at Menu Start
 
 3. Update packages using pacman:  
 
-        pacman -Syuu  
+        pacman -Syu    
 
 4. Exit the MSYS shell using Alt+F4 or by clicking X at top-right corner. It is Very Important to do not exit to shell!!.
 
@@ -291,7 +292,7 @@ application.
 
 6. Update packages again using pacman:  
 
-        pacman -Syuu  
+        pacman -Syu    
 
 7. Install dependencies:
 
@@ -305,21 +306,27 @@ application.
 
 	`git clone https://github.com/arqma/arqma`
 
-* Activate submodules:
+* Change branch to last Release:
 
-	`cd arqma && git submodule init && git submodule update`
+	`cd arqma && git checkout release-v0.4.0.0`    
+
+* Activate and update submodules:
+
+  `git submodule init && git submodule update`
 
 * If you are on a 64-bit system, run:
 
-        make release-static-win64
+        make release-static-win
 
 * The resulting executables can be found in `build/release/bin`
 
 * **Optional**: to build Windows binaries suitable for debugging on a 64-bit system, run:
 
-        make debug-static-win64
+        make debug-static-win
 
 * The resulting executables can be found in `build/debug/bin`
+
+*** Arqma does Not support 32-bit Windows anymore ***
 
 ### On FreeBSD:
 
@@ -454,22 +461,25 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 
 * ```make depends target=x86_64-linux-gnu``` for 64-bit linux binaries.
 * ```make depends target=x86_64-w64-mingw32``` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
-* ```make depends target=x86_64-apple-darwin11``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python-dev curl libtiff-tools bsdmainutils libbz2-dev python3-setuptools
+* ```make depends target=x86_64-apple-darwin14``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python3-dev curl libtiff-tools bsdmainutils libbz2-dev python3-setuptools
 * ```make depends target=i686-linux-gnu``` for 32-bit linux binaries. Requires: g++-multilib bc
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
-*** For `x86_64-apple-darwin11` you need to download SDK first ***    
+*** For `x86_64-apple-darwin14` you need to download SDK first ***    
 
 * ```git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs ```    
 
-You can download SDK at https://github.com/malbit/MacOSX-SDKs/archive/MacOSX10.11.sdk.tar.gz and unpack it and put to contrib/depends/SDKs    
+You can download SDK at https://github.com/malbit/MacOSX-SDKs/releases/download/MacOSX10.11.sdk.arqma/MacOSX10.11.sdk.tar.gz and unpack it and put to contrib/depends/SDKs    
 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
 Using `depends` might also be easier to compile Arqma on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
 
-The produced binaries still link libc dynamically. If the binary is compiled on a current distribution, it might not run on an older distribution with an older installation of libc. Passing `-DBACKCOMPAT=ON` to cmake will make sure that the binary will run on systems having at least libc version 2.17.
+### Compability with older Linux Versions < GLIBC_2.25
+
+* ```make depends-compat target=x86_64-linux-gnu``` for 64-bit linux binaries.
+
 
 ## Running arqmad
 

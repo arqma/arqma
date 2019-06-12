@@ -47,7 +47,7 @@ elseif (GIT_FOUND OR Git_FOUND)
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 else()
   message(STATUS "WARNING: Git was not found!")
-  write_static_version_header("Very Risky to Use")
+  write_static_version_header("unknown")
 endif ()
 add_custom_target(genversion ALL
   DEPENDS "${CMAKE_BINARY_DIR}/version.cpp")

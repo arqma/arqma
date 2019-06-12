@@ -26,8 +26,13 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #include "misc_log_ex.h"
 #include "common/threadpool.h"
+
+#include <cassert>
+#include <limits>
+#include <stdexcept>
 
 #include "cryptonote_config.h"
 #include "common/util.h"
@@ -37,10 +42,10 @@ static __thread bool is_leaf = false;
 
 namespace tools
 {
-threadpool::threadpool() : running(true), active(0) {
+threadpool::threadpool(unsigned int max_threads) : running(true), active(0) {
   boost::thread::attributes attrs;
   attrs.set_stack_size(THREAD_STACK_SIZE);
-  max = tools::get_max_concurrency();
+  max = max_threads ? max_threads : tools::get_max_concurrency();
   size_t i = max ? max - 1 : 0;
   while(i--) {
     threads.push_back(boost::thread(attrs, boost::bind(&threadpool::run, this, false)));
@@ -61,7 +66,7 @@ threadpool::~threadpool() {
     running = false;
     has_work.notify_all();
   }
-  for (size_t i = 0; i<threads.size(); i++) {
+  for (size_t i = 0; i < threads.size(); i++) {
     try { threads[i].join(); }
     catch (...) { /* ignore */ }
   }
@@ -70,7 +75,7 @@ threadpool::~threadpool() {
 void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
   CHECK_AND_ASSERT_THROW_MES(!is_leaf, "A leaf routine is using a thread pool");
   boost::unique_lock<boost::mutex> lock(mutex);
-  if (!leaf && ((active == max && !queue.empty()) || depth > 0)) {
+  if(!leaf && ((active == max && !queue.empty()) || depth > 0)) {
     // if all available threads are already running
     // and there's work waiting, just run in current thread
     lock.unlock();
@@ -80,9 +85,9 @@ void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
     --depth;
     is_leaf = false;
   } else {
-    if (obj)
+    if(obj)
       obj->inc();
-    if (leaf)
+    if(leaf)
       queue.push_front({obj, f, leaf});
     else
       queue.push_back({obj, f, leaf});
@@ -90,7 +95,8 @@ void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
   }
 }
 
-int threadpool::get_max_concurrency() {
+unsigned int threadpool::get_max_concurrency() const
+{
   return max;
 }
 
@@ -99,7 +105,7 @@ threadpool::waiter::~waiter()
   try
   {
     boost::unique_lock<boost::mutex> lock(mt);
-    if (num)
+    if(num)
       MERROR("wait should have been called before waiter dtor - waiting now");
   }
   catch (...) { /* ignore */ }
@@ -113,7 +119,8 @@ threadpool::waiter::~waiter()
   }
 }
 
-void threadpool::waiter::wait(threadpool *tpool) {
+void threadpool::waiter::wait(threadpool *tpool)
+{
   if (tpool)
     tpool->run(true);
   boost::unique_lock<boost::mutex> lock(mt);
@@ -121,19 +128,22 @@ void threadpool::waiter::wait(threadpool *tpool) {
     cv.wait(lock);
 }
 
-void threadpool::waiter::inc() {
+void threadpool::waiter::inc()
+{
   const boost::unique_lock<boost::mutex> lock(mt);
   num++;
 }
 
-void threadpool::waiter::dec() {
+void threadpool::waiter::dec()
+{
   const boost::unique_lock<boost::mutex> lock(mt);
   num--;
   if (!num)
     cv.notify_all();
 }
 
-void threadpool::run(bool flush) {
+void threadpool::run(bool flush)
+{
   boost::unique_lock<boost::mutex> lock(mutex);
   while (running) {
     entry e;

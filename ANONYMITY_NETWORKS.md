@@ -19,6 +19,11 @@ network. The transaction will not be broadcast unless an anonymity connection
 is made or until `arqmad` is shutdown and restarted with only public
 connections enabled.
 
+Anonymity networks can also be used with `arqma-wallet-cli` and
+`arqma-wallet-rpc` - the wallets will connect to a daemon through a proxy. The
+daemon must provide a hidden service for the RPC itself, which is separate from
+the hidden service for P2P connections.
+
 ## P2P Commands
 
 Only handshakes, peer timed syncs and transaction broadcast messages are
@@ -72,6 +77,33 @@ address "cmeua5767mz2q5jsaelk2rxhf67agrwuetaso5dzbenyzwlbkg2q.b32.i2p:5000" and
 forwarded to `arqmad` localhost port 30000.
 These addresses will be shared with outgoing peers, over the same network type,
 otherwise the peer will not be notified of the peer address by the proxy.
+
+### Wallet RPC
+
+An anonymity network can be configured to forward incoming connections to a
+`arqmad` RPC port - which is independent from the configuration for incoming
+P2P anonymity connections. The anonymity network (Tor/i2p) is
+[configured in the same manner](#configuration), except the localhost port
+must be the RPC port (typically 19994 for mainnet) instead of the p2p port:
+
+> HiddenServiceDir /var/lib/tor/data/arqma
+> HiddenServicePort 19994 127.0.0.1:19994
+Then the wallet will be configured to use a Tor/i2p address:
+> `--proxy 127.0.0.1:9050`
+> `--daemon-address rveahdfho7wo4b2m.onion`
+The proxy must match the address type - a Tor proxy will not work properly with
+i2p addresses, etc.
+
+i2p and onion addresses provide the information necessary to authenticate and
+encrypt the connection from end-to-end. If desired, SSL can also be applied to
+the connection with `--daemon-address https://rveahdfho7wo4b2m.onion` which
+requires a server certificate that is signed by a "root" certificate on the
+machine running the wallet. Alternatively, `--daemon-cert-file` can be used to
+specify a certificate to authenticate the server.
+
+Proxies can also be used to connect to "clearnet" (ipv4 addresses or ICANN
+domains), but `--daemon-cert-file` _must_ be used for authentication and
+encryption.
 
 ### Network Types
 

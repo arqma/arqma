@@ -65,22 +65,22 @@ DISABLE_VS_WARNINGS(4355)
 
 namespace cryptonote
 {
-  const command_line::arg_descriptor<bool, false> arg_testnet_on  = {
+  const command_line::arg_descriptor<bool, false> arg_testnet_on = {
     "testnet"
   , "Run on testnet. The wallet must be launched with --testnet flag."
   , false
   };
-  const command_line::arg_descriptor<bool, false> arg_stagenet_on  = {
+  const command_line::arg_descriptor<bool, false> arg_stagenet_on = {
     "stagenet"
   , "Run on stagenet. The wallet must be launched with --stagenet flag."
   , false
   };
-  const command_line::arg_descriptor<bool> arg_regtest_on  = {
+  const command_line::arg_descriptor<bool> arg_regtest_on = {
     "regtest"
   , "Run in a regression testing mode."
   , false
   };
-  const command_line::arg_descriptor<difficulty_type> arg_fixed_difficulty  = {
+  const command_line::arg_descriptor<difficulty_type> arg_fixed_difficulty = {
     "fixed-difficulty"
   , "Fixed difficulty used for testing."
   , 0
@@ -106,7 +106,7 @@ namespace cryptonote
     "disable-dns-checkpoints"
   , "Do not retrieve checkpoints from DNS - OBSOLETE. Enabled by Default"
   };
-  const command_line::arg_descriptor<size_t> arg_block_download_max_size  = {
+  const command_line::arg_descriptor<size_t> arg_block_download_max_size = {
     "block-download-max-size"
   , "Set maximum size of block download queue in bytes (0 for default)"
   , 0
@@ -126,7 +126,7 @@ namespace cryptonote
   , "Sleep time in ms, defaults to 0 (off), used to debug before/after locking mutex. Values 100 to 1000 are good for tests."
   , 0
   };
-  static const command_line::arg_descriptor<bool> arg_dns_checkpoints  = {
+  static const command_line::arg_descriptor<bool> arg_dns_checkpoints = {
     "enforce-dns-checkpointing"
   , "checkpoints from DNS server will be enforced - Obsolete. ON by Default"
   , true
@@ -141,12 +141,12 @@ namespace cryptonote
   , "Max number of threads to use when preparing block hashes in groups."
   , 4
   };
-  static const command_line::arg_descriptor<uint64_t> arg_show_time_stats  = {
+  static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
   , "Show time-stats when processing blocks/txs and disk synchronization."
   , 0
   };
-  static const command_line::arg_descriptor<size_t> arg_block_sync_size  = {
+  static const command_line::arg_descriptor<size_t> arg_block_sync_size = {
     "block-sync-size"
   , "How many blocks to sync at once during chain synchronization (0 = adaptive)."
   , 0
@@ -156,22 +156,22 @@ namespace cryptonote
   , "Check for new versions of arqma: [disabled|notify|download|update]"
   , "notify"
   };
-  static const command_line::arg_descriptor<bool> arg_fluffy_blocks  = {
+  static const command_line::arg_descriptor<bool> arg_fluffy_blocks = {
     "fluffy-blocks"
   , "Relay blocks as fluffy blocks (obsolete, now default)"
   , true
   };
-  static const command_line::arg_descriptor<bool> arg_no_fluffy_blocks  = {
+  static const command_line::arg_descriptor<bool> arg_no_fluffy_blocks = {
     "no-fluffy-blocks"
   , "Relay blocks as normal blocks"
   , false
   };
-  static const command_line::arg_descriptor<bool> arg_pad_transactions  = {
+  static const command_line::arg_descriptor<bool> arg_pad_transactions = {
     "pad-transactions"
   , "Pad relayed transactions to help defend against traffic volume analysis"
   , false
   };
-  static const command_line::arg_descriptor<size_t> arg_max_txpool_size  = {
+  static const command_line::arg_descriptor<size_t> arg_max_txpool_size = {
     "max-txpool-size"
   , "Set maximum txpool size in bytes."
   , DEFAULT_TXPOOL_MAX_SIZE
@@ -181,7 +181,7 @@ namespace cryptonote
   , "Run a program for each new block, '%s' will be replaced by the block hash"
   , ""
   };
-  static const command_line::arg_descriptor<bool> arg_prune_blockchain  = {
+  static const command_line::arg_descriptor<bool> arg_prune_blockchain = {
     "prune-blockchain"
   , "Prune BlockChain"
   , false
@@ -201,6 +201,7 @@ namespace cryptonote
               m_disable_dns_checkpoints(false),
               m_update_download(0),
               m_nettype(UNDEFINED),
+              m_update_available(false),
               m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
@@ -684,7 +685,7 @@ namespace cryptonote
     return false;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, crypto::hash &tx_prefixt_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
     tvc = boost::value_initialized<tx_verification_context>();
 
@@ -697,9 +698,8 @@ namespace cryptonote
     }
 
     tx_hash = crypto::null_hash;
-    tx_prefixt_hash = crypto::null_hash;
 
-    if(!parse_tx_from_blob(tx, tx_hash, tx_prefixt_hash, tx_blob))
+    if(!parse_tx_from_blob(tx, tx_hash, tx_blob))
     {
       LOG_PRINT_L1("WRONG TRANSACTION BLOB, Failed to parse, rejected");
       tvc.m_verifivation_failed = true;
@@ -732,7 +732,7 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, crypto::hash &tx_prefixt_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
     if(!check_tx_syntax(tx))
     {
@@ -768,7 +768,7 @@ namespace cryptonote
     TRY_ENTRY();
     CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
 
-    struct result { bool res; cryptonote::transaction tx; crypto::hash hash; crypto::hash prefix_hash; bool in_txpool; bool in_blockchain; };
+    struct result { bool res; cryptonote::transaction tx; crypto::hash hash; bool in_txpool; bool in_blockchain; };
     std::vector<result> results(tx_blobs.size());
 
     tvc.resize(tx_blobs.size());
@@ -779,7 +779,7 @@ namespace cryptonote
       tpool.submit(&waiter, [&, i, it] {
         try
         {
-          results[i].res = handle_incoming_tx_pre(*it, tvc[i], results[i].tx, results[i].hash, results[i].prefix_hash, keeped_by_block, relayed, do_not_relay);
+          results[i].res = handle_incoming_tx_pre(*it, tvc[i], results[i].tx, results[i].hash, keeped_by_block, relayed, do_not_relay);
         }
         catch (const std::exception &e)
         {
@@ -809,7 +809,7 @@ namespace cryptonote
         tpool.submit(&waiter, [&, i, it] {
           try
           {
-            results[i].res = handle_incoming_tx_post(*it, tvc[i], results[i].tx, results[i].hash, results[i].prefix_hash, keeped_by_block, relayed, do_not_relay);
+            results[i].res = handle_incoming_tx_post(*it, tvc[i], results[i].tx, results[i].hash, keeped_by_block, relayed, do_not_relay);
           }
           catch (const std::exception &e)
           {
@@ -834,7 +834,7 @@ namespace cryptonote
       if (already_have[i])
         continue;
 
-      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], results[i].prefix_hash, it->size(), tvc[i], keeped_by_block, relayed, do_not_relay);
+      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], it->size(), tvc[i], keeped_by_block, relayed, do_not_relay);
       if(tvc[i].m_verifivation_failed)
       {MERROR_VER("Transaction verification failed: " << results[i].hash);}
       else if(tvc[i].m_verifivation_impossible)
@@ -1075,10 +1075,9 @@ namespace cryptonote
   bool core::add_new_tx(transaction& tx, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
     crypto::hash tx_hash = get_transaction_hash(tx);
-    crypto::hash tx_prefix_hash = get_transaction_prefix_hash(tx);
     blobdata bl;
     t_serializable_object_to_blob(tx, bl);
-    return add_new_tx(tx, tx_hash, bl, tx_prefix_hash, bl.size(), tvc, keeped_by_block, relayed, do_not_relay);
+    return add_new_tx(tx, tx_hash, bl, bl.size(), tvc, keeped_by_block, relayed, do_not_relay);
   }
   //-----------------------------------------------------------------------------------------------
   size_t core::get_blockchain_total_transactions() const
@@ -1086,7 +1085,7 @@ namespace cryptonote
     return m_blockchain_storage.get_total_transactions();
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, const crypto::hash& tx_prefix_hash, size_t blob_size, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
+  bool core::add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, size_t blob_size, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
   {
     if(m_mempool.have_tx(tx_hash))
     {
@@ -1127,8 +1126,8 @@ namespace cryptonote
   {
     std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
     cryptonote::transaction tx;
-    crypto::hash tx_hash, tx_prefix_hash;
-    if (!parse_and_validate_tx_from_blob(tx_blob, tx, tx_hash, tx_prefix_hash))
+    crypto::hash tx_hash;
+    if (!parse_and_validate_tx_from_blob(tx_blob, tx, tx_hash))
     {
       LOG_ERROR("Failed to parse relayed transaction");
       return;
@@ -1236,7 +1235,7 @@ namespace cryptonote
 
       block_to_blob(b, arg.b.block);
       //pack transactions
-      for(auto& tx:  txs)
+      for(auto& tx: txs)
         arg.b.txs.push_back(tx);
 
       m_pprotocol->relay_block(arg, exclude_context);
@@ -1343,9 +1342,9 @@ namespace cryptonote
     return m_blockchain_storage.have_block(id);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::parse_tx_from_blob(transaction& tx, crypto::hash& tx_hash, crypto::hash& tx_prefix_hash, const blobdata& blob) const
+  bool core::parse_tx_from_blob(transaction& tx, crypto::hash& tx_hash, const blobdata& blob) const
   {
-    return parse_and_validate_tx_from_blob(blob, tx, tx_hash, tx_prefix_hash);
+    return parse_and_validate_tx_from_blob(blob, tx, tx_hash);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::check_tx_syntax(const transaction& tx) const
@@ -1532,10 +1531,10 @@ namespace cryptonote
     static const char software[] = "arqma";
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
-    static const char subdir[] = "cli"; // because it can never be simple
+//    static const char subdir[] = "cli"; // because it can never be simple
 #else
     static const char buildtag[] = "source";
-    static const char subdir[] = "source"; // because it can never be simple
+//    static const char subdir[] = "source"; // because it can never be simple
 #endif
 
     if (m_offline)
@@ -1550,15 +1549,19 @@ namespace cryptonote
       return false;
 
     if (tools::vercmp(version.c_str(), ARQMA_VERSION) <= 0)
+    {
+      m_update_available = false;
       return true;
+    }
 
-    std::string url = tools::get_update_url(software, subdir, buildtag, version, true);
+    std::string url = tools::get_update_url(software, buildtag, version, true);
     MCLOG_CYAN(el::Level::Info, "global", "Version " << version << " of " << software << " for " << buildtag << " is available: " << url << ", SHA256 hash " << hash);
+    m_update_available = true;
 
     if (check_updates_level == UPDATES_NOTIFY)
       return true;
 
-    url = tools::get_update_url(software, subdir, buildtag, version, false);
+    url = tools::get_update_url(software, buildtag, version, false);
     std::string filename;
     const char *slash = strrchr(url.c_str(), '/');
     if (slash)

@@ -61,7 +61,7 @@ namespace cryptonote
     static const command_line::arg_descriptor<std::string> arg_rpc_ssl;
     static const command_line::arg_descriptor<std::string> arg_rpc_ssl_private_key;
     static const command_line::arg_descriptor<std::string> arg_rpc_ssl_certificate;
-    static const command_line::arg_descriptor<std::vector<std::string>> arg_rpc_ssl_allowed_certificates;
+    static const command_line::arg_descriptor<std::string> arg_rpc_ssl_ca_certificates;
     static const command_line::arg_descriptor<std::vector<std::string>> arg_rpc_ssl_allowed_fingerprints;
     static const command_line::arg_descriptor<bool> arg_rpc_ssl_allow_any_cert;
     static const command_line::arg_descriptor<std::string> arg_bootstrap_daemon_address;
@@ -71,7 +71,7 @@ namespace cryptonote
 
     core_rpc_server(
         core& cr
-      , nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> >& p2p
+      , nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>& p2p
       );
 
     static void init_options(boost::program_options::options_description& desc);

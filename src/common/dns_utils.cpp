@@ -33,9 +33,9 @@
 
 #include <stdlib.h>
 #include "include_base_utils.h"
-#include <random>
+#include "common/threadpool.h"
+#include "crypto/crypto.h"
 #include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/optional.hpp>
 using namespace epee;
@@ -279,13 +279,13 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
 
   add_anchors(m_data->m_ub_context);
 
-  if (DNS_PUBLIC)
+  if (!DNS_PUBLIC)
   {
     // if no DNS_PUBLIC specified, we try a lookup to what we know
     // should be a valid DNSSEC record, and switch to known good
 	// DNSSEC resolvers if verification fails
 	bool available, valid;
-	static const char *probe_hostname = "";
+	static const char *probe_hostname = "updates.arqma.com";
 	auto records = get_txt_record(probe_hostname, available, valid);
 	if (!valid)
 	{
@@ -293,8 +293,8 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
 	  ub_ctx_delete(m_data->m_ub_context);
 	  m_data->m_ub_context = ub_ctx_create();
 	  add_anchors(m_data->m_ub_context);
-	  for (const auto &ip: dns_public_addr)
-	    ub_ctx_set_fwd(m_data->m_ub_context, string_copy(ip.c_str()));
+	  for (const auto &ip: DEFAULT_DNS_PUBLIC_ADDR)
+	    ub_ctx_set_fwd(m_data->m_ub_context, string_copy(ip));
 	  ub_ctx_set_option(m_data->m_ub_context, string_copy("do-udp:"), string_copy("no"));
 	  ub_ctx_set_option(m_data->m_ub_context, string_copy("do-tcp:"), string_copy("yes"));
 	}
@@ -330,7 +330,7 @@ std::vector<std::string> DNSResolver::get_record(const std::string& url, int rec
   // call DNS resolver, blocking.  if return value not zero, something went wrong
   if (!ub_resolve(m_data->m_ub_context, string_copy(url.c_str()), record_type, DNS_CLASS_IN, &result))
   {
-    dnssec_available = (result->secure || (!result->secure && result->bogus));
+    dnssec_available = (result->secure || result->bogus);
     dnssec_valid = result->secure && !result->bogus;
     if (result->havedata)
     {
@@ -517,22 +517,19 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
   std::vector<std::vector<std::string> > records;
   records.resize(dns_urls.size());
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<int> dis(0, dns_urls.size() - 1);
-  size_t first_index = dis(gen);
+  size_t first_index = crypto::rand_idx(dns_urls.size());
 
   // send all requests in parallel
-  std::vector<boost::thread> threads(dns_urls.size());
   std::deque<bool> avail(dns_urls.size(), false), valid(dns_urls.size(), false);
+  tools::threadpool& tpool = tools::threadpool::getInstance();
+  tools::threadpool::waiter waiter;
   for (size_t n = 0; n < dns_urls.size(); ++n)
   {
-    threads[n] = boost::thread([n, dns_urls, &records, &avail, &valid](){
+    tpool.submit(&waiter,[n, dns_urls, &records, &avail, &valid](){
       records[n] = tools::DNSResolver::instance().get_txt_record(dns_urls[n], avail[n], valid[n]);
     });
   }
-  for (size_t n = 0; n < dns_urls.size(); ++n)
-    threads[n].join();
+  waiter.wait(&tpool);
 
   size_t cur_index = first_index;
   do
@@ -541,12 +538,12 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
     if (!avail[cur_index])
     {
       records[cur_index].clear();
-      LOG_PRINT_L2("DNSSEC not available for checkpoint update at URL: " << url << ", skipping.");
+      LOG_PRINT_L2("DNSSEC not available for hostname: " << url << ", skipping.");
     }
     if (!valid[cur_index])
     {
       records[cur_index].clear();
-      LOG_PRINT_L2("DNSSEC validation failed for checkpoint update at URL: " << url << ", skipping.");
+      LOG_PRINT_L2("DNSSEC validation failed for hostname: " << url << ", skipping.");
     }
 
     cur_index++;
@@ -568,7 +565,7 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
 
   if (num_valid_records < 2)
   {
-    LOG_PRINT_L0("WARNING: no two valid ArQ-Net DNS checkpoint records were received");
+    LOG_PRINT_L0("WARNING: no two valid DNS TXT records were received");
     return false;
   }
 
@@ -590,7 +587,7 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
 
   if (good_records_index < 0)
   {
-    LOG_PRINT_L0("WARNING: no two ArQ-Net DNS checkpoint records matched");
+    LOG_PRINT_L0("WARNING: no two DNS TXT records matched");
     return false;
   }
 

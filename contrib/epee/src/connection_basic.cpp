@@ -47,6 +47,12 @@
 // TODO:
 #include "net/network_throttle-detail.hpp"
 
+#if BOOST_VERSION >= 107000
+#define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
+#else
+#define GET_IO_SERVICE(s) ((s).get_io_service())
+#endif
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.conn"
 
@@ -59,13 +65,22 @@ namespace epee
 namespace net_utils
 {
 
+namespace
+{
+  boost::asio::ssl::context& get_context(connection_basic_shared_state* state)
+  {
+		CHECK_AND_ASSERT_THROW_MES(state != nullptr, "state shared_ptr cannot be null");
+		return state->ssl_context;
+  }
+}
+
   std::string to_string(t_connection_type type)
   {
-	  if (type == e_connection_type_NET)
+	  if(type == e_connection_type_NET)
 		return std::string("NET");
-	  else if (type == e_connection_type_RPC)
+	  else if(type == e_connection_type_RPC)
 	    return std::string("RPC");
-	  else if (type == e_connection_type_P2P)
+	  else if(type == e_connection_type_P2P)
 	    return std::string("P2P");
 
 	  return std::string("UNKNOWN");
@@ -113,65 +128,61 @@ connection_basic_pimpl::connection_basic_pimpl(const std::string &name) : m_thro
 int connection_basic_pimpl::m_default_tos;
 
 // methods:
-connection_basic::connection_basic(boost::asio::ip::tcp::socket&& sock, boost::shared_ptr<socket_stats> stats, ssl_support_t ssl_support, ssl_context_t &ssl_context)
-	: m_stats(std::move(stats)),
+connection_basic::connection_basic(boost::asio::ip::tcp::socket&& sock, boost::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support)
+	: m_state(std::move(state)),
       mI( new connection_basic_pimpl("peer") ),
-      strand_(sock.get_io_service()),
-      socket_(sock.get_io_service(), ssl_context.context),
+      strand_(GET_IO_SERVICE(sock)),
+      socket_(GET_IO_SERVICE(sock), get_context(m_state.get())),
       m_want_close_connection(false),
       m_was_shutdown(false),
-      m_ssl_support(ssl_support),
-      m_ssl_context(ssl_context)
+      m_ssl_support(ssl_support)
 {
     // add nullptr checks if removed
-    CHECK_AND_ASSERT_THROW_MES(bool(m_stats), "stats shared_ptr cannot be null");
+	assert(m_state != nullptr); // release runtime check in get_context
 
     socket_.next_layer() = std::move(sock);
 
-    ++(m_stats->sock_count); // increase the global counter
-    mI->m_peer_number = m_stats->sock_number.fetch_add(1); // use, and increase the generated number
-
-    std::string remote_addr_str = "?";
-    try { boost::system::error_code e; remote_addr_str = socket().remote_endpoint(e).address().to_string(); } catch(...){} ;
-
-    _note("Spawned connection #"<<mI->m_peer_number<<" to " << remote_addr_str << " currently we have sockets count:" << m_stats->sock_count);
-}
-
-connection_basic::connection_basic(boost::asio::io_service &io_service, boost::shared_ptr<socket_stats> stats, ssl_support_t ssl_support, ssl_context_t &ssl_context)
-	: m_stats(std::move(stats)),
-      mI( new connection_basic_pimpl("peer") ),
-      strand_(io_service),
-      socket_(io_service, ssl_context.context),
-      m_want_close_connection(false),
-      m_was_shutdown(false),
-      m_ssl_support(ssl_support),
-      m_ssl_context(ssl_context)
-{
-    // add nullptr checks if removed
-    CHECK_AND_ASSERT_THROW_MES(bool(m_stats), "stats shared_ptr cannot be null");
-
-    ++(m_stats->sock_count); // increase the global counter
-    mI->m_peer_number = m_stats->sock_number.fetch_add(1); // use, and increase the generated number
-
-    std::string remote_addr_str = "?";
-    try { boost::system::error_code e; remote_addr_str = socket().remote_endpoint(e).address().to_string(); } catch(...){} ;
-
-    _note("Spawned connection # " << mI->m_peer_number << " to " << remote_addr_str << " currently we have sockets count:" << m_stats->sock_count);
-}
-
-connection_basic::~connection_basic() noexcept(false) {
-  --(m_stats->sock_count);
+	++(m_state->sock_count); // increase the global counter
+	mI->m_peer_number = m_state->sock_number.fetch_add(1); // use, and increase the generated number
 
 	std::string remote_addr_str = "?";
 	try { boost::system::error_code e; remote_addr_str = socket().remote_endpoint(e).address().to_string(); } catch(...){} ;
-	_note("Destructing connection #"<<mI->m_peer_number << " to " << remote_addr_str);
 
-try { throw 0; } catch(...){}
+	_note("Spawned connection #" << mI->m_peer_number << " to " << remote_addr_str << " currently we have sockets count:" << m_state->sock_count);
+}
+
+connection_basic::connection_basic(boost::asio::io_service& io_service, boost::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support)
+	: m_state(std::move(state)),
+	  mI( new connection_basic_pimpl("peer") ),
+	  strand_(io_service),
+	  socket_(io_service, get_context(m_state.get())),
+      m_want_close_connection(false),
+      m_was_shutdown(false),
+	  m_ssl_support(ssl_support)
+{
+    // add nullptr checks if removed
+    assert(m_state != nullptr); // release runtime check in get_context
+
+    ++(m_state->sock_count); // increase the global counter
+    mI->m_peer_number = m_state->sock_number.fetch_add(1); // use, and increase the generated number
+
+    std::string remote_addr_str = "?";
+    try { boost::system::error_code e; remote_addr_str = socket().remote_endpoint(e).address().to_string(); } catch(...){} ;
+
+    _note("Spawned connection # " << mI->m_peer_number << " to " << remote_addr_str << " currently we have sockets count:" << m_state->sock_count);
+}
+
+connection_basic::~connection_basic() noexcept(false) {
+  --(m_state->sock_count);
+
+	std::string remote_addr_str = "?";
+    try { boost::system::error_code e; remote_addr_str = socket().remote_endpoint(e).address().to_string(); } catch(...){} ;
+	_note("Destructing connection #" << mI->m_peer_number << " to " << remote_addr_str);
 }
 
 void connection_basic::set_rate_up_limit(uint64_t limit) {
 	{
-		CRITICAL_REGION_LOCAL(	network_throttle_manager::m_lock_get_global_throttle_out );
+		CRITICAL_REGION_LOCAL( network_throttle_manager::m_lock_get_global_throttle_out );
 		network_throttle_manager::get_global_throttle_out().set_target_speed(limit);
 	}
 	save_limit_to_file(limit);
@@ -179,12 +190,12 @@ void connection_basic::set_rate_up_limit(uint64_t limit) {
 
 void connection_basic::set_rate_down_limit(uint64_t limit) {
 	{
-	  CRITICAL_REGION_LOCAL(	network_throttle_manager::m_lock_get_global_throttle_in );
+	  CRITICAL_REGION_LOCAL( network_throttle_manager::m_lock_get_global_throttle_in );
 		network_throttle_manager::get_global_throttle_in().set_target_speed(limit);
 	}
 
 	{
-	  CRITICAL_REGION_LOCAL(	network_throttle_manager::m_lock_get_global_throttle_inreq );
+	  CRITICAL_REGION_LOCAL( network_throttle_manager::m_lock_get_global_throttle_inreq );
 		network_throttle_manager::get_global_throttle_inreq().set_target_speed(limit);
 	}
     save_limit_to_file(limit);
@@ -219,8 +230,8 @@ int connection_basic::get_tos_flag() {
 	return connection_basic_pimpl::m_default_tos;
 }
 
-void connection_basic::sleep_before_packet(size_t packet_size, int phase,  int q_len) {
-	double delay=0; // will be calculated
+void connection_basic::sleep_before_packet(size_t packet_size, int phase, int q_len) {
+	double delay = 0; // will be calculated
 	do
 	{ // rate limiting
 		if (m_was_shutdown) {
@@ -229,34 +240,34 @@ void connection_basic::sleep_before_packet(size_t packet_size, int phase,  int q
 		}
 
 		{
-			CRITICAL_REGION_LOCAL(	network_throttle_manager::m_lock_get_global_throttle_out );
+			CRITICAL_REGION_LOCAL( network_throttle_manager::m_lock_get_global_throttle_out );
 			delay = network_throttle_manager::get_global_throttle_out().get_sleep_time_after_tick( packet_size );
 		}
 
 		delay *= 0.50;
 		if (delay > 0) {
             long int ms = (long int)(delay * 1000);
-			MTRACE("Sleeping in " << __FUNCTION__ << " for " << ms << " ms before packet_size="<<packet_size); // debug sleep
+			MTRACE("Sleeping in " << __FUNCTION__ << " for " << ms << " ms before packet_size=" << packet_size); // debug sleep
 			boost::this_thread::sleep(boost::posix_time::milliseconds( ms ) );
 		}
 	} while(delay > 0);
 
 // XXX LATER XXX
 	{
-	  CRITICAL_REGION_LOCAL(	network_throttle_manager::m_lock_get_global_throttle_out );
+	  CRITICAL_REGION_LOCAL( network_throttle_manager::m_lock_get_global_throttle_out );
 		network_throttle_manager::get_global_throttle_out().handle_trafic_exact( packet_size ); // increase counter - global
 	}
 
 }
 
-void connection_basic::do_send_handler_write(const void* ptr , size_t cb ) {
+void connection_basic::do_send_handler_write(const void* ptr, size_t cb) {
         // No sleeping here; sleeping is done once and for all in connection<t_protocol_handler>::handle_write
-	MTRACE("handler_write (direct) - before ASIO write, for packet="<<cb<<" B (after sleep)");
+	MTRACE("handler_write (direct) - before ASIO write, for packet=" << cb << " B (after sleep)");
 }
 
 void connection_basic::do_send_handler_write_from_queue( const boost::system::error_code& e, size_t cb, int q_len ) {
         // No sleeping here; sleeping is done once and for all in connection<t_protocol_handler>::handle_write
-	MTRACE("handler_write (after write, from queue="<<q_len<<") - before ASIO write, for packet="<<cb<<" B (after sleep)");
+	MTRACE("handler_write (after write, from queue=" << q_len << ") - before ASIO write, for packet=" << cb << "B (after sleep)");
 }
 
 void connection_basic::logger_handle_net_read(size_t size) { // network data read

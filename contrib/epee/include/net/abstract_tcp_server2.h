@@ -70,7 +70,7 @@ namespace net_utils
 
   struct i_connection_filter
   {
-    virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address)=0;
+    virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address) = 0;
   protected:
     virtual ~i_connection_filter(){}
   };
@@ -83,35 +83,34 @@ namespace net_utils
   template<class t_protocol_handler>
   class connection
     : public boost::enable_shared_from_this<connection<t_protocol_handler>>,
-    private boost::noncopyable,
-    public i_service_endpoint,
-    public connection_basic
+      private boost::noncopyable,
+      public i_service_endpoint,
+      public connection_basic
   {
   public:
     typedef typename t_protocol_handler::connection_context t_connection_context;
 
-    struct shared_state : socket_stats
+    struct shared_state : connection_basic_shared_state
     {
       shared_state()
-        : socket_stats(), pfilter(nullptr), config()
+        : connection_basic_shared_state(), pfilter(nullptr), config(), stop_signal_sent(false)
       {}
 
       i_connection_filter* pfilter;
       typename t_protocol_handler::config_type config;
+      bool stop_signal_sent;
     };
 
     // Construct a connection with the given io_service.
     explicit connection( boost::asio::io_service& io_service,
                          boost::shared_ptr<shared_state> state,
                          t_connection_type connection_type,
-                         epee::net_utils::ssl_support_t ssl_support,
-                         ssl_context_t &ssl_context);
+                         epee::net_utils::ssl_support_t ssl_support);
 
     explicit connection( boost::asio::ip::tcp::socket&& sock,
                          boost::shared_ptr<shared_state> state,
                          t_connection_type connection_type,
-                         epee::net_utils::ssl_support_t ssl_support,
-                         ssl_context_t &ssl_context);
+                         epee::net_utils::ssl_support_t ssl_support);
 
     virtual ~connection() noexcept(false);
 
@@ -127,7 +126,7 @@ namespace net_utils
 
     void save_dbg_log();
 
-	bool speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on RPC connections)
+	  bool speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on RPC connections)
 
     bool cancel();
 
@@ -143,16 +142,14 @@ namespace net_utils
     virtual bool add_ref();
     virtual bool release();
     //------------------------------------------------------
-    boost::shared_ptr<connection<t_protocol_handler> > safe_shared_from_this();
+    boost::shared_ptr<connection<t_protocol_handler>> safe_shared_from_this();
     bool shutdown();
 
     // Handle completion of a receive operation.
-    void handle_receive(const boost::system::error_code& e,
-      std::size_t bytes_transferred);
+    void handle_receive(const boost::system::error_code& e, std::size_t bytes_transferred);
 
     /// Handle completion of a read operation.
-    void handle_read(const boost::system::error_code& e,
-      std::size_t bytes_transferred);
+    void handle_read(const boost::system::error_code& e, std::size_t bytes_transferred);
 
     /// Handle completion of a write operation.
     void handle_write(const boost::system::error_code& e, size_t cb);
@@ -214,7 +211,7 @@ namespace net_utils
     };
 
   public:
-    typedef boost::shared_ptr<connection<t_protocol_handler> > connection_ptr;
+    typedef boost::shared_ptr<connection<t_protocol_handler>> connection_ptr;
     typedef typename t_protocol_handler::connection_context t_connection_context;
     // Construct the server to listen on the specified TCP address and port, and
     // serve up files from the given directory.
@@ -226,8 +223,8 @@ namespace net_utils
     std::map<std::string, t_connection_type> server_type_map;
     void create_server_type_map();
 
-    bool init_server(uint32_t port, const std::string address = "0.0.0.0", epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect, const std::pair<std::string, std::string> &private_key_and_certificate_path = std::make_pair(std::string(), std::string()), const std::list<std::string> &allowed_certificates = {}, const std::vector<std::vector<uint8_t>> &allowed_fingerprints = {}, bool allow_any_cert = false);
-    bool init_server(const std::string port,  const std::string& address = "0.0.0.0", epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect, const std::pair<std::string, std::string> &private_key_and_certificate_path = std::make_pair(std::string(), std::string()), const std::list<std::string> &allowed_certificates = {}, const std::vector<std::vector<uint8_t>> &allowed_fingerprints = {}, bool allow_any_cert = false);
+    bool init_server(uint32_t port, const std::string address = "0.0.0.0", ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);
+    bool init_server(const std::string port,  const std::string& address = "0.0.0.0", ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);
 
     // Run the server's io_service loop.
     bool run_server(size_t threads_count, bool wait = true, const boost::thread::attributes& attrs = boost::thread::attributes());
@@ -256,10 +253,10 @@ namespace net_utils
     }
 
     bool add_connection(t_connection_context& out, boost::asio::ip::tcp::socket&& sock, network_address real_remote, epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
-    try_connect_result_t try_connect(connection_ptr new_connection_l, const std::string& adr, const std::string& port, boost::asio::ip::tcp::socket &sock_, const boost::asio::ip::tcp::endpoint &remote_endpoint, const std::string &bind_ip, uint32_t conn_timeout, epee::net_utils::ssl_support_t ssl_support);
-    bool connect(const std::string& adr, const std::string& port, uint32_t conn_timeot, t_connection_context& cn, const std::string& bind_ip = "0.0.0.0", epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
+    try_connect_result_t try_connect(connection_ptr new_connection_l, const std::string& adr, const std::string& port, boost::asio::ip::tcp::socket& sock_, const boost::asio::ip::tcp::endpoint &remote_endpoint, const std::string &bind_ip, uint32_t conn_timeout, epee::net_utils::ssl_support_t ssl_support);
+    bool connect(const std::string& adr, const std::string& port, uint32_t conn_timeout, t_connection_context& cn, const std::string& bind_ip = "0.0.0.0", epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
     template<class t_callback>
-    bool connect_async(const std::string& adr, const std::string& port, uint32_t conn_timeot, const t_callback &cb, const std::string& bind_ip = "0.0.0.0", epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
+    bool connect_async(const std::string& adr, const std::string& port, uint32_t conn_timeout, const t_callback &cb, const std::string& bind_ip = "0.0.0.0", epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
 
     typename t_protocol_handler::config_type& get_config_object()
     {
@@ -278,23 +275,23 @@ namespace net_utils
 
     boost::asio::io_service& get_io_service(){return io_service_;}
 
-    struct idle_callback_conext_base
+    struct idle_callback_context_base
     {
-      virtual ~idle_callback_conext_base(){}
+      virtual ~idle_callback_context_base(){}
 
       virtual bool call_handler(){return true;}
 
-      idle_callback_conext_base(boost::asio::io_service& io_serice)
-        : m_timer(io_serice)
+      idle_callback_context_base(boost::asio::io_service& io_service)
+        : m_timer(io_service)
       {}
       boost::asio::deadline_timer m_timer;
     };
 
     template <class t_handler>
-    struct idle_callback_conext: public idle_callback_conext_base
+    struct idle_callback_context: public idle_callback_context_base
     {
-      idle_callback_conext(boost::asio::io_service& io_serice, t_handler& h, uint64_t period)
-        : idle_callback_conext_base(io_serice), m_handler(h){this->m_period = period;}
+      idle_callback_context(boost::asio::io_service& io_service, t_handler& h, uint64_t period)
+        : idle_callback_context_base(io_service), m_handler(h){this->m_period = period;}
 
       t_handler m_handler;
       virtual bool call_handler()
@@ -307,7 +304,7 @@ namespace net_utils
     template<class t_handler>
     bool add_idle_handler(t_handler t_callback, uint64_t timeout_ms)
       {
-        boost::shared_ptr<idle_callback_conext<t_handler>> ptr(new idle_callback_conext<t_handler>(io_service_, t_callback, timeout_ms));
+        boost::shared_ptr<idle_callback_context<t_handler>> ptr(new idle_callback_context<t_handler>(io_service_, t_callback, timeout_ms));
         //needed call handler here ?...
         ptr->m_timer.expires_from_now(boost::posix_time::milliseconds(ptr->m_period));
         ptr->m_timer.async_wait(boost::bind(&boosted_tcp_server<t_protocol_handler>::global_timer_handler<t_handler>, this, ptr));
@@ -315,7 +312,7 @@ namespace net_utils
       }
 
       template<class t_handler>
-      bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_conext<t_handler>> ptr)
+      bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_context<t_handler>> ptr)
     {
       //if handler return false - he don't want to be called anymore
       if(!ptr->call_handler())
@@ -376,10 +373,6 @@ namespace net_utils
 
     boost::mutex connections_mutex;
     std::set<connection_ptr> connections_;
-
-    ssl_context_t m_ssl_context;
-    std::list<std::string> m_allowed_certificates;
-
   }; // class <>boosted_tcp_server
 
 
