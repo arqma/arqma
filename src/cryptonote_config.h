@@ -73,12 +73,11 @@
 #define COIN                                            ((uint64_t)1000000000)
 
 #define FEE_PER_KB_OLD                                  ((uint64_t)(COIN) / 100)
-#define FEE_PER_KB                                      ((uint64_t)2 * (COIN) / 100000)
-#define FEE_PER_BYTE                                    ((uint64_t)300)
-#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)2 * (COIN) / 100000)
+#define FEE_PER_KB                                      ((uint64_t)10000)
+#define FEE_PER_BYTE                                    ((uint64_t)8)
+#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)5500)
 #define DYNAMIC_FEE_PER_KB_BASE_BLOCK_REWARD            ((uint64_t)10000000000)
-#define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)20000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
-#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)3)
+#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)1000)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
@@ -115,6 +114,7 @@
 #define DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN             DIFFICULTY_TARGET_V2 //just alias; used by tests
 
 #define BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT          10000  //by default, blocks ids count in synchronizing
+#define BLOCKS_QUICK_SYNC_COUNT                         250
 #define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT_PRE_V4       100    //by default, blocks count in blocks downloading
 #define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT              5      //by default, blocks count in blocks downloading
 
@@ -167,8 +167,9 @@
 #define HF_VERSION_ENFORCE_RCT                          6
 #define HF_VERSION_LOWER_FEE                            10
 #define HF_VERSION_PER_BYTE_FEE                         13
+#define HF_FORBID_BORROMEAN                             13
 
-#define PER_KB_FEE_QUANTIZATION_DECIMALS                8
+#define PER_KB_FEE_QUANTIZATION_DECIMALS                6
 
 #define HASH_OF_HASHES_STEP                             256
 
@@ -188,7 +189,6 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 // New constants are intended to go here
 namespace config
 {
-   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
    uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
    uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000);
    uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);

@@ -32,8 +32,8 @@ set(ringct_basic_sources
   rctTypes.cpp
   rctCryptoOps.c
   multiexp.cc
-  bulletproofs.cc)
-  # bulletproofs_old.cc) // switched off for tests
+  bulletproofs.cc
+  bp_legacy.cc)
 
 set(ringct_basic_private_headers
   rctOps.h

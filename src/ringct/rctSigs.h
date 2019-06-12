@@ -97,9 +97,9 @@ namespace rct {
     //   this shows that sum inputs = sum outputs
     //Ver:
     //   verifies the above sig is created corretly
-    mgSig proveRctMG(const ctkeyM & pubs, const ctkeyV & inSk, const keyV &outMasks, const ctkeyV & outPk, const multisig_kLRki *kLRki, key *mscout, unsigned int index, key txnFee, const key &message, hw::device &hwdev);
+    mgSig proveRctMG(const ctkeyM & pubs, const ctkeyV & inSk, const keyV &outMasks, const ctkeyV & outPk, const multisig_kLRki *kLRki, key *mscout, unsigned int index, const key &txnFee, const key &message, hw::device &hwdev);
     mgSig proveRctMGSimple(const key & message, const ctkeyV & pubs, const ctkey & inSk, const key &a , const key &Cout, const multisig_kLRki *kLRki, key *mscout, unsigned int index, hw::device &hwdev);
-    bool verRctMG(const mgSig &mg, const ctkeyM & pubs, const ctkeyV & outPk, key txnFee, const key &message);
+    bool verRctMG(const mgSig &mg, const ctkeyM & pubs, const ctkeyV & outPk, const key &txnFee, const key &message);
     bool verRctMGSimple(const key &message, const mgSig &mg, const ctkeyV & pubs, const key & C);
 
     //These functions get keys from blockchain
@@ -120,14 +120,18 @@ namespace rct {
     //decodeRct: (c.f. http://eprint.iacr.org/2015/1098 section 5.1.1)
     //   uses the attached ecdh info to find the amounts represented by each output commitment
     //   must know the destination private key to find the correct amount, else will return a random number
-    rctSig genRct(const key &message, const ctkeyV & inSk, const keyV & destinations, const std::vector<xmr_amount> & amounts, const ctkeyM &mixRing, const keyV &amount_keys, const multisig_kLRki *kLRki, multisig_out *msout, unsigned int index, ctkeyV &outSk, hw::device &hwdev);
+    rctSig genRct(const key &message, const ctkeyV & inSk, const keyV & destinations, const std::vector<xmr_amount> & amounts, const ctkeyM &mixRing, const keyV &amount_keys, const multisig_kLRki *kLRki, multisig_out *msout, unsigned int index, ctkeyV &outSk, RangeProofType range_proof_type, hw::device &hwdev);
     rctSig genRct(const key &message, const ctkeyV & inSk, const ctkeyV  & inPk, const keyV & destinations, const std::vector<xmr_amount> & amounts, const keyV &amount_keys, const multisig_kLRki *kLRki, multisig_out *msout, const int mixin, hw::device &hwdev);
     rctSig genRctSimple(const key & message, const ctkeyV & inSk, const ctkeyV & inPk, const keyV & destinations, const std::vector<xmr_amount> & inamounts, const std::vector<xmr_amount> & outamounts, const keyV &amount_keys, const std::vector<multisig_kLRki> *kLRki, multisig_out *msout, xmr_amount txnFee, unsigned int mixin, hw::device &hwdev);
     rctSig genRctSimple(const key & message, const ctkeyV & inSk, const keyV & destinations, const std::vector<xmr_amount> & inamounts, const std::vector<xmr_amount> & outamounts, xmr_amount txnFee, const ctkeyM & mixRing, const keyV &amount_keys, const std::vector<multisig_kLRki> *kLRki, multisig_out *msout, const std::vector<unsigned int> & index, ctkeyV &outSk, RangeProofType range_proof_type, hw::device &hwdev);
+    rctSig genRctSimple_old(const key & message, const ctkeyV & inSk, const ctkeyV & inPk, const keyV & destinations, const std::vector<xmr_amount> & inamounts, const std::vector<xmr_amount> & outamounts, const keyV &amount_keys, const std::vector<multisig_kLRki> *kLRki, multisig_out *msout, xmr_amount txnFee, unsigned int mixin, hw::device &hwdev);
+    rctSig genRctSimple_old(const key & message, const ctkeyV & inSk, const keyV & destinations, const std::vector<xmr_amount> & inamounts, const std::vector<xmr_amount> & outamounts, xmr_amount txnFee, const ctkeyM & mixRing, const keyV &amount_keys, const std::vector<multisig_kLRki> *kLRki, multisig_out *msout, const std::vector<unsigned int> & index, ctkeyV &outSk, RangeProofType range_proof_type, hw::device &hwdev);
     bool verRct(const rctSig & rv, bool semantics);
     static inline bool verRct(const rctSig & rv) { return verRct(rv, true) && verRct(rv, false); }
     bool verRctSemanticsSimple(const rctSig & rv);
     bool verRctSemanticsSimple(const std::vector<const rctSig*> & rv);
+    bool verRctSemanticsSimple_old(const rctSig & rv);
+    bool verRctSemanticsSimple_old(const std::vector<const rctSig*> & rv);
     bool verRctNonSemanticsSimple(const rctSig & rv);
     static inline bool verRctSimple(const rctSig & rv) { return verRctSemanticsSimple(rv) && verRctNonSemanticsSimple(rv); }
     xmr_amount decodeRct(const rctSig & rv, const key & sk, unsigned int i, key & mask, hw::device &hwdev);

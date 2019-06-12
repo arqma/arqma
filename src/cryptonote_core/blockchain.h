@@ -571,7 +571,7 @@ namespace cryptonote
      *
      * The dynamic fee is based on the block weight in a past window, and
      * the current block reward. It is expressed by kB before v8, and
-     * per byte from v8.
+     * per byte from v13.
      * This function calculates an estimate for a dynamic fee which will be
      * valid for the next grace_blocks
      *

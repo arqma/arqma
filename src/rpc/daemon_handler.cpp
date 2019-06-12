@@ -51,7 +51,7 @@ namespace rpc
 
   void DaemonHandler::handle(const GetBlocksFast::Request& req, GetBlocksFast::Response& res)
   {
-    std::vector<std::pair<std::pair<blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, blobdata> > > > blocks;
+    std::vector<std::pair<std::pair<blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, blobdata>>>> blocks;
 
     if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
     {

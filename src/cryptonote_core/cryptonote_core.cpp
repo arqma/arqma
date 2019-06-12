@@ -740,6 +740,45 @@ namespace cryptonote
       tvc.m_verifivation_failed = true;
       return false;
     }
+    // resolve outPk references in rct txes
+    // outPk aren't the only thing that need resolving for a fully resolved tx,
+    // but outPk (1) are needed now to check range proof semantics, and
+    // (2) do not need access to the blockchain to find data
+    if (tx.version >= 2)
+    {
+      rct::rctSig &rv = tx.rct_signatures;
+      if (rv.type != rct::RCTTypeBulletproof)
+      {
+        if (rv.outPk.size() != tx.vout.size())
+        {
+          LOG_PRINT_L1("WRONG TRANSACTION BLOB, Bad outPk size in tx " << tx_hash << ", rejected");
+          tvc.m_verifivation_failed = true;
+          return false;
+        }
+        for (size_t n = 0; n < tx.rct_signatures.outPk.size(); ++n)
+          rv.outPk[n].dest = rct::pk2rct(boost::get<txout_to_key>(tx.vout[n].target).key);
+        const bool bulletproof = rct::is_rct_bulletproof(rv.type);
+        if (bulletproof)
+        {
+          if (rct::n_bulletproof_v1_amounts(rv.p.bulletproofs) != tx.vout.size())
+          {
+            LOG_PRINT_L1("WRONG TRANSACTION BLOB, Bad bulletproofs size in tx " << tx_hash << ", rejected");
+            tvc.m_verifivation_failed = true;
+            return false;
+          }
+          size_t idx = 0;
+          for (size_t n = 0; n < rv.p.bulletproofs.size(); ++n)
+          {
+            CHECK_AND_ASSERT_MES(rv.p.bulletproofs[n].L.size() >= 6, false, "Bad bulletproofs L size"); // at least 64 bits
+            const size_t n_amounts = rct::n_bulletproof_v1_amounts(rv.p.bulletproofs[n]);
+            CHECK_AND_ASSERT_MES(idx + n_amounts <= rv.outPk.size(), false, "Internal error filling out V");
+            rv.p.bulletproofs[n].V.clear();
+            for (size_t i = 0; i < n_amounts; ++i)
+              rv.p.bulletproofs[n].V.push_back(rv.outPk[idx++].mask);
+          }
+        }
+      }
+    }
 
     return true;
   }
@@ -799,6 +838,16 @@ namespace cryptonote
           tx_info[n].tvc.m_verifivation_failed = true;
           tx_info[n].result = false;
           break;
+        case rct::RCTTypeSimpleBulletproof:
+          if (!rct::verRctSemanticsSimple_old(rv))
+          {
+            MERROR_VER("rct signature semantics check failed");
+            set_semantics_failed(tx_info[n].tx_hash);
+            tx_info[n].tvc.m_verifivation_failed = true;
+            tx_info[n].result = false;
+            break;
+          }
+          break;
         case rct::RCTTypeSimple:
           if (!rct::verRctSemanticsSimple(rv))
           {
@@ -810,6 +859,7 @@ namespace cryptonote
           }
           break;
         case rct::RCTTypeFull:
+        case rct::RCTTypeFullBulletproof:
           if (!rct::verRct(rv, true))
           {
             MERROR_VER("rct signature semantics check failed");
@@ -1071,9 +1121,12 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
+    static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 100000 : 0;
     if (block_sync_size > 0)
       return block_sync_size;
-    return BLOCKS_SYNCHRONIZING_DEFAULT_COUNT;
+    if (height >= quick_height)
+      return BLOCKS_SYNCHRONIZING_DEFAULT_COUNT;
+    return BLOCKS_QUICK_SYNC_COUNT;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::are_key_images_spent_in_pool(const std::vector<crypto::key_image>& key_im, std::vector<bool> &spent) const

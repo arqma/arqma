@@ -1404,9 +1404,11 @@ static uint64_t decodeRct(const rct::rctSig & rv, const crypto::key_derivation &
     switch (rv.type)
     {
     case rct::RCTTypeSimple:
+    case rct::RCTTypeSimpleBulletproof:
     case rct::RCTTypeBulletproof:
       return rct::decodeRctSimple(rv, rct::sk2rct(scalar1), i, mask, hwdev);
     case rct::RCTTypeFull:
+    case rct::RCTTypeFullBulletproof:
       return rct::decodeRct(rv, rct::sk2rct(scalar1), i, mask, hwdev);
     default:
       LOG_ERROR("Unsupported rct type: " << rv.type);
@@ -5511,9 +5513,14 @@ bool wallet2::sign_tx(unsigned_tx_set &exported_txs, std::vector<wallet2::pendin
     signed_txes.ptx.push_back(pending_tx());
     tools::wallet2::pending_tx &ptx = signed_txes.ptx.back();
     rct::RangeProofType range_proof_type = rct::RangeProofBorromean;
-    if (sd.use_bulletproofs)
+    const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+    if (sd.use_bulletproofs && bulletproofv2)
     {
       range_proof_type = rct::RangeProofPaddedBulletproof;
+    }
+    else if (sd.use_bulletproofs)
+    {
+     range_proof_type = rct::RangeProofMultiOutputBulletproof;
     }
     crypto::secret_key tx_key;
     std::vector<crypto::secret_key> additional_tx_keys;
@@ -5938,7 +5945,15 @@ bool wallet2::sign_multisig_tx(multisig_tx_set &exported_txs, std::vector<crypto
     rct::RangeProofType range_proof_type = rct::RangeProofBorromean;
     if (sd.use_bulletproofs)
     {
-      range_proof_type = rct::RangeProofBulletproof;
+      const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+      if (bulletproofv2)
+      {
+        range_proof_type = rct::RangeProofPaddedBulletproof;
+      }
+      else
+      {
+        range_proof_type = rct::RangeProofMultiOutputBulletproof;
+      }
       for (const rct::Bulletproof &proof: ptx.tx.rct_signatures.p.bulletproofs)
         if (proof.V.size() > 1)
           range_proof_type = rct::RangeProofPaddedBulletproof;
@@ -6132,10 +6147,6 @@ int wallet2::get_fee_algorithm() const
   // changes at v3 and v5 and v9
   if (use_fork_rules(HF_VERSION_PER_BYTE_FEE, 0))
     return 3;
-  if (use_fork_rules(9, 0))
-    return 3;
-  if (use_fork_rules(7, 0))
-    return 3;
   if (use_fork_rules(5, 0))
     return 2;
   if (use_fork_rules(3, -720 * 14))
@@ -6145,9 +6156,7 @@ int wallet2::get_fee_algorithm() const
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_min_ring_size() const
 {
-  if (use_fork_rules(9, 10))
-    return 7;
-  if (use_fork_rules(7, 10))
+  if (use_fork_rules(13, 10))
     return 7;
   if (use_fork_rules(6, 10))
     return 5;
@@ -6158,24 +6167,24 @@ uint64_t wallet2::get_min_ring_size() const
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_max_ring_size() const
 {
-  if (use_fork_rules(9, 10))
-    return 45;
+  if (use_fork_rules(13, 10))
+    return 21;
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::adjust_mixin(uint64_t mixin) const
 {
-  if (mixin < 6 && use_fork_rules(7, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 7, using 7");
-    mixin = 6;
+  const uint64_t min_ring_size = get_min_ring_size();
+  if (mixin + 1 < min_ring_size)
+  {
+    MWARNING("Requested ring size " << (mixin + 1) << " too low, using " << min_ring_size);
+    mixin = min_ring_size-1;
   }
-  else if (mixin < 4 && use_fork_rules(6, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 6, using 5");
-    mixin = 4;
-  }
-  else if (mixin < 2 && use_fork_rules(2, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 2, using 3");
-    mixin = 2;
+  const uint64_t max_ring_size = get_max_ring_size();
+  if (max_ring_size && mixin + 1 > max_ring_size)
+  {
+    MWARNING("Requested ring size " << (mixin + 1) << " too high, using " << max_ring_size);
+    mixin = max_ring_size-1;
   }
   return mixin;
 }
@@ -6210,7 +6219,7 @@ uint32_t wallet2::adjust_priority(uint32_t priority)
       const uint64_t full_reward_zone = block_weight_limit / 2;
 
       // get the last N block headers and sum the block sizes
-      const size_t N = 15;
+      const size_t N = 10;
       if (m_blockchain.size() < N)
       {
         MERROR("The blockchain is too short");
@@ -6645,7 +6654,8 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
         has_rct = true;
         max_rct_index = std::max(max_rct_index, m_transfers[idx].m_global_output_index);
       }
-    const bool has_rct_distribution = has_rct && get_rct_distribution(rct_start_height, rct_offsets);
+    bool has_rct_distribution = has_rct && get_rct_distribution(rct_start_height, rct_offsets);
+    if (rct_offsets.size() == 0) has_rct_distribution = false;
     if (has_rct_distribution)
     {
       // check we're clear enough of rct start, to avoid corner cases below
@@ -6743,7 +6753,10 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     //static const double shape = m_testnet ? 17.02 : 17.28;
     static const double scale = 1/1.61;
     std::gamma_distribution<double> gamma(shape, scale);
-    THROW_WALLET_EXCEPTION_IF(rct_offsets.size() <= CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE, error::wallet_internal_error, "Bad offset calculation");
+
+    if (has_rct_distribution) {
+      THROW_WALLET_EXCEPTION_IF(rct_offsets.size() <= CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE, error::wallet_internal_error, "Bad offset calculation");
+    }
     uint64_t last_usable_block = rct_offsets.size() - 1;
     auto pick_gamma = [&]()
     {
@@ -8303,9 +8316,10 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   const bool use_per_byte_fee = use_fork_rules(HF_VERSION_PER_BYTE_FEE, 0);
   const bool use_rct = use_fork_rules(4, 0);
   const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
-  const rct::RangeProofType range_proof_type = bulletproof ? rct::RangeProofPaddedBulletproof  : rct::RangeProofBorromean;
+  const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+  const rct::RangeProofType range_proof_type = bulletproofv2 ? rct::RangeProofPaddedBulletproof : bulletproof ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofBorromean;
 
-  const uint64_t base_fee  = get_base_fee();
+  const uint64_t base_fee = get_base_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
   const uint64_t fee_quantization_mask = get_fee_quantization_mask();
 
@@ -8338,7 +8352,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   // early out if we know we can't make it anyway
   // we could also check for being within FEE_PER_KB, but if the fee calculation
   // ever changes, this might be missed, so let this go through
-  const uint64_t min_fee = (fee_multiplier * base_fee * estimate_tx_size(use_rct, 1, fake_outs_count, 2, extra.size(), bulletproof)) / 1024;
+  const uint64_t min_fee = (fee_multiplier * base_fee * estimate_tx_size(use_rct, 1, fake_outs_count, 2, extra.size(), bulletproof));
   uint64_t balance_subtotal = 0;
   uint64_t unlocked_balance_subtotal = 0;
   for (uint32_t index_minor : subaddr_indices)
@@ -8877,8 +8891,9 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
   const bool use_per_byte_fee = use_fork_rules(HF_VERSION_PER_BYTE_FEE);
   const bool use_rct = fake_outs_count > 0 && use_fork_rules(4, 0);
   const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
-  const rct::RangeProofType range_proof_type = bulletproof ? rct::RangeProofPaddedBulletproof : rct::RangeProofBorromean;
-  const uint64_t base_fee  = get_base_fee();
+  const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+  const rct::RangeProofType range_proof_type = bulletproofv2 ? rct::RangeProofPaddedBulletproof : bulletproof ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofBorromean;
+  const uint64_t base_fee = get_base_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
   const uint64_t fee_quantization_mask = get_fee_quantization_mask();
 
@@ -9088,7 +9103,7 @@ uint64_t wallet2::get_upper_transaction_weight_limit() const
   if (m_upper_transaction_weight_limit > 0)
     return m_upper_transaction_weight_limit;
   uint64_t full_reward_zone = use_fork_rules(5, 10) ? CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5 : use_fork_rules(2, 10) ? CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 : CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1;
-  if (use_fork_rules(8, 10))
+  if (use_fork_rules(13, 10))
     return full_reward_zone / 2 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
   else
     return full_reward_zone - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
@@ -9219,7 +9234,7 @@ std::vector<wallet2::pending_tx> wallet2::create_unmixable_sweep_transactions()
   const bool hf1_rules = use_fork_rules(2, 10); // first hard fork has version 2
   tx_dust_policy dust_policy(hf1_rules ? 0 : ::config::DEFAULT_DUST_THRESHOLD);
 
-  const uint64_t base_fee  = get_base_fee();
+  const uint64_t base_fee = get_base_fee();
 
   // may throw
   std::vector<size_t> unmixable_outputs = select_available_unmixable_outputs();
@@ -11596,7 +11611,7 @@ std::vector<std::pair<uint64_t, uint64_t>> wallet2::estimate_backlog(const std::
     uint64_t nblocks_min = priority_weight_min / full_reward_zone;
     uint64_t nblocks_max = priority_weight_max / full_reward_zone;
     MDEBUG("estimate_backlog: priority_weight " << priority_weight_min << " - " << priority_weight_max << " for "
-        << our_fee_byte_min << " - " << our_fee_byte_max << " piconero byte fee, "
+        << our_fee_byte_min << " - " << our_fee_byte_max << " nanoarq byte fee, "
         << nblocks_min << " - " << nblocks_max << " blocks at block weight " << full_reward_zone);
     blocks.push_back(std::make_pair(nblocks_min, nblocks_max));
   }
@@ -11634,7 +11649,7 @@ uint64_t wallet2::get_segregation_fork_height() const
   static const bool use_dns = true;
   if (use_dns)
   {
-    // All four MoneroPulse domains have DNSSEC on and valid
+    // All four Arq-Net domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
 
     };
