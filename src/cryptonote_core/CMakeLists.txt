@@ -42,12 +42,6 @@ set(cryptonote_core_private_headers
   tx_pool.h
   cryptonote_tx_utils.h)
 
-if(PER_BLOCK_CHECKPOINT)
-  set(Blocks "blocks")
-else()
-  set(Blocks "")
-endif()
-
 arqma_private_headers(cryptonote_core
   ${cryptonote_core_private_headers})
 arqma_add_library(cryptonote_core
