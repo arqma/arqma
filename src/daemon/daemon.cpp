@@ -118,6 +118,7 @@ t_daemon::t_daemon(t_daemon && other)
   {
     mp_internals = std::move(other.mp_internals);
     other.mp_internals.reset(nullptr);
+    public_rpc_port = other.public_rpc_port;
   }
 }
 
@@ -128,6 +129,7 @@ t_daemon & t_daemon::operator=(t_daemon && other)
   {
     mp_internals = std::move(other.mp_internals);
     other.mp_internals.reset(nullptr);
+    public_rpc_port = other.public_rpc_port;
   }
   return *this;
 }
@@ -190,7 +192,7 @@ bool t_daemon::run(bool interactive)
 
     MINFO(std::string("ZMQ server started at ") + zmq_rpc_bind_address
           + ":" + zmq_rpc_bind_port + ".");
-    
+
     if (public_rpc_port > 0)
     {
       MGINFO("Public RPC Port " << public_rpc_port << " will be advertise to other peers over P2P");
