@@ -257,7 +257,7 @@ namespace nodetool
 
   private:
     const std::vector<std::string> m_seed_nodes_list =
-    { "seeds.arqma.com", "seeds.myarqma.com", "seeds.supportaqma.com", "seeds.supportarqma.eu" };
+    { "seeds.arqma.com", "seeds.myarqma.com", "seeds.supportarqma.com", "seeds.supportarqma.eu" };
     // TODO ASAP. Will try to do that yet before or just after HF11 Fork
     // One issue has to be sorted. seeder script os adding IN A to ZONE while
     // should not do so. SmajeNz0 got that script btw.
