@@ -47,7 +47,7 @@ namespace hw {
     #ifdef WITH_DEVICE_LEDGER
 
     namespace {
-        bool apdu_verbose =true;
+        bool apdu_verbose = true;
     }
 
     void set_apdu_verbose(bool verbose);
@@ -56,13 +56,15 @@ namespace hw {
     public:
         rct::key Aout;
         rct::key Bout;
-        bool     is_subaddress;
-        size_t   index;
+        bool is_subaddress;
+        bool additional_key;
+        size_t index;
         rct::key Pout;
         rct::key AKout;
         ABPkeys(const rct::key& A, const rct::key& B, const bool is_subaddr,  size_t index, const rct::key& P,const rct::key& AK);
-        ABPkeys(const ABPkeys& keys) ;
+        ABPkeys(const ABPkeys& keys);
         ABPkeys() {index=0;is_subaddress=false;}
+        ABPkeys &operator=(const ABPkeys &keys);
     };
 
     class Keymap {

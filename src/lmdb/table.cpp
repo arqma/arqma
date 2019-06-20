@@ -1,6 +1,5 @@
 // Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2014-2018, The Monero Project
-//
+// Copyright (c) 2018, The Monero Project
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification, are
@@ -26,36 +25,20 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#include "table.h"
 
-#pragma once
-#include <boost/program_options.hpp>
+namespace lmdb
+{
+    expect<MDB_dbi> table::open(MDB_txn& write_txn) const noexcept
+    {
+        ARQMA_PRECOND(name != nullptr);
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
-
-namespace daemonize {
-
-struct t_internals;
-
-class t_daemon final {
-public:
-  static void init_options(boost::program_options::options_description & option_spec);
-private:
-  void stop_p2p();
-private:
-  std::unique_ptr<t_internals> mp_internals;
-  uint16_t public_rpc_port;
-  std::string zmq_rpc_bind_address;
-  std::string zmq_rpc_bind_port;
-public:
-  t_daemon(
-      boost::program_options::variables_map const & vm, uint16_t public_rpc_port = 0
-    );
-  t_daemon(t_daemon && other);
-  t_daemon & operator=(t_daemon && other);
-  ~t_daemon();
-
-  bool run(bool interactive = false);
-  void stop();
-};
+        MDB_dbi out;
+        ARQMA_LMDB_CHECK(mdb_dbi_open(&write_txn, name, flags, &out));
+        if (key_cmp && !(flags & MDB_INTEGERKEY))
+            ARQMA_LMDB_CHECK(mdb_set_compare(&write_txn, out, key_cmp));
+        if (value_cmp && !(flags & MDB_INTEGERDUP))
+            ARQMA_LMDB_CHECK(mdb_set_dupsort(&write_txn, out, value_cmp));
+        return out;
+    }
 }

@@ -96,11 +96,17 @@ namespace daemon_args
   , "Max number of threads to use for a parallel job"
   , 0
   };
+  
+  const command_line::arg_descriptor<bool> arg_public_node = {
+    "public-node"
+  , "Allow Arq-Net Users to use this Arqma Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
+  , false
+  };
 
-  const command_line::arg_descriptor<std::string> arg_zmq_rpc_bind_ip   = {
+  const command_line::arg_descriptor<std::string> arg_zmq_rpc_bind_ip = {
     "zmq-rpc-bind-ip"
-      , "IP for ZMQ RPC server to listen on"
-      , "127.0.0.1"
+  , "IP for ZMQ RPC server to listen on"
+  , "127.0.0.1"
   };
 
   const command_line::arg_descriptor<std::string, false, true, 2> arg_zmq_rpc_bind_port = {
