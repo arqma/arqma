@@ -6580,7 +6580,6 @@ static std::string get_human_readable_timestamp(uint64_t ts)
   gmtime_r(&tt, &tm);
 #endif
   uint64_t now = time(NULL);
-  uint64_t diff = ts > now ? ts - now : now - ts;
   strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
   return std::string(buffer);
 }

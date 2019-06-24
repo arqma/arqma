@@ -1476,8 +1476,6 @@ void wallet2::scan_output(const cryptonote::transaction &tx, bool miner_tx, cons
 //----------------------------------------------------------------------------------------------------
 void wallet2::cache_tx_data(const cryptonote::transaction& tx, const crypto::hash &txid, tx_cache_data &tx_cache_data) const
 {
-  const cryptonote::account_keys& keys = m_account.get_keys();
-
   if(!parse_tx_extra(tx.extra, tx_cache_data.tx_extra_fields))
   {
     // Extra may only be partially parsed, it's OK if tx_extra_fields contains public key
@@ -2993,8 +2991,8 @@ bool wallet2::get_rct_distribution(uint64_t &start_height, std::vector<uint64_t>
     MWARNING("Failed to request output distribution: results are not for amount 0");
     return false;
   }
-  start_height = res.distributions[0].start_height;
-  distribution = std::move(res.distributions[0].distribution);
+  start_height = res.distributions[0].data.start_height;
+  distribution = std::move(res.distributions[0].data.distribution);
   return true;
 }
 //----------------------------------------------------------------------------------------------------
@@ -6718,13 +6716,13 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
         {
           if (d.amount == amount)
           {
-            THROW_WALLET_EXCEPTION_IF(d.start_height > segregation_fork_height, error::get_output_distribution, "Distribution start_height too high");
-            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - d.start_height >= d.distribution.size(), error::get_output_distribution, "Distribution size too small");
-            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - RECENT_OUTPUT_BLOCKS - d.start_height >= d.distribution.size(), error::get_output_distribution, "Distribution size too small");
+            THROW_WALLET_EXCEPTION_IF(d.data.start_height > segregation_fork_height, error::get_output_distribution, "Distribution start_height too high");
+            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - d.data.start_height >= d.data.distribution.size(), error::get_output_distribution, "Distribution size too small");
+            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - RECENT_OUTPUT_BLOCKS - d.data.start_height >= d.data.distribution.size(), error::get_output_distribution, "Distribution size too small");
             THROW_WALLET_EXCEPTION_IF(segregation_fork_height <= RECENT_OUTPUT_BLOCKS, error::wallet_internal_error, "Fork height too low");
-            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - RECENT_OUTPUT_BLOCKS < d.start_height, error::get_output_distribution, "Bad start height");
-            uint64_t till_fork = d.distribution[segregation_fork_height - d.start_height];
-            uint64_t recent = till_fork - d.distribution[segregation_fork_height - RECENT_OUTPUT_BLOCKS - d.start_height];
+            THROW_WALLET_EXCEPTION_IF(segregation_fork_height - RECENT_OUTPUT_BLOCKS < d.data.start_height, error::get_output_distribution, "Bad start height");
+            uint64_t till_fork = d.data.distribution[segregation_fork_height - d.data.start_height];
+            uint64_t recent = till_fork - d.data.distribution[segregation_fork_height - RECENT_OUTPUT_BLOCKS - d.data.start_height];
             segregation_limit[amount] = std::make_pair(till_fork, recent);
             found = true;
             break;
@@ -8019,7 +8017,6 @@ void wallet2::light_wallet_get_address_txs()
 
   // for balance calculation
   uint64_t wallet_total_sent = 0;
-  uint64_t wallet_total_unlocked_sent = 0;
   // txs in pool
   std::vector<crypto::hash> pool_txs;
 
@@ -11078,7 +11075,6 @@ cryptonote::blobdata wallet2::export_multisig()
   for (size_t n = 0; n < m_transfers.size(); ++n)
   {
     transfer_details &td = m_transfers[n];
-    const std::vector<crypto::public_key> additional_tx_pub_keys = get_additional_tx_pub_keys_from_extra(td.m_tx);
     crypto::key_image ki;
     td.m_multisig_k.clear();
     info[n].m_LR.clear();
@@ -11107,7 +11103,6 @@ cryptonote::blobdata wallet2::export_multisig()
   boost::archive::portable_binary_oarchive ar(oss);
   ar << info;
 
-  std::string magic(MULTISIG_EXPORT_FILE_MAGIC, strlen(MULTISIG_EXPORT_FILE_MAGIC));
   const cryptonote::account_public_address &keys = get_account().get_keys().m_account_address;
   std::string header;
   header += std::string((const char *)&keys.m_spend_public_key, sizeof(crypto::public_key));
