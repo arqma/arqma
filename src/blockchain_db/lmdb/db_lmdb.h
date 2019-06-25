@@ -382,24 +382,6 @@ private:
   virtual void check_hard_fork_info();
   virtual void drop_hard_fork_info();
 
-  /**
-   * @brief convert a tx output to a blob for storage
-   *
-   * @param output the output to convert
-   *
-   * @return the resultant blob
-   */
-  blobdata output_to_blob(const tx_out& output) const;
-
-  /**
-   * @brief convert a tx output blob to a tx output
-   *
-   * @param blob the blob to convert
-   *
-   * @return the resultant tx output
-   */
-  tx_out output_from_blob(const blobdata& blob) const;
-
   void check_open() const;
 
   bool prune_worker(int mode, uint32_t pruning_seed);
