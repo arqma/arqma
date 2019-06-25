@@ -4393,7 +4393,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
       }
     }
 
-    for (unsigned i = 0; i < extra && !blocks_exist; i++, blockidx++++)
+    for (unsigned i = 0; i < extra && !blocks_exist; i++, blockidx++)
     {
       block &block = blocks[blockidx];
 
