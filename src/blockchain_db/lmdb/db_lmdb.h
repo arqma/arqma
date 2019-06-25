@@ -382,7 +382,7 @@ private:
   virtual void check_hard_fork_info();
   virtual void drop_hard_fork_info();
 
-  void check_open() const;
+  inline void check_open() const;
 
   bool prune_worker(int mode, uint32_t pruning_seed);
 
