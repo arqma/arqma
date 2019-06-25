@@ -6156,6 +6156,8 @@ uint64_t wallet2::get_min_ring_size() const
 {
   if (use_fork_rules(13, 10))
     return 7;
+  if (use_fork_rules(12, 10))
+    return 7;
   if (use_fork_rules(6, 10))
     return 5;
   if (use_fork_rules(2, 10))
@@ -6166,7 +6168,7 @@ uint64_t wallet2::get_min_ring_size() const
 uint64_t wallet2::get_max_ring_size() const
 {
   if (use_fork_rules(13, 10))
-    return 21;
+    return 7;
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------

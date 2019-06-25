@@ -1817,6 +1817,8 @@ bool simple_wallet::set_default_ring_size(const std::vector<std::string> &args/*
 
     if (ring_size != 0 && ring_size != DEFAULT_MIX+1)
       fail_msg_writer() << "\n" << tr("WARNING: this is a non default ring size, which may harm your privacy. Default is recommended.");
+    else if (ring_size == DEFAULT_MIX)
+	  message_writer() << tr("WARNING: from v13, ring size will be fixed and this setting will be ignored.");
 
     const auto pwd_container = get_and_verify_password();
     if (pwd_container)
