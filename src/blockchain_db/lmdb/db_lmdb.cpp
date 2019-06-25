@@ -3603,6 +3603,7 @@ void BlockchainLMDB::get_output_tx_and_index_from_global(const std::vector<uint6
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
   tx_out_indices.clear();
+  tx_out_indices.reserve(global_indices.size());
 
   TXN_PREFIX_RDONLY();
   RCURSOR(output_txs);
@@ -3617,9 +3618,8 @@ void BlockchainLMDB::get_output_tx_and_index_from_global(const std::vector<uint6
     else if (get_result)
       throw0(DB_ERROR("DB error attempting to fetch output tx hash"));
 
-    outtx *ot = (outtx *)v.mv_data;
-    auto result = tx_out_index(ot->tx_hash, ot->local_index);
-    tx_out_indices.push_back(result);
+    const outtx *ot = (const outtx *)v.mv_data;
+    tx_out_indices.push_back(tx_out_index(ot->tx_hash, ot->local_index));
   }
 
   TXN_POSTFIX_RDONLY();
@@ -3634,6 +3634,7 @@ void BlockchainLMDB::get_output_key(const epee::span<const uint64_t> &amounts, c
   TIME_MEASURE_START(db3);
   check_open();
   outputs.clear();
+  outputs.reserve(offsets.size());
 
   TXN_PREFIX_RDONLY();
 
@@ -3658,19 +3659,19 @@ void BlockchainLMDB::get_output_key(const epee::span<const uint64_t> &amounts, c
     else if (get_result)
       throw0(DB_ERROR(lmdb_error("Error attempting to retrieve an output pubkey from the db", get_result).c_str()));
 
-    output_data_t data;
     if (amount == 0)
     {
       const outkey *okp = (const outkey *)v.mv_data;
-      data = okp->data;
+      outputs.push_back(okp->data);
     }
     else
     {
       const pre_rct_outkey *okp = (const pre_rct_outkey *)v.mv_data;
+      outputs.resize(outputs.size() + 1);
+      output_data_t &data = outputs.back();
       memcpy(&data, &okp->data, sizeof(pre_rct_output_data_t));
       data.commitment = rct::zeroCommit(amount);
     }
-    outputs.push_back(data);
   }
 
   TXN_POSTFIX_RDONLY();
@@ -3686,6 +3687,7 @@ void BlockchainLMDB::get_output_tx_and_index(const uint64_t& amount, const std::
   indices.clear();
 
   std::vector <uint64_t> tx_indices;
+  tx_indices.reserve(offsets.size());
   TXN_PREFIX_RDONLY();
 
   RCURSOR(output_amounts);
