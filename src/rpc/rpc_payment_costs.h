@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2019, The Arqma Network
+// Copyright (c) 2019, The Monero Project
 //
 // All rights reserved.
 //
@@ -26,36 +26,25 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#include <boost/optional/optional.hpp>
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/positional_options.hpp>
-#include <boost/program_options/variables_map.hpp>
 
-#include "common/command_line.h"
+#pragma once
 
-namespace wallet_args
-{
-  command_line::arg_descriptor<std::string> arg_generate_from_json();
-  command_line::arg_descriptor<std::string> arg_wallet_file();
-  command_line::arg_descriptor<std::string> arg_rpc_client_secret_key();
-
-  const char* tr(const char* str);
-
-  /*! Processes command line arguments (`argc` and `argv`) using `desc_params`
-  and `positional_options`, while adding parameters for log files and
-  concurrency. Log file and concurrency arguments are handled, along with basic
-  global init for the wallet process.
-
-  \return
-    pair.first: The list of parsed options, iff there are no errors.
-    pair.second: Should the execution terminate succesfully without actually launching the application
-  */
-  std::pair<boost::optional<boost::program_options::variables_map>, bool> main(
-    int argc, char** argv,
-    const char* const usage,
-    const char* const notice,
-    boost::program_options::options_description desc_params,
-    const boost::program_options::positional_options_description& positional_options,
-    const std::function<void(const std::string&, bool)> &print,
-    const char *default_log_name, bool log_to_console = false);
-}
+#define COST_PER_BLOCK 0.05
+#define COST_PER_TX_RELAY 100
+#define COST_PER_OUT 1
+#define COST_PER_OUTPUT_INDEXES 1
+#define COST_PER_TX 0.5
+#define COST_PER_KEY_IMAGE 0.01
+#define COST_PER_POOL_HASH 0.01
+#define COST_PER_TX_POOL_STATS 0.2
+#define COST_PER_BLOCK_HEADER 0.1
+#define COST_PER_GET_INFO 1
+#define COST_PER_OUTPUT_HISTOGRAM 25000
+#define COST_PER_FULL_OUTPUT_HISTOGRAM 5000000
+#define COST_PER_OUTPUT_DISTRIBUTION_0 20
+#define COST_PER_OUTPUT_DISTRIBUTION 50000
+#define COST_PER_COINBASE_TX_SUM 10000000
+#define COST_PER_BLOCK_HASH 0.002
+#define COST_PER_FEE_ESTIMATE 1
+#define COST_PER_SYNC_INFO 2
+#define COST_PER_HARD_FORK_INFO 1

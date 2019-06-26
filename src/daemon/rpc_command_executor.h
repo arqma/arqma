@@ -161,6 +161,8 @@ public:
   bool prune_blockchain();
 
   bool check_blockchain_pruning();
+
+  bool rpc_payments();
 };
 
 } // namespace daemonize

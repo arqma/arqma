@@ -37,6 +37,7 @@
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_basic/hardfork.h"
+#include "rpc/rpc_payment_signature.h"
 #include <boost/format.hpp>
 #include <ctime>
 #include <string>
@@ -2095,6 +2096,47 @@ bool t_rpc_command_executor::pop_blocks(uint64_t num_blocks)
   tools::success_msg_writer() << "new height: " << res.height;
 
   return true;
+}
+
+bool t_rpc_command_executor::rpc_payments()
+{
+    cryptonote::COMMAND_RPC_ACCESS_DATA::request req;
+    cryptonote::COMMAND_RPC_ACCESS_DATA::response res;
+    std::string fail_message = "Unsuccessful";
+    epee::json_rpc::error error_resp;
+
+    if (m_is_rpc)
+    {
+        if (!m_rpc_client->json_rpc_request(req, res, "rpc_access_data", fail_message.c_str()))
+        {
+            return true;
+        }
+    }
+    else
+    {
+        if (!m_rpc_server->on_rpc_access_data(req, res, error_resp) || res.status != CORE_RPC_STATUS_OK)
+        {
+            tools::fail_msg_writer() << make_error(fail_message, res.status);
+            return true;
+        }
+    }
+
+    const uint64_t now = (boost::posix_time::microsec_clock::universal_time() - cryptonote::rpc_payment_epoch).total_seconds();
+    uint64_t balance = 0;
+    tools::msg_writer() << boost::format("%64s %16u %16u %8u %8u %8u %8u %s")
+        % "Client ID" % "Balance" % "Total mined" % "Good" % "Stale" % "Bad" % "Dupes" % "Last update";
+    for (const auto &entry: res.entries)
+    {
+      tools::msg_writer() << boost::format("%64s %16u %16u %8u %8u %8u %8u %s")
+          % entry.client % entry.balance % entry.credits_total
+          % entry.nonces_good % entry.nonces_stale % entry.nonces_bad % entry.nonces_dupe
+          % (entry.last_update_time == 0 ? "never" : get_human_time_ago(entry.last_update_time, now).c_str());
+      balance += entry.balance;
+    }
+    tools::msg_writer() << res.entries.size() << " clients with a total of " << balance << " credits";
+    tools::msg_writer() << "Aggregated client hash rate: " << get_mining_speed(res.hashrate);
+
+    return true;
 }
 
 }// namespace daemonize

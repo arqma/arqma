@@ -140,6 +140,9 @@ namespace cryptonote
     bool set_subaddress_lookahead(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_segregation_height(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_ignore_fractional_outputs(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_persistent_rpc_client_id(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_auto_mine_for_rpc_payment_threshold(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_credits_target(const std::vector<std::string> &args = std::vector<std::string>());
     bool help(const std::vector<std::string> &args = std::vector<std::string>());
     bool start_mining(const std::vector<std::string> &args);
     bool stop_mining(const std::vector<std::string> &args);
@@ -223,6 +226,9 @@ namespace cryptonote
     bool blackball(const std::vector<std::string>& args);
     bool unblackball(const std::vector<std::string>& args);
     bool blackballed(const std::vector<std::string>& args);
+    bool rpc_payment_info(const std::vector<std::string> &args);
+    bool start_mining_for_rpc(const std::vector<std::string> &args);
+    bool stop_mining_for_rpc(const std::vector<std::string> &args);
     bool version(const std::vector<std::string>& args);
 
     uint64_t get_daemon_blockchain_height(std::string& err);
@@ -255,6 +261,8 @@ namespace cryptonote
      * \param ptx_vector Pending tx(es) created by transfer/sweep_all
      */
     void commit_or_save(std::vector<tools::wallet2::pending_tx>& ptx_vector, bool do_not_relay);
+
+    void handle_transfer_exception(const std::exception_ptr &e, bool trusted_daemon);
 
     //----------------- i_wallet2_callback ---------------------
     virtual void on_new_block(uint64_t height, const cryptonote::block& block);
@@ -357,5 +365,11 @@ namespace cryptonote
     bool m_auto_refresh_refreshing;
     std::atomic<bool> m_in_manual_refresh;
     uint32_t m_current_subaddress_account;
+
+    std::atomic<bool> m_need_payment;
+    boost::posix_time::ptime m_last_rpc_payment_mining_time;
+    bool m_rpc_payment_mining_requested;
+    bool m_daemon_rpc_payment_message_displayed;
+    float m_rpc_payment_hash_rate;
   };
 }
