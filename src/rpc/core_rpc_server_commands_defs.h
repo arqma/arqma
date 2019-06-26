@@ -129,6 +129,8 @@ namespace cryptonote
       std::string status;
       std::vector<block_output_indices> output_indices;
       bool untrusted;
+      uint64_t credits;
+      std::string top_hash;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(blocks)
@@ -137,6 +139,8 @@ namespace cryptonote
         KV_SERIALIZE(status)
         KV_SERIALIZE(output_indices)
         KV_SERIALIZE(untrusted)
+        KV_SERIALIZE(credits)
+        KV_SERIALIZE(top_hash)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -146,8 +150,10 @@ namespace cryptonote
   {
     struct request_t
     {
+      std::string client;
       std::vector<uint64_t> heights;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(client)
         KV_SERIALIZE(heights)
       END_KV_SERIALIZE_MAP()
     };
@@ -176,7 +182,10 @@ namespace cryptonote
     {
         struct request_t
         {
+            std::string client;
+
             BEGIN_KV_SERIALIZE_MAP()
+                KV_SERIALIZE(client);
             END_KV_SERIALIZE_MAP()
         };
         typedef epee::misc_utils::struct_init<request_t> request;
@@ -186,11 +195,15 @@ namespace cryptonote
             std::vector<std::string> blks_hashes;
             std::string status;
             bool untrusted;
+            uint64_t credits;
+            std::string top_hash;
 
             BEGIN_KV_SERIALIZE_MAP()
                 KV_SERIALIZE(blks_hashes)
                 KV_SERIALIZE(status)
                 KV_SERIALIZE(untrusted)
+                KV_SERIALIZE(credits)
+                KV_SERIALIZE(top_hash)
             END_KV_SERIALIZE_MAP()
         };
         typedef epee::misc_utils::struct_init<response_t> response;
@@ -233,6 +246,7 @@ namespace cryptonote
     };
     typedef epee::misc_utils::struct_init<response_t> response;
   };
+
   //-----------------------------------------------
   struct COMMAND_RPC_GET_RANDOM_OUTS
   {
@@ -599,7 +613,7 @@ namespace cryptonote
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(tx_as_hex)
         KV_SERIALIZE_OPT(do_not_relay, false)
-        KV_SERIALIZE(client);
+        KV_SERIALIZE(client)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -760,8 +774,6 @@ namespace cryptonote
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
-
-  //-----------------------------------------------
   struct COMMAND_RPC_STOP_MINING
   {
     struct request_t
@@ -975,7 +987,7 @@ namespace cryptonote
       uint64_t block_weight;
       uint64_t num_txes;
       std::string pow_hash;
-	   uint64_t long_term_weight;
+      uint64_t long_term_weight;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(major_version)
@@ -994,7 +1006,7 @@ namespace cryptonote
         KV_SERIALIZE_OPT(block_weight, (uint64_t)0)
         KV_SERIALIZE(num_txes)
         KV_SERIALIZE(pow_hash)
-		 KV_SERIALIZE_OPT(long_term_weight, (uint64_t)0)
+        KV_SERIALIZE_OPT(long_term_weight, (uint64_t)0)
       END_KV_SERIALIZE_MAP()
   };
 
@@ -1387,6 +1399,7 @@ namespace cryptonote
     struct request_t
     {
       std::string client;
+
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(client)
       END_KV_SERIALIZE_MAP()
@@ -1437,7 +1450,6 @@ namespace cryptonote
       bool untrusted;
       uint64_t credits;
       std::string top_hash;
-
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
@@ -1656,7 +1668,7 @@ namespace cryptonote
   {
     struct request_t
     {
-      int64_t limit_down;  // all limits (for get and set) are kbps
+      int64_t limit_down;  // all limits (for get and set) are kB/s
       int64_t limit_up;
 
       BEGIN_KV_SERIALIZE_MAP()
@@ -2547,11 +2559,11 @@ namespace cryptonote
       std::string status;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
         KV_SERIALIZE(pruned)
         KV_SERIALIZE(pruning_seed)
         KV_SERIALIZE(credits)
         KV_SERIALIZE(top_hash)
-        KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
