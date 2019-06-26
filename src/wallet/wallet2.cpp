@@ -2935,7 +2935,7 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
       if (error)
       {
         if (exception)
-          std::rethrow_exception(exceprion);
+          std::rethrow_exception(exception);
         else
           throw std::runtime_error("proxy exception in refresh thread");
       }
@@ -4627,7 +4627,7 @@ bool wallet2::check_connection(uint32_t *version, bool *ssl, uint32_t timeout)
 void wallet2::set_offline(bool offline)
 {
   m_offline = offline;
-  m_http_client.set_auto_reconnect(!offline);
+  m_http_client.set_auto_connect(!offline);
   if(offline)
   {
     boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
