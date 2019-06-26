@@ -1004,7 +1004,7 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::
     crypto::hash low_block = alt_chain.front()->second.bl.prev_id;
 
     //Make sure that the high_timestamp is really highest
-	  for(const blocks_ext_by_hash::iterator &it : alt_chain)
+	  for(const blocks_ext_by_hash::const_iterator &it : alt_chain)
     {
 	    if(high_timestamp < it->second.bl.timestamp)
 		     high_timestamp = it->second.bl.timestamp;
