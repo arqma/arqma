@@ -48,9 +48,9 @@
 
 #define STALE_THRESHOLD 15 /* seconds */
 
-#define PENALTY_FOR_STALE 2
-#define PENALTY_FOR_BAD_HASH 20
-#define PENALTY_FOR_DUPLICATE 20
+#define PENALTY_FOR_STALE 0.02
+#define PENALTY_FOR_BAD_HASH 0.2
+#define PENALTY_FOR_DUPLICATE 0.2
 
 #define DEFAULT_FLUSH_AGE (3600 * 24 * 180) // half a year
 
