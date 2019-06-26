@@ -802,6 +802,9 @@ namespace tools
     bool is_transfer_unlocked(uint64_t unlock_time, uint64_t block_height) const;
 
     uint64_t get_last_block_reward() const { return m_last_block_reward; }
+    
+    struct rpc_node_data_t { epee::net_utils::network_address address; float credits_per_hash; bool white; };
+	std::vector<cryptonote::public_node> get_public_nodes(bool white_only = true);
 
     template <class t_archive>
     inline void serialize(t_archive &a, const unsigned int ver)
