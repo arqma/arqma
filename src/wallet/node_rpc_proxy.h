@@ -42,10 +42,11 @@ namespace tools
 class NodeRPCProxy
 {
 public:
-  NodeRPCProxy(epee::net_utils::http::http_simple_client &http_client, rpc_payment_state_t &rpc_payment_state, boost::mutex &mutex);
+  NodeRPCProxy(epee::net_utils::http::http_simple_client &http_client, rpc_payment_state_t &rpc_payment_state, boost::recursive_mutex &mutex);
 
   void set_client_secret_key(const crypto::secret_key &skey) { m_client_id_secret_key = skey; }
   void invalidate();
+  void set_offline(bool offline) { m_offline = offline; }
 
   boost::optional<std::string> get_rpc_version(uint32_t &version);
   boost::optional<std::string> get_height(uint64_t &height);
@@ -74,7 +75,8 @@ private:
 
   epee::net_utils::http::http_simple_client &m_http_client;
   rpc_payment_state_t &m_rpc_payment_state;
-  boost::mutex &m_daemon_rpc_mutex;
+  boost::recursive_mutex &m_daemon_rpc_mutex;
+  bool m_offline;
   crypto::secret_key m_client_id_secret_key;
 
   uint64_t m_height;
