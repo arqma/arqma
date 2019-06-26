@@ -48,6 +48,13 @@
 namespace daemonize {
 
 namespace {
+  std::string print_float(float f, int prec)
+  {
+	char buf[16];
+	snprintf(buf, sizeof(buf), "%*.*f", prec, prec, f);
+	return buf;
+  }
+
   void print_peer(std::string const & prefix, cryptonote::peer const & peer)
   {
     time_t now;
@@ -64,8 +71,9 @@ namespace {
     epee::string_tools::xtype_to_string(peer.port, port_str);
     std::string addr_str = ip_str + ":" + port_str;
     std::string rpc_port = peer.rpc_port ? std::to_string(peer.rpc_port) : "-";
+    std::string rpc_credits_per_hash = peer.rpc_credits_per_hash ? print_float(peer.rpc_credits_per_hash / RPC_CREDITS_PER_HASH_SCALE, 2) : "-";
     std::string pruning_seed = epee::string_tools::to_string_hex(peer.pruning_seed);
-    tools::msg_writer() << boost::format("%-10s %-25s %-25s %-5s %-4s %s") % prefix % id_str % addr_str % rpc_port % pruning_seed % elapsed;
+    tools::msg_writer() << boost::format("%-10s %-25s %-25s %-5s %-5s %-4s %s") % prefix % id_str % addr_str % rpc_port % rpc_credits_per_hash % pruning_seed % elapsed;
   }
 
   void print_block_header(cryptonote::block_header_response const & header)

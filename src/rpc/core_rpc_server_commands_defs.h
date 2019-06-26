@@ -1165,16 +1165,17 @@ namespace cryptonote
     uint32_t ip;
     uint16_t port;
     uint16_t rpc_port;
+    uint32_t rpc_credits_per_hash;
     uint64_t last_seen;
     uint32_t pruning_seed;
 
     peer() = default;
 
-    peer(uint64_t id, const std::string &host, uint64_t last_seen, uint32_t pruning_seed, uint16_t rpc_port)
-      : id(id), host(host), ip(0), port(0), rpc_port(rpc_port), last_seen(last_seen), pruning_seed(pruning_seed)
+    peer(uint64_t id, const std::string &host, uint64_t last_seen, uint32_t pruning_seed, uint16_t rpc_port, uint32_t rpc_credits_per_hash)
+      : id(id), host(host), ip(0), port(0), rpc_port(rpc_port), rpc_credits_per_hash(rpc_credits_per_hash), last_seen(last_seen), pruning_seed(pruning_seed)
     {}
-    peer(uint64_t id, uint32_t ip, uint16_t port, uint64_t last_seen, uint32_t pruning_seed, uint16_t rpc_port)
-      : id(id), host(std::to_string(ip)), ip(ip), port(port), rpc_port(rpc_port), last_seen(last_seen), pruning_seed(pruning_seed)
+    peer(uint64_t id, uint32_t ip, uint16_t port, uint64_t last_seen, uint32_t pruning_seed, uint16_t rpc_port, uint32_t rpc_credits_per_hash)
+      : id(id), host(std::to_string(ip)), ip(ip), port(port), rpc_port(rpc_port), rpc_credits_per_hash(rpc_credits_per_hash), last_seen(last_seen), pruning_seed(pruning_seed)
     {}
 
     BEGIN_KV_SERIALIZE_MAP()
@@ -1183,6 +1184,7 @@ namespace cryptonote
       KV_SERIALIZE(ip)
       KV_SERIALIZE(port)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)0)
+      KV_SERIALIZE_OPT(rpc_credits_per_hash, (uint32_t)0)
       KV_SERIALIZE(last_seen)
       KV_SERIALIZE_OPT(pruning_seed, (uint32_t)0)
     END_KV_SERIALIZE_MAP()
