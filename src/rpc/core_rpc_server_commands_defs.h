@@ -2478,14 +2478,12 @@ namespace cryptonote
       uint64_t count;
       uint64_t time;
       uint64_t credits;
-      std::string top_hash;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(rpc)
         KV_SERIALIZE(count)
         KV_SERIALIZE(time)
         KV_SERIALIZE(credits)
-        KV_SERIALIZE(top_hash)
       END_KV_SERIALIZE_MAP()
     };
 
@@ -2553,6 +2551,35 @@ namespace cryptonote
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
+  struct COMMAND_RPC_ACCESS_ACCOUNT
+  {
+	struct request_t
+	{
+	  std::string client;
+	  int64_t delta_balance;
+	
+	  BEGIN_KV_SERIALIZE_MAP()
+	    KV_SERIALIZE(client)
+	    KV_SERIALIZE(delta_balance)
+	  END_KV_SERIALIZE_MAP()
+	};
+	typedef epee::misc_utils::struct_init<request_t> request;
+	
+	struct response_t
+	{
+	  std::string status;
+	  uint64_t credits;
+	  bool untrusted;
+	
+	  BEGIN_KV_SERIALIZE_MAP()
+	    KV_SERIALIZE(status)
+	    KV_SERIALIZE(credits)
+	    KV_SERIALIZE(untrusted)
+	  END_KV_SERIALIZE_MAP()
+	};
+	typedef epee::misc_utils::struct_init<response_t> response;
+  };
+	  
   struct COMMAND_RPC_POP_BLOCKS
   {
     struct request_t

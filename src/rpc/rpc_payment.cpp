@@ -93,6 +93,21 @@ namespace cryptonote
     m_nonces_dupe(0)
   {
   }
+  
+  uint64_t rpc_payment::balance(const crypto::public_key &client, int64_t delta)
+  {
+	client_info &info = m_client_info[client]; // creates if not found
+	uint64_t credits = info.credits;
+	if (delta > 0 && credits > std::numeric_limits<uint64_t>::max() - delta)
+	  credits = std::numeric_limits<uint64_t>::max();
+	else if (delta < 0 && credits < (uint64_t)-delta)
+	  credits = 0;
+	else
+	  credits += delta;
+	if (delta)
+	  MINFO("Client " << client << ": balance change from " << info.credits << " to " << credits);
+	return info.credits = credits;
+  }
 
   bool rpc_payment::pay(const crypto::public_key &client, uint64_t ts, uint64_t payment, const std::string &rpc, bool same_ts, uint64_t &credits)
   {

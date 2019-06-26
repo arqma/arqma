@@ -2784,7 +2784,34 @@ namespace cryptonote
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-
+  bool core_rpc_server::on_rpc_access_account(const COMMAND_RPC_ACCESS_ACCOUNT::request& req, COMMAND_RPC_ACCESS_ACCOUNT::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
+  {
+	RPC_TRACKER(rpc_access_account);
+	
+	bool r;
+	if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_ACCESS_ACCOUNT>(invoke_http_mode::JON, "rpc_access_account", req, res, r))
+	  return r;
+	
+	if (!m_rpc_payment)
+	{
+	  res.status = "Payments not enabled";
+	  return false;
+	}
+	
+	crypto::public_key client;
+	if (!epee::string_tools::hex_to_pod(req.client.substr(0, 2 * sizeof(client)), client))
+	{
+	  error_resp.code = CORE_RPC_ERROR_CODE_INVALID_CLIENT;
+	  error_resp.message = "Invalid client ID";
+	  return false;
+	}
+	
+	res.credits = m_rpc_payment->balance(client, req.delta_balance);
+	
+	res.status = CORE_RPC_STATUS_OK;
+	return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
 
   const command_line::arg_descriptor<std::string, false, true, 2> core_rpc_server::arg_rpc_bind_port = {
       "rpc-bind-port"
