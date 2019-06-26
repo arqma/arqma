@@ -469,7 +469,7 @@ void simple_wallet::handle_transfer_exception(const std::exception_ptr &e, bool 
     }
     catch (const tools::error::tx_rejected& e)
     {
-      fail_msg_writer() << (boost::format(sw::tr("transaction %s was rejected by daemon with status: ")) % get_transaction_hash(e.tx())) << e.status();
+      fail_msg_writer() << (boost::format(sw::tr("transaction %s was rejected by daemon")) % get_transaction_hash(e.tx())) << e.status();
       std::string reason = e.reason();
       if (!reason.empty())
         fail_msg_writer() << sw::tr("Reason: ") << reason;

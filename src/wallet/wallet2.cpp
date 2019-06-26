@@ -146,6 +146,37 @@ namespace
     dir /= ".shared-ringdb";
     return dir.string();
   }
+
+  void add_reason(std::string &reasons, const char *reason)
+  {
+    if (!reasons.empty())
+      reasons += ", ";
+    reasons += reason;
+  }
+
+  std::string get_text_reason(const cryptonote::COMMAND_RPC_SEND_RAW_TX::response &res)
+  {
+      std::string reason;
+      if (res.low_mixin)
+        add_reason(reason, "bad ring size");
+      if (res.double_spend)
+        add_reason(reason, "double spend");
+      if (res.invalid_input)
+        add_reason(reason, "invalid input");
+      if (res.invalid_output)
+        add_reason(reason, "invalid output");
+      if (res.too_big)
+        add_reason(reason, "too big");
+      if (res.overspend)
+        add_reason(reason, "overspend");
+      if (res.fee_too_low)
+        add_reason(reason, "fee too low");
+      if (res.not_rct)
+        add_reason(reason, "tx is not ringct");
+      if (res.not_relayed)
+        add_reason(reason, "tx was not relayed");
+      return reason;
+  }
 }
 
 namespace
@@ -624,19 +655,6 @@ std::pair<std::unique_ptr<tools::wallet2>, tools::password_container> generate_f
     return {std::move(wallet), tools::password_container(password)};
   }
   return {nullptr, tools::password_container{}};
-}
-
-static void throw_on_rpc_response_error(const boost::optional<std::string> &status, const char *method)
-{
-  // no error
-  if (!status)
-    return;
-
-  // empty string -> not connection
-  THROW_WALLET_EXCEPTION_IF(status->empty(), tools::error::no_connection_to_daemon, method);
-
-  THROW_WALLET_EXCEPTION_IF(*status == CORE_RPC_STATUS_BUSY, tools::error::daemon_busy, method);
-  THROW_WALLET_EXCEPTION_IF(*status != CORE_RPC_STATUS_OK, tools::error::wallet_generic_rpc_error, method, *status);
 }
 
 std::string strjoin(const std::vector<size_t> &V, const char *sep)
@@ -2662,7 +2680,7 @@ void wallet2::update_pool_state(bool refreshed)
     }
     else
     {
-      LOG_PRINT_L0("Error calling gettransactions daemon RPC: r " << r << ", status " << res.status);
+      LOG_PRINT_L0("Error calling gettransactions daemon RPC: r " << r << ", status " << get_rpc_status(res.status));
     }
   }
   MDEBUG("update_pool_state end");
@@ -10355,7 +10373,10 @@ uint64_t wallet2::get_daemon_blockchain_height(string &err)
   boost::optional<std::string> result = m_node_rpc_proxy.get_height(height);
   if (result)
   {
-    err = *result;
+    if (m_trusted_daemon)
+      err = *result;
+    else
+      err = "daemon error";
     return 0;
   }
 
@@ -10370,7 +10391,10 @@ uint64_t wallet2::get_daemon_blockchain_target_height(string &err)
   const auto result = m_node_rpc_proxy.get_target_height(target_height);
   if (result && *result != CORE_RPC_STATUS_OK)
   {
-    err= *result;
+    if (m_trusted_daemon)
+      err = *result;
+    else
+      err = "daemon error";
     return 0;
   }
   return target_height;
@@ -11869,4 +11893,28 @@ uint64_t wallet2::get_segregation_fork_height() const
 void wallet2::generate_genesis(cryptonote::block& b) const {
   cryptonote::generate_genesis_block(b);
 }
+
+//----------------------------------------------------------------------------------------------------
+std::string wallet2::get_rpc_status(const std::string &s) const
+{
+  if (m_trusted_daemon)
+    return s;
+  if (s == CORE_RPC_STATUS_OK)
+    return s;
+  if (s == CORE_RPC_STATUS_BUSY || s == CORE_RPC_STATUS_PAYMENT_REQUIRED)
+    return s;
+  return "<error>";
+}
+//----------------------------------------------------------------------------------------------------
+void wallet2::throw_on_rpc_response_error(bool r, const epee::json_rpc::error &error, const std::string &status, const char *method) const
+{
+  THROW_WALLET_EXCEPTION_IF(error.code, tools::error::wallet_coded_rpc_error, method, error.code, get_rpc_server_error_message(error.code));
+  THROW_WALLET_EXCEPTION_IF(!r, tools::error::no_connection_to_daemon, method);
+  // empty string -> not connection
+  THROW_WALLET_EXCEPTION_IF(status.empty(), tools::error::no_connection_to_daemon, method);
+
+  THROW_WALLET_EXCEPTION_IF(status == CORE_RPC_STATUS_BUSY, tools::error::daemon_busy, method);
+  THROW_WALLET_EXCEPTION_IF(status == CORE_RPC_STATUS_PAYMENT_REQUIRED, tools::error::payment_required, method);
+}
+
 }

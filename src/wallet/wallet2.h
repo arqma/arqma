@@ -40,6 +40,7 @@
 #include <boost/serialization/deque.hpp>
 #include <boost/thread/lock_guard.hpp>
 #include <atomic>
+#include <random>
 
 #include "include_base_utils.h"
 #include "cryptonote_basic/account.h"
@@ -1306,6 +1307,9 @@ namespace tools
 
     void setup_new_blockchain();
     void create_keys_file(const std::string &wallet_, bool watch_only, const epee::wipeable_string &password, bool create_address_file);
+
+    std::string get_rpc_status(const std::string &s) const;
+    void throw_on_rpc_response_error(bool r, const epee::json_rpc::error &error, const std::string &status, const char *method) const;
 
     std::string get_client_signature() const;
     void check_rpc_cost(const char *call, uint64_t post_call_credits, uint64_t pre_credits, double expected_cost);
