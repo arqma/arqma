@@ -2793,7 +2793,7 @@ simple_wallet::simple_wallet()
                            tr("Checks whether an output is marked as spent"));
   m_cmd_binder.set_handler("public_nodes",
 	                       boost::bind(&simple_wallet::public_nodes, this, _1),
-	                       tr("Public Nodes"),
+	                       tr("public_nodes"),
 	                       tr("Lists known public nodes"));
   m_cmd_binder.set_handler("version",
                            boost::bind(&simple_wallet::version, this, _1),
