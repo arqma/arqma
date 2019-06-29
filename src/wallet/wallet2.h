@@ -722,7 +722,7 @@ namespace tools
     bool is_deprecated() const;
     void refresh(bool trusted_daemon);
     void refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blocks_fetched);
-    void refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blocks_fetched, bool& received_money);
+    void refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blocks_fetched, bool& received_money, bool check_pool = true);
     bool refresh(bool trusted_daemon, uint64_t & blocks_fetched, bool& received_money, bool& ok);
 
     void set_refresh_type(RefreshType refresh_type) { m_refresh_type = refresh_type; }
@@ -802,7 +802,7 @@ namespace tools
     bool is_transfer_unlocked(uint64_t unlock_time, uint64_t block_height) const;
 
     uint64_t get_last_block_reward() const { return m_last_block_reward; }
-    
+
     struct rpc_node_data_t { epee::net_utils::network_address address; float credits_per_hash; bool white; };
 	std::vector<cryptonote::public_node> get_public_nodes(bool white_only = true);
 
@@ -1293,7 +1293,7 @@ namespace tools
     crypto::public_key get_tx_pub_key_from_received_outs(const tools::wallet2::transfer_details &td) const;
     bool should_pick_a_second_output(bool use_rct, size_t n_transfers, const std::vector<size_t> &unused_transfers_indices, const std::vector<size_t> &unused_dust_indices) const;
     std::vector<size_t> get_only_rct(const std::vector<size_t> &unused_dust_indices, const std::vector<size_t> &unused_transfers_indices) const;
-    void scan_output(const cryptonote::transaction &tx, bool miner_tx, const crypto::public_key &tx_pub_key, size_t i, tx_scan_info_t &tx_scan_info, int &num_vouts_received, std::unordered_map<cryptonote::subaddress_index, uint64_t> &tx_money_got_in_outs, std::vector<size_t> &outs);
+    void scan_output(const cryptonote::transaction &tx, bool miner_tx, const crypto::public_key &tx_pub_key, size_t i, tx_scan_info_t &tx_scan_info, int &num_vouts_received, std::unordered_map<cryptonote::subaddress_index, uint64_t> &tx_money_got_in_outs, std::vector<size_t> &outs, bool pool);
     void trim_hashchain();
     crypto::key_image get_multisig_composite_key_image(size_t n) const;
     rct::multisig_kLRki get_multisig_composite_kLRki(size_t n, const crypto::public_key &ignore, std::unordered_set<rct::key> &used_L, std::unordered_set<rct::key> &new_used_L) const;
