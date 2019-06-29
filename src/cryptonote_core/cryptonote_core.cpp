@@ -1120,7 +1120,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 170000 : 0;
+    static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 200000 : 0;
     if (block_sync_size > 0)
       return block_sync_size;
     if (height >= quick_height)
@@ -1421,19 +1421,19 @@ namespace cryptonote
     TRY_ENTRY();
 
     bvc = boost::value_initialized<block_verification_context>();
-    
+
     if(!check_incoming_block_size(block_blob))
     {
       bvc.m_verifivation_failed = true;
       return false;
     }
-    
+
     if (((size_t)-1) <= 0xffffffff && block_blob.size() >= 0x3fffffff)
 	  MWARNING("This block's size is " << block_blob.size() << ", closing on the 32 bit limit");
-	
-	// load json & DNS checkpoints every 10min/hour respectively,
-	// and verify them with respect to what blocks we already have
-	CHECK_AND_ASSERT_MES(update_checkpoints(), false, "One or more checkpoints loaded from json or dns conflicted with existing checkpoints.");
+
+    // load json & DNS checkpoints every 10min/hour respectively,
+    // and verify them with respect to what blocks we already have
+    CHECK_AND_ASSERT_MES(update_checkpoints(), false, "One or more checkpoints loaded from json or dns conflicted with existing checkpoints.");
 
     block b = AUTO_VAL_INIT(b);
     if(!parse_and_validate_block_from_blob(block_blob, b))
@@ -1455,10 +1455,10 @@ namespace cryptonote
   bool core::check_incoming_block_size(const blobdata& block_blob) const
   {
     // note: we assume block weight is always >= block blob size, so we check incoming
-	// blob size against the block weight limit, which acts as a sanity check without
-	// having to parse/weigh first; in fact, since the block blob is the block header
-	// plus the tx hashes, the weight will typically be much larger than the blob size
-	if(block_blob.size() > m_blockchain_storage.get_current_cumulative_block_weight_limit() + BLOCK_SIZE_SANITY_LEEWAY)
+    // blob size against the block weight limit, which acts as a sanity check without
+    // having to parse/weigh first; in fact, since the block blob is the block header
+    // plus the tx hashes, the weight will typically be much larger than the blob size
+    if(block_blob.size() > m_blockchain_storage.get_current_cumulative_block_weight_limit() + BLOCK_SIZE_SANITY_LEEWAY)
     {
       LOG_PRINT_L1("WRONG BLOCK BLOB, sanity check failed on size " << block_blob.size() << ", rejected");
       return false;

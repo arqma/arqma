@@ -812,7 +812,7 @@ bool simple_wallet::print_fee_info(const std::vector<std::string> &args/* = std:
   const bool per_byte = m_wallet->use_fork_rules(HF_VERSION_PER_BYTE_FEE);
   const uint64_t base_fee = m_wallet->get_base_fee();
   const char *base = per_byte ? "byte" : "kB";
-  const uint64_t typical_size = per_byte ? 2500 : 13;
+  const uint64_t typical_size = per_byte ? 2500 : 4;
   const uint64_t size_granularity = per_byte ? 1 : 1024;
   message_writer() << (boost::format(tr("Current fee is %s %s per %s")) % print_money(base_fee) % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % base).str();
 
@@ -1851,7 +1851,7 @@ bool simple_wallet::public_nodes(const std::vector<std::string> &args)
 	    return node0.rpc_credits_per_hash < node1.rpc_credits_per_hash;
 	  return false;
 	});
-	
+
 	const uint64_t now = time(NULL);
 	message_writer() << boost::format("%32s %12s %16s") % tr("address") % tr("credits/hash") % tr("last_seen");
 	for (const auto &node: nodes)
@@ -1870,7 +1870,7 @@ bool simple_wallet::public_nodes(const std::vector<std::string> &args)
   }
   return true;
 }
-	
+
 bool simple_wallet::version(const std::vector<std::string> &args)
 {
   message_writer() << "ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")";
@@ -4366,15 +4366,15 @@ bool simple_wallet::set_daemon(const std::vector<std::string>& args)
       }
       catch (const std::exception &e) { }
     }
-    
+
     if (!try_connect_to_daemon())
 	{
 	  fail_msg_writer() << tr("Failed to connect to daemon");
 	  return true;
 	}
-	    
+
     success_msg_writer() << boost::format("Daemon set to %s, %s") % daemon_url % (m_wallet->is_trusted_daemon() ? tr("trusted") : tr("untrusted"));
-    
+
     // check whether the daemon's prices match the claim, and disconnect if not, to disincentivize daemons lying
 	uint32_t actual_cph, claimed_cph;
 	if (check_daemon_rpc_prices(daemon_url, actual_cph, claimed_cph))
@@ -5337,8 +5337,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
             print_money(total_fee);
         }
         if (dust_in_fee != 0) prompt << boost::format(tr(", of which %s is dust from change")) % print_money(dust_in_fee);
-        if (dust_not_in_fee != 0)  prompt << tr(".") << ENDL << boost::format(tr("A total of %s from dust change will be sent to dust address"))
-                                                   % print_money(dust_not_in_fee);
+        if (dust_not_in_fee != 0)  prompt << tr(".") << ENDL << boost::format(tr("A total of %s from dust change will be sent to dust address")) % print_money(dust_not_in_fee);
         if (transfer_type == TransferLocked)
         {
           float days = locked_blocks / 360.0f;
