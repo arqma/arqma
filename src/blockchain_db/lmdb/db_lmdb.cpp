@@ -694,7 +694,7 @@ uint64_t BlockchainLMDB::get_estimated_batch_size(uint64_t batch_num_blocks, uin
       ++num_blocks_used;
     }
     if (my_rtxn) block_rtxn_stop();
-    avg_block_size = total_block_size / num_blocks_used;
+    avg_block_size = total_block_size / (num_blocks_used ? num_blocks_used : 1);
     MDEBUG("average block size across recent " << num_blocks_used << " blocks: " << avg_block_size);
   }
 estim:
@@ -2502,7 +2502,7 @@ uint64_t BlockchainLMDB::get_max_block_size()
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
-	
+
   TXN_PREFIX_RDONLY();
   RCURSOR(properties)
   MDB_val_str(k, "max_block_size");
@@ -2519,7 +2519,7 @@ uint64_t BlockchainLMDB::get_max_block_size()
   TXN_POSTFIX_RDONLY();
   return max_block_size;
 }
-	
+
 void BlockchainLMDB::add_max_block_size(uint64_t sz)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);

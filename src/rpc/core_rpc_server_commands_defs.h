@@ -30,6 +30,9 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
+
+#include "string_tools.h"
+
 #include "cryptonote_protocol/cryptonote_protocol_defs.h"
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "cryptonote_basic/difficulty.h"
@@ -367,6 +370,7 @@ namespace cryptonote
       uint64_t block_height;
       uint64_t block_timestamp;
       std::vector<uint64_t> output_indices;
+      bool relayed;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(tx_hash)
@@ -380,6 +384,7 @@ namespace cryptonote
         KV_SERIALIZE(block_height)
         KV_SERIALIZE(block_timestamp)
         KV_SERIALIZE(output_indices)
+        KV_SERIALIZE(relayed)
       END_KV_SERIALIZE_MAP()
     };
 
@@ -608,11 +613,13 @@ namespace cryptonote
     {
       std::string tx_as_hex;
       bool do_not_relay;
+      bool do_sanity_checks;
       std::string client;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(tx_as_hex)
         KV_SERIALIZE_OPT(do_not_relay, false)
+        KV_SERIALIZE_OPT(do_sanity_checks, true)
         KV_SERIALIZE(client)
       END_KV_SERIALIZE_MAP()
     };
@@ -632,6 +639,7 @@ namespace cryptonote
       bool overspend;
       bool fee_too_low;
       bool not_rct;
+      bool sanity_check_failed;
       bool untrusted;
       uint64_t credits;
       std::string top_hash;
@@ -648,6 +656,7 @@ namespace cryptonote
         KV_SERIALIZE(overspend)
         KV_SERIALIZE(fee_too_low)
         KV_SERIALIZE(not_rct)
+        KV_SERIALIZE(sanity_check_failed)
         KV_SERIALIZE(untrusted)
         KV_SERIALIZE(credits)
         KV_SERIALIZE(top_hash)
@@ -1175,7 +1184,7 @@ namespace cryptonote
       : id(id), host(host), ip(0), port(0), rpc_port(rpc_port), rpc_credits_per_hash(rpc_credits_per_hash), last_seen(last_seen), pruning_seed(pruning_seed)
     {}
     peer(uint64_t id, uint32_t ip, uint16_t port, uint64_t last_seen, uint32_t pruning_seed, uint16_t rpc_port, uint32_t rpc_credits_per_hash)
-      : id(id), host(std::to_string(ip)), ip(ip), port(port), rpc_port(rpc_port), rpc_credits_per_hash(rpc_credits_per_hash), last_seen(last_seen), pruning_seed(pruning_seed)
+      : id(id), host(epee::string_tools::get_ip_string_from_int32(ip)), ip(ip), port(port), rpc_port(rpc_port), rpc_credits_per_hash(rpc_credits_per_hash), last_seen(last_seen), pruning_seed(pruning_seed)
     {}
 
     BEGIN_KV_SERIALIZE_MAP()
@@ -1213,20 +1222,20 @@ namespace cryptonote
     };
     typedef epee::misc_utils::struct_init<response_t> response;
   };
-  
+
   struct public_node
   {
 	std::string host;
 	uint64_t last_seen;
 	uint16_t rpc_port;
 	uint32_t rpc_credits_per_hash;
-	
+
 	public_node(): last_seen(0), rpc_port(0), rpc_credits_per_hash(0) {}
-	
+
 	public_node(const peer &peer)
 	  : host(peer.host), last_seen(peer.last_seen), rpc_port(peer.rpc_port), rpc_credits_per_hash(peer.rpc_credits_per_hash)
 	{}
-	
+
 	BEGIN_KV_SERIALIZE_MAP()
 	  KV_SERIALIZE(host)
 	  KV_SERIALIZE(last_seen)
@@ -1234,27 +1243,27 @@ namespace cryptonote
 	  KV_SERIALIZE(rpc_credits_per_hash)
 	END_KV_SERIALIZE_MAP()
   };
-	
+
   struct COMMAND_RPC_GET_PUBLIC_NODES
   {
 	struct request_t
 	{
 	  bool gray;
 	  bool white;
-	
+
 	  BEGIN_KV_SERIALIZE_MAP()
 	    KV_SERIALIZE_OPT(gray, false)
 	    KV_SERIALIZE_OPT(white, true)
 	  END_KV_SERIALIZE_MAP()
 	};
 	typedef epee::misc_utils::struct_init<request_t> request;
-	
+
 	struct response_t
 	{
 	  std::string status;
 	  std::vector<public_node> gray;
 	  std::vector<public_node> white;
-	
+
 	  BEGIN_KV_SERIALIZE_MAP()
 	    KV_SERIALIZE(status)
 	    KV_SERIALIZE(gray)
@@ -2561,20 +2570,20 @@ namespace cryptonote
 	{
 	  std::string client;
 	  int64_t delta_balance;
-	
+
 	  BEGIN_KV_SERIALIZE_MAP()
 	    KV_SERIALIZE(client)
 	    KV_SERIALIZE(delta_balance)
 	  END_KV_SERIALIZE_MAP()
 	};
 	typedef epee::misc_utils::struct_init<request_t> request;
-	
+
 	struct response_t
 	{
 	  std::string status;
 	  uint64_t credits;
 	  bool untrusted;
-	
+
 	  BEGIN_KV_SERIALIZE_MAP()
 	    KV_SERIALIZE(status)
 	    KV_SERIALIZE(credits)
@@ -2583,7 +2592,7 @@ namespace cryptonote
 	};
 	typedef epee::misc_utils::struct_init<response_t> response;
   };
-	  
+
   struct COMMAND_RPC_POP_BLOCKS
   {
     struct request_t

@@ -140,6 +140,7 @@ namespace cryptonote
     bool set_subaddress_lookahead(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_segregation_height(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_ignore_fractional_outputs(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_track_uses(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_persistent_rpc_client_id(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_auto_mine_for_rpc_payment_threshold(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_credits_target(const std::vector<std::string> &args = std::vector<std::string>());
@@ -190,6 +191,7 @@ namespace cryptonote
     bool get_reserve_proof(const std::vector<std::string> &args);
     bool check_reserve_proof(const std::vector<std::string> &args);
     bool show_transfers(const std::vector<std::string> &args);
+    bool export_transfers(const std::vector<std::string> &args);
     bool unspent_outputs(const std::vector<std::string> &args);
     bool rescan_blockchain(const std::vector<std::string> &args);
     bool refresh_main(uint64_t start_height, bool reset = false, bool is_init = false);
@@ -242,6 +244,26 @@ namespace cryptonote
     bool print_ring_members(const std::vector<tools::wallet2::pending_tx>& ptx_vector, std::ostream& ostr);
     std::string get_prompt() const;
     bool print_seed(bool encrypted);
+    std::pair<std::string, std::string> show_outputs_line(const std::vector<uint64_t> &heights, uint64_t blockchain_height, uint64_t highlight_height = std::numeric_limits<uint64_t>::max()) const;
+    bool prompt_if_old(const std::vector<tools::wallet2::pending_tx> &ptx_vector);
+
+    struct transfer_view
+    {
+      std::string type;
+      boost::variant<uint64_t, std::string> block;
+      uint64_t timestamp;
+      std::string direction;
+      bool confirmed;
+      uint64_t amount;
+      crypto::hash hash;
+      std::string payment_id;
+      uint64_t fee;
+      std::vector<std::pair<std::string, uint64_t>> outputs;
+      std::set<uint32_t> index;
+      std::string note;
+      std::string unlocked;
+    };
+    bool get_transfers(std::vector<std::string>& args_, std::vector<transfer_view>& transfers);
 
     /*!
      * \brief Prints the seed with a nice message

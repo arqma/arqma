@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2016-2018, The Monero Project
+// Copyright (c) 2019, The Arqma Network
+// Copyright (c) 2019, The Monero Project
 //
 // All rights reserved.
 //
@@ -27,40 +27,11 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pragma once
-
-#include <boost/optional/optional.hpp>
-#include <cstdint>
-#include <string>
-#include <vector>
+#include "cryptonote_basic/blobdatatype.h"
 
 namespace cryptonote
 {
-class core;
+  class Blockchain;
 
-namespace rpc
-{
-
-struct output_distribution_data
-{
-  std::vector<std::uint64_t> distribution;
-  std::uint64_t start_height;
-  std::uint64_t base;
-};
-
-class RpcHandler
-{
-  public:
-    RpcHandler() { }
-    virtual ~RpcHandler() { }
-
-    virtual std::string handle(const std::string& request) = 0;
-
-    static boost::optional<output_distribution_data>
-      get_output_distribution(const std::function<bool(uint64_t, uint64_t, uint64_t, uint64_t&, std::vector<uint64_t>&, uint64_t&)> &f, uint64_t amount, uint64_t from_height, uint64_t to_height, bool cumulative);
-};
-
-
-}  // rpc
-
-}  // cryptonote
+  bool tx_sanity_check(Blockchain &blockchain, const cryptonote::blobdata &tx_blob);
+}
