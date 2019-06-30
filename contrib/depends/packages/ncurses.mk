@@ -7,7 +7,7 @@ $(package)_sha256_hash=aa057eeeb4a14d470101eff4597d5833dcef5965331be3528c08d99ce
 define $(package)_set_vars
   $(package)_build_opts=CC="$($(package)_cc)"
   $(package)_config_env=AR="$($(package)_ar)" RANLIB="$($(package)_ranlib)" CC="$($(package)_cc)"
-  $(package)_config_env_darwin=RANLIB="$(host_prefix)/native/bin/x86_64-apple-darwin11-ranlib" AR="$(host_prefix)/native/bin/x86_64-apple-darwin11-ar" CC="$(host_prefix)/native/bin/$($(package)_cc)"
+  $(package)_config_env_darwin=RANLIB="$(host_prefix)/native/bin/x86_64-apple-darwin14-ranlib" AR="$(host_prefix)/native/bin/x86_64-apple-darwin14-ar" CC="$(host_prefix)/native/bin/$($(package)_cc)"
   $(package)_config_opts=--prefix=$(host_prefix)
   $(package)_config_opts+=--disable-shared
   $(package)_config_opts+=--with-build-cc=gcc
