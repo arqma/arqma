@@ -6370,7 +6370,7 @@ int wallet2::get_fee_algorithm()
 uint64_t wallet2::get_min_ring_size()
 {
   if (use_fork_rules(13, 10))
-    return 7;
+    return 11;
   if (use_fork_rules(12, 10))
     return 7;
   if (use_fork_rules(6, 10))
@@ -6383,7 +6383,7 @@ uint64_t wallet2::get_min_ring_size()
 uint64_t wallet2::get_max_ring_size()
 {
   if (use_fork_rules(13, 10))
-    return 7;
+    return 11;
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------

@@ -319,15 +319,17 @@ namespace rct {
             return false;
           if (type == RCTTypeSimpleBulletproof || type == RCTTypeFullBulletproof)
           {
-            ar.tag("bp");
+            uint32_t nbp_old = bulletproofs.size();
+            FIELD(nbp_old)
+            ar.tag("bp_old");
             ar.begin_array();
-            PREPARE_CUSTOM_VECTOR_SERIALIZATION(outputs, bulletproofs);
-            if (bulletproofs.size() != outputs)
+            if (nbp_old != outputs)
               return false;
-            for (size_t i = 0; i < outputs; ++i)
+            PREPARE_CUSTOM_VECTOR_SERIALIZATION(nbp_old, bulletproofs);
+            for (size_t i = 0; i < nbp_old; ++i)
             {
               FIELDS(bulletproofs[i])
-              if (outputs - i > 1)
+              if (nbp_old - i > 1)
                 ar.delimit_array();
             }
             ar.end_array();

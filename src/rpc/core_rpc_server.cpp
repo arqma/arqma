@@ -2596,7 +2596,7 @@ namespace cryptonote
       if (!get_block_template(m_rpc_payment->get_payment_address(), NULL, extra_nonce, reserved_offset, difficulty, height, expected_reward, b, error_resp))
         return false;
       return true;
-    }, hashing_blob, top_hash, res.diff, res.credits_per_hash_found, res.credits))
+    }, hashing_blob, top_hash, res.diff, res.credits_per_hash_found, res.credits, res.cookie))
     {
       return false;
     }
@@ -2637,7 +2637,7 @@ namespace cryptonote
     crypto::hash top_hash;
     uint64_t height;
     m_core.get_blockchain_top(height, top_hash);
-    if (!m_rpc_payment->submit_nonce(client, req.nonce, top_hash, error_resp.code, error_resp.message, res.credits, hash, block))
+    if (!m_rpc_payment->submit_nonce(client, req.nonce, top_hash, error_resp.code, error_resp.message, res.credits, hash, block, req.cookie))
     {
       return false;
     }

@@ -48,7 +48,7 @@
 
 #define STALE_THRESHOLD 15 /* seconds */
 
-#define PENALTY_FOR_STALE 1
+#define PENALTY_FOR_STALE 0
 #define PENALTY_FOR_BAD_HASH 2
 #define PENALTY_FOR_DUPLICATE 2
 
@@ -68,6 +68,7 @@ namespace
 namespace cryptonote
 {
   rpc_payment::client_info::client_info():
+    cookie(0),
     top(crypto::null_hash),
     credits(0),
     update_time(time(NULL)),
@@ -93,7 +94,7 @@ namespace cryptonote
     m_nonces_dupe(0)
   {
   }
-  
+
   uint64_t rpc_payment::balance(const crypto::public_key &client, int64_t delta)
   {
 	client_info &info = m_client_info[client]; // creates if not found
@@ -121,6 +122,7 @@ namespace cryptonote
     if (info.credits < payment)
     {
       MDEBUG("Not enough credits: " << info.credits << " < " << payment);
+      credits = info.credits;
       return false;
     }
     info.credits -= payment;
@@ -131,7 +133,7 @@ namespace cryptonote
     return true;
   }
 
-  bool rpc_payment::get_info(const crypto::public_key &client, const std::function<bool(const cryptonote::blobdata&, cryptonote::block&)> &get_block_template, cryptonote::blobdata &hashing_blob, const crypto::hash &top, uint64_t &diff, uint64_t &credits_per_hash_found, uint64_t &credits)
+  bool rpc_payment::get_info(const crypto::public_key &client, const std::function<bool(const cryptonote::blobdata&, cryptonote::block&)> &get_block_template, cryptonote::blobdata &hashing_blob, const crypto::hash &top, uint64_t &diff, uint64_t &credits_per_hash_found, uint64_t &credits, uint32_t &cookie)
   {
     client_info &info = m_client_info[client]; // creates if not found
     const uint64_t now = time(NULL);
@@ -147,10 +149,12 @@ namespace cryptonote
       if(!add_extra_nonce_to_tx_extra(info.block.miner_tx.extra, extra_nonce))
         return false;
       hashing_blob = get_block_hashing_blob(info.block);
-      info.previous_top = info.top;
-      info.previous_payments = info.payments;
-      info.payments.clear();
+      info.previous_hashing_blob = info.hashing_blob;
       info.hashing_blob = hashing_blob;
+      info.previous_top = info.top;
+      std::swap(info.previous_payments, info.payments);
+      info.payments.clear();
+      ++info.cookie;
       info.block_template_update_time = now;
     }
     info.top = top;
@@ -159,14 +163,25 @@ namespace cryptonote
     diff = m_diff;
     credits_per_hash_found = m_credits_per_hash_found;
     credits = info.credits;
+    cookie = info.cookie;
     return true;
   }
 
-  bool rpc_payment::submit_nonce(const crypto::public_key &client, uint32_t nonce, const crypto::hash &top, int64_t &error_code, std::string &error_message, uint64_t &credits, crypto::hash &hash, cryptonote::block &block)
+  bool rpc_payment::submit_nonce(const crypto::public_key &client, uint32_t nonce, const crypto::hash &top, int64_t &error_code, std::string &error_message, uint64_t &credits, crypto::hash &hash, cryptonote::block &block, uint32_t cookie)
   {
     client_info &info = m_client_info[client]; // creates if not found
-    MINFO("client " << client << " sends nonce: " << nonce);
-    const bool is_current = top == info.top;
+    if (cookie != info.cookie && cookie != info.cookie - 1)
+    {
+      MWARNING("Very stale nonce");
+      ++m_nonces_stale;
+      ++info.nonces_stale;
+      info.credits = std::max(info.credits, PENALTY_FOR_STALE * m_credits_per_hash_found) - PENALTY_FOR_STALE * m_credits_per_hash_found;
+      error_code = CORE_RPC_ERROR_CODE_STALE_PAYMENT;
+      error_message = "Very stale payment";
+      return false;
+    }
+    const bool is_current = cookie == info.cookie;
+    MINFO("client " << client << " sends nonce: " << nonce << ", " << (is_current ? "current" : "stale"));
     std::unordered_set<uint64_t> &payments = is_current ? info.payments : info.previous_payments;
     if (payments.find(nonce) != payments.end())
     {
@@ -179,14 +194,6 @@ namespace cryptonote
       return false;
     }
     payments.insert(nonce);
-
-    if (info.hashing_blob.size() < 43)
-    {
-      // not initialized ?
-      error_code = CORE_RPC_ERROR_CODE_WRONG_BLOCKBLOB;
-      error_message = "not initialized";
-      return false;
-    }
 
     const uint64_t now = time(NULL);
     if (!is_current)
@@ -203,7 +210,15 @@ namespace cryptonote
       }
     }
 
-    cryptonote::blobdata hashing_blob = info.hashing_blob;
+    cryptonote::blobdata hashing_blob = is_current ? info.hashing_blob : info.previous_hashing_blob;
+    if (hashing_blob.size() < 43)
+    {
+      // not initialized ?
+      error_code = CORE_RPC_ERROR_CODE_WRONG_BLOCKBLOB;
+      error_message = "not initialized";
+      return false;
+    }
+
     *(uint32_t*)(hashing_blob.data() + 39) = SWAP32LE(nonce);
     crypto::cn_turtle_hash(hashing_blob.data(), hashing_blob.size(), hash);
     if (!check_hash(hash, m_diff))
@@ -212,7 +227,7 @@ namespace cryptonote
       ++m_nonces_bad;
       ++info.nonces_bad;
       error_code = CORE_RPC_ERROR_CODE_PAYMENT_TOO_LOW;
-      error_message = "Hash does not meet difficulty (could be wrong PoW hash, or mining at lower difficulty than required)";
+      error_message = "Hash does not meet difficulty (could be wrong PoW hash, or mining at lower difficulty than required, or attempt to defraud)";
       info.credits = std::max(info.credits, PENALTY_FOR_BAD_HASH * m_credits_per_hash_found) - PENALTY_FOR_BAD_HASH * m_credits_per_hash_found;
       return false;
     }

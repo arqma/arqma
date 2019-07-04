@@ -2388,6 +2388,7 @@ namespace cryptonote
     {
       std::string status;
       std::string hashing_blob;
+      uint32_t cookie;
       uint64_t diff;
       uint64_t credits_per_hash_found;
       uint64_t credits;
@@ -2398,6 +2399,7 @@ namespace cryptonote
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE(hashing_blob)
+        KV_SERIALIZE(cookie)
         KV_SERIALIZE(diff)
         KV_SERIALIZE(credits_per_hash_found)
         KV_SERIALIZE(credits)
@@ -2415,10 +2417,12 @@ namespace cryptonote
     {
       std::string client;
       uint32_t nonce;
+      uint32_t cookie;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(client)
         KV_SERIALIZE(nonce)
+        KV_SERIALIZE(cookie)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
