@@ -2653,7 +2653,7 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
     }
   }
 
-  if (hf_version < 13 && tx.rct_signatures.type == rct::RCTTypeBulletproof) {
+  if (hf_version < 12 && tx.rct_signatures.type == rct::RCTTypeBulletproof) {
     if (tx.version >= 2) {
       const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
       if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
@@ -2666,7 +2666,7 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
   }
 
   // from v14, forbid borromean range proofs <--- Need to be speak about
-  if (hf_version > 13) {
+  if (hf_version > 12) {
     if (tx.version >= 2) {
       const bool borromean = rct::is_rct_borromean(tx.rct_signatures.type);
       if (borromean)
@@ -3144,7 +3144,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
     // for bulletproofs, check they're only multi-output after v13
     if(rct::is_rct_bulletproof(rv.type) && rv.type == rct::RCTTypeBulletproof)
     {
-      if (hf_version < 13)
+      if (hf_version < 12)
       {
         for (const rct::Bulletproof &proof: rv.p.bulletproofs)
         {
