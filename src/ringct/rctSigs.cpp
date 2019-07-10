@@ -1122,7 +1122,7 @@ namespace rct {
         }
     }
 
-/*    ////////////////// ver RingCT simple OLD /////////////////
+    ////////////////// ver RingCT simple OLD /////////////////
     // assumes only post-rct style inputs (at least for max anonymity)
     bool verRctSemanticsSimple_old(const std::vector<const rctSig*> & rvv) {
       try
@@ -1141,7 +1141,7 @@ namespace rct {
           const rctSig &rv = *rvp;
           CHECK_AND_ASSERT_MES(rv.type == RCTTypeSimple || rv.type == RCTTypeSimpleBulletproof, false, "verRctSemanticsSimple_old called on non simple rctSig");
           const bool bulletproof = is_rct_bulletproof(rv.type);
-          if (bulletproof)
+          if(bulletproof)
           {
             CHECK_AND_ASSERT_MES(rv.p.pseudoOuts.size() == rv.p.MGs.size(), false, "Mismatched sizes of rv.p.pseudoOuts and rv.p.MGs");
             CHECK_AND_ASSERT_MES(rv.pseudoOuts.empty(), false, "rv.pseudoOuts is not empty");
@@ -1153,7 +1153,7 @@ namespace rct {
             CHECK_AND_ASSERT_MES(rv.p.pseudoOuts.empty(), false, "rv.p.pseudoOuts is not empty");
           }
           CHECK_AND_ASSERT_MES(rv.outPk.size() == rv.ecdhInfo.size(), false, "Mismatched sizes of outPk and rv.ecdhInfo");
-          if (!bulletproof)
+          if(!bulletproof)
             max_non_bp_proofs += rv.p.rangeSigs.size();
         }
 
@@ -1183,7 +1183,7 @@ namespace rct {
             return false;
           }
 
-          if (bulletproof)
+          if(bulletproof)
           {
             for (size_t i = 0; i < rv.p.bulletproofs.size(); i++)
               proofs.push_back(&rv.p.bulletproofs[i]);
@@ -1203,7 +1203,7 @@ namespace rct {
 
         waiter.wait(&tpool);
         for (size_t i = 0; i < results.size(); ++i) {
-          if (!results[i]) {
+          if(!results[i]) {
             LOG_PRINT_L1("Range proof verified failed for proof " << i);
             return false;
           }
@@ -1228,7 +1228,7 @@ namespace rct {
     {
       return verRctSemanticsSimple_old(std::vector<const rctSig*>(1, &rv));
     }
-*/
+
     //ver RingCT simple
     //assumes only post-rct style inputs (at least for max anonymity)
     bool verRctSemanticsSimple(const std::vector<const rctSig*> & rvv) {
@@ -1305,25 +1305,10 @@ namespace rct {
             offset += rv.p.rangeSigs.size();
           }
         }
-        for (const rctSig *rvp: rvv)
+        if(!proofs.empty() && !verBulletproof(proofs))
         {
-          const rctSig &rv = *rvp;
-          if(rv.type != RCTTypeBulletproof)
-          {
-            if(!proofs.empty() && !verBulletproof_old(proofs))
-            {
-              LOG_PRINT_L1("Aggregate range proof verified failed");
-              return false;
-            }
-          }
-          else
-          {
-            if(!proofs.empty() && !verBulletproof(proofs))
-            {
-              LOG_PRINT_L1("Aggregate range proof verified failed");
-              return false;
-            }
-          }
+          LOG_PRINT_L1("Aggregate range proof verified failed");
+          return false;
         }
 
         waiter.wait(&tpool);

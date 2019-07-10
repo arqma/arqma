@@ -175,7 +175,7 @@
 
 #define HF_VERSION_LOWER_FEE                            10
 #define HF_VERSION_PER_BYTE_FEE                         13
-#define HF_FORBID_BORROMEAN                             14
+#define HF_FORBID_BORROMEAN                             13
 #define HF_VERSION_LONG_TERM_BLOCK_WEIGHT               14
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
