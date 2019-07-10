@@ -5727,11 +5727,11 @@ bool wallet2::sign_tx(unsigned_tx_set &exported_txs, std::vector<wallet2::pendin
     tools::wallet2::pending_tx &ptx = signed_txes.ptx.back();
     rct::RangeProofType range_proof_type = rct::RangeProofBorromean;
     const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
-    if (sd.use_bulletproofs && bulletproofv2)
+    if(sd.use_bulletproofs && bulletproofv2)
     {
       range_proof_type = rct::RangeProofPaddedBulletproof;
     }
-    else if (sd.use_bulletproofs)
+    else if(sd.use_bulletproofs)
     {
      range_proof_type = rct::RangeProofMultiOutputBulletproof;
     }
@@ -6156,10 +6156,10 @@ bool wallet2::sign_multisig_tx(multisig_tx_set &exported_txs, std::vector<crypto
     rct::multisig_out msout = ptx.multisig_sigs.front().msout;
     auto sources = sd.sources;
     rct::RangeProofType range_proof_type = rct::RangeProofBorromean;
-    if (sd.use_bulletproofs)
+    if(sd.use_bulletproofs)
     {
       const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
-      if (bulletproofv2)
+      if(bulletproofv2)
       {
         range_proof_type = rct::RangeProofPaddedBulletproof;
       }
@@ -6167,9 +6167,6 @@ bool wallet2::sign_multisig_tx(multisig_tx_set &exported_txs, std::vector<crypto
       {
         range_proof_type = rct::RangeProofMultiOutputBulletproof;
       }
-      for (const rct::Bulletproof &proof: ptx.tx.rct_signatures.p.bulletproofs)
-        if (proof.V.size() > 1)
-          range_proof_type = rct::RangeProofPaddedBulletproof;
     }
     bool r = cryptonote::construct_tx_with_tx_key(m_account.get_keys(), m_subaddresses, sources, sd.splitted_dsts, ptx.change_dts.addr, sd.extra, tx, sd.unlock_time, ptx.tx_key, ptx.additional_tx_keys, sd.use_rct, range_proof_type, &msout, false);
     THROW_WALLET_EXCEPTION_IF(!r, error::tx_not_constructed, sd.sources, sd.splitted_dsts, sd.unlock_time, m_nettype);

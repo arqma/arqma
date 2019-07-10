@@ -2737,14 +2737,14 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
   }
 
   // II
-  if (rv.type == rct::RCTTypeFull || rv.type == rct::RCTTypeFullBulletproof)
+  if(rv.type == rct::RCTTypeFull || rv.type == rct::RCTTypeFullBulletproof)
   {
     rv.p.MGs.resize(1);
     rv.p.MGs[0].II.resize(tx.vin.size());
     for (size_t n = 0; n < tx.vin.size(); ++n)
       rv.p.MGs[0].II[n] = rct::ki2rct(boost::get<txin_to_key>(tx.vin[n]).k_image);
   }
-  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeSimpleBulletproof)
+  else if(rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeSimpleBulletproof)
   {
     CHECK_AND_ASSERT_MES(rv.p.MGs.size() == tx.vin.size(), false, "Bad MGs size");
     for (size_t n = 0; n < tx.vin.size(); ++n)

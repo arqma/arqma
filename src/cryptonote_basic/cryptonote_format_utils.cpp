@@ -144,23 +144,23 @@ namespace cryptonote
         rv.outPk[n].dest = rct::pk2rct(boost::get<txout_to_key>(tx.vout[n].target).key);
       }
 
-      if (!base_only)
+      if(!base_only)
       {
         const bool bulletproof = rct::is_rct_bulletproof(rv.type);
-        if (bulletproof && rv.type == rct::RCTTypeBulletproof)
+        if(bulletproof && rv.type == rct::RCTTypeBulletproof)
         {
-          if (rv.p.bulletproofs.size() != 1)
+          if(rv.p.bulletproofs.size() != 1)
           {
             LOG_PRINT_L1("Failed to parse transaction from blob, bad bulletproofs size in tx " << get_transaction_hash(tx));
             return false;
           }
-          if (rv.p.bulletproofs[0].L.size() < 6)
+          if(rv.p.bulletproofs[0].L.size() < 6)
           {
             LOG_PRINT_L1("Failed to parse transaction from blob, bad bulletproofs L size in tx " << get_transaction_hash(tx));
             return false;
           }
           const size_t max_outputs = 1 << (rv.p.bulletproofs[0].L.size() - 6);
-          if (max_outputs < tx.vout.size() && rv.type == rct::RCTTypeBulletproof)
+          if(max_outputs < tx.vout.size() && rv.type == rct::RCTTypeBulletproof)
           {
             LOG_PRINT_L1("Failed to parse transaction from blob, bad bulletproofs max outputs in tx " << get_transaction_hash(tx));
             return false;
@@ -171,25 +171,17 @@ namespace cryptonote
           for (size_t i = 0; i < n_amounts; ++i)
             rv.p.bulletproofs[0].V[i] = rct::scalarmultKey(rv.outPk[i].mask, rct::INV_EIGHT);
         }
-        else if (bulletproof)
+        else if(bulletproof && rv.type != rct::RCTTypeBulletproof)
         {
-          if (rct::n_bulletproof_v1_amounts(rv.p.bulletproofs) != tx.vout.size())
+          if(rv.p.bulletproofs.size() != tx.vout.size())
           {
             LOG_PRINT_L1("Failed to parse transaction from blob, bad bulletproofs size in tx " << get_transaction_hash(tx));
             return false;
           }
-          size_t idx = 0;
           for (size_t n = 0; n < rv.outPk.size(); ++n)
           {
-            //rv.p.bulletproofs[n].V.resize(1);
-            //rv.p.bulletproofs[n].V[0] = rv.outPk[n].mask;
-            CHECK_AND_ASSERT_MES(rv.p.bulletproofs[n].L.size() >= 6, false, "Bad bulletproofs L size"); // at least 64 bits
-            const size_t n_amounts = rct::n_bulletproof_v1_amounts(rv.p.bulletproofs[n]);
-            CHECK_AND_ASSERT_MES(idx + n_amounts <= rv.outPk.size(), false, "Internal error filling out V");
-            rv.p.bulletproofs[n].V.resize(n_amounts);
-            rv.p.bulletproofs[n].V.clear();
-            for (size_t i = 0; i < n_amounts; ++i)
-              rv.p.bulletproofs[n].V[i] = rv.outPk[idx++].mask;
+            rv.p.bulletproofs[n].V.resize(1);
+            rv.p.bulletproofs[n].V[0] = rv.outPk[n].mask;
           }
         }
       }
