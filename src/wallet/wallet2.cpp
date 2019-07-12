@@ -5726,8 +5726,8 @@ bool wallet2::sign_tx(unsigned_tx_set &exported_txs, std::vector<wallet2::pendin
     signed_txes.ptx.push_back(pending_tx());
     tools::wallet2::pending_tx &ptx = signed_txes.ptx.back();
     rct::RangeProofType range_proof_type = rct::RangeProofBorromean;
-    const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
-    if(sd.use_bulletproofs && bulletproofv2)
+    const bool padded_bulletproofs = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+    if(sd.use_bulletproofs && padded_bulletproofs)
     {
       range_proof_type = rct::RangeProofPaddedBulletproof;
     }
@@ -6158,8 +6158,8 @@ bool wallet2::sign_multisig_tx(multisig_tx_set &exported_txs, std::vector<crypto
     rct::RangeProofType range_proof_type = rct::RangeProofBorromean;
     if(sd.use_bulletproofs)
     {
-      const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
-      if(bulletproofv2)
+      const bool padded_bulletproofs = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+      if(padded_bulletproofs)
       {
         range_proof_type = rct::RangeProofPaddedBulletproof;
       }
@@ -8502,8 +8502,8 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   const bool use_per_byte_fee = use_fork_rules(HF_VERSION_PER_BYTE_FEE, 0);
   const bool use_rct = use_fork_rules(4, 0);
   const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
-  const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
-  const rct::RangeProofType range_proof_type = bulletproofv2 ? rct::RangeProofPaddedBulletproof : bulletproof ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofBorromean;
+  const bool padded_bulletproofs = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+  const rct::RangeProofType range_proof_type = padded_bulletproofs ? rct::RangeProofPaddedBulletproof : bulletproof ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofBorromean;
 
   const uint64_t base_fee = get_base_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
@@ -9147,8 +9147,8 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
   const bool use_per_byte_fee = use_fork_rules(HF_VERSION_PER_BYTE_FEE);
   const bool use_rct = fake_outs_count > 0 && use_fork_rules(4, 0);
   const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
-  const bool bulletproofv2 = use_fork_rules(HF_FORBID_BORROMEAN, 0);
-  const rct::RangeProofType range_proof_type = bulletproofv2 ? rct::RangeProofPaddedBulletproof : bulletproof ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofBorromean;
+  const bool padded_bulletproofs = use_fork_rules(HF_FORBID_BORROMEAN, 0);
+  const rct::RangeProofType range_proof_type = padded_bulletproofs ? rct::RangeProofPaddedBulletproof : bulletproof ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofBorromean;
   const uint64_t base_fee = get_base_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
   const uint64_t fee_quantization_mask = get_fee_quantization_mask();
