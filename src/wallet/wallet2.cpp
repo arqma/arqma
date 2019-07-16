@@ -7845,37 +7845,90 @@ void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry
 
 std::vector<size_t> wallet2::pick_preferred_rct_inputs(uint64_t needed_money, uint32_t subaddr_account, const std::set<uint32_t> &subaddr_indices) const
 {
+  struct pick_out
+  {
+    pick_out(size_t idx, uint64_t amount, uint64_t blk_height) : idx(idx), amount(amount), blk_height(blk_height) {}
+    size_t idx;
+    uint64_t amount;
+    uint64_t blk_height;
+  };
+
   std::vector<size_t> picks;
   float current_output_relatdness = 1.0f;
+  std::vector<pick_out> pick_list;
+  pick_list.reserve(m_transfers.size());
 
   LOG_PRINT_L2("pick_preferred_rct_inputs: needed_money " << print_money(needed_money));
+
+  // Highest and second highest available amounts to choose from
+  uint64_t amount_a = 0;
+  uint64_t amount_b = 0;
+  // Check if the pick_list is sorted
+  uint64_t last_block = 0;
+  bool sorted = true;
 
   // try to find a rct input of enough size
   for (size_t i = 0; i < m_transfers.size(); ++i)
   {
     const transfer_details& td = m_transfers[i];
-    if (!td.m_spent && td.is_rct() && td.amount() >= needed_money && is_transfer_unlocked(td) && td.m_subaddr_index.major == subaddr_account && subaddr_indices.count(td.m_subaddr_index.minor) == 1)
+    if (!td.m_spent && !td.m_key_image_partial && td.is_rct() && is_transfer_unlocked(td) && td.m_subaddr_index.major == subaddr_account && subaddr_indices.count(td.m_subaddr_index.minor) == 1)
     {
-      LOG_PRINT_L2("We can use " << i << " alone: " << print_money(td.amount()));
-      picks.push_back(i);
-      return picks;
+      uint64_t amt = td.amount();
+      if(amt >= needed_money)
+      {
+        LOG_PRINT_L2("We can use " << i << " alone: " << print_money(amt));
+        picks.push_back(i);
+        return picks;
+      }
+
+      pick_list.emplace_back(i, amt, td.m_block_height);
+      if(amt > amount_a)
+      {
+        amount_b = amount_a;
+        amount_a = amt;
+      }
+
+      if(td.m_block_height < last_block)
+        sorted = false;
+      last_block = td.m_block_height;
     }
   }
+
+  // This means there is no chance of constructing a two output tx af any kind, return empty
+  if(amount_a + amount_b < needed_money)
+    return picks;
+
+  // This makes the O(n^2) below the worst possible case and limited to small n's (otherwise they will naturally spead out)
+  if(!sorted)
+    std::sort(pick_list.begin(), pick_list.end(), [](const pick_out& a, const pick_out& b)
+    {
+      return a.blk_height < b.blk_height;
+    });
+  else
+    LOG_PRINT_L2("pick_preferred_rct_inputs: sort skipped, we are sorted already");
 
   // then try to find two outputs
   // this could be made better by picking one of the outputs to be a small one, since those
   // are less useful since often below the needed money, so if one can be used in a pair,
   // it gets rid of it for the future
-  for (size_t i = 0; i < m_transfers.size(); ++i)
+  for (size_t i = 0; i < pick_list.size(); i++)
   {
-    const transfer_details& td = m_transfers[i];
-    if (!td.m_spent && !td.m_key_image_partial && td.is_rct() && is_transfer_unlocked(td) && td.m_subaddr_index.major == subaddr_account && subaddr_indices.count(td.m_subaddr_index.minor) == 1)
+    LOG_PRINT_L2("Considering input " << pick_list[i].idx << ", " << print_money(pick_list[i].amount));
+    for(size_t j = pick_list.size(); j-- > i+1;)
     {
-      LOG_PRINT_L2("Considering input " << i << ", " << print_money(td.amount()));
-      for (size_t j = i + 1; j < m_transfers.size(); ++j)
+      if(pick_list[i].amount + pick_list[j].amount >= needed_money)
       {
-        const transfer_details& td2 = m_transfers[j];
-        if (!td2.m_spent && !td.m_key_image_partial && td2.is_rct() && td.amount() + td2.amount() >= needed_money && is_transfer_unlocked(td2) && td2.m_subaddr_index == td.m_subaddr_index)
+        size_t i_idx = pick_list[i].idx;
+        size_t j_idx = pick_list[j].idx;
+        const transfer_details &td = m_transfers[i_idx];
+        const transfer_details &td2 = m_transfers[j_idx];
+
+        // update our picks if those outputs are less related than any we
+        // already found. If the same, don't update, and oldest suitable outputs
+        // will be used in preference.
+        float relatedness = get_output_relatedness(td, td2);
+        LOG_PRINT_L2("  with input " << j_idx  << ", " << pick_list[j].amount << ", relatedness " << relatedness);
+        if(relatedness < current_output_relatdness)
         {
           // update our picks if those outputs are less related than any we
           // already found. If the same, don't update, and oldest suitable outputs
@@ -7888,10 +7941,10 @@ std::vector<size_t> wallet2::pick_preferred_rct_inputs(uint64_t needed_money, ui
             // if they're unrelated. If they are related, we'll end up returning
             // them if we find nothing better
             picks.clear();
-            picks.push_back(i);
-            picks.push_back(j);
-            LOG_PRINT_L0("we could use " << i << " and " << j);
-            if (relatedness == 0.0f)
+            picks.push_back(i_idx);
+            picks.push_back(j_idx);
+            LOG_PRINT_L0("we could use " << i_idx << " and " << j_idx);
+            if(relatedness == 0.0f)
               return picks;
             current_output_relatdness = relatedness;
           }
