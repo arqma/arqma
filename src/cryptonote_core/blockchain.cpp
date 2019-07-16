@@ -97,7 +97,7 @@ static const struct {
  { 11, 131650, 0, 1552424400 },
  { 12, 183700, 0, 1558656000 }
 };
-static const uint64_t mainnet_hard_fork_version_1_till = (uint64_t)-1;
+static const uint64_t mainnet_hard_fork_version_1_till = 1;
 
 static const struct {
  uint8_t version;
@@ -108,13 +108,15 @@ static const struct {
  // version 1 from the start of the blockchain
  { 1, 0, 0, 1341378000 },
  { 7, 1, 0, 1528750800 },
- { 8, 10, 0, 1528751200 },
- { 9, 20, 0, 1530248400 },
- { 10, 100, 0, 1538352000 },
- { 11, 800, 0, 1552424400 },
- { 12, 1000, 0, 1552824400 }
+ { 8, 720, 0, 1528751200 },
+ { 9, 1440, 0, 1530248400 },
+ { 10, 2500, 0, 1538352000 },
+ { 11, 5000, 0, 1552424400 },
+ { 12, 7000, 0, 1552824400 },
+ { 13, 8000, 0, 1560348000 },
+ { 14, 8720, 0, 1560351600 }
 };
-static const uint64_t testnet_hard_fork_version_1_till = (uint64_t)-1;
+static const uint64_t testnet_hard_fork_version_1_till = 1;
 
 static const struct {
  uint8_t version;
@@ -133,6 +135,7 @@ static const struct {
  { 13, 8000, 0, 1560348000 },
  { 14, 8720, 0, 1560351600 }
 };
+static const uint64_t stagenet_hard_fork_version_1_till = 1;
 
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool) :
@@ -341,7 +344,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   if (m_hardfork == nullptr)
   {
     if (m_nettype ==  FAKECHAIN || m_nettype == STAGENET)
-      m_hardfork = new HardFork(*db, 1, 0);
+      m_hardfork = new HardFork(*db, 1, stagenet_hard_fork_version_1_till);
     else if (m_nettype == TESTNET)
       m_hardfork = new HardFork(*db, 1, testnet_hard_fork_version_1_till);
     else
@@ -2652,6 +2655,18 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
     }
   }
 
+  if (hf_version < 12 && tx.rct_signatures.type == rct::RCTTypeBulletproof) {
+    if (tx.version >= 2) {
+      const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
+      if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
+      {
+        MERROR_VER("Bulletproofs Padded are not allowed before v13");
+        tvc.m_invalid_output = true;
+        return false;
+      }
+    }
+  }
+
   // from v14, forbid borromean range proofs
   if (hf_version > HF_FORBID_BORROMEAN) {
     if (tx.version >= 2) {
@@ -3129,9 +3144,9 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
     }
 
     // for bulletproofs, check they're only multi-output after v13
-    if(rct::is_rct_bulletproof(rv.type))
+    if(rct::is_rct_bulletproof(rv.type) && rv.type == rct::RCTTypeBulletproof)
     {
-      if (hf_version < 8)
+      if (hf_version < 12)
       {
         for (const rct::Bulletproof &proof: rv.p.bulletproofs)
         {
@@ -3144,6 +3159,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       }
     }
   }
+
   return true;
 }
 

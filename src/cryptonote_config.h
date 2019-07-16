@@ -74,14 +74,14 @@
 // COIN - number of smallest units in one coin
 #define COIN                                            ((uint64_t)1000000000)
 
-#define FEE_PER_KB_OLD                                  ((uint64_t)(COIN) / 100)
-#define FEE_PER_KB                                      ((uint64_t)2 * (COIN) / 100000)
+#define FEE_PER_KB_OLD                                  ((uint64_t)10000000)
+#define FEE_PER_KB                                      ((uint64_t)20000)
 #define FEE_PER_BYTE                                    ((uint64_t)3)
-#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)2 * (COIN) / 100000)
+#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)20000)
 #define DYNAMIC_FEE_PER_KB_BASE_BLOCK_REWARD            ((uint64_t)10000000000)
-#define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)FEE_PER_KB * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
-#define DYNAMIC_FEE_PER_BYTE_BASE_FEE_V13               ((uint64_t)DYNAMIC_FEE_PER_KB_BASE_FEE_V5 / 1024)
-#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)3000)
+#define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)20000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
+#define DYNAMIC_FEE_PER_BYTE_BASE_FEE_V13               ((uint64_t)(DYNAMIC_FEE_PER_KB_BASE_FEE_V5) * 50 / 1000)
+#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)750)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
