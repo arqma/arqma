@@ -1920,7 +1920,7 @@ namespace nodetool
     const epee::net_utils::zone zone_type = context.m_remote_address.get_zone();
     network_zone& zone = m_network_zones.at(zone_type);
 
-    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new);
+    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new, true);
     m_payload_handler.get_payload_sync_data(rsp.payload_data);
 
     if(!context.m_is_income && zone.m_our_address.get_zone() == zone_type)
@@ -2017,7 +2017,7 @@ namespace nodetool
     });
 
     //fill response
-    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new);
+    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new, true);
     get_local_node_data(rsp.node_data, zone);
     m_payload_handler.get_payload_sync_data(rsp.payload_data);
     LOG_DEBUG_CC(context, "COMMAND_HANDSHAKE");
