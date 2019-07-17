@@ -83,9 +83,9 @@ namespace cryptonote
 
     uint64_t get_transaction_weight_limit(uint8_t version)
     {
-      // from v13, limit a tx to 70% of the minimum block weight
-      if (version >= 13)
-        return get_min_block_weight(version) * 70 / 100 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
+      // from v13, max transaction size can be 32kB.
+      if (version > 12)
+        return config::TRANSACTION_SIZE_LIMIT;
       else
         return get_min_block_weight(version) - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
     }
