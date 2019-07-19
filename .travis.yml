@@ -2,6 +2,13 @@ sudo: required
 dist: bionic
 os: linux
 language: minimal
+notifications:
+  webhooks:
+    urls:
+      - https://discordhooks.herokuapp.com/travis
+    on_success: always
+    on_failure: always
+    on_start: always
 cache:
   directories:
   - contrib/depends/built
@@ -9,10 +16,7 @@ cache:
   - $HOME/.ccache
 env:
   global:
-    - MAKEJOBS=-j3
-    - CCACHE_SIZE=100M
     - CCACHE_TEMPDIR=/tmp/.ccache-temp
-    - CCACHE_COMPRESS=1
     - CCACHE_DIR=$HOME/.ccache
     - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
     - SDK_URL=https://bitcoincore.org/depends-sources/sdks
@@ -47,14 +51,11 @@ before_script:
     - if [ -n "$OSX_SDK" -a -f contrib/depends/sdk-sources/MacOSX${OSX_SDK}.sdk.tar.gz ]; then tar -C contrib/depends/SDKs -xf contrib/depends/sdk-sources/MacOSX${OSX_SDK}.sdk.tar.gz; fi
     - if [[ $HOST = *-mingw32 ]]; then $DOCKER_EXEC bash -c "update-alternatives --set $HOST-g++ \$(which $HOST-g++-posix)"; fi
     - if [[ $HOST = *-mingw32 ]]; then $DOCKER_EXEC bash -c "update-alternatives --set $HOST-gcc \$(which $HOST-gcc-posix)"; fi
-    - if [ -z "$NO_DEPENDS" ]; then $DOCKER_EXEC bash -c "CONFIG_SHELL= make $MAKEJOBS -C contrib/depends HOST=$HOST $DEP_OPTS"; fi
+    - if [ -z "$NO_DEPENDS" ]; then $DOCKER_EXEC bash -c "CONFIG_SHELL= make -j2 -C contrib/depends HOST=$HOST $DEP_OPTS"; fi
 script:
     - git submodule init && git submodule update
     - export TRAVIS_COMMIT_LOG=`git log --format=fuller -1`
     - OUTDIR=$BASE_OUTDIR/$TRAVIS_PULL_REQUEST/$TRAVIS_JOB_NUMBER-$HOST
-    - if [ -z "$NO_DEPENDS" ]; then $DOCKER_EXEC ccache --max-size=$CCACHE_SIZE; fi
-    - $DOCKER_EXEC bash -c "mkdir build && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$TRAVIS_BUILD_DIR/contrib/depends/$HOST/share/toolchain.cmake .. && make $MAKEJOBS"
+    - if [ -z "$NO_DEPENDS" ]; then $DOCKER_EXEC ccache --max-size=100M; fi
+    - $DOCKER_EXEC bash -c "mkdir build && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$TRAVIS_BUILD_DIR/contrib/depends/$HOST/share/toolchain.cmake .. && make -j2"
     - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/contrib/depends/$HOST/lib
-after_script:
-    - echo $TRAVIS_COMMIT_RANGE
-    - echo $TRAVIS_COMMIT_LOG
