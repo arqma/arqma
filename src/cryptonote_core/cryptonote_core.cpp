@@ -1160,7 +1160,7 @@ namespace cryptonote
     }
 
     // Remove Burned Premine Amount from coinbase emission
-    emission_amount -= config::PREMINE_BURN;
+    emission_amount -= config::blockchain_settings::PREMINE_BURN;
 
     return std::pair<uint64_t, uint64_t>(emission_amount, total_fee_amount);
   }

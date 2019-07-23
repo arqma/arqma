@@ -9418,8 +9418,8 @@ uint64_t wallet2::get_upper_transaction_weight_limit()
   if (m_upper_transaction_weight_limit > 0)
     return m_upper_transaction_weight_limit;
   uint64_t full_reward_zone = use_fork_rules(5, 10) ? CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5 : use_fork_rules(2, 10) ? CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 : CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1;
-  if (use_fork_rules(13, 10))
-    return full_reward_zone * 70 / 100 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
+  if(use_fork_rules(13, 10))
+    return config::blockchain_settings::TRANSACTION_SIZE_LIMIT;
   else
     return full_reward_zone - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
 }

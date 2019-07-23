@@ -1076,7 +1076,7 @@ namespace nodetool
     {
       bool is_priority = is_priority_node(na);
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, *con, " Failed to HANDSHAKE with peer: " << na.str()/*<< ", try " << try_count*/);
-      zone.m_bet_server.get_config_object().close(con->m_connection_id);
+      zone.m_net_server.get_config_object().close(con->m_connection_id);
       return false;
     }
 

@@ -70,16 +70,18 @@ namespace cryptonote {
   //-----------------------------------------------------------------------------------------------
   size_t get_min_block_weight(uint8_t version)
   {
-    if (version < 2)
+    if(version < 2)
       return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1;
-    if (version < 5)
+    else if(version < 5)
       return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2;
-    return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5;
+    else if(version < 13)
+      return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5;
+    return config::blockchain_settings::MINIMUM_BLOCK_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
   size_t get_max_tx_size()
   {
-    return config::TRANSACTION_SIZE_LIMIT;
+    return config::blockchain_settings::TRANSACTION_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
   bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t version) {

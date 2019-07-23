@@ -83,9 +83,9 @@ namespace cryptonote
 
     uint64_t get_transaction_weight_limit(uint8_t version)
     {
-      // from v13, max transaction size can be 32kB.
+      // from v13, max transaction size can be 48kB.
       if (version > 12)
-        return config::TRANSACTION_SIZE_LIMIT;
+        return config::blockchain_settings::TRANSACTION_SIZE_LIMIT;
       else
         return get_min_block_weight(version) - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
     }
