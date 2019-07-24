@@ -9417,13 +9417,10 @@ bool wallet2::use_fork_rules(uint8_t version, int64_t early_blocks)
 //----------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_upper_transaction_weight_limit()
 {
-  if (m_upper_transaction_weight_limit > 0)
-    return m_upper_transaction_weight_limit;
-  uint64_t full_reward_zone = use_fork_rules(5, 10) ? CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5 : use_fork_rules(2, 10) ? CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 : CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1;
   if(use_fork_rules(13, 10))
     return config::tx_settings::TRANSACTION_SIZE_LIMIT;
   else
-    return full_reward_zone - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
+    return config::tx_settings::TRANSACTION_SIZE_LIMIT * 4;
 }
 //----------------------------------------------------------------------------------------------------
 std::vector<size_t> wallet2::select_available_outputs(const std::function<bool(const transfer_details &td)> &f) const

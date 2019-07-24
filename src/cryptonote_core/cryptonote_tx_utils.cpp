@@ -164,7 +164,7 @@ namespace cryptonote
 
     CHECK_AND_ASSERT_MES(summary_amounts == block_reward, false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal block_reward = " << block_reward);
 
-  	tx.version = config::tx_settings::CURRENT_TX_VERSION;
+    tx.version = config::tx_settings::CURRENT_TX_VERSION;
 
     //lock
     tx.unlock_time = height + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;

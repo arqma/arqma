@@ -83,11 +83,10 @@ namespace cryptonote
 
     uint64_t get_transaction_weight_limit(uint8_t version)
     {
-      // from v13, max transaction size can be 48kB.
-      if (version > 12)
+      if(version > 12)
         return config::tx_settings::TRANSACTION_SIZE_LIMIT;
       else
-        return get_min_block_weight(version) - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
+        return config::tx_settings::TRANSACTION_SIZE_LIMIT * 4;
     }
 
     // This class is meant to create a batch when none currently exists.

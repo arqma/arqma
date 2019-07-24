@@ -690,7 +690,19 @@ namespace cryptonote
   {
     tvc = boost::value_initialized<tx_verification_context>();
 
-    if(tx_blob.size() > get_max_tx_size())
+    uint8_t hf = m_blockchain_storage.get_current_hard_fork_version();
+    uint64_t max_tx_size;
+
+    if(hf < 13)
+    {
+      max_tx_size = get_max_tx_size() * 4;
+    }
+    else
+    {
+      max_tx_size = get_max_tx_size();
+    }
+
+    if(tx_blob.size() > max_tx_size)
     {
       LOG_PRINT_L1("WRONG TRANSACTION BLOB, too big size " << tx_blob.size() << ", rejected");
       tvc.m_verifivation_failed = true;
