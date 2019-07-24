@@ -81,7 +81,7 @@ namespace cryptonote {
   //-----------------------------------------------------------------------------------------------
   size_t get_max_tx_size()
   {
-    return config::blockchain_settings::TRANSACTION_SIZE_LIMIT;
+    return config::tx_settings::TRANSACTION_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
   bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t version) {
@@ -305,8 +305,7 @@ namespace cryptonote {
       return true;
     bool dnssec_valid;
     std::string address_str = tools::dns_utils::get_account_address_as_str_from_url(str_or_url, dnssec_valid, dns_confirm);
-    return !address_str.empty() &&
-      get_account_address_from_str(info, nettype, address_str);
+    return !address_str.empty() && get_account_address_from_str(info, nettype, address_str);
   }
   //--------------------------------------------------------------------------------
   bool operator ==(const cryptonote::transaction& a, const cryptonote::transaction& b) {

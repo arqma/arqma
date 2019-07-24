@@ -1120,9 +1120,9 @@ namespace cryptonote
   size_t core::get_block_sync_size(uint64_t height) const
   {
     static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 215000 : 0;
-    if (block_sync_size > 0)
+    if(block_sync_size > 0)
       return block_sync_size;
-    if (height >= quick_height)
+    if(height >= quick_height)
       return BLOCKS_SYNCHRONIZING_DEFAULT_COUNT;
     return BLOCKS_QUICK_SYNC_COUNT;
   }
