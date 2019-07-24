@@ -112,9 +112,6 @@
 #define DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN             DIFFICULTY_TARGET_V2 //just alias; used by tests
 
 #define BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT          10000  //by default, blocks ids count in synchronizing
-#define BLOCKS_QUICK_SYNC_COUNT                         250
-#define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT_PRE_V4       100    //by default, blocks count in blocks downloading
-#define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT              20     //by default, blocks count in blocks downloading
 
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 //seconds, one week
@@ -252,7 +249,12 @@ namespace config
      static constexpr uint8_t CURRENT_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
      static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
    }
-
+   
+   namespace sync
+   {
+     static constexpr size_t NORMAL_SYNC = 20; // Amount of Blocks to download and Validate at ones while Synchronizung with Arqma Network.
+     static constexpr size_t RAPID_SYNC = 250; // Amount of Blocks to download at ones from already known by Arqma Daemon and Checkpoint are hardcoded into codebase
+   }
 }
 
 namespace cryptonote
