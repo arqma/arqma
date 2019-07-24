@@ -223,7 +223,7 @@ namespace tools
   void set_strict_default_file_permissions(bool strict);
 
   ssize_t get_lockable_memory();
-  
+
   void set_max_concurrency(unsigned n);
   unsigned get_max_concurrency();
 
@@ -243,4 +243,6 @@ namespace tools
 #endif
 
   void closefrom(int fd);
+
+  std::string get_human_readable_bytes(uint64_t bytes);
 }
