@@ -3,23 +3,23 @@
 /// @brief implementaion for throttling of connection (count and rate-limit speed etc)
 
 // Copyright (c) 2014-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -54,7 +54,7 @@ class network_throttle : public i_network_throttle {
 
 
 		network_speed_bps m_target_speed;
-		size_t m_network_add_cost; // estimated add cost of headers 
+		size_t m_network_add_cost; // estimated add cost of headers
 		size_t m_network_minimal_segment; // estimated minimal cost of sending 1 byte to round up to
 		size_t m_network_max_segment; // recommended max size of 1 TCP transmission
 
@@ -66,6 +66,8 @@ class network_throttle : public i_network_throttle {
 		network_time_seconds m_last_sample_time; // time of last history[0] - so we know when to rotate the buffer
 		network_time_seconds m_start_time; // when we were created
 		bool m_any_packet_yet; // did we yet got any packet to count
+		uint64_t m_total_packets;
+		uint64_t m_total_bytes;
 
 		std::string m_name; // my name for debug and logs
 		std::string m_nameshort; // my name for debug and logs (used in log file name)
@@ -95,6 +97,7 @@ class network_throttle : public i_network_throttle {
 		virtual size_t get_recommended_size_of_planned_transport() const; ///< what should be the size (bytes) of next data block to be transported
 		virtual size_t get_recommended_size_of_planned_transport_window(double force_window) const;  ///< ditto, but for given windows time frame
 		virtual double get_current_speed() const;
+		virtual void get_stats(uint64_t &total_packets, uint64_t &total_bytes) const;
 
 	private:
 		virtual network_time_seconds time_to_slot(network_time_seconds t) const { return std::floor( t ); } // convert exact time eg 13.7 to rounded time for slot number in history 13
@@ -122,5 +125,3 @@ struct network_throttle_bw {
 
 
 #endif
-
-

@@ -163,6 +163,8 @@ public:
   bool check_blockchain_pruning();
 
   bool rpc_payments();
+  
+  bool print_net_stats();
 };
 
 } // namespace daemonize
