@@ -214,8 +214,8 @@ namespace cryptonote
     {
       msout->c.clear();
     }
-
-	tx.version = config::tx_settings::CURRENT_TX_VERSION;
+    
+    tx.version = config::tx_settings::CURRENT_TX_VERSION;
     tx.unlock_time = unlock_time;
 
     tx.extra = extra;
