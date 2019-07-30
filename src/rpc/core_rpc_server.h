@@ -87,8 +87,6 @@ namespace cryptonote
       );
     network_type nettype() const { return m_core.get_nettype(); }
 
-    std::string get_client_id_signature() const;
-
     CHAIN_HTTP_TO_MAP2(connection_context); //forward http requests to uri map
 
     BEGIN_URI_MAP2()
@@ -275,7 +273,6 @@ private:
     bool m_was_bootstrap_ever_used;
     bool m_restricted;
     std::unique_ptr<rpc_payment> m_rpc_payment;
-    crypto::secret_key m_local_client;
   };
 }
 

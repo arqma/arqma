@@ -56,7 +56,7 @@ public:
   boost::optional<std::string> get_earliest_height(uint8_t version, uint64_t &earliest_height);
   boost::optional<std::string> get_dynamic_base_fee_estimate(uint64_t grace_blocks, uint64_t &fee);
   boost::optional<std::string> get_fee_quantization_mask(uint64_t &fee_quantization_mask);
-  boost::optional<std::string> get_rpc_payment_info(bool mining, bool &payments, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &blob, uint64_t &height);
+  boost::optional<std::string> get_rpc_payment_info(bool mining, bool &payment_required, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &blob, uint64_t &height, uint32_t &cookie);
 
 private:
   template<typename T> void handle_payment_changes(const T &res, std::true_type) {
@@ -90,12 +90,11 @@ private:
   uint64_t m_block_weight_limit;
   time_t m_get_info_time;
   time_t m_rpc_payment_info_time;
-  bool m_rpc_payment_payments;
-  uint64_t m_rpc_payment_credits;
   uint64_t m_rpc_payment_diff;
   uint64_t m_rpc_payment_credits_per_hash_found;
   cryptonote::blobdata m_rpc_payment_blob;
   uint64_t m_rpc_payment_height;
+  uint32_t m_rpc_payment_cookie;
 };
 
 }

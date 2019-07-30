@@ -70,37 +70,44 @@ using namespace epee;
 
 #define RPC_TRACKER(rpc) \
   PERF_TIMER(rpc); \
-  RPCTracker tracker(#rpc)
+  RPCTracker tracker(#rpc, PERF_TIMER_NAME(rpc))
 
 namespace
 {
   class RPCTracker
   {
   public:
-    RPCTracker(const char *rpc): rpc(rpc), timer(rpc, ARQMA_DEFAULT_LOG_CATEGORY, 1000000, tools::performance_timer_log_level) {
+    struct entry_t
+    {
+      uint64_t count;
+      uint64_t time;
+      uint64_t credits;
+    };
+    
+    RPCTracker(const char *rpc, tools::LoggingPerformanceTimer &timer): rpc(rpc), timer(timer) {
     }
     ~RPCTracker() {
       boost::unique_lock<boost::mutex> lock(mutex);
       auto &e = tracker[rpc];
-      std::get<0>(e)++;
-      std::get<1>(e) = timer.value();
+      ++e.count;
+      e.time += timer.value();
     }
     void pay(uint64_t amount) {
       boost::unique_lock<boost::mutex> lock(mutex);
       auto &e = tracker[rpc];
-      std::get<2>(e) += amount;
+      e.credits += amount;
     }
     const std::string &rpc_name() const { return rpc; }
     static void clear() { boost::unique_lock<boost::mutex> lock(mutex); tracker.clear(); }
-    static std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> data() { boost::unique_lock<boost::mutex> lock(mutex); return tracker; }
+    static std::unordered_map<std::string, entry_t> data() { boost::unique_lock<boost::mutex> lock(mutex); return tracker; }
   private:
     std::string rpc;
-    tools::LoggingPerformanceTimer timer;
+    tools::LoggingPerformanceTimer &timer;
     static boost::mutex mutex;
-    static std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> tracker;
+    static std::unordered_map<std::string, entry_t> tracker;
   };
   boost::mutex RPCTracker::mutex;
-  std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> RPCTracker::tracker;
+  std::unordered_map<std::string, RPCTracker::entry_t> RPCTracker::tracker;
 
   void add_reason(std::string &reasons, const char *reason)
   {
@@ -112,11 +119,6 @@ namespace
 
 namespace cryptonote
 {
-
-  std::string core_rpc_server::get_client_id_signature() const
-  {
-    return cryptonote::make_rpc_payment_signature(m_local_client);
-  }
 
   //-----------------------------------------------------------------------------------
   void core_rpc_server::init_options(boost::program_options::options_description& desc)
@@ -162,6 +164,11 @@ namespace cryptonote
     std::string address = command_line::get_arg(vm, arg_rpc_payment_address);
     if (!address.empty())
     {
+      if (!m_restricted && nettype() != FAKECHAIN)
+      {
+        MERROR("RPC Payment Enabled but server is not restricted, anyone can adjust their balance to bypass payment");
+        return false;
+      }
       cryptonote::address_parse_info info;
       if (!get_account_address_from_str(info, nettype(), address))
       {
@@ -192,8 +199,6 @@ namespace cryptonote
       if (ok & !epee::net_utils::is_ip_loopback(bind_ip))
         MWARNING("The RPC server is accessible from the outside, but no RPC payment was setup. RPC access will be free for all.");
     }
-
-    m_local_client = rct::rct2sk(rct::skGen());
 
     m_bootstrap_daemon_address = command_line::get_arg(vm, arg_bootstrap_daemon_address);
     if (!m_bootstrap_daemon_address.empty())
@@ -258,12 +263,6 @@ namespace cryptonote
       return false;
     }
     crypto::public_key local_client;
-    crypto::secret_key_to_public_key(m_local_client, local_client);
-    if (client == local_client)
-    {
-      credits = 0;
-      return true;
-    }
     if (!m_rpc_payment->pay(client, ts, payment, rpc, same_ts, credits))
     {
       message = CORE_RPC_STATUS_PAYMENT_REQUIRED;
@@ -553,8 +552,6 @@ namespace cryptonote
 
     CHECK_PAYMENT(req, res, 1);
 
-    NOTIFY_RESPONSE_CHAIN_ENTRY::request resp;
-
     res.start_height = req.start_height;
     if(!m_core.get_blockchain_storage().find_blockchain_supplement(req.block_ids, res.m_block_ids, res.start_height, res.current_height, false))
     {
@@ -562,7 +559,7 @@ namespace cryptonote
       return false;
     }
 
-    CHECK_PAYMENT_SAME_TS(req, res, resp.m_block_ids.size() * COST_PER_BLOCK_HASH);
+    CHECK_PAYMENT_SAME_TS(req, res, res.m_block_ids.size() * COST_PER_BLOCK_HASH);
 
     res.status = CORE_RPC_STATUS_OK;
     return true;
@@ -1169,41 +1166,41 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_public_nodes(const COMMAND_RPC_GET_PUBLIC_NODES::request& req, COMMAND_RPC_GET_PUBLIC_NODES::response& res, const connection_context *ctx)
   {
-    PERF_TIMER(on_get_public_nodes);
-
-	COMMAND_RPC_GET_PEER_LIST::response peer_list_res;
-	const bool success = on_get_peer_list(COMMAND_RPC_GET_PEER_LIST::request(), peer_list_res, ctx);
-	res.status = peer_list_res.status;
-	if (!success)
-	{
-	  return false;
-	}
-	if (res.status != CORE_RPC_STATUS_OK)
-	{
-	  return true;
-	}
-
-	const auto collect = [](const std::vector<peer> &peer_list, std::vector<public_node> &public_nodes)
-	{
-	  for (const auto &entry : peer_list)
-	  {
-	    if (entry.rpc_port != 0)
-	    {
-	      public_nodes.emplace_back(entry);
-	    }
-	  }
-	};
-
-	if (req.white)
-	{
-	  collect(peer_list_res.white_list, res.white);
-	}
-	if (req.gray)
-	{
-	  collect(peer_list_res.gray_list, res.gray);
-	}
-
-	return true;
+    RPC_TRACKER(get_public_nodes);
+    
+    COMMAND_RPC_GET_PEER_LIST::response peer_list_res;
+    const bool success = on_get_peer_list(COMMAND_RPC_GET_PEER_LIST::request(), peer_list_res, ctx);
+    res.status = peer_list_res.status;
+    if (!success)
+    {
+      return false;
+    }
+    if (res.status != CORE_RPC_STATUS_OK)
+    {
+      return true;
+    }
+    
+    const auto collect = [](const std::vector<peer> &peer_list, std::vector<public_node> &public_nodes)
+    {
+      for (const auto &entry : peer_list)
+      {
+        if (entry.rpc_port != 0)
+        {
+          public_nodes.emplace_back(entry);
+        }
+      }
+    };
+    
+    if (req.white)
+    {
+      collect(peer_list_res.white_list, res.white);
+    }
+    if (req.gray)
+    {
+      collect(peer_list_res.gray_list, res.gray);
+    }
+    
+    return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_set_log_hash_rate(const COMMAND_RPC_SET_LOG_HASH_RATE::request& req, COMMAND_RPC_SET_LOG_HASH_RATE::response& res, const connection_context *ctx)
@@ -1293,7 +1290,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_transaction_pool_hashes(const COMMAND_RPC_GET_TRANSACTION_POOL_HASHES::request& req, COMMAND_RPC_GET_TRANSACTION_POOL_HASHES::response& res, const connection_context *ctx)
   {
-    RPC_TRACKER(on_get_transaction_pool_hashes);
+    RPC_TRACKER(get_transaction_pool_hashes);
     bool r;
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_TRANSACTION_POOL_HASHES>(invoke_http_mode::JON, "/get_transaction_pool_hashes", req, res, r))
       return r;
@@ -1438,10 +1435,7 @@ namespace cryptonote
       LOG_ERROR("Failed to find tx pub key in blockblob");
       return false;
     }
-    if (!extra_nonce.empty())
-      reserved_offset += sizeof(tx_pub_key) + 2; //2 bytes: tag for TX_EXTRA_NONCE(1 byte), counter in TX_EXTRA_NONCE(1 byte)
-    else
-      reserved_offset = 0;
+    reserved_offset += sizeof(tx_pub_key) + 2; //2 bytes: tag for TX_EXTRA_NONCE(1 byte), counter in TX_EXTRA_NONCE(1 byte)
     if(reserved_offset + extra_nonce.size() > block_blob.size())
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
@@ -1572,7 +1566,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_generateblocks(const COMMAND_RPC_GENERATEBLOCKS::request& req, COMMAND_RPC_GENERATEBLOCKS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
   {
-    RPC_TRACKER(on_generateblocks);
+    RPC_TRACKER(generateblocks);
 
     CHECK_CORE_READY();
 
@@ -2175,7 +2169,13 @@ namespace cryptonote
   bool core_rpc_server::on_get_coinbase_tx_sum(const COMMAND_RPC_GET_COINBASE_TX_SUM::request& req, COMMAND_RPC_GET_COINBASE_TX_SUM::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
   {
     RPC_TRACKER(get_coinbase_tx_sum);
-    CHECK_PAYMENT_MIN1(req, res, COST_PER_COINBASE_TX_SUM, false);
+    const uint64_t bc_height = m_core.get_current_blockchain_height();
+    if (req.height >= bc_height || req.count > bc_height)
+    {
+      res.status = "height or count is too large";
+      return true;
+    }
+    CHECK_PAYMENT_MIN1(req, res, COST_PER_COINBASE_TX_SUM_BLOCK * req.count, false);
     std::pair<uint64_t, uint64_t> amounts = m_core.get_coinbase_tx_sum(req.height, req.count);
     res.emission_amount = amounts.first;
     res.fee_amount = amounts.second;
@@ -2185,7 +2185,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_base_fee_estimate(const COMMAND_RPC_GET_BASE_FEE_ESTIMATE::request& req, COMMAND_RPC_GET_BASE_FEE_ESTIMATE::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
   {
-    RPC_TRACKER(on_get_base_fee_estimate);
+    RPC_TRACKER(get_base_fee_estimate);
     bool r;
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_BASE_FEE_ESTIMATE>(invoke_http_mode::JON_RPC, "get_fee_estimate", req, res, r))
       return r;
@@ -2410,7 +2410,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_pop_blocks(const COMMAND_RPC_POP_BLOCKS::request& req, COMMAND_RPC_POP_BLOCKS::response& res, const connection_context *ctx)
   {
-    RPC_TRACKER(on_pop_blocks);
+    RPC_TRACKER(pop_blocks);
 
     m_core.get_blockchain_storage().pop_blocks(req.nblocks);
 
@@ -2519,7 +2519,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_output_distribution(const COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request& req, COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
   {
-    RPC_TRACKER(on_get_output_distribution);
+    RPC_TRACKER(get_output_distribution);
     bool r;
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_OUTPUT_DISTRIBUTION>(invoke_http_mode::JON_RPC, "get_output_distribution", req, res, r))
       return r;
@@ -2648,7 +2648,8 @@ namespace cryptonote
     }
 
     crypto::public_key client;
-    if (!epee::string_tools::hex_to_pod(req.client.substr(0, 2 * sizeof(client)), client))
+    uint64_t ts;
+    if(!cryptonote::verify_rpc_payment_signature(req.client, client, ts))
     {
       res.credits = 0;
       res.status = "Invalid client ID";
@@ -2706,23 +2707,27 @@ namespace cryptonote
     cryptonote::block block;
     crypto::hash top_hash;
     uint64_t height;
+    bool stale;
     m_core.get_blockchain_top(height, top_hash);
-    if (!m_rpc_payment->submit_nonce(client, req.nonce, top_hash, error_resp.code, error_resp.message, res.credits, hash, block, req.cookie))
+    if (!m_rpc_payment->submit_nonce(client, req.nonce, top_hash, error_resp.code, error_resp.message, res.credits, hash, block, req.cookie, stale))
     {
       return false;
     }
 
-    // it might be a valid block!
-    const difficulty_type current_difficulty = m_core.get_blockchain_storage().get_difficulty_for_next_block();
-    if (check_hash(hash, current_difficulty))
+    if(!stale)
     {
-      MINFO("This payment meets the current network difficulty");
-      block_verification_context bvc;
-      if(m_core.handle_block_found(block, bvc))
-        MGINFO_GREEN("Block found by RPC user at height " << get_block_height(block) << ": " <<
-            print_money(cryptonote::get_outs_money_amount(block.miner_tx)));
-      else
-        MERROR("Seemingly valid block was not accepted");
+      // it might be a valid block!
+      const difficulty_type current_difficulty = m_core.get_blockchain_storage().get_difficulty_for_next_block();
+      if (check_hash(hash, current_difficulty))
+      {
+        MINFO("This payment meets the current network difficulty");
+        block_verification_context bvc;
+        if(m_core.handle_block_found(block, bvc))
+          MGINFO_GREEN("Block found by RPC user at height " << get_block_height(block) << ": " <<
+              print_money(cryptonote::get_outs_money_amount(block.miner_tx)));
+        else
+          MERROR("Seemingly valid block was not accepted");
+      }
     }
 
     m_core.get_blockchain_top(height, top_hash);
@@ -2748,14 +2753,16 @@ namespace cryptonote
     }
 
     crypto::public_key client;
-    if (!epee::string_tools::hex_to_pod(req.client.substr(0, 2 * sizeof(client)), client))
+    uint64_t ts;
+    if(!cryptonote::verify_rpc_payment_signature(req.client, client, ts))
     {
+      res.credits = 0;
       error_resp.code = CORE_RPC_ERROR_CODE_INVALID_CLIENT;
       error_resp.message = "Invalid client ID";
       return false;
     }
 
-    RPCTracker ext_tracker(("external:" + req.paying_for).c_str());
+    RPCTracker ext_tracker(("external:" + req.paying_for).c_str(), PERF_TIMER_NAME(rpc_access_pay));
     if (!check_payment(req.client, req.payment, req.paying_for, false, res.status, res.credits, res.top_hash))
       return true;
     ext_tracker.pay(req.payment);
@@ -2780,9 +2787,9 @@ namespace cryptonote
     {
       res.data.resize(res.data.size() + 1);
       res.data.back().rpc = d.first;
-      res.data.back().count = std::get<0>(d.second);
-      res.data.back().time = std::get<1>(d.second);
-      res.data.back().credits = std::get<2>(d.second);
+      res.data.back().count = d.second.count;
+      res.data.back().time = d.second.time;
+      res.data.back().credits = d.second.credits;
     }
 
     res.status = CORE_RPC_STATUS_OK;

@@ -35,7 +35,6 @@
 
 namespace cryptonote
 {
-  extern const boost::posix_time::ptime rpc_payment_epoch;
   std::string make_rpc_payment_signature(const crypto::secret_key &skey);
   bool verify_rpc_payment_signature(const std::string &message, crypto::public_key &pkey, uint64_t &ts);
 }

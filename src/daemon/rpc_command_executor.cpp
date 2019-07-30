@@ -2189,7 +2189,7 @@ bool t_rpc_command_executor::rpc_payments()
         }
     }
 
-    const uint64_t now = (boost::posix_time::microsec_clock::universal_time() - cryptonote::rpc_payment_epoch).total_seconds();
+    const uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     uint64_t balance = 0;
     tools::msg_writer() << boost::format("%64s %16u %16u %8u %8u %8u %8u %s")
         % "Client ID" % "Balance" % "Total mined" % "Good" % "Stale" % "Bad" % "Dupes" % "Last update";

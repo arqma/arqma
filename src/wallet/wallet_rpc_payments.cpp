@@ -57,9 +57,9 @@ std::string wallet2::get_client_signature() const
   return cryptonote::make_rpc_payment_signature(m_rpc_client_secret_key);
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::get_rpc_payment_info(bool mining, bool &payments, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &hashing_blob, uint64_t &height)
+bool wallet2::get_rpc_payment_info(bool mining, bool &payment_required, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &hashing_blob, uint64_t &height, uint32_t &cookie)
 {
-  boost::optional<std::string> result = m_node_rpc_proxy.get_rpc_payment_info(mining, payments, credits, diff, credits_per_hash_found, hashing_blob, height);
+  boost::optional<std::string> result = m_node_rpc_proxy.get_rpc_payment_info(mining, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie);
   credits = m_rpc_payment_state.credits;
   if (result && *result != CORE_RPC_STATUS_OK)
     return false;
@@ -68,17 +68,19 @@ bool wallet2::get_rpc_payment_info(bool mining, bool &payments, uint64_t &credit
 //----------------------------------------------------------------------------------------------------
 bool wallet2::daemon_requires_payment()
 {
-  bool payments = false;
+  bool payment_required = false;
   uint64_t credits, diff, credits_per_hash_found, height;
+  uint32_t cookie;
   cryptonote::blobdata blob;
-  return get_rpc_payment_info(false, payments, credits, diff, credits_per_hash_found, blob, height) && payments;
+  return get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, blob, height, cookie) && payment_required;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::make_rpc_payment(uint32_t nonce, uint64_t &credits, uint64_t &balance)
+bool wallet2::make_rpc_payment(uint32_t nonce, uint32_t cookie, uint64_t &credits, uint64_t &balance)
 {
   cryptonote::COMMAND_RPC_ACCESS_SUBMIT_NONCE::request req = AUTO_VAL_INIT(req);
   cryptonote::COMMAND_RPC_ACCESS_SUBMIT_NONCE::response res = AUTO_VAL_INIT(res);
   req.nonce = nonce;
+  req.cookie = cookie;
   m_daemon_rpc_mutex.lock();
   uint64_t pre_call_credits = m_rpc_payment_state.credits;
   req.client = get_client_signature();
@@ -102,19 +104,18 @@ bool wallet2::make_rpc_payment(uint32_t nonce, uint64_t &credits, uint64_t &bala
 bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::function<bool(uint64_t, uint64_t)> &startfunc, const std::function<bool(unsigned)> &contfunc, const std::function<bool(uint64_t)> &foundfunc, const std::function<void(const std::string&)> &errorfunc)
 {
   bool need_payment = false;
-  bool payments;
+  bool payment_required;
   uint64_t credits, diff, credits_per_hash_found, height;
+  uint32_t cookie;
   unsigned int n_hashes = 0;
   cryptonote::blobdata hashing_blob;
   try
   {
-    need_payment = get_rpc_payment_info(false, payments, credits, diff, credits_per_hash_found, hashing_blob, height) && payments && credits < credits_target;
+    need_payment = get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie) && payment_required && credits < credits_target;
     if (!need_payment)
       return true;
     if (!startfunc(diff, credits_per_hash_found))
       return true;
-    if (hashing_blob.empty())
-      return false;
   }
   catch (const std::exception &e) { return false; }
 
@@ -123,7 +124,7 @@ bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::functio
   {
     try
     {
-      need_payment = get_rpc_payment_info(true, payments, credits, diff, credits_per_hash_found, hashing_blob, height) && payments && credits < credits_target;
+      need_payment = get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie) && payment_required && credits < credits_target;
       if (!need_payment)
         return true;
     }
@@ -146,7 +147,7 @@ bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::functio
       uint64_t credits, balance;
       try
       {
-        make_rpc_payment(local_nonce, credits, balance);
+        make_rpc_payment(local_nonce, cookie, credits, balance);
         if (credits != credits_per_hash_found)
         {
           MERROR("Found nonce, but daemon did not credit us with the expected amount");

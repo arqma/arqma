@@ -28,7 +28,6 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "node_rpc_proxy.h"
-#include "wallet_rpc_helpers.h"
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "rpc/rpc_payment_signature.h"
 #include "rpc/rpc_payment_costs.h"
@@ -259,7 +258,7 @@ boost::optional<std::string> NodeRPCProxy::get_fee_quantization_mask(uint64_t &f
   return boost::optional<std::string>();
 }
 
-boost::optional<std::string> NodeRPCProxy::get_rpc_payment_info(bool mining, bool &payments, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &blob, uint64_t &height)
+boost::optional<std::string> NodeRPCProxy::get_rpc_payment_info(bool mining, bool &payment_required, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &blob, uint64_t &height, uint32_t &cookie)
 {
   const time_t now = time(NULL);
   if (m_rpc_payment_state.stale || now >= m_rpc_payment_info_time + 5*60 || (mining && now >= m_rpc_payment_info_time + 10)) // re-cache every 10 seconds if mining, 5 minutes otherwise
@@ -275,12 +274,10 @@ boost::optional<std::string> NodeRPCProxy::get_rpc_payment_info(bool mining, boo
       m_rpc_payment_state.stale = false;
     }
 
-    m_rpc_payment_payments = resp_t.diff > 0;
-    m_rpc_payment_credits = resp_t.credits;
     m_rpc_payment_diff = resp_t.diff;
     m_rpc_payment_credits_per_hash_found = resp_t.credits_per_hash_found;
-    m_rpc_payment_blob = resp_t.hashing_blob;
     m_rpc_payment_height = resp_t.height;
+    m_rpc_payment_cookie = resp_t.cookie;
 
     if (!epee::string_tools::parse_hexstr_to_binbuff(resp_t.hashing_blob, m_rpc_payment_blob) || m_rpc_payment_blob.size() < 43)
     {
@@ -290,12 +287,13 @@ boost::optional<std::string> NodeRPCProxy::get_rpc_payment_info(bool mining, boo
     m_rpc_payment_info_time = now;
   }
 
-  payments = m_rpc_payment_payments;
-  credits = m_rpc_payment_credits;
+  payment_required = m_rpc_payment_diff > 0;
+  credits = m_rpc_payment_state.credits;
   diff = m_rpc_payment_diff;
   credits_per_hash_found = m_rpc_payment_credits_per_hash_found;
   blob = m_rpc_payment_blob;
   height = m_rpc_payment_height;
+  cookie = m_rpc_payment_cookie;
   return boost::optional<std::string>();
 }
 

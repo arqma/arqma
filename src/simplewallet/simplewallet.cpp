@@ -226,6 +226,7 @@ namespace
   const char* USAGE_RPC_PAYMENT_INFO("rpc_payment_info");
   const char* USAGE_START_MINING_FOR_RPC("start_mining_for_rpc");
   const char* USAGE_STOP_MINING_FOR_RPC("stop_mining_for_rpc");
+  const char* USAGE_NET_STATS("net_stats");
   const char* USAGE_WELCOME("welcome");
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
@@ -1694,19 +1695,20 @@ bool simple_wallet::rpc_payment_info(const std::vector<std::string> &args)
 
   try
   {
-    bool payments;
+    bool payment_required;
     uint64_t credits, diff, credits_per_hash_found, height;
+    uint32_t cookie;
     std::string hashing_blob;
     crypto::public_key pkey;
     crypto::secret_key_to_public_key(m_wallet->get_rpc_client_secret_key(), pkey);
     message_writer() << tr("RPC client ID: ") << pkey;
     message_writer() << tr("RPC client secret key: ") << m_wallet->get_rpc_client_secret_key();
-    if (!m_wallet->get_rpc_payment_info(false, payments, credits, diff, credits_per_hash_found, hashing_blob, height))
+    if (!m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie))
     {
       fail_msg_writer() << tr("Failed to query daemon");
       return true;
     }
-    if (payments)
+    if (payment_required)
     {
       uint64_t target = m_wallet->credits_target();
       if (target == 0)
@@ -1914,39 +1916,48 @@ bool simple_wallet::save_known_rings(const std::vector<std::string> &args)
   return true;
 }
 
+bool simple_wallet::net_stats(const std::vector<std::string> &args)
+{
+  message_writer() << std::to_string(m_wallet->get_bytes_sent()) + tr(" bytes sent");
+  message_writer() << std::to_string(m_wallet->get_bytes_received()) + tr(" bytes received");
+  return true;
+}
+
 bool simple_wallet::public_nodes(const std::vector<std::string> &args)
 {
   try
   {
-	auto nodes = m_wallet->get_public_nodes(false);
-	if (nodes.empty())
-	{
-	  fail_msg_writer() << tr("No known public nodes");
-	  return true;
-	}
-	std::sort(nodes.begin(), nodes.end(), [](const public_node &node0, const public_node &node1) {
-	  if (node0.rpc_credits_per_hash && node1.rpc_credits_per_hash == 0)
-	    return true;
-	  if (node0.rpc_credits_per_hash && node1.rpc_credits_per_hash)
-	    return node0.rpc_credits_per_hash < node1.rpc_credits_per_hash;
-	  return false;
-	});
-
-	const uint64_t now = time(NULL);
-	message_writer() << boost::format("%32s %12s %16s") % tr("address") % tr("credits/hash") % tr("last_seen");
-	for (const auto &node: nodes)
-	{
-	  const float cph = node.rpc_credits_per_hash / RPC_CREDITS_PER_HASH_SCALE;
-	  char cphs[9];
-	  snprintf(cphs, sizeof(cphs), "%.3f", cph);
-	  const std::string last_seen = node.last_seen == 0 ? tr("never") : get_human_readable_timespan(std::chrono::seconds(now - node.last_seen));
-	  std::string host = node.host + ":" + std::to_string(node.rpc_port);
-	  message_writer() << boost::format("%32s %12s %16s") % host % cph % last_seen;
-	}
+    auto nodes = m_wallet->get_public_nodes(false);
+    m_claimed_cph.clear();
+    if (nodes.empty())
+    {
+      fail_msg_writer() << tr("No known public nodes");
+      return true;
+    }
+    std::sort(nodes.begin(), nodes.end(), [](const public_node &node0, const public_node &node1) {
+      if (node0.rpc_credits_per_hash && node1.rpc_credits_per_hash == 0)
+        return true;
+      if (node0.rpc_credits_per_hash && node1.rpc_credits_per_hash)
+        return node0.rpc_credits_per_hash < node1.rpc_credits_per_hash;
+      return false;
+    });
+    
+    const uint64_t now = time(NULL);
+    message_writer() << boost::format("%32s %12s %16s") % tr("address") % tr("credits/hash") % tr("last_seen");
+    for (const auto &node: nodes)
+    {
+      const float cph = node.rpc_credits_per_hash / RPC_CREDITS_PER_HASH_SCALE;
+      char cphs[9];
+      snprintf(cphs, sizeof(cphs), "%.3f", cph);
+      const std::string last_seen = node.last_seen == 0 ? tr("never") : get_human_readable_timespan(std::chrono::seconds(now - node.last_seen));
+      std::string host = node.host + ":" + std::to_string(node.rpc_port);
+      message_writer() << boost::format("%32s %12s %16s") % host % cphs % last_seen;
+      m_claimed_cph[host] = node.rpc_credits_per_hash;
+    }
   }
   catch (const std::exception &e)
   {
-	fail_msg_writer() << tr("Error retrieving public node list: ") << e.what();
+    fail_msg_writer() << tr("Error retrieving public node list: ") << e.what();
   }
   return true;
 }
@@ -1982,15 +1993,16 @@ bool simple_wallet::start_mining_for_rpc(const std::vector<std::string> &args)
 
   LOCK_IDLE_SCOPE();
 
-  bool payments;
+  bool payment_required;
   uint64_t credits, diff, credits_per_hash_found, height;
+  uint32_t cookie;
   std::string hashing_blob;
-  if (!m_wallet->get_rpc_payment_info(true, payments, credits, diff, credits_per_hash_found, hashing_blob, height))
+  if (!m_wallet->get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie))
   {
     fail_msg_writer() << tr("Failed to query daemon");
     return true;
   }
-  if (!payments)
+  if (!payment_required)
   {
     fail_msg_writer() << tr("Daemon does not require payment for RPC access");
     return true;
@@ -2907,6 +2919,10 @@ simple_wallet::simple_wallet()
                            boost::bind(&simple_wallet::public_nodes, this, _1),
                            tr(USAGE_PUBLIC_NODES),
                            tr("Lists known public nodes"));
+  m_cmd_binder.set_handler("net_stats",
+                           boost::bind(&simple_wallet::net_stats, this, _1),
+                           tr(USAGE_NET_STATS),
+                           tr("Prints simple network stats"));
   m_cmd_binder.set_handler("welcome",
                            boost::bind(&simple_wallet::welcome, this, _1),
                            tr(USAGE_WELCOME),
@@ -4412,28 +4428,30 @@ bool simple_wallet::check_daemon_rpc_prices(const std::string &daemon_url, uint3
 {
   try
   {
-	const auto nodes = m_wallet->get_public_nodes(false);
-	for (const auto &node: nodes)
-	{
-	  const std::string host = node.host + ":" + std::to_string(node.rpc_port);
-	  if (host == daemon_url)
-	  {
-	    claimed_cph = node.rpc_credits_per_hash;
-	    bool payments;
-	    uint64_t credits, diff, credits_per_hash_found, height;
-	    cryptonote::blobdata hashing_blob;
-	    if (m_wallet->get_rpc_payment_info(false, payments, credits, diff, credits_per_hash_found, hashing_blob, height) && payments)
-	    {
-	      actual_cph = RPC_CREDITS_PER_HASH_SCALE * (credits_per_hash_found / (float)diff);
-	      return true;
-	    }
-	  }
-	}
+    auto i = m_claimed_cph.find(daemon_url);
+    if (i == m_claimed_cph.end())
+      return false;
+
+    claimed_cph = m_claimed_cph[daemon_url];
+    bool payment_required;
+    uint64_t credits, diff, credits_per_hash_found, height;
+    uint32_t cookie;
+    cryptonote::blobdata hashing_blob;
+    if (m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie) && payment_required)
+    {
+      actual_cph = RPC_CREDITS_PER_HASH_SCALE * (credits_per_hash_found / (float)diff);
+      return true;
+    }
+    else
+    {
+      fail_msg_writer() << tr("Error checking daemon RPC access prices");
+    }
   }
   catch (const std::exception &e)
   {
-	// can't check
-	return false;
+    // can't check
+    fail_msg_writer() << tr("Error checking daemon RPC access prices: ") << e.what();
+    return false;
   }
   // no record found for this daemon
   return false;
@@ -4497,24 +4515,24 @@ bool simple_wallet::set_daemon(const std::vector<std::string>& args)
     }
 
     if (!try_connect_to_daemon())
-	{
-	  fail_msg_writer() << tr("Failed to connect to daemon");
-	  return true;
-	}
+    {
+      fail_msg_writer() << tr("Failed to connect to daemon");
+      return true;
+    }
 
     success_msg_writer() << boost::format("Daemon set to %s, %s") % daemon_url % (m_wallet->is_trusted_daemon() ? tr("trusted") : tr("untrusted"));
 
     // check whether the daemon's prices match the claim, and disconnect if not, to disincentivize daemons lying
-	uint32_t actual_cph, claimed_cph;
-	if (check_daemon_rpc_prices(daemon_url, actual_cph, claimed_cph))
-	{
-	  if (actual_cph < claimed_cph)
-	  {
-	    fail_msg_writer() << tr("Daemon RPC credits/hash is less than was claimed. Either this daemon is cheating, or it changed its setup recently.");
-	    fail_msg_writer() << tr("Claimed: ") << claimed_cph / (float)RPC_CREDITS_PER_HASH_SCALE;
-	    fail_msg_writer() << tr("Actual: ") << actual_cph / (float)RPC_CREDITS_PER_HASH_SCALE;
-	  }
-	}
+    uint32_t actual_cph, claimed_cph;
+    if (check_daemon_rpc_prices(daemon_url, actual_cph, claimed_cph))
+    {
+      if (actual_cph < claimed_cph)
+      {
+        fail_msg_writer() << tr("Daemon RPC credits/hash is less than was claimed. Either this daemon is cheating, or it changed its setup recently.");
+        fail_msg_writer() << tr("Claimed: ") << claimed_cph / (float)RPC_CREDITS_PER_HASH_SCALE;
+        fail_msg_writer() << tr("Actual: ") << actual_cph / (float)RPC_CREDITS_PER_HASH_SCALE;
+      }
+    }
 
     m_daemon_rpc_payment_message_displayed = false;
   } else {
@@ -7712,7 +7730,7 @@ void simple_wallet::wallet_idle_thread()
     if (!m_idle_run.load(std::memory_order_relaxed))
       break;
 
-    if (m_rpc_payment_mining_requested || m_wallet->auto_mine_for_rpc_payment_threshold() >= 0)
+    if (m_rpc_payment_mining_requested || m_wallet->auto_mine_for_rpc_payment_threshold() >= 0.0f)
     {
       uint64_t target = m_wallet->credits_target();
       if (target == 0)
@@ -7723,12 +7741,13 @@ void simple_wallet::wallet_idle_thread()
       if (need_payment)
       {
         const boost::posix_time::ptime start_time = boost::posix_time::microsec_clock::universal_time();
-        bool ret = m_wallet->search_for_rpc_payment(target, [this](uint64_t diff, uint64_t credits_per_hash_found) {
+        auto startfunc = [this](uint64_t diff, uint64_t credits_per_hash_found)
+        {
           const float cph = credits_per_hash_found / (float)diff;
           bool low = (diff > MAX_PAYMENT_DIFF || cph < MIN_PAYMENT_RATE);
           if (credits_per_hash_found > 0 && cph >= m_wallet->auto_mine_for_rpc_payment_threshold())
           {
-            MINFO(std::to_string(cph) << " credits per hash is >= out threshold (" << m_wallet->auto_mine_for_rpc_payment_threshold() << "), starting mining");
+            MINFO(std::to_string(cph) << " credits per hash is >= our threshold (" << m_wallet->auto_mine_for_rpc_payment_threshold() << "), starting mining");
             return true;
           }
           else if (m_rpc_payment_mining_requested)
@@ -7747,7 +7766,9 @@ void simple_wallet::wallet_idle_thread()
             }
             return false;
           }
-        }, [&,this](unsigned n_hashes){
+        };
+        auto contfunc = [&,this](unsigned n_hashes)
+        {
           if (!m_idle_run.load(std::memory_order_relaxed))
             return false;
           const boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
@@ -7757,13 +7778,18 @@ void simple_wallet::wallet_idle_thread()
           if ((now - start_time).total_microseconds() >= REFRESH_PERIOD * 1000000)
             return false;
           return true;
-        }, [this, target](uint64_t credits) {
+        };
+        auto foundfunc = [this, target](uint64_t credits)
+        {
           m_need_payment = false;
           return credits < target;
-        }, [this](const std::string &error) {
+        };
+        auto errorfunc = [this](const std::string &error)
+        {
           fail_msg_writer() << tr("Error mining to daemon: ") << error;
           m_cmd_binder.print_prompt();
-        });
+        };
+        bool ret = m_wallet->search_for_rpc_payment(target, startfunc, contfunc, foundfunc, errorfunc);
         if (!ret)
         {
           fail_msg_writer() << tr("Failed to start mining for RPC payment");

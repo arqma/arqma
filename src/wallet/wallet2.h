@@ -830,8 +830,7 @@ private:
 
     uint64_t get_last_block_reward() const { return m_last_block_reward; }
 
-    struct rpc_node_data_t { epee::net_utils::network_address address; float credits_per_hash; bool white; };
-	std::vector<cryptonote::public_node> get_public_nodes(bool white_only = true);
+    std::vector<cryptonote::public_node> get_public_nodes(bool white_only = true);
 
     template <class t_archive>
     inline void serialize(t_archive &a, const unsigned int ver)
@@ -1168,9 +1167,9 @@ private:
 
     bool is_unattended() const { return m_unattended; }
 
-    bool get_rpc_payment_info(bool mining, bool &payments, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &hashing_blob, uint64_t &height);
+    bool get_rpc_payment_info(bool mining, bool &payment_required, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &hashing_blob, uint64_t &height, uint32_t &cookie);
     bool daemon_requires_payment();
-    bool make_rpc_payment(uint32_t payment, uint64_t &credits, uint64_t &balance);
+    bool make_rpc_payment(uint32_t nonce, uint32_t cookie, uint64_t &credits, uint64_t &balance);
     bool search_for_rpc_payment(uint64_t credits_target, const std::function<bool(uint64_t, uint64_t)> &startfunc, const std::function<bool(unsigned)> &contfunc, const std::function<bool(uint64_t)> &foundfunc = NULL, const std::function<void(const std::string&)> &errorfunc = NULL);
     template<typename T> void handle_payment_changes(const T &res, std::true_type) {
       if (res.status == CORE_RPC_STATUS_OK || res.status == CORE_RPC_STATUS_PAYMENT_REQUIRED)
@@ -1258,6 +1257,9 @@ private:
     bool set_blackballed_outputs(const std::vector<std::pair<uint64_t, uint64_t>> &outputs, bool add = false);
     bool unblackball_output(const std::pair<uint64_t, uint64_t> &output);
     bool is_output_blackballed(const std::pair<uint64_t, uint64_t> &output) const;
+    
+    uint64_t get_bytes_sent() const;
+    uint64_t get_bytes_received() const;
 
     void set_offline(bool offline = true);
 

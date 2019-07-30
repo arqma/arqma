@@ -106,7 +106,9 @@ namespace net_utils
           m_initialized(true),
           m_connected(false),
           m_deadline(m_io_service),
-          m_shutdowned(0)
+          m_shutdowned(0),
+          m_bytes_sent(0),
+          m_bytes_received(0)
     {
     }
 
@@ -309,6 +311,7 @@ namespace net_utils
         else
 				{
 					m_deadline.expires_at(std::chrono::steady_clock::time_point::max());
+          m_bytes_sent += buff.size();
 				}
 			}
 
@@ -366,6 +369,7 @@ namespace net_utils
         else
 				{
 					m_deadline.expires_at(std::chrono::steady_clock::time_point::max());
+          m_bytes_sent += sz;
 				}
 			}
 
@@ -457,7 +461,8 @@ namespace net_utils
 				/*if(!bytes_transferred)
 					return false;*/
 
-				buff.assign(local_buff, bytes_transferred);
+				m_bytes_received += bytes_transferred;
+        buff.assign(local_buff, bytes_transferred);
 				return true;
 			}
 
@@ -526,7 +531,8 @@ namespace net_utils
 					m_deadline.expires_at(std::chrono::steady_clock::time_point::max());
 				}
 
-				if(bytes_transferred != buff.size())
+				m_bytes_received += bytes_transferred;
+        if(bytes_transferred != buff.size())
 				{
 					LOG_ERROR("Transferred mismatch with transfer_at_least value: m_bytes_transferred= " << bytes_transferred << " at_least value=" << buff.size());
 					return false;
@@ -578,6 +584,16 @@ namespace net_utils
     boost::asio::ip::tcp::socket& get_socket()
 		{
 			return m_ssl_socket->next_layer();
+		}
+    
+    uint64_t get_bytes_sent() const
+		{
+			return m_bytes_sent;
+		}
+
+		uint64_t get_bytes_received() const
+		{
+			return m_bytes_received;
 		}
 
 	private:
@@ -665,6 +681,8 @@ namespace net_utils
 		bool m_connected;
 		boost::asio::steady_timer m_deadline;
 		volatile uint32_t m_shutdowned;
+    std::atomic<uint64_t> m_bytes_sent;
+    std::atomic<uint64_t> m_bytes_received;
 	};
 
 

@@ -41,7 +41,7 @@ namespace cryptonote
   struct cryptonote_connection_context: public epee::net_utils::connection_context_base
   {
     cryptonote_connection_context(): m_state(state_before_handshake), m_remote_blockchain_height(0), m_last_response_height(0),
-        m_last_request_time(boost::date_time::not_a_date_time), m_callback_request_count(0), m_last_known_hash(crypto::null_hash), m_pruning_seed(0), m_rpc_port(0), m_rpc_credits_per_hash(0.0f), m_anchor(false) {}
+        m_last_request_time(boost::date_time::not_a_date_time), m_callback_request_count(0), m_last_known_hash(crypto::null_hash), m_pruning_seed(0), m_rpc_port(0), m_rpc_credits_per_hash(0), m_anchor(false) {}
 
     enum state
     {
