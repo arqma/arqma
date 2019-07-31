@@ -456,36 +456,44 @@ bool t_command_parser_executor::set_limit_down(const std::vector<std::string>& a
 
 bool t_command_parser_executor::out_peers(const std::vector<std::string>& args)
 {
-	if (args.empty()) return false;
-
-	unsigned int limit;
-	try {
-		limit = std::stoi(args[0]);
-	}
-
-	catch(const std::exception& ex) {
-		_erro("stoi exception");
-		return false;
-	}
-
-	return m_executor.out_peers(limit);
+  bool set = false;
+  uint32_t limit = 0;
+  try
+  {
+    if(!args.empty())
+    {
+      limit = std::stoi(args[0]);
+      set = true;
+    }
+  }
+  
+  catch(const std::exception& ex) {
+    _erro("stoi exception");
+    return false;
+  }
+  
+  return m_executor.out_peers(set, limit);
 }
 
 bool t_command_parser_executor::in_peers(const std::vector<std::string>& args)
 {
-	if (args.empty()) return false;
-
-	unsigned int limit;
-	try {
-		limit = std::stoi(args[0]);
-	}
-
-	catch(const std::exception& ex) {
-		_erro("stoi exception");
-		return false;
-	}
-
-	return m_executor.in_peers(limit);
+  bool set = false;
+  uint32_t limit = 0;
+  try
+  {
+    if(!args.empty())
+    {
+      limit = std::stoi(args[0]);
+      set = true;
+    }
+  }
+  
+  catch(const std::exception& ex) {
+    _erro("stoi exception");
+    return false;
+  }
+  
+  return m_executor.in_peers(set, limit);
 }
 
 bool t_command_parser_executor::start_save_graph(const std::vector<std::string>& args)
