@@ -286,6 +286,7 @@ private:
       uint64_t m_amount;
       bool m_rct;
       bool m_key_image_known;
+      bool m_key_image_requested;
       size_t m_pk_index;
       cryptonote::subaddress_index m_subaddr_index;
       bool m_key_image_partial;
@@ -310,6 +311,7 @@ private:
         FIELD(m_amount)
         FIELD(m_rct)
         FIELD(m_key_image_known)
+        FIELD(m_key_image_requested)
         FIELD(m_pk_index)
         FIELD(m_subaddr_index)
         FIELD(m_key_image_partial)
@@ -400,7 +402,7 @@ private:
         FIELD(extra)
         FIELD(unlock_time)
         FIELD(use_rct)
-		FIELD(use_bulletproofs)
+        FIELD(use_bulletproofs)
         FIELD(dests)
         FIELD(subaddr_account)
         FIELD(subaddr_indices)
@@ -413,7 +415,7 @@ private:
     struct multisig_sig
     {
       rct::rctSig sigs;
-      crypto::public_key ignore;
+      std::unordered_set<crypto::public_key> ignore;
       std::unordered_set<rct::key> used_L;
       std::unordered_set<crypto::public_key> signing_keys;
       rct::multisig_out msout;
@@ -458,7 +460,7 @@ private:
     struct unsigned_tx_set
     {
       std::vector<tx_construction_data> txes;
-      wallet2::transfer_container transfers;
+      std::pair<size_t, wallet2::transfer_container> transfers;
     };
 
     struct signed_tx_set
@@ -616,6 +618,14 @@ private:
       const std::vector<crypto::secret_key> &view_keys,
       const std::vector<crypto::public_key> &spend_keys,
       uint32_t threshold);
+    std::string exchange_multisig_keys(const epee::wipeable_string &password,
+      const std::vector<std::string> &info);
+    /*!
+     * \brief Any but first round of keys exchange
+     */
+    std::string exchange_multisig_keys(const epee::wipeable_string &password,
+      std::unordered_set<crypto::public_key> pkeys,
+      std::vector<crypto::public_key> signers);
     /*!
      * \brief Finalizes creation of a multisig wallet
      */
@@ -1121,9 +1131,9 @@ private:
     bool verify_with_public_key(const std::string &data, const crypto::public_key &public_key, const std::string &signature) const;
 
     // Import/Export wallet data
-    std::vector<tools::wallet2::transfer_details> export_outputs() const;
+    std::pair<size_t, std::vector<tools::wallet2::transfer_details>> export_outputs() const;
     std::string export_outputs_to_str() const;
-    size_t import_outputs(const std::vector<tools::wallet2::transfer_details> &outputs);
+    size_t import_outputs(const std::pair<size_t, std::vector<tools::wallet2::transfer_details>> &outputs);
     size_t import_outputs_from_str(const std::string &outputs_st);
     payment_container export_payments() const;
     void import_payments(const payment_container &payments);
@@ -1131,8 +1141,8 @@ private:
     std::tuple<size_t, crypto::hash, std::vector<crypto::hash>> export_blockchain() const;
     void import_blockchain(const std::tuple<size_t, crypto::hash, std::vector<crypto::hash>> &bc);
     bool export_key_images(const std::string &filename) const;
-    std::vector<std::pair<crypto::key_image, crypto::signature>> export_key_images() const;
-    uint64_t import_key_images(const std::vector<std::pair<crypto::key_image, crypto::signature>> &signed_key_images, uint64_t &spent, uint64_t &unspent, bool check_spent = true);
+    std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> export_key_images() const;
+    uint64_t import_key_images(const std::vector<std::pair<crypto::key_image, crypto::signature>> &signed_key_images, size_t offset, uint64_t &spent, uint64_t &unspent, bool check_spent = true);
     uint64_t import_key_images(const std::string &filename, uint64_t &spent, uint64_t &unspent);
 
     void update_pool_state(bool refreshed = false);
@@ -1330,7 +1340,7 @@ private:
     void scan_output(const cryptonote::transaction &tx, bool miner_tx, const crypto::public_key &tx_pub_key, size_t i, tx_scan_info_t &tx_scan_info, int &num_vouts_received, std::unordered_map<cryptonote::subaddress_index, uint64_t> &tx_money_got_in_outs, std::vector<size_t> &outs, bool pool);
     void trim_hashchain();
     crypto::key_image get_multisig_composite_key_image(size_t n) const;
-    rct::multisig_kLRki get_multisig_composite_kLRki(size_t n, const crypto::public_key &ignore, std::unordered_set<rct::key> &used_L, std::unordered_set<rct::key> &new_used_L) const;
+    rct::multisig_kLRki get_multisig_composite_kLRki(size_t n, const std::unordered_set<crypto::public_key> &ignore_set, std::unordered_set<rct::key> &used_L, std::unordered_set<rct::key> &new_used_L) const;
     rct::multisig_kLRki get_multisig_kLRki(size_t n, const rct::key &k) const;
     rct::key get_multisig_k(size_t idx, const std::unordered_set<rct::key> &used_L) const;
     void update_multisig_rescan_info(const std::vector<std::vector<rct::key>> &multisig_k, const std::vector<std::vector<tools::wallet2::multisig_info>> &info, size_t n);
@@ -1344,6 +1354,12 @@ private:
     bool get_rct_distribution(uint64_t &start_height, std::vector<uint64_t> &distribution);
 
     uint64_t get_segregation_fork_height() const;
+    void unpack_multisig_info(const std::vector<std::string>& info,
+      std::vector<crypto::public_key> &public_keys,
+      std::vector<crypto::secret_key> &secret_keys) const;
+    bool unpack_extra_multisig_info(const std::vector<std::string>& info,
+      std::vector<crypto::public_key> &signers,
+      std::unordered_set<crypto::public_key> &pkeys) const;
 
     void cache_tx_data(const cryptonote::transaction& tx, const crypto::hash &txid, tx_cache_data &tx_cache_data) const;
 
@@ -1400,6 +1416,9 @@ private:
     bool m_multisig; /*!< if > 1 spend secret key will not match spend public key */
     uint32_t m_multisig_threshold;
     std::vector<crypto::public_key> m_multisig_signers;
+    //in case of general M/N multisig wallet we should perform N - M + 1 key exchange rounds and remember how many rounds are passed.
+    uint32_t m_multisig_rounds_passed;
+    std::vector<crypto::public_key> m_multisig_derivations;
     bool m_always_confirm_transfers;
     bool m_print_ring_members;
     bool m_store_tx_info; /*!< request txkey to be returned in RPC, and store in the wallet cache file */
@@ -1471,7 +1490,7 @@ private:
   };
 }
 BOOST_CLASS_VERSION(tools::wallet2, 26)
-BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 10)
+BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 11)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info, 1)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info::LR, 0)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_tx_set, 1)
@@ -1498,36 +1517,40 @@ namespace boost
     template <class Archive>
     inline typename std::enable_if<Archive::is_loading::value, void>::type initialize_transfer_details(Archive &a, tools::wallet2::transfer_details &x, const boost::serialization::version_type ver)
     {
-        if (ver < 1)
+        if(ver < 1)
         {
           x.m_mask = rct::identity();
           x.m_amount = x.m_tx.vout[x.m_internal_output_index].amount;
         }
-        if (ver < 2)
+        if(ver < 2)
         {
           x.m_spent_height = 0;
         }
-        if (ver < 4)
+        if(ver < 4)
         {
           x.m_rct = x.m_tx.vout[x.m_internal_output_index].amount == 0;
         }
-        if (ver < 6)
+        if(ver < 6)
         {
           x.m_key_image_known = true;
         }
-        if (ver < 7)
+        if(ver < 7)
         {
           x.m_pk_index = 0;
         }
-        if (ver < 8)
+        if(ver < 8)
         {
           x.m_subaddr_index = {};
         }
-        if (ver < 9)
+        if(ver < 9)
         {
           x.m_key_image_partial = false;
           x.m_multisig_k.clear();
           x.m_multisig_info.clear();
+        }
+        if(ver < 11)
+        {
+          x.m_key_image_requested = false;
         }
     }
 
@@ -1537,7 +1560,7 @@ namespace boost
       a & x.m_block_height;
       a & x.m_global_output_index;
       a & x.m_internal_output_index;
-      if (ver < 3)
+      if(ver < 3)
       {
         cryptonote::transaction tx;
         a & tx;
@@ -1550,7 +1573,7 @@ namespace boost
       }
       a & x.m_spent;
       a & x.m_key_image;
-      if (ver < 1)
+      if(ver < 1)
       {
         // ensure mask and amount are set
         initialize_transfer_details(a, x, ver);
@@ -1558,30 +1581,30 @@ namespace boost
       }
       a & x.m_mask;
       a & x.m_amount;
-      if (ver < 2)
+      if(ver < 2)
       {
         initialize_transfer_details(a, x, ver);
         return;
       }
       a & x.m_spent_height;
-      if (ver < 3)
+      if(ver < 3)
       {
         initialize_transfer_details(a, x, ver);
         return;
       }
       a & x.m_txid;
-      if (ver < 4)
+      if(ver < 4)
       {
         initialize_transfer_details(a, x, ver);
         return;
       }
       a & x.m_rct;
-      if (ver < 5)
+      if(ver < 5)
       {
         initialize_transfer_details(a, x, ver);
         return;
       }
-      if (ver < 6)
+      if(ver < 6)
       {
         // v5 did not properly initialize
         uint8_t u;
@@ -1590,19 +1613,19 @@ namespace boost
         return;
       }
       a & x.m_key_image_known;
-      if (ver < 7)
+      if(ver < 7)
       {
         initialize_transfer_details(a, x, ver);
         return;
       }
       a & x.m_pk_index;
-      if (ver < 8)
+      if(ver < 8)
       {
         initialize_transfer_details(a, x, ver);
         return;
       }
       a & x.m_subaddr_index;
-      if (ver < 9)
+      if(ver < 9)
       {
         initialize_transfer_details(a, x, ver);
         return;
@@ -1610,9 +1633,15 @@ namespace boost
       a & x.m_multisig_info;
       a & x.m_multisig_k;
       a & x.m_key_image_partial;
-      if (ver < 10)
+      if(ver < 10)
         return;
       a & x.m_uses;
+      if(ver < 11)
+      {
+        initialize_transfer_details(a, x, ver);
+        return;
+      }
+      a & x.m_key_image_requested;
     }
 
     template <class Archive>

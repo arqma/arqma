@@ -3,7 +3,9 @@ dist: bionic
 os: linux
 language: minimal
 notifications:
-  webhooks: https://discordhooks.herokuapp.com/travis
+  webhooks: 
+    urls:
+      - https://discordhooks.herokuapp.com/travis
     on_success: always
     on_failure: always
     on_start: always
@@ -21,7 +23,7 @@ env:
     - CCACHE_DIR=$HOME/.ccache
     - BASE_OUTDIR=$TRAVIS_BUILD_DIR/out
     - SDK_URL=https://bitcoincore.org/depends-sources/sdks
-    - DOCKER_PACKAGES="build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache"
+    - DOCKER_PACKAGES="build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache xsltproc"
   matrix:
 # ARM v7
     - HOST=arm-linux-gnueabihf PACKAGES="python3 gperf g++-arm-linux-gnueabihf"
