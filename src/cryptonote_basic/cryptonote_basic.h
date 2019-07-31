@@ -420,7 +420,7 @@ namespace cryptonote
       FIELDS(*static_cast<block_header *>(this))
       FIELD(miner_tx)
       FIELD(tx_hashes)
-      if(tx_hashes.size() > CRYPTONOTE_MAX_TX_PER_BLOCK)
+      if(tx_hashes.size() > config::tx_settings::MAX_TRANSACTIONS_IN_BLOCK)
         return false;
     END_SERIALIZE()
   };
