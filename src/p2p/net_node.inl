@@ -266,7 +266,7 @@ namespace nodetool
     {
       m_igd = no_igd;
     }
-    else if(sigd = "delayed")
+    else if(sigd == "delayed")
     {
       if(has_no_igd && !command_line::is_arg_defaulted(vm, arg_igd))
       {
