@@ -2,9 +2,9 @@ packages:=boost openssl zeromq cppzmq expat ldns libiconv hidapi protobuf libusb
 native_packages := native_ccache native_protobuf
 
 darwin_native_packages = native_biplist native_ds_store native_mac_alias
-darwin_packages = sodium-darwin unbound ncurses readline
+darwin_packages = sodium-darwin ncurses readline
 
-linux_packages = eudev unbound ncurses readline unwind sodium
+linux_packages = eudev ncurses readline unwind sodium
 qt_packages = qt
 
 ifeq ($(host_os),mingw32)
