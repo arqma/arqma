@@ -330,7 +330,7 @@ namespace cryptonote
 
     if(m_core.have_block(hshd.top_id))
     {
-      if(target < hshd.current_height)
+      if(target > hshd.current_height)
       {
         MINFO(context << "peer is not ahead of us and we are syncing, disconnecting");
         return false;
@@ -360,10 +360,7 @@ namespace cryptonote
       << " [Your node is " << abs_diff << " blocks (" << (abs_diff / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) << " days) "
       << (0 <= diff ? std::string("behind") : std::string("ahead"))
       << "] " << ENDL << "SYNCHRONIZATION started");
-      if (hshd.current_height >= m_core.get_current_blockchain_height() + 5) // don't switch to unsafe mode just for a few blocks
-      {
-        m_core.safesyncmode(false);
-      }
+      
       if (m_core.get_target_blockchain_height() == 0) // only when sync starts
       {
         m_sync_timer.resume();

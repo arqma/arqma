@@ -162,7 +162,6 @@ namespace cryptonote
 
   struct COMMAND_RPC_GET_BLOCKS_FAST
   {
-
     struct request_t: public rpc_access_request_base
     {
       std::list<crypto::hash> block_ids; //*first 10 blocks id goes sequential, next goes in pow(2,n) offset, like 2, 4, 8, 16, 32, 64 and so on, and the last one is always genesis block */
