@@ -4,6 +4,7 @@ SET(CMAKE_BUILD_TYPE release)
 
 SET(STATIC true)
 SET(UNBOUND_STATIC true)
+SET(ARCH "default")
 
 # where is the target environment
 SET(CMAKE_FIND_ROOT_PATH @prefix@ /usr)
