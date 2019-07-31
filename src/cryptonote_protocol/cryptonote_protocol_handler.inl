@@ -883,7 +883,7 @@ namespace cryptonote
       LOG_ERROR_CCONTEXT(
           "Requested objects count is too big ("
           << arg.blocks.size() << ") expected not more then "
-          << CURRENCY_PROTOCOL_MAX_BLOCKS_REQUEST_COUNT);
+          << CURRENCY_PROTOCOL_MAX_OBJECT_REQUEST_COUNT);
       drop_connection(context, false, false);
       return 1;
     }
@@ -920,7 +920,7 @@ namespace cryptonote
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::handle_response_get_objects(int command, NOTIFY_RESPONSE_GET_OBJECTS::request& arg, cryptonote_connection_context& context)
   {
-    MLOG_P2P_MESSAGE("Received NOTIFY_RESPONSE_GET_OBJECTS (" << arg.blocks.size() << " blocks);
+    MLOG_P2P_MESSAGE("Received NOTIFY_RESPONSE_GET_OBJECTS (" << arg.blocks.size() << " blocks)");
     MLOG_PEER_STATE("received objects");
 
     boost::posix_time::ptime request_time = context.m_last_request_time;
