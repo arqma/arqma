@@ -205,6 +205,13 @@ namespace nodetool
         m_config.m_support_flags = 0; // only set in public zone
       }
     };
+    
+    enum igd_t
+    {
+      no_igd,
+      igd,
+      delayed_igd,
+    };
 
   public:
     typedef t_payload_net_handler payload_net_handler;
@@ -216,7 +223,7 @@ namespace nodetool
         m_rpc_credits_per_hash(0),
         m_allow_local_ip(false),
         m_hide_my_port(false),
-        m_no_igd(false),
+        m_igd(no_igd),
         m_offline(false),
         m_save_graph(false),
         is_closing(false),
@@ -426,7 +433,7 @@ namespace nodetool
     uint32_t m_rpc_credits_per_hash;
     bool m_allow_local_ip;
     bool m_hide_my_port;
-    bool m_no_igd;
+    igd_t m_igd;
     bool m_offline;
     std::atomic<bool> m_save_graph;
     std::atomic<bool> is_closing;
@@ -499,6 +506,7 @@ namespace nodetool
     extern const command_line::arg_descriptor<bool> arg_p2p_hide_my_port;
 
     extern const command_line::arg_descriptor<bool> arg_no_igd;
+    extern const command_line::arg_descriptor<std::string> arg_igd;
     extern const command_line::arg_descriptor<bool> arg_offline;
     extern const command_line::arg_descriptor<int64_t> arg_out_peers;
     extern const command_line::arg_descriptor<int64_t> arg_in_peers;
