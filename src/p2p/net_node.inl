@@ -1580,7 +1580,7 @@ namespace nodetool
       }
       else
       {
-        if(m_igd == delayes_igd)
+        if(m_igd == delayed_igd)
         {
           MWARNING("No incoming connections, trying to setup and use IGD");
           add_upnp_port_mapping(m_listening_port);
