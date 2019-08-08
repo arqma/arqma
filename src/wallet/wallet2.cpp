@@ -3985,7 +3985,6 @@ void wallet2::init_type(hw::device::device_type device_type)
   m_multisig = false;
   m_multisig_threshold = 0;
   m_multisig_signers.clear();
-  m_original_keys_available = false;
   m_key_device_type = device_type;
 }
 
@@ -4058,9 +4057,6 @@ void wallet2::generate(const std::string& wallet_, const epee::wipeable_string& 
   m_account.make_multisig(view_secret_key, spend_secret_key, spend_public_key, multisig_keys);
   m_account.finalize_multisig(spend_public_key);
 
-  // Not possible to restore a multisig wallet that is able to activate the MMS
-  // (because the original keys are not (yet) part of the restore info), so
-  // keep m_original_keys_available to false
   init_type(hw::device::device_type::SOFTWARE);
   m_multisig = true;
   m_multisig_threshold = threshold;
@@ -4376,7 +4372,6 @@ std::string wallet2::make_multisig(const epee::wipeable_string &password,
   memwipe(&spend_skey, sizeof(rct::key));
 
   init_type(hw::device::device_type::SOFTWARE);
-  m_original_keys_available = true;
   m_multisig = true;
   m_multisig_threshold = threshold;
   m_multisig_signers = multisig_signers;
