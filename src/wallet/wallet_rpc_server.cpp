@@ -1885,7 +1885,7 @@ namespace tools
 
     try
     {
-      m_wallet->rescan_blockchain();
+      m_wallet->rescan_blockchain(req.hard);
     }
     catch (const std::exception& e)
     {
@@ -2569,7 +2569,7 @@ namespace tools
     if (!m_wallet) return not_open(er);
     try
     {
-      std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> ski = m_wallet->export_key_images();
+      std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> ski = m_wallet->export_key_images(req.all);
       res.offset = ski.first;
       res.signed_key_images.resize(ski.second.size());
       for (size_t n = 0; n < ski.second.size(); ++n)

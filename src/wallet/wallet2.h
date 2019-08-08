@@ -835,7 +835,7 @@ private:
 
     uint64_t get_blockchain_current_height() const { return m_light_wallet_blockchain_height ? m_light_wallet_blockchain_height : m_blockchain.size(); }
     void rescan_spent();
-    void rescan_blockchain(bool refresh = true);
+    void rescan_blockchain(bool hard, bool refresh = true, bool keep_key_images = false);
     bool is_transfer_unlocked(const transfer_details& td) const;
     bool is_transfer_unlocked(uint64_t unlock_time, uint64_t block_height) const;
 
@@ -1142,7 +1142,7 @@ private:
     std::tuple<size_t, crypto::hash, std::vector<crypto::hash>> export_blockchain() const;
     void import_blockchain(const std::tuple<size_t, crypto::hash, std::vector<crypto::hash>> &bc);
     bool export_key_images(const std::string &filename) const;
-    std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> export_key_images() const;
+    std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> export_key_images(bool all = false) const;
     uint64_t import_key_images(const std::vector<std::pair<crypto::key_image, crypto::signature>> &signed_key_images, size_t offset, uint64_t &spent, uint64_t &unspent, bool check_spent = true);
     uint64_t import_key_images(const std::string &filename, uint64_t &spent, uint64_t &unspent);
 
@@ -1283,6 +1283,9 @@ private:
     void set_tx_notify(const std::shared_ptr<tools::Notify> &notify) { m_tx_notify = notify; }
 
     bool is_tx_spendtime_unlocked(uint64_t unlock_time, uint64_t block_height) const;
+    void hash_m_transfer(const transfer_details & transfer, crypto::hash &hash) const;
+    uint64_t hash_m_transfers(int64_t transfer_height, crypto::hash &hash) const;
+    void finish_rescan_bc_keep_key_images(uint64_t transfer_height, const crypto::hash &hash);
 
     uint64_t credits() const { return m_rpc_payment_state.credits; }
     void credit_report(uint64_t &expected_spent, uint64_t &discrepancy) const { expected_spent = m_rpc_payment_state.expected_spent; discrepancy = m_rpc_payment_state.discrepancy; }
@@ -1307,6 +1310,7 @@ private:
     void detach_blockchain(uint64_t height);
     void get_short_chain_history(std::list<crypto::hash>& ids, uint64_t granularity = 1) const;
     bool clear();
+    void clear_soft(bool keep_key_images=false);
     void pull_blocks(uint64_t start_height, uint64_t& blocks_start_height, const std::list<crypto::hash> &short_chain_history, std::vector<cryptonote::block_complete_entry> &blocks, std::vector<cryptonote::COMMAND_RPC_GET_BLOCKS_FAST::block_output_indices> &o_indices);
     void pull_hashes(uint64_t start_height, uint64_t& blocks_start_height, const std::list<crypto::hash> &short_chain_history, std::vector<crypto::hash> &hashes);
     void fast_refresh(uint64_t stop_height, uint64_t &blocks_start_height, std::list<crypto::hash> &short_chain_history, bool force = false);

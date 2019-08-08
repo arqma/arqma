@@ -231,6 +231,7 @@ namespace
   const char* USAGE_WELCOME("welcome");
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
+  const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
 
   std::string input_line(const std::string& prompt, bool yesno = false)
   {
@@ -2852,7 +2853,8 @@ simple_wallet::simple_wallet()
                            tr("Show the unspent outputs of a specified address within an optional amount range."));
   m_cmd_binder.set_handler("rescan_bc",
                            boost::bind(&simple_wallet::rescan_blockchain, this, _1),
-                           tr("Rescan the blockchain from scratch, losing any information which can not be recovered from the blockchain itself."));
+                           tr(USAGE_RESCAN_BC),
+                           tr("Rescan the blockchain from scratch. If \"hard\" is specified, you will lose any information which can not be recovered from the blockchain itself."));
   m_cmd_binder.set_handler("set_tx_note",
                            boost::bind(&simple_wallet::set_tx_note, this, _1),
                            tr(USAGE_SET_TX_NOTE),
@@ -4709,15 +4711,22 @@ boost::optional<epee::wipeable_string> simple_wallet::on_get_password(const char
   return pwd_container->password();
 }
 //----------------------------------------------------------------------------------------------------
-bool simple_wallet::refresh_main(uint64_t start_height, bool reset, bool is_init)
+bool simple_wallet::refresh_main(uint64_t start_height, enum ResetType reset, bool is_init)
 {
-  if (!try_connect_to_daemon(is_init))
+  if(!try_connect_to_daemon(is_init))
     return true;
 
   LOCK_IDLE_SCOPE();
-
-  if (reset)
-    m_wallet->rescan_blockchain(false);
+  
+  crypto::hash transfer_hash_pre();
+  uint64_t height_pre = 0, height_post;
+  if(reset != ResetNone)
+  {
+    if(reset == ResetSoftKeepKI)
+      height_pre = m_wallet->hash_m_transfers(-1, transfer_hash_pre);
+    
+    m_wallet->rescan_blockchain(reset == ResetHard, false, reset == ResetSoftKeepKI);
+  }
 
 #ifdef HAVE_READLINE
   rdln::suspend_readline pause_readline;
@@ -4733,6 +4742,18 @@ bool simple_wallet::refresh_main(uint64_t start_height, bool reset, bool is_init
     m_in_manual_refresh.store(true, std::memory_order_relaxed);
     epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){m_in_manual_refresh.store(false, std::memory_order_relaxed);});
     m_wallet->refresh(m_wallet->is_trusted_daemon(), start_height, fetched_blocks);
+    
+    if(reset == ResetSoftKeepKI)
+    {
+      m_wallet->finish_rescan_bc_keep_key_images(height_pre, transfer_hash_pre);
+      
+      height_post = m_wallet->get_num_transfer_details();
+      if (height_pre != height_post)
+      {
+        message_writer() << tr("New transfer received since rescan was started. Key images are incomplete.");
+      }
+    }
+    
     ok = true;
     // Clear line "Height xxx of xxx"
     std::cout << "\r                                                                \r";
@@ -4801,7 +4822,7 @@ bool simple_wallet::refresh(const std::vector<std::string>& args)
         start_height = 0;
     }
   }
-  return refresh_main(start_height, false);
+  return refresh_main(start_height, ResetNone);
 }
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::show_balance_unlocked(bool detailed)
@@ -7750,15 +7771,67 @@ bool simple_wallet::unspent_outputs(const std::vector<std::string> &args_)
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::rescan_blockchain(const std::vector<std::string> &args_)
 {
-  message_writer() << tr("Warning: this will lose any information which can not be recovered from the blockchain.");
-  message_writer() << tr("This includes destination addresses, tx secret keys, tx notes, etc");
-  std::string confirm = input_line(tr("Rescan anyway?"), true);
-  if(!std::cin.eof())
+  uint64_t start_height = 0;
+  ResetType reset_type = ResetSoft;
+  
+  if(!args_.empty())
   {
-    if (!command_line::is_yes(confirm))
+    if(args_[0] == "hard")
+    {
+      reset_type = ResetHard;
+    }
+    else if(args_[0] == "soft")
+    {
+      reset_type = ResetSoft;
+    }
+    else if(args_[0] == "keep_ki")
+    {
+      reset_type = ResetSoftKeepKI;
+    }
+    else
+    {
+      PRINT_USAGE(USAGE_RESCAN_BC);
       return true;
+    }
+    
+    if(args_.size() > 1)
+    {
+      try
+      {
+        start_height = boost::lexical_cast<uint64_t>( args_[1] );
+      }
+      catch(const boost::bad_lexical_cast &)
+      {
+        start_height = 0;
+      }
+    }
   }
-  return refresh_main(0, true);
+  
+  if(reset_type == ResetHard)
+  {
+    message_writer() << tr("Warning: this will lose any information which can not be recovered from the blockchain.");
+    message_writer() << tr("This includes destination addresses, tx secret keys, tx notes, etc");
+    std::string confirm = input_line(tr("Rescan anyway?"), true);
+    if(!std::cin.eof())
+    {
+      if (!command_line::is_yes(confirm))
+        return true;
+    }
+  }
+  
+  const uint64_t wallet_from_height = m_wallet->get_refresh_from_block_height();
+  if (start_height > wallet_from_height)
+  {
+    message_writer() << tr("Warning: your restore height is higher than wallet restore height: ") << wallet_from_height;
+    std::string confirm = input_line(tr("Rescan anyway ? (Y/Yes/N/No): "));
+    if(!std::cin.eof())
+    {
+      if (!command_line::is_yes(confirm))
+        return true;
+    }
+  }
+
+  return refresh_main(start_height, reset_type, true);
 }
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::wallet_idle_thread()
@@ -7879,7 +7952,7 @@ bool simple_wallet::run()
   // check and display warning, but go on anyway
   try_connect_to_daemon();
 
-  refresh_main(0, false, true);
+  refresh_main(0, ResetNone, true);
 
   m_auto_refresh_enabled = m_wallet->auto_refresh();
   m_idle_thread = boost::thread([&]{wallet_idle_thread();});

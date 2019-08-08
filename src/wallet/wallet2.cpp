@@ -3279,6 +3279,26 @@ bool wallet2::clear()
   m_multisig_rounds_passed = 0;
   return true;
 }
+//----------------------------------------------------------------------------------------------------
+void wallet2::clear_soft(bool keep_key_images)
+{
+  m_blockchain.clear();
+  m_transfers.clear();
+  if(!keep_key_images)
+    m_key_images.clear();
+  m_pub_keys.clear();
+  m_unconfirmed_txs.clear();
+  m_payments.clear();
+  m_confirmed_txs.clear();
+  m_unconfirmed_payments.clear();
+  m_scanned_pool_txs[0].clear();
+  m_scanned_pool_txs[1].clear();
+
+  cryptonote::block b;
+  generate_genesis(b);
+  m_blockchain.push_back(get_block_hash(b));
+  m_last_block_reward = cryptonote::get_outs_money_amount(b.miner_tx);
+}
 
 /*!
  * \brief Stores wallet information to wallet file.
@@ -5449,14 +5469,29 @@ void wallet2::rescan_spent()
   }
 }
 //----------------------------------------------------------------------------------------------------
-void wallet2::rescan_blockchain(bool refresh)
+void wallet2::rescan_blockchain(bool hard, bool refresh, bool keep_key_images)
 {
-  clear();
+  CHECK_AND_ASSERT_THROW_MES(!hard || !keep_key_images, "Cannot preserve key images on hard rescan");
+  const size_t transfers_cnt = m_transfers.size();
+  crypto::hash transfers_hash{};
+  
+  if(hard)
+  {
+    clear();
+    setup_new_blockchain();
+  }
+  else
+  {
+    if(keep_key_images && refresh)
+      hash_m_transfers((int64_t) transfers_cnt, transfers_hash);
+    clear_soft(keep_key_images);
+  }
 
-  setup_new_blockchain();
-
-  if (refresh)
+  if(refresh)
     this->refresh(false);
+    
+  if(refresh && keep_key_images)
+    finish_rescan_bc_keep_key_images(transfers_cnt, transfers_hash);
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::is_transfer_unlocked(const transfer_details& td) const
@@ -11090,14 +11125,17 @@ bool wallet2::export_key_images(const std::string &filename) const
 }
 
 //----------------------------------------------------------------------------------------------------
-std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> wallet2::export_key_images() const
+std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> wallet2::export_key_images(bool all) const
 {
   PERF_TIMER(export_key_images_raw);
   std::vector<std::pair<crypto::key_image, crypto::signature>> ski;
 
   size_t offset = 0;
-  while (offset < m_transfers.size() && !m_transfers[offset].m_key_image_requested)
-    ++offset;
+  if(!all)
+  {
+    while (offset < m_transfers.size() && !m_transfers[offset].m_key_image_requested)
+      ++offset;
+  }
 
   ski.reserve(m_transfers.size() - offset);
   for (size_t n = offset; n < m_transfers.size(); ++n)
@@ -11424,6 +11462,7 @@ uint64_t wallet2::import_key_images(const std::vector<std::pair<crypto::key_imag
         auto it = m_key_images.find(boost::get<cryptonote::txin_to_key>(in).k_image);
         if (it != m_key_images.end())
         {
+          THROW_WALLET_EXCEPTION_IF(it->second >= m_transfers.size(), error::wallet_internal_error, std::string("Key images cache contains illegal transfer offset: ") + std::to_string(it->second) + std::string(" m_transfers.size() = ") + std::to_string(m_transfers.size()));
           const transfer_details& td = m_transfers[it->second];
           uint64_t amount = boost::get<cryptonote::txin_to_key>(in).amount;
           if (amount > 0)
@@ -11536,6 +11575,63 @@ void wallet2::import_blockchain(const std::tuple<size_t, crypto::hash, std::vect
   crypto::hash genesis_hash = get_block_hash(genesis);
   check_genesis(genesis_hash);
   m_last_block_reward = cryptonote::get_outs_money_amount(genesis.miner_tx);
+}
+//----------------------------------------------------------------------------------------------------
+void wallet2::hash_m_transfer(const transfer_details & transfer, crypto::hash &hash) const
+{
+  KECCAK_CTX state;
+  keccak_init(&state);
+  keccak_update(&state, (const uint8_t *) transfer.m_txid.data, sizeof(transfer.m_txid.data));
+  keccak_update(&state, (const uint8_t *) transfer.m_internal_output_index, sizeof(transfer.m_internal_output_index));
+  keccak_update(&state, (const uint8_t *) transfer.m_global_output_index, sizeof(transfer.m_global_output_index));
+  keccak_update(&state, (const uint8_t *) transfer.m_amount, sizeof(transfer.m_amount));
+  keccak_finish(&state, (uint8_t *) hash.data);
+}
+//----------------------------------------------------------------------------------------------------
+uint64_t wallet2::hash_m_transfers(int64_t transfer_height, crypto::hash &hash) const
+{
+  CHECK_AND_ASSERT_THROW_MES(transfer_height > (int64_t)m_transfers.size(), "Hash height is greater than number of transfers");
+
+  KECCAK_CTX state;
+  crypto::hash tmp_hash{};
+  uint64_t current_height = 0;
+
+  keccak_init(&state);
+  for(const transfer_details & transfer : m_transfers){
+    if (transfer_height >= 0 && current_height >= (uint64_t)transfer_height){
+      break;
+    }
+
+    hash_m_transfer(transfer, tmp_hash);
+    keccak_update(&state, (const uint8_t *) transfer.m_block_height, sizeof(transfer.m_block_height));
+    keccak_update(&state, (const uint8_t *) tmp_hash.data, sizeof(tmp_hash.data));
+    current_height += 1;
+  }
+  
+  keccak_finish(&state, (uint8_t *) hash.data);
+  return current_height;
+}
+//----------------------------------------------------------------------------------------------------
+void wallet2::finish_rescan_bc_keep_key_images(uint64_t transfer_height, const crypto::hash &hash)
+{
+  // Compute hash of m_transfers, if differs there had to be BC reorg.
+  crypto::hash new_transfers_hash{};
+  hash_m_transfers((int64_t) transfer_height, new_transfers_hash);
+
+  if (new_transfers_hash != hash)
+  {
+    // Soft-Reset to avoid inconsistency in case of BC reorg.
+    clear_soft(false);  // keep_key_images works only with soft reset.
+    THROW_WALLET_EXCEPTION_IF(true, error::wallet_internal_error, "Transfers changed during rescan, soft or hard rescan is needed");
+  }
+
+  // Restore key images in m_transfers from m_key_images
+  for(auto it = m_key_images.begin(); it != m_key_images.end(); it++)
+  {
+    THROW_WALLET_EXCEPTION_IF(it->second >= m_transfers.size(), error::wallet_internal_error, "Key images cache contains illegal transfer offset");
+    m_transfers[it->second].m_key_image = it->first;
+    m_transfers[it->second].m_key_image_known = true;
+  }
 }
 //----------------------------------------------------------------------------------------------------
 std::pair<size_t, std::vector<tools::wallet2::transfer_details>> wallet2::export_outputs() const
