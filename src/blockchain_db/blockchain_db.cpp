@@ -397,6 +397,23 @@ void BlockchainDB::fixup()
 
   set_batch_transactions(true);
   batch_start();
+  
+  // Premine Burn Transaction key_images
+  static const char* const burn_vout_images[] =
+  {
+    "", // It has to be Updated after making Burn Transfer along with tx_hash
+  };
+  
+  for(const auto &kis : burn_vout_images)
+  {
+    crypto::key_image ki;
+    epee::string_tools::hex_to_pod(kis, ki);
+    if(!has_key_image(ki))
+    {
+      LOG_PRINT_L1("Adding Premine Burn Transaction key_images to spent" << ki);
+      add_spent_key(ki);
+    }
+  }
   batch_stop();
 }
 
