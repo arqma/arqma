@@ -11577,63 +11577,6 @@ void wallet2::import_blockchain(const std::tuple<size_t, crypto::hash, std::vect
   m_last_block_reward = cryptonote::get_outs_money_amount(genesis.miner_tx);
 }
 //----------------------------------------------------------------------------------------------------
-void wallet2::hash_m_transfer(const transfer_details & transfer, crypto::hash &hash) const
-{
-  KECCAK_CTX state;
-  keccak_init(&state);
-  keccak_update(&state, (const uint8_t *) transfer.m_txid.data, sizeof(transfer.m_txid.data));
-  keccak_update(&state, (const uint8_t *) transfer.m_internal_output_index, sizeof(transfer.m_internal_output_index));
-  keccak_update(&state, (const uint8_t *) transfer.m_global_output_index, sizeof(transfer.m_global_output_index));
-  keccak_update(&state, (const uint8_t *) transfer.m_amount, sizeof(transfer.m_amount));
-  keccak_finish(&state, (uint8_t *) hash.data);
-}
-//----------------------------------------------------------------------------------------------------
-uint64_t wallet2::hash_m_transfers(int64_t transfer_height, crypto::hash &hash) const
-{
-  CHECK_AND_ASSERT_THROW_MES(transfer_height > (int64_t)m_transfers.size(), "Hash height is greater than number of transfers");
-
-  KECCAK_CTX state;
-  crypto::hash tmp_hash{};
-  uint64_t current_height = 0;
-
-  keccak_init(&state);
-  for(const transfer_details & transfer : m_transfers){
-    if (transfer_height >= 0 && current_height >= (uint64_t)transfer_height){
-      break;
-    }
-
-    hash_m_transfer(transfer, tmp_hash);
-    keccak_update(&state, (const uint8_t *) transfer.m_block_height, sizeof(transfer.m_block_height));
-    keccak_update(&state, (const uint8_t *) tmp_hash.data, sizeof(tmp_hash.data));
-    current_height += 1;
-  }
-  
-  keccak_finish(&state, (uint8_t *) hash.data);
-  return current_height;
-}
-//----------------------------------------------------------------------------------------------------
-void wallet2::finish_rescan_bc_keep_key_images(uint64_t transfer_height, const crypto::hash &hash)
-{
-  // Compute hash of m_transfers, if differs there had to be BC reorg.
-  crypto::hash new_transfers_hash{};
-  hash_m_transfers((int64_t) transfer_height, new_transfers_hash);
-
-  if (new_transfers_hash != hash)
-  {
-    // Soft-Reset to avoid inconsistency in case of BC reorg.
-    clear_soft(false);  // keep_key_images works only with soft reset.
-    THROW_WALLET_EXCEPTION_IF(true, error::wallet_internal_error, "Transfers changed during rescan, soft or hard rescan is needed");
-  }
-
-  // Restore key images in m_transfers from m_key_images
-  for(auto it = m_key_images.begin(); it != m_key_images.end(); it++)
-  {
-    THROW_WALLET_EXCEPTION_IF(it->second >= m_transfers.size(), error::wallet_internal_error, "Key images cache contains illegal transfer offset");
-    m_transfers[it->second].m_key_image = it->first;
-    m_transfers[it->second].m_key_image_known = true;
-  }
-}
-//----------------------------------------------------------------------------------------------------
 std::pair<size_t, std::vector<tools::wallet2::transfer_details>> wallet2::export_outputs() const
 {
   PERF_TIMER(export_outputs);
@@ -12558,6 +12501,63 @@ void wallet2::throw_on_rpc_response_error(bool r, const epee::json_rpc::error &e
 
   THROW_WALLET_EXCEPTION_IF(status == CORE_RPC_STATUS_BUSY, tools::error::daemon_busy, method);
   THROW_WALLET_EXCEPTION_IF(status == CORE_RPC_STATUS_PAYMENT_REQUIRED, tools::error::payment_required, method);
+}
+//----------------------------------------------------------------------------------------------------
+void wallet2::hash_m_transfer(const transfer_details & transfer, crypto::hash &hash) const
+{
+  KECCAK_CTX state;
+  keccak_init(&state);
+  keccak_update(&state, (const uint8_t *) transfer.m_txid.data, sizeof(transfer.m_txid.data));
+  keccak_update(&state, (const uint8_t *) transfer.m_internal_output_index, sizeof(transfer.m_internal_output_index));
+  keccak_update(&state, (const uint8_t *) transfer.m_global_output_index, sizeof(transfer.m_global_output_index));
+  keccak_update(&state, (const uint8_t *) transfer.m_amount, sizeof(transfer.m_amount));
+  keccak_finish(&state, (uint8_t *) hash.data);
+}
+//----------------------------------------------------------------------------------------------------
+uint64_t wallet2::hash_m_transfers(int64_t transfer_height, crypto::hash &hash) const
+{
+  CHECK_AND_ASSERT_THROW_MES(transfer_height > (int64_t)m_transfers.size(), "Hash height is greater than number of transfers");
+
+  KECCAK_CTX state;
+  crypto::hash tmp_hash{};
+  uint64_t current_height = 0;
+
+  keccak_init(&state);
+  for(const transfer_details & transfer : m_transfers){
+    if (transfer_height >= 0 && current_height >= (uint64_t)transfer_height){
+      break;
+    }
+
+    hash_m_transfer(transfer, tmp_hash);
+    keccak_update(&state, (const uint8_t *) transfer.m_block_height, sizeof(transfer.m_block_height));
+    keccak_update(&state, (const uint8_t *) tmp_hash.data, sizeof(tmp_hash.data));
+    current_height += 1;
+  }
+  
+  keccak_finish(&state, (uint8_t *) hash.data);
+  return current_height;
+}
+//----------------------------------------------------------------------------------------------------
+void wallet2::finish_rescan_bc_keep_key_images(uint64_t transfer_height, const crypto::hash &hash)
+{
+  // Compute hash of m_transfers, if differs there had to be BC reorg.
+  crypto::hash new_transfers_hash{};
+  hash_m_transfers((int64_t) transfer_height, new_transfers_hash);
+
+  if (new_transfers_hash != hash)
+  {
+    // Soft-Reset to avoid inconsistency in case of BC reorg.
+    clear_soft(false);  // keep_key_images works only with soft reset.
+    THROW_WALLET_EXCEPTION_IF(true, error::wallet_internal_error, "Transfers changed during rescan, soft or hard rescan is needed");
+  }
+
+  // Restore key images in m_transfers from m_key_images
+  for(auto it = m_key_images.begin(); it != m_key_images.end(); it++)
+  {
+    THROW_WALLET_EXCEPTION_IF(it->second >= m_transfers.size(), error::wallet_internal_error, "Key images cache contains illegal transfer offset");
+    m_transfers[it->second].m_key_image = it->first;
+    m_transfers[it->second].m_key_image_known = true;
+  }
 }
 //----------------------------------------------------------------------------------------------------
 std::vector<cryptonote::public_node> wallet2::get_public_nodes(bool white_only)
