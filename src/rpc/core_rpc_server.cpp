@@ -335,11 +335,13 @@ namespace cryptonote
     res.rpc_connections_count = restricted ? 0 : get_connections_count();
     res.white_peerlist_size = restricted ? 0 : m_p2p.get_public_white_peers_count();
     res.grey_peerlist_size = restricted ? 0 : m_p2p.get_public_gray_peers_count();
+    
     cryptonote::network_type net_type = nettype();
     res.mainnet = net_type == MAINNET;
     res.testnet = net_type == TESTNET;
     res.stagenet = net_type == STAGENET;
     res.nettype = net_type == MAINNET ? "mainnet" : net_type == TESTNET ? "testnet" : net_type == STAGENET ? "stagenet" : "fakechain";
+    
     res.cumulative_difficulty = m_core.get_blockchain_storage().get_db().get_block_cumulative_difficulty(res.height - 1);
     res.block_size_limit = res.block_weight_limit = m_core.get_blockchain_storage().get_current_cumulative_block_weight_limit();
     res.block_size_median = res.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
@@ -991,7 +993,7 @@ namespace cryptonote
       res.status = "Failed";
       std::string reason = "";
       if ((res.low_mixin = tvc.m_low_mixin))
-        add_reason(reason, "ring size too small");
+        add_reason(reason, "bad ring size");
       if ((res.double_spend = tvc.m_double_spend))
         add_reason(reason, "double spend");
       if ((res.invalid_input = tvc.m_invalid_input))

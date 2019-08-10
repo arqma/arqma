@@ -764,15 +764,15 @@ std::string get_nix_version_display_string()
   ssize_t get_lockable_memory()
   {
 #ifdef __GLIBC__
-    struct rlimit rlim;
-	if (getrlimit(RLIMIT_MEMLOCK, &rlim) < 0)
-	{
-	  MERROR("Failed to determine the lockable memory limit");
-	  return -1;
-	}
-	return rlim.rlim_cur;
+  struct rlimit rlim;
+  if (getrlimit(RLIMIT_MEMLOCK, &rlim) < 0)
+  {
+    MERROR("Failed to determine the lockable memory limit");
+    return -1;
+  }
+  return rlim.rlim_cur;
 #else
-	return -1;
+  return -1;
 #endif
   }
 

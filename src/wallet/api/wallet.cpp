@@ -1203,7 +1203,8 @@ string WalletImpl::makeMultisig(const vector<string>& info, uint32_t threshold) 
     return string();
 }
 
-std::string WalletImpl::exchangeMultisigKeys(const std::vector<std::string> &info) {
+std::string WalletImpl::exchangeMultisigKeys(const std::vector<std::string> &info)
+{
     try {
         clearStatus();
         checkMultisigWalletNotReady(m_wallet);

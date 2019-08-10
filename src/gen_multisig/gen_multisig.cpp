@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
   }
   if (threshold <= 1 || threshold > total)
   {
-    tools::fail_msg_writer() << (boost::format(genms::tr("Error: expected N > 1 and N <= M, but got N==%u and M==%d")) % threshold % total).str();
+    tools::fail_msg_writer() << (boost::format(genms::tr("Error: expected N > 1 and N <= M, but got N = %u and M = %d")) % threshold % total).str();
     return 1;
   }
   if (!(*vm)["filename-base"].defaulted() && !command_line::get_arg(*vm, arg_filename_base).empty())

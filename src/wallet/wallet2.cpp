@@ -155,11 +155,11 @@ namespace
     std::string data;
     crypto::public_key signer;
     CHECK_AND_ASSERT_THROW_MES(crypto::secret_key_to_public_key(signer_secret_key, signer), "Failed to derive public spend key");
-    data += std::string((const char *)&signer, sizeof(crypto::public_key));
+    data += std::string((const char*)&signer, sizeof(crypto::public_key));
 
     for (const auto &key: keys)
     {
-      data += std::string((const char *)&key, sizeof(crypto::public_key));
+      data += std::string((const char*)&key, sizeof(crypto::public_key));
     }
 
     data.resize(data.size() + sizeof(crypto::signature));
@@ -177,7 +177,8 @@ namespace
     std::vector<crypto::public_key> public_keys;
     public_keys.reserve(keys.size());
 
-    std::transform(keys.begin(), keys.end(), std::back_inserter(public_keys), [] (const crypto::secret_key& k) -> crypto::public_key {
+    std::transform(keys.begin(), keys.end(), std::back_inserter(public_keys), [] (const crypto::secret_key& k) -> crypto::public_key
+    {
       crypto::public_key p;
       CHECK_AND_ASSERT_THROW_MES(crypto::secret_key_to_public_key(k, p), "Failed to derive public spend key");
       return p;
@@ -2197,6 +2198,7 @@ void wallet2::process_outgoing(const crypto::hash &txid, const cryptonote::trans
     entry.first->second.m_subaddr_indices = subaddr_indices;
   }
 
+  entry.first->second.m_rings.clear();
   for (const auto &in: tx.vin)
   {
     if (in.type() != typeid(cryptonote::txin_to_key))
@@ -4410,30 +4412,24 @@ std::string wallet2::make_multisig(const epee::wipeable_string &password,
   return extra_multisig_info;
 }
 
-std::string wallet2::exchange_multisig_keys(const epee::wipeable_string &password,
-  const std::vector<std::string> &info)
+std::string wallet2::exchange_multisig_keys(const epee::wipeable_string &password, const std::vector<std::string> &info)
 {
-  THROW_WALLET_EXCEPTION_IF(info.empty(),
-    error::wallet_internal_error, "Empty multisig info");
+  THROW_WALLET_EXCEPTION_IF(info.empty(), error::wallet_internal_error, "Empty multisig info");
 
   if (info[0].substr(0, MULTISIG_EXTRA_INFO_MAGIC.size()) != MULTISIG_EXTRA_INFO_MAGIC)
   {
-    THROW_WALLET_EXCEPTION_IF(false,
-      error::wallet_internal_error, "Unsupported info string");
+    THROW_WALLET_EXCEPTION_IF(false, error::wallet_internal_error, "Unsupported info string");
   }
 
   std::vector<crypto::public_key> signers;
   std::unordered_set<crypto::public_key> pkeys;
 
-  THROW_WALLET_EXCEPTION_IF(!unpack_extra_multisig_info(info, signers, pkeys),
-    error::wallet_internal_error, "Bad extra multisig info");
+  THROW_WALLET_EXCEPTION_IF(!unpack_extra_multisig_info(info, signers, pkeys), error::wallet_internal_error, "Bad extra multisig info");
 
   return exchange_multisig_keys(password, pkeys, signers);
 }
 
-std::string wallet2::exchange_multisig_keys(const epee::wipeable_string &password,
-  std::unordered_set<crypto::public_key> derivations,
-  std::vector<crypto::public_key> signers)
+std::string wallet2::exchange_multisig_keys(const epee::wipeable_string &password, std::unordered_set<crypto::public_key> derivations, std::vector<crypto::public_key> signers)
 {
   CHECK_AND_ASSERT_THROW_MES(!derivations.empty(), "empty pkeys");
   CHECK_AND_ASSERT_THROW_MES(!signers.empty(), "empty signers");
@@ -4544,9 +4540,7 @@ std::string wallet2::exchange_multisig_keys(const epee::wipeable_string &passwor
   return extra_multisig_info;
 }
 
-void wallet2::unpack_multisig_info(const std::vector<std::string>& info,
-  std::vector<crypto::public_key> &public_keys,
-  std::vector<crypto::secret_key> &secret_keys) const
+void wallet2::unpack_multisig_info(const std::vector<std::string>& info, std::vector<crypto::public_key> &public_keys, std::vector<crypto::secret_key> &secret_keys) const
 {
   // parse all multisig info
   public_keys.resize(info.size());
@@ -4590,15 +4584,12 @@ void wallet2::unpack_multisig_info(const std::vector<std::string>& info,
     }
     else
     {
-      THROW_WALLET_EXCEPTION_IF(public_keys[i] == local_pkey, error::wallet_internal_error,
-          "Found local spend public key, but not local view secret key - something very weird");
+      THROW_WALLET_EXCEPTION_IF(public_keys[i] == local_pkey, error::wallet_internal_error, "Found local spend public key, but not local view secret key - something very weird");
     }
   }
 }
 
-std::string wallet2::make_multisig(const epee::wipeable_string &password,
-  const std::vector<std::string> &info,
-  uint32_t threshold)
+std::string wallet2::make_multisig(const epee::wipeable_string &password, const std::vector<std::string> &info, uint32_t threshold)
 {
   std::vector<crypto::secret_key> secret_keys(info.size());
   std::vector<crypto::public_key> public_keys(info.size());
@@ -4665,8 +4656,8 @@ std::string wallet2::get_multisig_info() const
   crypto::hash hash;
 
   std::string data;
-  data += std::string((const char *)&skey, sizeof(crypto::secret_key));
-  data += std::string((const char *)&pkey, sizeof(crypto::public_key));
+  data += std::string((const char*)&skey, sizeof(crypto::secret_key));
+  data += std::string((const char*)&pkey, sizeof(crypto::public_key));
 
   data.resize(data.size() + sizeof(crypto::signature));
   crypto::cn_fast_hash(data.data(), data.size() - sizeof(signature), hash);
@@ -4677,6 +4668,43 @@ std::string wallet2::get_multisig_info() const
 }
 
 bool wallet2::verify_multisig_info(const std::string &data, crypto::secret_key &skey, crypto::public_key &pkey)
+{
+  const size_t header_len = strlen("MultisigV1");
+  if(data.size() < header_len || data.substr(0, header_len) !- "MultisigV1")
+  {
+    MERROR("Multisig info header check error");
+    return false;
+  }
+  std::string decoded;
+  if(!tools::base58::decode(data.substr(header_len), decoded))
+  {
+    MERROR("Multisig info decoding error");
+    return false;
+  }
+  if(decoded.size() != sizeof(crypto::secret_key) + sizeof(crypto::public_key) + sizeof(crypto::signature))
+  {
+    MERROR("Multisig info is corrupt");
+    return false;
+  }
+  
+  size_t offset = 0;
+  skey = *(const crypto::secret_key*)(decoded.data() + offset);
+  offset += sizeof(skey);
+  pkey = *(const crypto::public_key*)(decoded.data() + offset);
+  offset += sizeof(pkey);
+  const crypto::signature &signature = *(const crypto::signature*)(decoded.data() + offset);
+  
+  crypto::hash hash;
+  crypto::cn_fast_hash(decoded.data(), decoded.size() - sizeof(signature), hash);
+  if (!crypto::check_signature(hash, pkey, signature))
+  {
+    MERROR("Multisig info signature is invalid");
+    return false;
+  }
+  return true;
+}
+
+bool wallet2::verify_extra_multisig_info(const std::string &data, std::unordered_set<crypto::public_key> &pkeys, crypto::public_key &signer)
 {
   if(data.size() < MULTISIG_EXTRA_INFO_MAGIC.size() || data.substr(0, MULTISIG_EXTRA_INFO_MAGIC.size()) != MULTISIG_EXTRA_INFO_MAGIC)
   {
@@ -4695,55 +4723,11 @@ bool wallet2::verify_multisig_info(const std::string &data, crypto::secret_key &
     return false;
   }
 
-  size_t offset = 0;
-  skey = *(const crypto::secret_key*)(decoded.data() + offset);
-  offset += sizeof(skey);
-  pkey = *(const crypto::public_key*)(decoded.data() + offset);
-  offset += sizeof(pkey);
-  const crypto::signature &signature = *(const crypto::signature*)(decoded.data() + offset);
-
-  crypto::hash hash;
-  crypto::cn_fast_hash(decoded.data(), decoded.size() - sizeof(signature), hash);
-  if (!crypto::check_signature(hash, pkey, signature))
-  {
-    MERROR("Multisig info signature is invalid");
-    return false;
-  }
-
-  return true;
-}
-
-bool wallet2::verify_extra_multisig_info(const std::string &data, std::unordered_set<crypto::public_key> &pkeys, crypto::public_key &signer)
-{
-  const size_t header_len = strlen("MultisigxV1");
-  if (data.size() < header_len || data.substr(0, header_len) != "MultisigxV1")
-  {
-    MERROR("Multisig info header check error");
-    return false;
-  }
-  std::string decoded;
-  if (!tools::base58::decode(data.substr(header_len), decoded))
-  {
-    MERROR("Multisig info decoding error");
-    return false;
-  }
-  if (decoded.size() < sizeof(crypto::public_key) + sizeof(crypto::signature))
-  {
-    MERROR("Multisig info is corrupt");
-    return false;
-  }
-  if ((decoded.size() - (sizeof(crypto::public_key) + sizeof(crypto::signature))) % sizeof(crypto::public_key))
-  {
-    MERROR("Multisig info is corrupt");
-    return false;
-  }
-
   const size_t n_keys = (decoded.size() - (sizeof(crypto::public_key) + sizeof(crypto::signature))) / sizeof(crypto::public_key);
   size_t offset = 0;
   signer = *(const crypto::public_key*)(decoded.data() + offset);
   offset += sizeof(signer);
   const crypto::signature &signature = *(const crypto::signature*)(decoded.data() + offset + n_keys * sizeof(crypto::public_key));
-
   crypto::hash hash;
   crypto::cn_fast_hash(decoded.data(), decoded.size() - sizeof(signature), hash);
   if (!crypto::check_signature(hash, signer, signature))
@@ -4751,14 +4735,12 @@ bool wallet2::verify_extra_multisig_info(const std::string &data, std::unordered
     MERROR("Multisig info signature is invalid");
     return false;
   }
-
   for (size_t n = 0; n < n_keys; ++n)
   {
     crypto::public_key mspk = *(const crypto::public_key*)(decoded.data() + offset);
     pkeys.insert(mspk);
     offset += sizeof(mspk);
   }
-
   return true;
 }
 

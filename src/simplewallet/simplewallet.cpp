@@ -1106,7 +1106,8 @@ bool simple_wallet::finalize_multisig(const std::vector<std::string> &args)
   return true;
 }
 
-bool simple_wallet::exchange_multisig_keys(const std::vector<std::string> &args) {
+bool simple_wallet::exchange_multisig_keys(const std::vector<std::string> &args)
+{
     bool ready;
     if (m_wallet->key_on_device())
     {
@@ -2747,7 +2748,7 @@ simple_wallet::simple_wallet()
                                   "store-tx-info <1|0>\n "
                                   "  Whether to store outgoing tx info (destination address, payment ID, tx secret key) for future reference.\n "
                                   "default-ring-size <n>\n "
-                                  "  Set the default ring size (default and minimum is 7).\n "
+                                  "  Set the default ring size (obsolete).\n "
                                   "auto-refresh <1|0>\n "
                                   "  Whether to automatically synchronize new blocks from the daemon.\n "
                                   "refresh-type <full|optimize-coinbase|no-coinbase|default>\n "

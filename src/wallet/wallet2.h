@@ -606,26 +606,18 @@ private:
      * \return empty if done, non empty if we need to send another string
      * to other participants
      */
-    std::string make_multisig(const epee::wipeable_string &password,
-      const std::vector<std::string> &info,
-      uint32_t threshold);
+    std::string make_multisig(const epee::wipeable_string &password, const std::vector<std::string> &info, uint32_t threshold);
     /*!
      * \brief Creates a multisig wallet
      * \return empty if done, non empty if we need to send another string
      * to other participants
      */
-    std::string make_multisig(const epee::wipeable_string &password,
-      const std::vector<crypto::secret_key> &view_keys,
-      const std::vector<crypto::public_key> &spend_keys,
-      uint32_t threshold);
-    std::string exchange_multisig_keys(const epee::wipeable_string &password,
-      const std::vector<std::string> &info);
+    std::string make_multisig(const epee::wipeable_string &password, const std::vector<crypto::secret_key> &view_keys, const std::vector<crypto::public_key> &spend_keys, uint32_t threshold);
+    std::string exchange_multisig_keys(const epee::wipeable_string &password, const std::vector<std::string> &info);
     /*!
      * \brief Any but first round of keys exchange
      */
-    std::string exchange_multisig_keys(const epee::wipeable_string &password,
-      std::unordered_set<crypto::public_key> pkeys,
-      std::vector<crypto::public_key> signers);
+    std::string exchange_multisig_keys(const epee::wipeable_string &password, std::unordered_set<crypto::public_key> pkeys, std::vector<crypto::public_key> signers);
     /*!
      * \brief Finalizes creation of a multisig wallet
      */
@@ -1359,12 +1351,8 @@ private:
     bool get_rct_distribution(uint64_t &start_height, std::vector<uint64_t> &distribution);
 
     uint64_t get_segregation_fork_height() const;
-    void unpack_multisig_info(const std::vector<std::string>& info,
-      std::vector<crypto::public_key> &public_keys,
-      std::vector<crypto::secret_key> &secret_keys) const;
-    bool unpack_extra_multisig_info(const std::vector<std::string>& info,
-      std::vector<crypto::public_key> &signers,
-      std::unordered_set<crypto::public_key> &pkeys) const;
+    void unpack_multisig_info(const std::vector<std::string>& info, std::vector<crypto::public_key> &public_keys, std::vector<crypto::secret_key> &secret_keys) const;
+    bool unpack_extra_multisig_info(const std::vector<std::string>& info, std::vector<crypto::public_key> &signers, std::unordered_set<crypto::public_key> &pkeys) const;
 
     void cache_tx_data(const cryptonote::transaction& tx, const crypto::hash &txid, tx_cache_data &tx_cache_data) const;
 
