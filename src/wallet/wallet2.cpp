@@ -4670,7 +4670,7 @@ std::string wallet2::get_multisig_info() const
 bool wallet2::verify_multisig_info(const std::string &data, crypto::secret_key &skey, crypto::public_key &pkey)
 {
   const size_t header_len = strlen("MultisigV1");
-  if(data.size() < header_len || data.substr(0, header_len) !- "MultisigV1")
+  if(data.size() < header_len || data.substr(0, header_len) != "MultisigV1")
   {
     MERROR("Multisig info header check error");
     return false;
