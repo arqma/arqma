@@ -130,7 +130,7 @@ public:
     NetworkType nettype() const override {return static_cast<NetworkType>(m_wallet->nettype());}
     void hardForkInfo(uint8_t &version, uint64_t &earliest_height) const override;
     bool useForkRules(uint8_t version, int64_t early_blocks) const override;
-     void addSubaddressAccount(const std::string& label) override;
+    void addSubaddressAccount(const std::string& label) override;
     size_t numSubaddressAccounts() const override;
     size_t numSubaddresses(uint32_t accountIndex) const override;
     void addSubaddress(uint32_t accountIndex, const std::string& label) override;
@@ -140,6 +140,7 @@ public:
     MultisigState multisig() const override;
     std::string getMultisigInfo() const override;
     std::string makeMultisig(const std::vector<std::string>& info, uint32_t threshold) override;
+    std::string exchangeMultisigKeys(const std::vector<std::string> &info) override;
     bool finalizeMultisig(const std::vector<std::string>& extraMultisigInfo) override;
     bool exportMultisigImages(std::string& images) override;
     size_t importMultisigImages(const std::vector<std::string>& images) override;

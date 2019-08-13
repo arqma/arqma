@@ -136,7 +136,7 @@ struct txpool_tx_meta_t
 {
   crypto::hash max_used_block_id;
   crypto::hash last_failed_id;
-  uint64_t blob_size;
+  uint64_t weight;
   uint64_t fee;
   uint64_t max_used_block_height;
   uint64_t last_failed_height;
@@ -357,13 +357,15 @@ private:
    * subclass of DB_EXCEPTION
    *
    * @param blk the block to be added
-   * @param block_size the size of the block (transactions and all)
+   * @param block_weight the weight of the block (transactions and all)
+   * @param long_term_block_weight the long term block weight of the block (transactions and all)
    * @param cumulative_difficulty the accumulated difficulty after this block
    * @param coins_generated the number of coins generated total after this block
    * @param blk_hash the hash of the block
    */
   virtual void add_block( const block& blk
-                , const size_t& block_size
+                , size_t block_weight
+                , uint64_t long_term_block_weight
                 , const difficulty_type& cumulative_difficulty
                 , const uint64_t& coins_generated
                 , uint64_t num_rct_outs
@@ -375,7 +377,7 @@ private:
    *
    * The subclass implementing this will remove the block data from the top
    * block in the chain.  The data to be removed is that which was added in
-   * BlockchainDB::add_block(const block& blk, const size_t& block_size, const difficulty_type& cumulative_difficulty, const uint64_t& coins_generated, const crypto::hash& blk_hash)
+   * BlockchainDB::add_block(const block& blk, size_t block_weight, uint64_t long_term_block_weight, const difficulty_type& cumulative_difficulty, const uint64_t& coins_generated, const crypto::hash& blk_hash)
    *
    * If any of this cannot be done, the subclass should throw the corresponding
    * subclass of DB_EXCEPTION
@@ -788,7 +790,8 @@ public:
    * subclass of DB_EXCEPTION
    *
    * @param blk the block to be added
-   * @param block_size the size of the block (transactions and all)
+   * @param block_weight the size of the block (transactions and all)
+   * @param long_term_block_weight the long term weight of the block (transactions and all)
    * @param cumulative_difficulty the accumulated difficulty after this block
    * @param coins_generated the number of coins generated total after this block
    * @param txs the transactions in the block
@@ -796,7 +799,8 @@ public:
    * @return the height of the chain post-addition
    */
   virtual uint64_t add_block( const block& blk
-                            , const size_t& block_size
+                            , size_t block_weight
+                            , uint64_t long_term_block_weight
                             , const difficulty_type& cumulative_difficulty
                             , const uint64_t& coins_generated
                             , const std::vector<transaction>& txs
@@ -929,18 +933,29 @@ public:
   virtual uint64_t get_top_block_timestamp() const = 0;
 
   /**
-   * @brief fetch a block's size
+   * @brief fetch a block's weight
    *
-   * The subclass should return the size of the block with the
+   * The subclass should return the weight of the block with the
    * given height.
    *
    * If the block does not exist, the subclass should throw BLOCK_DNE
    *
    * @param height the height requested
    *
-   * @return the size
+   * @return the weight
    */
-  virtual size_t get_block_size(const uint64_t& height) const = 0;
+  virtual size_t get_block_weight(const uint64_t& height) const = 0;
+
+  /**
+   * @brief fetch the last N blocks' weights
+   *
+   * If there are fewer than N blocks, the returned array will be smaller than N
+   *
+   * @param count the number of blocks requested
+   *
+   * @return the weights
+   */
+  virtual std::vector<uint64_t> get_block_weights(uint64_t start_height, size_t count) const = 0;
 
   /**
    * @brief fetch a block's cumulative difficulty
@@ -983,6 +998,28 @@ public:
    * @return the already generated coins
    */
   virtual uint64_t get_block_already_generated_coins(const uint64_t& height) const = 0;
+
+  /**
+   * @brief fetch a block's long term weight
+   *
+   * If the block does not exist, the subclass should throw BLOCK_DNE
+   *
+   * @param height the height requested
+   *
+   * @return the long term weight
+   */
+  virtual uint64_t get_block_long_term_weight(const uint64_t& height) const = 0;
+
+  /**
+   * @brief fetch the last N blocks' long term weights
+   *
+   * If there are fewer than N blocks, the returned array will be smaller than N
+   *
+   * @param count the number of blocks requested
+   *
+   * @return the weights
+   */
+  virtual std::vector<uint64_t> get_long_term_block_weights(uint64_t start_height, size_t count) const = 0;
 
   /**
    * @brief fetch a block's hash
@@ -1037,9 +1074,11 @@ public:
    *
    * The subclass should return the hash of the most recent block
    *
+   * @param block_height if non NULL, returns the height of that block (ie, the blockchain height minus 1)
+   *
    * @return the top block's hash
    */
-  virtual crypto::hash top_block_hash() const = 0;
+  virtual crypto::hash top_block_hash(uint64_t *block_height = NULL) const = 0;
 
   /**
    * @brief fetch the top block
@@ -1479,6 +1518,21 @@ public:
    * @return success iff true
    */
   virtual bool check_pruning() = 0;
+  
+  /**
+   * @brief get the max block size
+   */
+  virtual uint64_t get_max_block_size() = 0;
+	
+  /**
+   * @brief add a new max block size
+   *
+   * The max block size will be the maximum of sz and the current block size
+   *
+   * @param: sz the block size
+   */
+	
+  virtual void add_max_block_size(uint64_t sz) = 0;
 
   /**
    * @brief runs a function over all txpool transactions

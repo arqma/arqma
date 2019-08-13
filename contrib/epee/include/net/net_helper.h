@@ -65,7 +65,7 @@ namespace net_utils
       boost::unique_future<boost::asio::ip::tcp::socket> operator()(const std::string& addr, const std::string& port, boost::asio::steady_timer&) const;
     };
 
-  class blocked_mode_client
+    class blocked_mode_client
 	{
     enum try_connect_result_t
     {
@@ -106,7 +106,9 @@ namespace net_utils
           m_initialized(true),
           m_connected(false),
           m_deadline(m_io_service),
-          m_shutdowned(0)
+          m_shutdowned(0),
+          m_bytes_sent(0),
+          m_bytes_received(0)
     {
     }
 
@@ -162,7 +164,7 @@ namespace net_utils
         break;
 		}
 
-    m_ssl_socket->next_layer() = connection.get();
+        m_ssl_socket->next_layer() = connection.get();
 		m_deadline.cancel();
 		if(m_ssl_socket->next_layer().is_open())
 				{
@@ -189,6 +191,7 @@ namespace net_utils
 							}
 						}
 					}
+					
 					return CONNECT_SUCCESS;
 				}
         else
@@ -253,9 +256,9 @@ namespace net_utils
 				if(m_connected)
 				{
 					m_connected = false;
-          if(m_ssl_options)
-            shutdown_ssl();
-          m_ssl_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                    if(m_ssl_options)
+                        shutdown_ssl();
+                    m_ssl_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
 				}
 			}
 			catch(const boost::system::system_error& /*er*/)
@@ -266,7 +269,7 @@ namespace net_utils
 			catch(...)
 			{
 				//LOG_ERROR("Some fatal problems.");
-        m_connected = false;
+                m_connected = false;
 				return false;
 			}
 			return true;
@@ -296,19 +299,20 @@ namespace net_utils
 				// Block until the asynchronous operation has completed.
 				while (ec == boost::asio::error::would_block)
 				{
-          m_io_service.reset();
+                    m_io_service.reset();
 					m_io_service.run_one();
 				}
 
 				if(ec)
 				{
 					LOG_PRINT_L3("Problems at write: " << ec.message());
-          m_connected = false;
+                    m_connected = false;
 					return false;
 				}
-        else
+                else
 				{
 					m_deadline.expires_at(std::chrono::steady_clock::time_point::max());
+                    m_bytes_sent += buff.size();
 				}
 			}
 
@@ -360,19 +364,20 @@ namespace net_utils
 				if(!writen || ec)
 				{
 					LOG_PRINT_L3("Problems at write: " << ec.message());
-          m_connected = false;
+                    m_connected = false;
 					return false;
 				}
-        else
+                else
 				{
 					m_deadline.expires_at(std::chrono::steady_clock::time_point::max());
+                    m_bytes_sent += sz;
 				}
 			}
 
 			catch(const boost::system::system_error& er)
 			{
 				LOG_ERROR("Some problems at send, message: " << er.what());
-        m_connected = false;
+                m_connected = false;
 				return false;
 			}
 			catch(...)
@@ -421,14 +426,15 @@ namespace net_utils
 
 				handler_obj hndlr(ec, bytes_transferred);
 
-				char local_buff[10000] = {0};
+				static const size_t max_size = 16384;
+				buff.resize(max_size);
 
-				async_read(local_buff, sizeof(local_buff), boost::asio::transfer_at_least(1), hndlr);
+				async_read(&buff[0], max_size, boost::asio::transfer_at_least(1), hndlr);
 
 				// Block until the asynchronous operation has completed.
 				while (ec == boost::asio::error::would_block && !boost::interprocess::ipcdetail::atomic_read32(&m_shutdowned))
 				{
-          m_io_service.reset();
+				    m_io_service.reset();
 					m_io_service.run_one();
 				}
 
@@ -448,23 +454,24 @@ namespace net_utils
                     m_connected = false;
 					return false;
 				}
-        else
+                else
 				{
-          MTRACE("READ ENDS: Success. bytes_tr: " << bytes_transferred);
+                    MTRACE("READ ENDS: Success. bytes_tr: " << bytes_transferred);
 					m_deadline.expires_at(std::chrono::steady_clock::time_point::max());
 				}
 
 				/*if(!bytes_transferred)
 					return false;*/
 
-				buff.assign(local_buff, bytes_transferred);
+				m_bytes_received += bytes_transferred;
+                buff.resize(bytes_transferred);
 				return true;
 			}
 
 			catch(const boost::system::system_error& er)
 			{
 				LOG_ERROR("Some problems at read, message: " << er.what());
-        m_connected = false;
+                m_connected = false;
 				return false;
 			}
 			catch(...)
@@ -518,15 +525,16 @@ namespace net_utils
 				if(ec)
 				{
 					LOG_PRINT_L3("Problems at read: " << ec.message());
-          m_connected = false;
+                    m_connected = false;
 					return false;
 				}
-        else
+                else
 				{
 					m_deadline.expires_at(std::chrono::steady_clock::time_point::max());
 				}
 
-				if(bytes_transferred != buff.size())
+				m_bytes_received += bytes_transferred;
+                if(bytes_transferred != buff.size())
 				{
 					LOG_ERROR("Transferred mismatch with transfer_at_least value: m_bytes_transferred= " << bytes_transferred << " at_least value=" << buff.size());
 					return false;
@@ -538,7 +546,7 @@ namespace net_utils
 			catch(const boost::system::system_error& er)
 			{
 				LOG_ERROR("Some problems at read, message: " << er.what());
-        m_connected = false;
+                m_connected = false;
 				return false;
 			}
 			catch(...)
@@ -553,7 +561,7 @@ namespace net_utils
 		bool shutdown()
 		{
 			m_deadline.cancel();
-      boost::system::error_code ec;
+            boost::system::error_code ec;
 			if(m_ssl_options.support != ssl_support_t::e_ssl_support_disabled)
 				shutdown_ssl();
             m_ssl_socket->next_layer().cancel(ec);
@@ -566,7 +574,7 @@ namespace net_utils
 			if(ec)
 				MDEBUG("Problems at close: " << ec.message());
 			boost::interprocess::ipcdetail::atomic_write32(&m_shutdowned, 1);
-      m_connected = false;
+            m_connected = false;
 			return true;
 		}
 
@@ -575,9 +583,19 @@ namespace net_utils
 			return m_io_service;
 		}
 
-    boost::asio::ip::tcp::socket& get_socket()
+        boost::asio::ip::tcp::socket& get_socket()
 		{
 			return m_ssl_socket->next_layer();
+		}
+    
+        uint64_t get_bytes_sent() const
+		{
+			return m_bytes_sent;
+		}
+
+		uint64_t get_bytes_received() const
+		{
+			return m_bytes_received;
 		}
 
 	private:
@@ -593,7 +611,7 @@ namespace net_utils
 				// asynchronous operations are cancelled. This allows the blocked
 				// connect(), read_line() or write_line() functions to return.
 				LOG_PRINT_L3("Timed out socket");
-        m_connected = false;
+                m_connected = false;
 				m_ssl_socket->next_layer().close();
 
 				// There is no longer an active deadline. The expiry is set to positive
@@ -613,7 +631,7 @@ namespace net_utils
 			m_ssl_socket->async_shutdown(boost::lambda::var(ec) = boost::lambda::_1);
 			while (ec == boost::asio::error::would_block)
 			{
-        m_io_service.reset();
+                m_io_service.reset();
 				m_io_service.run_one();
 			}
 			// Ignore "short read" error
@@ -641,7 +659,7 @@ namespace net_utils
 		void async_write(const void* data, size_t sz, boost::system::error_code& ec)
 		{
 			if(m_ssl_options.support != ssl_support_t::e_ssl_support_disabled)
-        boost::asio::async_write(*m_ssl_socket, boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
+                boost::asio::async_write(*m_ssl_socket, boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
 			else
 				boost::asio::async_write(m_ssl_socket->next_layer(), boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
 		}
@@ -649,7 +667,7 @@ namespace net_utils
 		void async_read(char* buff, size_t sz, boost::asio::detail::transfer_at_least_t transfer_at_least, handler_obj& hndlr)
 		{
 			if(m_ssl_options.support == ssl_support_t::e_ssl_support_disabled)
-        boost::asio::async_read(m_ssl_socket->next_layer(), boost::asio::buffer(buff, sz), transfer_at_least, hndlr);
+                boost::asio::async_read(m_ssl_socket->next_layer(), boost::asio::buffer(buff, sz), transfer_at_least, hndlr);
 			else
 				boost::asio::async_read(*m_ssl_socket, boost::asio::buffer(buff, sz), transfer_at_least, hndlr);
 
@@ -657,14 +675,16 @@ namespace net_utils
 
 	protected:
 		boost::asio::io_service m_io_service;
-    boost::asio::ssl::context m_ctx;
+        boost::asio::ssl::context m_ctx;
 		std::shared_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> m_ssl_socket;
-    std::function<connect_func> m_connector;
+        std::function<connect_func> m_connector;
 		ssl_options_t m_ssl_options;
 		bool m_initialized;
 		bool m_connected;
 		boost::asio::steady_timer m_deadline;
 		volatile uint32_t m_shutdowned;
+        std::atomic<uint64_t> m_bytes_sent;
+        std::atomic<uint64_t> m_bytes_received;
 	};
 
 
@@ -733,7 +753,7 @@ namespace net_utils
 					LOG_PRINT_L3("Problems at write: " << ec.message());
 					return false;
 				}
-        else
+                else
 				{
 					m_send_deadline.expires_at(boost::posix_time::pos_infin);
 				}

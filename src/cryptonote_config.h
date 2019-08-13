@@ -38,19 +38,12 @@
 #define CRYPTONOTE_DNS_TIMEOUT_MS                       20000
 
 #define CRYPTONOTE_MAX_BLOCK_NUMBER                     500000000
-#define CRYPTONOTE_MAX_BLOCK_SIZE                       500000000  // block header blob limit, never used!
 #define CRYPTONOTE_GETBLOCKTEMPLATE_MAX_BLOCK_SIZE      196608 //size of block (bytes) that is the maximum that miners will produce
-#define CRYPTONOTE_MAX_TX_SIZE                          1000000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
-#define CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW            18
-#define CURRENT_TRANSACTION_VERSION                     2
-#define CURRENT_BLOCK_MAJOR_VERSION                     1
-#define CURRENT_BLOCK_MINOR_VERSION                     1
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2           300*2
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3           100*3
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V4           CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V3
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT              60*60*2
-#define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             4
 
 #define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW               60
 #define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2            11
@@ -67,16 +60,21 @@
 #define CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2    60000 //size of block (bytes) after which reward for block calculated using block size
 #define CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1    20000 //size of block (bytes) after which reward for block calculated using block size - before first fork
 #define CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5    300000 //size of block (bytes) after which reward for block calculated using block size - second change, from v5
+#define CRYPTONOTE_LONG_TERM_BLOCK_WEIGHT_WINDOW_SIZE   100000 // size in blocks of the long term block weight median window
+#define CRYPTONOTE_SHORT_TERM_BLOCK_WEIGHT_SURGE_FACTOR 50
 #define CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE          600
 #define CRYPTONOTE_DISPLAY_DECIMAL_POINT                9
 // COIN - number of smallest units in one coin
 #define COIN                                            ((uint64_t)1000000000)
 
-#define FEE_PER_KB_OLD                                  ((uint64_t)(COIN) / 100)
-#define FEE_PER_KB                                      ((uint64_t)2 * (COIN) / 100000)
-#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)2 * (COIN) / 100000)
+#define FEE_PER_KB_OLD                                  ((uint64_t)10000000)
+#define FEE_PER_KB                                      ((uint64_t)20000)
+#define FEE_PER_BYTE                                    ((uint64_t)3)
+#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)20000)
 #define DYNAMIC_FEE_PER_KB_BASE_BLOCK_REWARD            ((uint64_t)10000000000)
 #define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)20000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
+#define DYNAMIC_FEE_PER_BYTE_BASE_FEE_V13               ((uint64_t)(DYNAMIC_FEE_PER_KB_BASE_FEE_V5) * 50 / 1000)
+#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)750)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
@@ -113,9 +111,6 @@
 #define DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN             DIFFICULTY_TARGET_V2 //just alias; used by tests
 
 #define BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT          10000  //by default, blocks ids count in synchronizing
-#define BLOCKS_QUICK_SYNC_COUNT                         250
-#define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT_PRE_V4       100    //by default, blocks count in blocks downloading
-#define BLOCKS_SYNCHRONIZING_DEFAULT_COUNT              20     //by default, blocks count in blocks downloading
 
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 //seconds, one week
@@ -156,6 +151,7 @@
 #define CRYPTONOTE_BLOCKCHAINDATA_FILENAME              "data.mdb"
 #define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
 #define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
+#define RPC_PAYMENTS_DATA_FILENAME                      "rpcpayments.bin"
 #define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
 #define THREAD_STACK_SIZE                               5 * 1024 * 1024
@@ -164,18 +160,28 @@
 #define HF_VERSION_MIN_MIXIN_4                          6
 #define HF_VERSION_MIN_MIXIN_6                          7
 #define HF_VERSION_ENFORCE_RCT                          6
+
+#define HF_VERSION_MIN_MIXIN_10                         13
+
 #define HF_VERSION_LOWER_FEE                            10
+#define HF_VERSION_PER_BYTE_FEE                         13
+#define HF_FORBID_BORROMEAN                             13
+#define HF_VERSION_LONG_TERM_BLOCK_WEIGHT               14
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
 #define HASH_OF_HASHES_STEP                             256
 
-#define DEFAULT_TXPOOL_MAX_SIZE                         648000000ull // 3 days at 300000, in bytes
+#define DEFAULT_TXPOOL_MAX_WEIGHT                       648000000ull // 3 days at 300000, in bytes
+
+#define BULLETPROOF_MAX_OUTPUTS                         16
 
 #define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096         // the smaller, the smoother the increase
 #define CRYPTONOTE_PRUNING_LOG_STRIPES                  3            // the higher, the more space saved
 #define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500         // the smaller, the more space saved
 //#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
+
+#define RPC_CREDITS_PER_HASH_SCALE                      ((float)(1<<24))
 
 static constexpr uint64_t POISSON_CHECK_TRIGGER = 5;  // Reorg size that triggers poisson timestamp check
 static constexpr uint64_t POISSON_CHECK_DEPTH = 128;  // Main-chain depth of the poisson check. The attacker will have to tamper 50% of those blocks
@@ -184,9 +190,7 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 // New constants are intended to go here
 namespace config
 {
-   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
-   uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
-   uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000);
+   uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)0); // Deprecated
    uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
    std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -226,6 +230,30 @@ namespace config
      boost::uuids::uuid const NETWORK_ID = { {
          0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
        } }; // Bender's daydream
+   }
+
+   namespace blockchain_settings
+   {
+     static constexpr uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+     static constexpr uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
+     static constexpr uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
+     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
+     static constexpr uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+   }
+
+   namespace tx_settings
+   {
+     static constexpr uint8_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     static constexpr uint8_t CURRENT_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
+     static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
+     static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
+   }
+   
+   namespace sync
+   {
+     static constexpr size_t NORMAL_SYNC = 20; // Amount of Blocks to download and Validate at ones while Synchronizung with Arqma Network.
+     static constexpr size_t RAPID_SYNC = 250; // Amount of Blocks to download at ones from already known by Arqma Daemon and Checkpoint are hardcoded into codebase
    }
 }
 

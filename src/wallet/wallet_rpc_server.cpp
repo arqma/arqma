@@ -83,13 +83,11 @@ namespace
   //------------------------------------------------------------------------------------------------------------------------------
   void set_confirmations(tools::wallet_rpc::transfer_entry &entry, uint64_t blockchain_height, uint64_t block_reward)
   {
-    if (entry.height >= blockchain_height)
-    {
+    if (entry.height >= blockchain_height || (entry.height == 0 && (!strcmp(entry.type.c_str(), "pending") || !strcmp(entry.type.c_str(), "pool"))))
       entry.confirmations = 0;
-      entry.suggested_confirmations_threshold = 0;
-      return;
-    }
-    entry.confirmations = blockchain_height - entry.height;
+    else
+      entry.confirmations = blockchain_height - entry.height;
+
     if (block_reward == 0)
       entry.suggested_confirmations_threshold = 0;
     else
@@ -679,9 +677,11 @@ namespace tools
         return false;
       }
 
+      de.original = it->address;
       de.addr = info.address;
       de.is_subaddress = info.is_subaddress;
       de.amount = it->amount;
+      de.is_integrated = info.has_payment_id;
       dsts.push_back(de);
 
       if (info.has_payment_id)
@@ -1053,28 +1053,71 @@ namespace tools
       return false;
     }
 
-    tools::wallet2::unsigned_tx_set exported_txs;
-    try
+    if(req.unsigned_txset.empty() && req.multisig_txset.empty())
     {
-      cryptonote::blobdata blob;
-      if (!epee::string_tools::parse_hexstr_to_binbuff(req.unsigned_txset, blob))
+      er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
+      er.message = "no txset provided";
+      return false;
+    }
+
+    std::vector <wallet2::tx_construction_data> tx_constructions;
+    if(!req.unsigned_txset.empty())
+    {
+      try
       {
-        er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
-        er.message = "Failed to parse hex.";
-        return false;
+        tools::wallet2::unsigned_tx_set exported_txs;
+        cryptonote::blobdata blob;
+        if(!epee::string_tools::parse_hexstr_to_binbuff(req.unsigned_txset, blob))
+        {
+          er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
+          er.message = "Failed to parse hex.";
+          return false;
+        }
+        if(!m_wallet->parse_unsigned_tx_from_str(blob, exported_txs))
+        {
+          er.code = WALLET_RPC_ERROR_CODE_BAD_UNSIGNED_TX_DATA;
+          er.message = "cannot load unsigned_txset";
+          return false;
+        }
+        tx_constructions = exported_txs.txes;
       }
-      if(!m_wallet->parse_unsigned_tx_from_str(blob, exported_txs))
+      catch(const std::exception &e)
       {
         er.code = WALLET_RPC_ERROR_CODE_BAD_UNSIGNED_TX_DATA;
-        er.message = "cannot load unsigned_txset";
+        er.message = "failed to parse unsigned transfers: " + std::string(e.what());
         return false;
       }
-    }
-    catch (const std::exception &e)
+    } 
+    else if(!req.multisig_txset.empty())
     {
-      er.code = WALLET_RPC_ERROR_CODE_BAD_UNSIGNED_TX_DATA;
-      er.message = "failed to parse unsigned transfers: " + std::string(e.what());
-      return false;
+      try
+      {
+        tools::wallet2::multisig_tx_set exported_txs;
+        cryptonote::blobdata blob;
+        if(!epee::string_tools::parse_hexstr_to_binbuff(req.multisig_txset, blob))
+        {
+          er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
+          er.message = "Failed to parse hex.";
+          return false;
+        }
+        if(!m_wallet->parse_multisig_tx_from_str(blob, exported_txs))
+        {
+          er.code = WALLET_RPC_ERROR_CODE_BAD_MULTISIG_TX_DATA;
+          er.message = "cannot load multisig_txset";
+          return false;
+        }
+
+        for(size_t n = 0; n < exported_txs.m_ptx.size(); ++n)
+        {
+          tx_constructions.push_back(exported_txs.m_ptx[n].construction_data);
+        }
+      }
+      catch(const std::exception &e)
+      {
+        er.code = WALLET_RPC_ERROR_CODE_BAD_MULTISIG_TX_DATA;
+        er.message = "failed to parse multisig transfers: " + std::string(e.what());
+        return false;
+      }
     }
 
     std::vector<tools::wallet2::pending_tx> ptx;
@@ -1083,19 +1126,19 @@ namespace tools
       // gather info to ask the user
       std::unordered_map<cryptonote::account_public_address, std::pair<std::string, uint64_t>> dests;
       int first_known_non_zero_change_index = -1;
-      for (size_t n = 0; n < exported_txs.txes.size(); ++n)
+      for(size_t n = 0; n < tx_constructions.size(); ++n)
       {
-        const tools::wallet2::tx_construction_data &cd = exported_txs.txes[n];
+        const tools::wallet2::tx_construction_data &cd = tx_constructions[n];
         res.desc.push_back({0, 0, std::numeric_limits<uint32_t>::max(), 0, {}, "", 0, "", 0, 0, ""});
         wallet_rpc::COMMAND_RPC_DESCRIBE_TRANSFER::transfer_description &desc = res.desc.back();
 
         std::vector<cryptonote::tx_extra_field> tx_extra_fields;
         bool has_encrypted_payment_id = false;
         crypto::hash8 payment_id8 = crypto::null_hash8;
-        if (cryptonote::parse_tx_extra(cd.extra, tx_extra_fields))
+        if(cryptonote::parse_tx_extra(cd.extra, tx_extra_fields))
         {
           cryptonote::tx_extra_nonce extra_nonce;
-          if (find_tx_extra_field_by_type(tx_extra_fields, extra_nonce))
+          if(find_tx_extra_field_by_type(tx_extra_fields, extra_nonce))
           {
             crypto::hash payment_id;
             if(cryptonote::get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce.nonce, payment_id8))
@@ -1103,21 +1146,21 @@ namespace tools
               desc.payment_id = epee::string_tools::pod_to_hex(payment_id8);
               has_encrypted_payment_id = true;
             }
-            else if (cryptonote::get_payment_id_from_tx_extra_nonce(extra_nonce.nonce, payment_id))
+            else if(cryptonote::get_payment_id_from_tx_extra_nonce(extra_nonce.nonce, payment_id))
             {
               desc.payment_id = epee::string_tools::pod_to_hex(payment_id);
             }
           }
         }
 
-        for (size_t s = 0; s < cd.sources.size(); ++s)
+        for(size_t s = 0; s < cd.sources.size(); ++s)
         {
           desc.amount_in += cd.sources[s].amount;
           size_t ring_size = cd.sources[s].outputs.size();
           if (ring_size < desc.ring_size)
             desc.ring_size = ring_size;
         }
-        for (size_t d = 0; d < cd.splitted_dsts.size(); ++d)
+        for(size_t d = 0; d < cd.splitted_dsts.size(); ++d)
         {
           const cryptonote::tx_destination_entry &entry = cd.splitted_dsts[d];
           std::string address = cryptonote::get_account_address_as_str(m_wallet->nettype(), entry.is_subaddress, entry.addr);
@@ -1149,7 +1192,7 @@ namespace tools
           {
             if (first_known_non_zero_change_index == -1)
               first_known_non_zero_change_index = n;
-            const tools::wallet2::tx_construction_data &cdn = exported_txs.txes[first_known_non_zero_change_index];
+            const tools::wallet2::tx_construction_data &cdn = tx_constructions[first_known_non_zero_change_index];
             if (memcmp(&cd.change_dts.addr, &cdn.change_dts.addr, sizeof(cd.change_dts.addr)))
             {
               er.code = WALLET_RPC_ERROR_CODE_BAD_UNSIGNED_TX_DATA;
@@ -1177,7 +1220,7 @@ namespace tools
 
         if (desc.change_amount > 0)
         {
-          const tools::wallet2::tx_construction_data &cd0 = exported_txs.txes[0];
+          const tools::wallet2::tx_construction_data &cd0 = tx_constructions[0];
           desc.change_address = get_account_address_as_str(m_wallet->nettype(), cd0.subaddr_account > 0, cd0.change_dts.addr);
         }
 
@@ -1739,26 +1782,20 @@ namespace tools
     wallet2::transfer_container transfers;
     m_wallet->get_transfers(transfers);
 
-    bool transfers_found = false;
     for (const auto& td : transfers)
     {
       if (!filter || available != td.m_spent)
       {
         if (req.account_index != td.m_subaddr_index.major || (!req.subaddr_indices.empty() && req.subaddr_indices.count(td.m_subaddr_index.minor) == 0))
           continue;
-        if (!transfers_found)
-        {
-          transfers_found = true;
-        }
-        auto txBlob = t_serializable_object_to_blob(td.m_tx);
         wallet_rpc::transfer_details rpc_transfers;
         rpc_transfers.amount       = td.amount();
         rpc_transfers.spent        = td.m_spent;
         rpc_transfers.global_index = td.m_global_output_index;
         rpc_transfers.tx_hash      = epee::string_tools::pod_to_hex(td.m_txid);
-        rpc_transfers.tx_size      = txBlob.size();
         rpc_transfers.subaddr_index = {td.m_subaddr_index.major, td.m_subaddr_index.minor};
         rpc_transfers.key_image    = td.m_key_image_known ? epee::string_tools::pod_to_hex(td.m_key_image) : "";
+        rpc_transfers.unlocked     = m_wallet->is_transfer_unlocked(td);
         res.transfers.push_back(rpc_transfers);
       }
     }
@@ -1779,10 +1816,42 @@ namespace tools
       if (req.key_type.compare("mnemonic") == 0)
       {
         epee::wipeable_string seed;
-        if (!m_wallet->get_seed(seed))
+        bool ready;
+        if(m_wallet->multisig(&ready))
         {
+          if(!ready)
+          {
+            er.code = WALLET_RPC_ERROR_CODE_NOT_MULTISIG;
+            er.message = "This wallet is multisig, but not yet finalized";
+            return false;
+          }
+          if(!m_wallet->get_multisig_seed(seed))
+          {
+            er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
+            er.message = "Failed to get multisig seed.";
+            return false;
+          }
+        }
+        else
+        {
+          if(m_wallet->watch_only())
+          {
+            er.code = WALLET_RPC_ERROR_CODE_WATCH_ONLY;
+            er.message = "The wallet is watch-only. Cannot display seed.";
+            return false;
+          }
+          if(!m_wallet->is_deterministic())
+          {
+            er.code = WALLET_RPC_ERROR_CODE_NON_DETERMINISTIC;
             er.message = "The wallet is non-deterministic. Cannot display seed.";
             return false;
+          }
+          if(!m_wallet->get_seed(seed))
+          {
+            er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
+            er.message = "Failed to get seed.";
+            return false;
+          }
         }
         res.key = std::string(seed.data(), seed.size()); // send to the network, then wipe RAM :D
       }
@@ -1817,7 +1886,7 @@ namespace tools
 
     try
     {
-      m_wallet->rescan_blockchain();
+      m_wallet->rescan_blockchain(req.hard);
     }
     catch (const std::exception& e)
     {
@@ -2501,12 +2570,13 @@ namespace tools
     if (!m_wallet) return not_open(er);
     try
     {
-      std::vector<std::pair<crypto::key_image, crypto::signature>> ski = m_wallet->export_key_images();
-      res.signed_key_images.resize(ski.size());
-      for (size_t n = 0; n < ski.size(); ++n)
+      std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> ski = m_wallet->export_key_images(req.all);
+      res.offset = ski.first;
+      res.signed_key_images.resize(ski.second.size());
+      for (size_t n = 0; n < ski.second.size(); ++n)
       {
-         res.signed_key_images[n].key_image = epee::string_tools::pod_to_hex(ski[n].first);
-         res.signed_key_images[n].signature = epee::string_tools::pod_to_hex(ski[n].second);
+         res.signed_key_images[n].key_image = epee::string_tools::pod_to_hex(ski.second[n].first);
+         res.signed_key_images[n].signature = epee::string_tools::pod_to_hex(ski.second[n].second);
       }
     }
 
@@ -2559,7 +2629,7 @@ namespace tools
         ski[n].second = *reinterpret_cast<const crypto::signature*>(bd.data());
       }
       uint64_t spent = 0, unspent = 0;
-      uint64_t height = m_wallet->import_key_images(ski, spent, unspent);
+      uint64_t height = m_wallet->import_key_images(ski, req.offset, spent, unspent);
       res.spent = spent;
       res.unspent = unspent;
       res.height = height;
@@ -3712,7 +3782,7 @@ namespace tools
       return false;
     }
 
-    if (req.multisig_info.size() < threshold - 1)
+    if (req.multisig_info.size() < 1 || req.multisig_info.size() > total)
     {
       er.code = WALLET_RPC_ERROR_CODE_THRESHOLD_NOT_REACHED;
       er.message = "Needs multisig info from more participants";
@@ -3736,6 +3806,55 @@ namespace tools
     }
     res.address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
 
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool wallet_rpc_server::on_exchange_multisig_keys(const wallet_rpc::COMMAND_RPC_EXCHANGE_MULTISIG_KEYS::request& req, wallet_rpc::COMMAND_RPC_EXCHANGE_MULTISIG_KEYS::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    if (!m_wallet) return not_open(er);
+    if (m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Command unavailable in restricted mode.";
+      return false;
+    }
+    bool ready;
+    uint32_t threshold, total;
+    if (!m_wallet->multisig(&ready, &threshold, &total))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_NOT_MULTISIG;
+      er.message = "This wallet is not multisig";
+      return false;
+    }
+
+    if (ready)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_ALREADY_MULTISIG;
+      er.message = "This wallet is multisig, and already finalized";
+      return false;
+    }
+
+    if (req.multisig_info.size() < 1 || req.multisig_info.size() > total)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_THRESHOLD_NOT_REACHED;
+      er.message = "Needs multisig info from more participants";
+      return false;
+    }
+
+    try
+    {
+      res.multisig_info = m_wallet->exchange_multisig_keys(req.password, req.multisig_info);
+      if (res.multisig_info.empty())
+      {
+        res.address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
+      }
+    }
+    catch (const std::exception &e)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
+      er.message = std::string("Error calling exchange_multisig_info: ") + e.what();
+      return false;
+    }
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -3968,7 +4087,7 @@ namespace tools
 	  const bool verification_required =
 	    ssl_options.verification != epee::net_utils::ssl_verification_t::none &&
 	    ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled;
-	
+
 	  if (verification_required && !ssl_options.has_strong_verification(boost::string_ref{}))
 	  {
 	    er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
@@ -4055,6 +4174,7 @@ public:
 
       const auto arg_wallet_file = wallet_args::arg_wallet_file();
       const auto arg_from_json = wallet_args::arg_generate_from_json();
+      const auto arg_rpc_client_secret_key = wallet_args::arg_rpc_client_secret_key();
 
       const auto wallet_file = command_line::get_arg(vm, arg_wallet_file);
       const auto from_json = command_line::get_arg(vm, arg_from_json);
@@ -4101,6 +4221,17 @@ public:
       if (!wal)
       {
         return false;
+      }
+
+      if (!command_line::is_arg_defaulted(vm, arg_rpc_client_secret_key))
+      {
+        crypto::secret_key client_secret_key;
+        if (!epee::string_tools::hex_to_pod(command_line::get_arg(vm, arg_rpc_client_secret_key), client_secret_key))
+        {
+          MERROR(arg_rpc_client_secret_key.name << ": RPC client secret key should be 32 byte in hex format");
+          return false;
+        }
+        wal->set_rpc_client_secret_key(client_secret_key);
       }
 
       bool quit = false;
@@ -4200,6 +4331,7 @@ int main(int argc, char** argv) {
 
   const auto arg_wallet_file = wallet_args::arg_wallet_file();
   const auto arg_from_json = wallet_args::arg_generate_from_json();
+  const auto arg_rpc_client_secret_key = wallet_args::arg_rpc_client_secret_key();
 
   //po::options_description hidden_options("Hidden"); no options presented except "Hidden:"
   po::options_description hidden_options("");
@@ -4214,6 +4346,7 @@ int main(int argc, char** argv) {
   command_line::add_arg(desc_params, arg_from_json);
   command_line::add_arg(desc_params, arg_wallet_dir);
   command_line::add_arg(desc_params, arg_prompt_for_password);
+  command_line::add_arg(desc_params, arg_rpc_client_secret_key);
 
   daemonizer::init_options(hidden_options, desc_params);
   desc_params.add(hidden_options);

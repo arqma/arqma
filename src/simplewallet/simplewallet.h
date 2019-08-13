@@ -52,7 +52,7 @@
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "wallet.simplewallet"
-// Hardcode Monero's donation address (see #1447)
+
 constexpr const char ARQMA_DONATION_ADDR[] = "ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3";
 
 /*!
@@ -84,6 +84,9 @@ namespace cryptonote
     std::string get_commands_str();
     std::string get_command_usage(const std::vector<std::string> &args);
   private:
+    
+    enum ResetType { ResetNone, ResetSoft, ResetHard, ResetSoftKeepKI };
+    
     bool handle_command_line(const boost::program_options::variables_map& vm);
 
     bool run_console_handler();
@@ -140,6 +143,10 @@ namespace cryptonote
     bool set_subaddress_lookahead(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_segregation_height(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_ignore_fractional_outputs(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_track_uses(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_persistent_rpc_client_id(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_auto_mine_for_rpc_payment_threshold(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_credits_target(const std::vector<std::string> &args = std::vector<std::string>());
     bool help(const std::vector<std::string> &args = std::vector<std::string>());
     bool start_mining(const std::vector<std::string> &args);
     bool stop_mining(const std::vector<std::string> &args);
@@ -187,9 +194,10 @@ namespace cryptonote
     bool get_reserve_proof(const std::vector<std::string> &args);
     bool check_reserve_proof(const std::vector<std::string> &args);
     bool show_transfers(const std::vector<std::string> &args);
+    bool export_transfers(const std::vector<std::string> &args);
     bool unspent_outputs(const std::vector<std::string> &args);
     bool rescan_blockchain(const std::vector<std::string> &args);
-    bool refresh_main(uint64_t start_height, bool reset = false, bool is_init = false);
+    bool refresh_main(uint64_t start_height, ResetType reset, bool is_init = false);
     bool set_tx_note(const std::vector<std::string> &args);
     bool get_tx_note(const std::vector<std::string> &args);
     bool set_description(const std::vector<std::string> &args);
@@ -211,6 +219,7 @@ namespace cryptonote
     bool prepare_multisig(const std::vector<std::string>& args);
     bool make_multisig(const std::vector<std::string>& args);
     bool finalize_multisig(const std::vector<std::string> &args);
+    bool exchange_multisig_keys(const std::vector<std::string> &args);
     bool export_multisig(const std::vector<std::string>& args);
     bool import_multisig(const std::vector<std::string>& args);
     bool accept_loaded_tx(const tools::wallet2::multisig_tx_set &txs);
@@ -223,6 +232,12 @@ namespace cryptonote
     bool blackball(const std::vector<std::string>& args);
     bool unblackball(const std::vector<std::string>& args);
     bool blackballed(const std::vector<std::string>& args);
+    bool rpc_payment_info(const std::vector<std::string> &args);
+    bool start_mining_for_rpc(const std::vector<std::string> &args);
+    bool stop_mining_for_rpc(const std::vector<std::string> &args);
+    bool net_stats(const std::vector<std::string>& args);
+    bool public_nodes(const std::vector<std::string>& args);
+    bool welcome(const std::vector<std::string>& args);
     bool version(const std::vector<std::string>& args);
 
     uint64_t get_daemon_blockchain_height(std::string& err);
@@ -234,6 +249,26 @@ namespace cryptonote
     bool print_ring_members(const std::vector<tools::wallet2::pending_tx>& ptx_vector, std::ostream& ostr);
     std::string get_prompt() const;
     bool print_seed(bool encrypted);
+    std::pair<std::string, std::string> show_outputs_line(const std::vector<uint64_t> &heights, uint64_t blockchain_height, uint64_t highlight_height = std::numeric_limits<uint64_t>::max()) const;
+    bool prompt_if_old(const std::vector<tools::wallet2::pending_tx> &ptx_vector);
+
+    struct transfer_view
+    {
+      std::string type;
+      boost::variant<uint64_t, std::string> block;
+      uint64_t timestamp;
+      std::string direction;
+      bool confirmed;
+      uint64_t amount;
+      crypto::hash hash;
+      std::string payment_id;
+      uint64_t fee;
+      std::vector<std::pair<std::string, uint64_t>> outputs;
+      std::set<uint32_t> index;
+      std::string note;
+      std::string unlocked;
+    };
+    bool get_transfers(std::vector<std::string>& args_, std::vector<transfer_view>& transfers);
 
     /*!
      * \brief Prints the seed with a nice message
@@ -255,6 +290,10 @@ namespace cryptonote
      * \param ptx_vector Pending tx(es) created by transfer/sweep_all
      */
     void commit_or_save(std::vector<tools::wallet2::pending_tx>& ptx_vector, bool do_not_relay);
+
+    void handle_transfer_exception(const std::exception_ptr &e, bool trusted_daemon);
+
+    bool check_daemon_rpc_prices(const std::string &daemon_url, uint32_t &actual_cph, uint32_t &claimed_cph);
 
     //----------------- i_wallet2_callback ---------------------
     virtual void on_new_block(uint64_t height, const cryptonote::block& block);
@@ -357,5 +396,13 @@ namespace cryptonote
     bool m_auto_refresh_refreshing;
     std::atomic<bool> m_in_manual_refresh;
     uint32_t m_current_subaddress_account;
+
+    std::atomic<bool> m_need_payment;
+    boost::posix_time::ptime m_last_rpc_payment_mining_time;
+    bool m_rpc_payment_mining_requested;
+    bool m_daemon_rpc_payment_message_displayed;
+    float m_rpc_payment_hash_rate;
+    
+    std::unordered_map<std::string, uint32_t> m_claimed_cph;
   };
 }

@@ -296,8 +296,7 @@ namespace rct {
 
     //generates C =aG + bH from b, a is given..
     void genC(key & C, const key & a, xmr_amount amount) {
-        key bH = scalarmultH(d2h(amount));
-        addKeys1(C, a, bH);
+        addKeys2(C, a, d2h(amount), rct::H);;
     }
 
     //generates a <secret , public> / Pedersen commitment to the amount
@@ -336,10 +335,8 @@ namespace rct {
     }
 
     key commit(xmr_amount amount, const key &mask) {
-        key c = scalarmultBase(mask);
-        key am = d2h(amount);
-        key bH = scalarmultH(am);
-        addKeys(c, c, bH);
+        key c;
+        genC(c, mask, amount);
         return c;
     }
 
@@ -391,20 +388,31 @@ namespace rct {
 
     //Computes aH where H= toPoint(cn_fast_hash(G)), G the basepoint
     key scalarmultH(const key & a) {
-        ge_p3 A;
         ge_p2 R;
-        CHECK_AND_ASSERT_THROW_MES_L1(ge_frombytes_vartime(&A, H.bytes) == 0, "ge_frombytes_vartime failed at "+boost::lexical_cast<std::string>(__LINE__));
-        ge_scalarmult(&R, a.bytes, &A);
+        ge_scalarmult(&R, a.bytes, &ge_p3_H);
         key aP;
         ge_tobytes(aP.bytes, &R);
         return aP;
     }
 
-
-    //Computes aL where L is the curve order
-    bool isInMainSubgroup(const key & a) {
+    //Computes 8P
+    key scalarmult8(const key & P) {
         ge_p3 p3;
-        return toPointCheckOrder(&p3, a.bytes);
+        CHECK_AND_ASSERT_THROW_MES_L1(ge_frombytes_vartime(&p3, P.bytes) == 0, "ge_frombytes_vartime failed at "+boost::lexical_cast<std::string>(__LINE__));
+        ge_p2 p2;
+        ge_p3_to_p2(&p2, &p3);
+        ge_p1p1 p1;
+        ge_mul8(&p1, &p2);
+        ge_p1p1_to_p2(&p2, &p1);
+        rct::key res;
+        ge_tobytes(res.bytes, &p2);
+        return res;
+    }
+
+    //Computes lA where l is the curve order
+    bool isInMainSubgroup(const key & A) {
+        ge_p3 p3;
+        return toPointCheckOrder(&p3, A.bytes);
     }
 
     //Curve addition / subtractions
@@ -426,6 +434,25 @@ namespace rct {
       key k;
       addKeys(k, A, B);
       return k;
+    }
+
+    rct::key addKeys(const keyV &A) {
+      if (A.empty())
+        return rct::identity();
+      ge_p3 p3, tmp;
+      CHECK_AND_ASSERT_THROW_MES_L1(ge_frombytes_vartime(&p3, A[0].bytes) == 0, "ge_frombytes_vartime failed at "+boost::lexical_cast<std::string>(__LINE__));
+      for (size_t i = 1; i < A.size(); ++i)
+      {
+        CHECK_AND_ASSERT_THROW_MES_L1(ge_frombytes_vartime(&tmp, A[i].bytes) == 0, "ge_frombytes_vartime failed at "+boost::lexical_cast<std::string>(__LINE__));
+        ge_cached p2;
+        ge_p3_to_cached(&p2, &tmp);
+        ge_p1p1 p1;
+        ge_add(&p1, &p3, &p2);
+        ge_p1p1_to_p3(&p3, &p1);
+      }
+      rct::key res;
+      ge_p3_tobytes(res.bytes, &p3);
+      return res;
     }
 
     //addKeys1

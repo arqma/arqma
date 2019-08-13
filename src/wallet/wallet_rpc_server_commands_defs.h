@@ -48,7 +48,7 @@
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define WALLET_RPC_VERSION_MAJOR 1
-#define WALLET_RPC_VERSION_MINOR 12
+#define WALLET_RPC_VERSION_MINOR 16
 #define MAKE_WALLET_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define WALLET_RPC_VERSION MAKE_WALLET_RPC_VERSION(WALLET_RPC_VERSION_MAJOR, WALLET_RPC_VERSION_MINOR)
 namespace tools
@@ -611,9 +611,11 @@ namespace wallet_rpc
     struct request_t
     {
       std::string unsigned_txset;
+      std::string multisig_txset;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(unsigned_txset)
+        KV_SERIALIZE(multisig_txset)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -989,18 +991,18 @@ namespace wallet_rpc
     bool spent;
     uint64_t global_index;
     std::string tx_hash;
-    uint64_t tx_size;
     cryptonote::subaddress_index subaddr_index;
     std::string key_image;
+    bool unlocked;
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(amount)
       KV_SERIALIZE(spent)
       KV_SERIALIZE(global_index)
       KV_SERIALIZE(tx_hash)
-      KV_SERIALIZE(tx_size)
       KV_SERIALIZE(subaddr_index)
       KV_SERIALIZE(key_image)
+      KV_SERIALIZE(unlocked)
     END_KV_SERIALIZE_MAP()
   };
 
@@ -1130,7 +1132,10 @@ namespace wallet_rpc
   {
     struct request_t
     {
+      bool hard;
+      
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_OPT(hard, false)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -1675,7 +1680,10 @@ namespace wallet_rpc
   {
     struct request_t
     {
+      bool all;
+      
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_OPT(all, false)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -1693,9 +1701,11 @@ namespace wallet_rpc
 
     struct response_t
     {
+      uint32_t offset;
       std::vector<signed_key_image> signed_key_images;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(offset)
         KV_SERIALIZE(signed_key_images);
       END_KV_SERIALIZE_MAP()
     };
@@ -1717,9 +1727,11 @@ namespace wallet_rpc
 
     struct request_t
     {
+      uint32_t offset;
       std::vector<signed_key_image> signed_key_images;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_OPT(offset, (uint32_t)0);
         KV_SERIALIZE(signed_key_images);
       END_KV_SERIALIZE_MAP()
     };
@@ -2170,7 +2182,7 @@ namespace wallet_rpc
     };
     typedef epee::misc_utils::struct_init<response_t> response;
   };
-  
+
   struct COMMAND_RPC_IS_MULTISIG
   {
     struct request_t
@@ -2314,6 +2326,33 @@ namespace wallet_rpc
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
+  struct COMMAND_RPC_EXCHANGE_MULTISIG_KEYS
+  {
+    struct request_t
+    {
+      std::string password;
+      std::vector<std::string> multisig_info;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(password)
+        KV_SERIALIZE(multisig_info)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::string address;
+      std::string multisig_info;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(address)
+        KV_SERIALIZE(multisig_info)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+  
   struct COMMAND_RPC_SIGN_MULTISIG
   {
     struct request_t
@@ -2418,7 +2457,7 @@ namespace wallet_rpc
     };
     typedef epee::misc_utils::struct_init<response_t> response;
   };
-  
+
   struct COMMAND_RPC_SET_DAEMON
   {
 	struct request_t
@@ -2431,7 +2470,7 @@ namespace wallet_rpc
 	  std::string ssl_ca_file;
 	  std::vector<std::string> ssl_allowed_fingerprints;
 	  bool ssl_allow_any_cert;
-	
+
 	  BEGIN_KV_SERIALIZE_MAP()
 	    KV_SERIALIZE(address)
 	    KV_SERIALIZE_OPT(trusted, false)
@@ -2444,7 +2483,7 @@ namespace wallet_rpc
 	  END_KV_SERIALIZE_MAP()
 	};
 	typedef epee::misc_utils::struct_init<request_t> request;
-	
+
 	struct response_t
 	{
 	  BEGIN_KV_SERIALIZE_MAP()

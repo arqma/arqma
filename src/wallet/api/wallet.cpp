@@ -61,7 +61,7 @@ namespace Monero {
 
 namespace {
     // copy-pasted from simplewallet
-    static const size_t DEFAULT_MIXIN = 6;
+    static const size_t DEFAULT_MIXIN = 10;
     static const int    DEFAULT_REFRESH_INTERVAL_MILLIS = 1000 * 10;
     // limit maximum refresh interval as one minute
     static const int    MAX_REFRESH_INTERVAL_MILLIS = 1000 * 60 * 1;
@@ -1203,6 +1203,21 @@ string WalletImpl::makeMultisig(const vector<string>& info, uint32_t threshold) 
     return string();
 }
 
+std::string WalletImpl::exchangeMultisigKeys(const std::vector<std::string> &info)
+{
+    try {
+        clearStatus();
+        checkMultisigWalletNotReady(m_wallet);
+
+        return m_wallet->exchange_multisig_keys(epee::wipeable_string(m_password), info);
+    } catch (const exception& e) {
+        LOG_ERROR("Error on exchanging multisig keys: ") << e.what();
+        setStatusError(string(tr("Failed to make multisig: ")) + e.what());
+    }
+
+    return string();
+}
+
 bool WalletImpl::finalizeMultisig(const vector<string>& extraMultisigInfo) {
     try {
         clearStatus();
@@ -1332,6 +1347,7 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
     size_t fake_outs_count = mixin_count > 0 ? mixin_count : m_wallet->default_mixin();
     if (fake_outs_count == 0)
         fake_outs_count = DEFAULT_MIXIN;
+    fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
 
     uint32_t adjusted_priority = m_wallet->adjust_priority(static_cast<uint32_t>(priority));
 
@@ -1386,9 +1402,11 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
             if (amount) {
                 vector<cryptonote::tx_destination_entry> dsts;
                 cryptonote::tx_destination_entry de;
+                de.original = dst_addr;
                 de.addr = info.address;
                 de.amount = *amount;
                 de.is_subaddress = info.is_subaddress;
+                de.is_integrated = info.has_payment_id;
                 dsts.push_back(de);
                 transaction->m_pending_tx = m_wallet->create_transactions_2(dsts, fake_outs_count, 0 /* unlock_time */,
                                                                           adjusted_priority,
@@ -1406,7 +1424,9 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
             }
 
             if (multisig().isMultisig) {
-                transaction->m_signers = m_wallet->make_multisig_tx_set(transaction->m_pending_tx).m_signers;
+                auto tx_set = m_wallet->make_multisig_tx_set(transaction->m_pending_tx);
+                transaction->m_pending_tx = tx_set.m_ptx;
+                transaction->m_signers = tx_set.m_signers;
             }
         } catch (const tools::error::daemon_busy&) {
             // TODO: make it translatable with "tr"?

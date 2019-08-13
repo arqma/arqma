@@ -232,6 +232,7 @@ namespace cryptonote
         cnx.port = std::to_string(cntxt.m_remote_address.as<epee::net_utils::ipv4_network_address>().port());
       }
       cnx.rpc_port = cntxt.m_rpc_port;
+      cnx.rpc_credits_per_hash = cntxt.m_rpc_credits_per_hash;
 
       std::stringstream peer_id_str;
       peer_id_str << std::hex << std::setw(16) << peer_id;
@@ -329,6 +330,11 @@ namespace cryptonote
 
     if(m_core.have_block(hshd.top_id))
     {
+      if(target > hshd.current_height)
+      {
+        MINFO(context << "peer is not ahead of us and we are syncing, disconnecting");
+        return false;
+      }
       context.m_state = cryptonote_connection_context::state_normal;
       if(is_inital && target == m_core.get_current_blockchain_height())
         on_connection_synchronized();
@@ -354,10 +360,7 @@ namespace cryptonote
       << " [Your node is " << abs_diff << " blocks (" << (abs_diff / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) << " days) "
       << (0 <= diff ? std::string("behind") : std::string("ahead"))
       << "] " << ENDL << "SYNCHRONIZATION started");
-      if (hshd.current_height >= m_core.get_current_blockchain_height() + 5) // don't switch to unsafe mode just for a few blocks
-      {
-        m_core.safesyncmode(false);
-      }
+      
       if (m_core.get_target_blockchain_height() == 0) // only when sync starts
       {
         m_sync_timer.resume();
@@ -874,7 +877,17 @@ namespace cryptonote
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context)
   {
-    MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_GET_OBJECTS (" << arg.blocks.size() << " blocks, " << arg.txs.size() << " txes)");
+    MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_GET_OBJECTS (" << arg.blocks.size() << " blocks)");
+    if (arg.blocks.size() > CURRENCY_PROTOCOL_MAX_OBJECT_REQUEST_COUNT)
+    {
+      LOG_ERROR_CCONTEXT(
+          "Requested objects count is too big ("
+          << arg.blocks.size() << ") expected not more then "
+          << CURRENCY_PROTOCOL_MAX_OBJECT_REQUEST_COUNT);
+      drop_connection(context, false, false);
+      return 1;
+    }
+      
     NOTIFY_RESPONSE_GET_OBJECTS::request rsp;
     if(!m_core.handle_get_objects(arg, rsp, context))
     {
@@ -882,8 +895,9 @@ namespace cryptonote
       drop_connection(context, false, false);
       return 1;
     }
-    MLOG_P2P_MESSAGE("-->>NOTIFY_RESPONSE_GET_OBJECTS: blocks.size()=" << rsp.blocks.size() << ", txs.size()=" << rsp.txs.size()
-                            << ", rsp.m_current_blockchain_height=" << rsp.current_blockchain_height << ", missed_ids.size()=" << rsp.missed_ids.size());
+    MLOG_P2P_MESSAGE("-->>NOTIFY_RESPONSE_GET_OBJECTS: blocks.size()="
+                    << rsp.blocks.size() << ", rsp.m_current_blockchain_height=" << rsp.current_blockchain_height
+                    << ", missed_ids.size()=" << rsp.missed_ids.size());
     post_notify<NOTIFY_RESPONSE_GET_OBJECTS>(rsp, context);
     //handler_response_blocks_now(sizeof(rsp)); // XXX
     //handler_response_blocks_now(200);
@@ -906,7 +920,7 @@ namespace cryptonote
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::handle_response_get_objects(int command, NOTIFY_RESPONSE_GET_OBJECTS::request& arg, cryptonote_connection_context& context)
   {
-    MLOG_P2P_MESSAGE("Received NOTIFY_RESPONSE_GET_OBJECTS (" << arg.blocks.size() << " blocks, " << arg.txs.size() << " txes)");
+    MLOG_P2P_MESSAGE("Received NOTIFY_RESPONSE_GET_OBJECTS (" << arg.blocks.size() << " blocks)");
     MLOG_PEER_STATE("received objects");
 
     boost::posix_time::ptime request_time = context.m_last_request_time;
@@ -914,7 +928,6 @@ namespace cryptonote
 
     // calculate size of request
     size_t size = 0;
-    for (const auto &element : arg.txs) size += element.size();
 
     size_t blocks_size = 0;
     for (const auto &element : arg.blocks) {
@@ -1862,7 +1875,7 @@ skip:
         }
 
         context.m_last_request_time = boost::posix_time::microsec_clock::universal_time();
-        MLOG_P2P_MESSAGE("-->>NOTIFY_REQUEST_GET_OBJECTS: blocks.size()=" << req.blocks.size() << ", txs.size()=" << req.txs.size()
+        MLOG_P2P_MESSAGE("-->>NOTIFY_REQUEST_GET_OBJECTS: blocks.size()=" << req.blocks.size()
             << "requested blocks count=" << count << " / " << count_limit << " from " << span.first << ", first hash " << req.blocks.front());
         //epee::net_utils::network_throttle_manager::get_global_throttle_inreq().logger_handle_net("log/dr-arqma/net/req-all.data", sec, get_avg_block_size());
 

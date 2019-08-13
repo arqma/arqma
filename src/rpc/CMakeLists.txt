@@ -28,10 +28,13 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 set(rpc_base_sources
-  rpc_args.cpp)
+  rpc_args.cpp
+  rpc_payment_signature.cpp
+  rpc_handler.cpp)
 
 set(rpc_sources
   core_rpc_server.cpp
+  rpc_payment.cpp
   instanciations)
 
 set(daemon_messages_sources
@@ -44,15 +47,19 @@ set(daemon_rpc_server_sources
 
 
 set(rpc_base_headers
-  rpc_args.h)
+  rpc_args.h
+  rpc_payment_signature.h
+  rpc_handler.h)
 
-set(rpc_headers)
+set(rpc_headers
+  rpc_handler.h)
 
 set(daemon_rpc_server_headers)
 
 
 set(rpc_daemon_private_headers
   core_rpc_server.h
+  rpc_payment.h
   core_rpc_server_commands_defs.h
   core_rpc_server_error_codes.h)
 
@@ -64,7 +71,6 @@ set(daemon_rpc_server_private_headers
   message.h
   daemon_messages.h
   daemon_handler.h
-  rpc_handler.h
   zmq_server.h)
 
 

@@ -105,6 +105,7 @@ namespace nodetool
     command_line::add_arg(desc, arg_anonymous_inbound);
     command_line::add_arg(desc, arg_p2p_hide_my_port);
     command_line::add_arg(desc, arg_no_igd);
+    command_line::add_arg(desc, arg_igd);
     command_line::add_arg(desc, arg_out_peers);
     command_line::add_arg(desc, arg_in_peers);
     command_line::add_arg(desc, arg_tos_flag);
@@ -250,7 +251,35 @@ namespace nodetool
     public_zone.m_can_pingback = true;
     m_external_port = command_line::get_arg(vm, arg_p2p_external_port);
     m_allow_local_ip = command_line::get_arg(vm, arg_p2p_allow_local_ip);
-    m_no_igd = command_line::get_arg(vm, arg_no_igd);
+    const bool has_no_igd = command_line::get_arg(vm, arg_no_igd);
+    const std::string sigd = command_line::get_arg(vm, arg_igd);
+    if(sigd == "enabled")
+    {
+      if(has_no_igd)
+      {
+        MFATAL("Can not have both --" << arg_no_igd.name << " and --" << arg_igd.name << " enabled");
+        return false;
+      }
+      m_igd = igd;
+    }
+    else if(sigd == "disabled")
+    {
+      m_igd = no_igd;
+    }
+    else if(sigd == "delayed")
+    {
+      if(has_no_igd && !command_line::is_arg_defaulted(vm, arg_igd))
+      {
+        MFATAL("Can not have both --" << arg_no_igd.name << " and --" << arg_igd.name << " delayed");
+        return false;
+      }
+      m_igd = has_no_igd ? no_igd : delayed_igd;
+    }
+    else
+    {
+      MFATAL("Invalid value for --" << arg_igd.name << ", expected enabled, disabled or delayed");
+      return false;
+    }
     m_offline = command_line::get_arg(vm, cryptonote::arg_offline);
 
     if (command_line::has_arg(vm, arg_p2p_add_peer))
@@ -442,6 +471,8 @@ namespace nodetool
       full_addrs.insert("77.93.206.172:39993");
       full_addrs.insert("51.158.65.16:39993");
       full_addrs.insert("77.103.229.42:39993");
+      full_addrs.insert("139.99.106.122:39993");
+      full_addrs.insert("144.217.242.16:39993");
     }
     else if (nettype == cryptonote::FAKECHAIN)
     {
@@ -666,7 +697,7 @@ namespace nodetool
       MDEBUG("External port defined as " << m_external_port);
 
     // add UPnP port mapping
-    if(!m_no_igd)
+    if(m_igd == igd)
       add_upnp_port_mapping(m_listening_port);
 
     return res;
@@ -761,7 +792,7 @@ namespace nodetool
       for(auto& zone : m_network_zones)
         zone.second.m_net_server.deinit_server();
       // remove UPnP port mapping
-      if(!m_no_igd)
+      if(m_igd == igd)
         delete_upnp_port_mapping(m_listening_port);
     }
     return store_config();
@@ -862,7 +893,8 @@ namespace nodetool
 
         pi = context.peer_id = rsp.node_data.peer_id;
         context.m_rpc_port = rsp.node_data.rpc_port;
-        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(rsp.node_data.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port);
+        context.m_rpc_credits_per_hash = rsp.node_data.rpc_credits_per_hash;
+	    m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(rsp.node_data.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port, context.m_rpc_credits_per_hash);
 
         // move
         for (auto const& zone : m_network_zones)
@@ -928,8 +960,11 @@ namespace nodetool
         add_host_fail(context.m_remote_address);
       }
       if(!context.m_is_income)
-        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(context.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port);
-      m_payload_handler.process_payload_sync_data(rsp.payload_data, context, false);
+        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(context.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port, context.m_rpc_credits_per_hash);
+      if(!m_payload_handler.process_payload_sync_data(rsp.payload_data, context, false))
+      {
+        m_network_zones.at(context.m_remote_address.get_zone()).m_net_server.get_config_object().close(context.m_connection_id);
+      }
     });
 
     if(!r)
@@ -1072,6 +1107,7 @@ namespace nodetool
     {
       bool is_priority = is_priority_node(na);
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, *con, " Failed to HANDSHAKE with peer: " << na.str()/*<< ", try " << try_count*/);
+      zone.m_net_server.get_config_object().close(con->m_connection_id);
       return false;
     }
 
@@ -1090,6 +1126,7 @@ namespace nodetool
     pe_local.last_seen = static_cast<int64_t>(last_seen);
     pe_local.pruning_seed = con->m_pruning_seed;
     pe_local.rpc_port = con->m_rpc_port;
+    pe_local.rpc_credits_per_hash = con->m_rpc_credits_per_hash;
     zone.m_peerlist.append_with_peer_white(pe_local);
     //update last seen and push it to peerlist manager
 
@@ -1128,7 +1165,7 @@ namespace nodetool
       bool is_priority = is_priority_node(na);
 
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, *con, " Failed to HANDSHAKE with peer: " << na.str());
-
+      zone.m_net_server.get_config_object().close(con->m_connection_id);
       return false;
     }
 
@@ -1543,8 +1580,17 @@ namespace nodetool
       }
       else
       {
-        const el::Level level = el::Level::Warning;
-        MCLOG_RED(level, "global", "No incoming connections - check firewalls/routers allow port " << get_this_peer_port());
+        if(m_igd == delayed_igd)
+        {
+          MWARNING("No incoming connections, trying to setup and use IGD");
+          add_upnp_port_mapping(m_listening_port);
+          m_igd = igd;
+        }
+        else
+        {
+          const el::Level level = el::Level::Warning;
+          MCLOG_RED(level, "global", "No incoming connections - Please check either FireWall or Router allow port " << get_this_peer_port());
+        }
       }
     }
     return true;
@@ -1632,6 +1678,7 @@ namespace nodetool
     else
       node_data.my_port = 0;
     node_data.rpc_port = zone.m_can_pingback ? m_rpc_port : 0;
+    node_data.rpc_credits_per_hash = zone.m_can_pingback ? m_rpc_credits_per_hash : 0;
     node_data.network_id = m_network_id;
     return true;
   }
@@ -1917,7 +1964,7 @@ namespace nodetool
     const epee::net_utils::zone zone_type = context.m_remote_address.get_zone();
     network_zone& zone = m_network_zones.at(zone_type);
 
-    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new);
+    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new, true);
     m_payload_handler.get_payload_sync_data(rsp.payload_data);
 
     if(!context.m_is_income && zone.m_our_address.get_zone() == zone_type)
@@ -1981,6 +2028,7 @@ namespace nodetool
     context.peer_id = arg.node_data.peer_id;
     context.m_in_timedsync = false;
     context.m_rpc_port = arg.node_data.rpc_port;
+    context.m_rpc_credits_per_hash = arg.node_data.rpc_credits_per_hash;
 
     if(arg.node_data.peer_id != zone.m_config.m_peer_id && arg.node_data.my_port && zone.m_can_pingback)
     {
@@ -2001,6 +2049,7 @@ namespace nodetool
         pe.id = peer_id_l;
         pe.pruning_seed = context.m_pruning_seed;
         pe.rpc_port = context.m_rpc_port;
+        pe.rpc_credits_per_hash = context.m_rpc_credits_per_hash;
         this->m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.append_with_peer_white(pe);
         LOG_DEBUG_CC(context, "PING SUCCESS " << context.m_remote_address.host_str() << ":" << port_l);
       });
@@ -2012,7 +2061,7 @@ namespace nodetool
     });
 
     //fill response
-    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new);
+    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new, true);
     get_local_node_data(rsp.node_data, zone);
     m_payload_handler.get_payload_sync_data(rsp.payload_data);
     LOG_DEBUG_CC(context, "COMMAND_HANDSHAKE");
@@ -2169,6 +2218,15 @@ namespace nodetool
         public_zone->second.m_net_server.get_config_object().del_out_connections(current - count);
     }
   }
+  
+  template<class t_payload_net_handler>
+  uint32_t node_server<t_payload_net_handler>::get_max_out_public_peers() const
+  {
+    const auto public_zone = m_network_zones.find(epee::net_utils::zone::public_);
+    if(public_zone == m_network_zones.end())
+      return 0;
+    return public_zone->second.m_config.m_net_config.max_out_connection_count;
+  }
 
   template<class t_payload_net_handler>
   void node_server<t_payload_net_handler>::change_max_in_public_peers(size_t count)
@@ -2181,6 +2239,15 @@ namespace nodetool
       if(current > count)
         public_zone->second.m_net_server.get_config_object().del_in_connections(current - count);
     }
+  }
+  
+  template<class t_payload_net_handler>
+  uint32_t node_server<t_payload_net_handler>::get_max_in_public_peers() const
+  {
+    const auto public_zone = m_network_zones.find(epee::net_utils::zone::public_);
+    if(public_zone == m_network_zones.end())
+      return 0;
+    return public_zone->second.m_config.m_net_config.max_in_connection_count;
   }
 
   template<class t_payload_net_handler>
@@ -2197,11 +2264,10 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::set_rate_up_limit(const boost::program_options::variables_map& vm, int64_t limit)
   {
-    this->islimitup=true;
+    this->islimitup=(limit != -1) && (limit != default_limit_up);
 
     if (limit == -1) {
       limit = default_limit_up;
-      this->islimitup=false;
     }
 
     epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_up_limit( limit );
@@ -2212,10 +2278,9 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::set_rate_down_limit(const boost::program_options::variables_map& vm, int64_t limit)
   {
-    this->islimitdown=true;
+    this->islimitdown=(limit != -1) && (limit != default_limit_down);
     if(limit == -1) {
       limit = default_limit_down;
-      this->islimitdown=false;
     }
     epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_down_limit( limit );
     MINFO("Set limit-down to " << limit << " Kbps");
@@ -2300,7 +2365,7 @@ namespace nodetool
       }
       else
       {
-        zone.second.m_peerlist.set_peer_just_seen(pe.id, pe.adr, pe.pruning_seed, pe.rpc_port);
+        zone.second.m_peerlist.set_peer_just_seen(pe.id, pe.adr, pe.pruning_seed, pe.rpc_port, pe.rpc_credits_per_hash);
         LOG_PRINT_L2("PEER PROMOTED TO WHITE PEER LIST IP address: " << pe.adr.host_str() << " Peer ID: " << peerid_type(pe.id));
       }
     }

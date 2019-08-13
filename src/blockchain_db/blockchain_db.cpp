@@ -196,7 +196,8 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const transacti
 }
 
 uint64_t BlockchainDB::add_block( const block& blk
-                                , const size_t& block_size
+                                , size_t block_weight
+                                , uint64_t long_term_block_weight
                                 , const difficulty_type& cumulative_difficulty
                                 , const uint64_t& coins_generated
                                 , const std::vector<transaction>& txs
@@ -241,7 +242,7 @@ uint64_t BlockchainDB::add_block( const block& blk
 
   // call out to subclass implementation to add the block & metadata
   time1 = epee::misc_utils::get_tick_count();
-  add_block(blk, block_size, cumulative_difficulty, coins_generated, num_rct_outs, blk_hash);
+  add_block(blk, block_weight, long_term_block_weight, cumulative_difficulty, coins_generated, num_rct_outs, blk_hash);
   TIME_MEASURE_FINISH(time1);
   time_add_block1 += time1;
 
@@ -396,6 +397,24 @@ void BlockchainDB::fixup()
 
   set_batch_transactions(true);
   batch_start();
+  
+  // Premine Burn Transaction key_images
+  static const char* const burn_vout_images[] =
+  {
+    "55fbaf353dc0750a522a3d5b9dc5500659681b8b8d5e7126e529a34f6887d8c6", // tx_hash: e8642cc515dc92e7fe31a5c5dc0558ed336e7ce5139a173e2f1680d2f46453fc
+    "c37f0d76d9143384ee1f2cf9d6f05f131ec0f11c8b20b4c69179a5a563cd2792", // tx_hash: e8642cc515dc92e7fe31a5c5dc0558ed336e7ce5139a173e2f1680d2f46453fc
+  };
+  
+  for(const auto &kis : burn_vout_images)
+  {
+    crypto::key_image ki;
+    epee::string_tools::hex_to_pod(kis, ki);
+    if(!has_key_image(ki))
+    {
+      LOG_PRINT_L1("Adding Premine Burn Transaction key_images to spent" << ki);
+      add_spent_key(ki);
+    }
+  }
   batch_stop();
 }
 

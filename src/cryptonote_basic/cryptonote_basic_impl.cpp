@@ -68,29 +68,28 @@ namespace cryptonote {
   /* Cryptonote helper functions                                          */
   /************************************************************************/
   //-----------------------------------------------------------------------------------------------
-  size_t get_min_block_size(uint8_t version)
+  size_t get_min_block_weight(uint8_t version)
   {
-    if (version < 2)
+    if(version < 2)
       return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1;
-    if (version < 5)
+    else if(version < 5)
       return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2;
-    return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5;
-  }
-  //-----------------------------------------------------------------------------------------------
-  size_t get_max_block_size()
-  {
-    return CRYPTONOTE_MAX_BLOCK_SIZE;
+    else if(version < 13)
+      return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5;
+    return config::blockchain_settings::MINIMUM_BLOCK_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
   size_t get_max_tx_size()
   {
-    return CRYPTONOTE_MAX_TX_SIZE;
+    return config::tx_settings::TRANSACTION_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
-  bool get_block_reward(size_t median_size, size_t current_block_size, uint64_t already_generated_coins, uint64_t &reward, uint8_t version) {
+  bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t version) {
     static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
     const int target_minutes = DIFFICULTY_TARGET_V2 / 60;
     const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes-3);
+
+    already_generated_coins -= config::blockchain_settings::PREMINE_BURN;
 
     uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
     if (base_reward < FINAL_SUBSIDY_PER_MINUTE*target_minutes)
@@ -98,37 +97,37 @@ namespace cryptonote {
       base_reward = FINAL_SUBSIDY_PER_MINUTE*target_minutes;
     }
 
-    uint64_t full_reward_zone = get_min_block_size(version);
+    uint64_t full_reward_zone = get_min_block_weight(version);
 
     //make it soft
-    if (median_size < full_reward_zone) {
-      median_size = full_reward_zone;
+    if (median_weight < full_reward_zone) {
+      median_weight = full_reward_zone;
     }
 
-    if (current_block_size <= median_size) {
+    if (current_block_weight <= median_weight) {
       reward = base_reward;
       return true;
     }
 
-    if(current_block_size > 2 * median_size) {
-      MERROR("Block cumulative size is too big: " << current_block_size << ", expected less than " << 2 * median_size);
+    if(current_block_weight > 2 * median_weight) {
+      MERROR("Block cumulative weight is too big: " << current_block_weight << ", expected less than " << 2 * median_weight);
       return false;
     }
 
-    assert(median_size < std::numeric_limits<uint32_t>::max());
-    assert(current_block_size < std::numeric_limits<uint32_t>::max());
+    assert(median_weight < std::numeric_limits<uint32_t>::max());
+    assert(current_block_weight < std::numeric_limits<uint32_t>::max());
 
     uint64_t product_hi;
     // BUGFIX: 32-bit saturation bug (e.g. ARM7), the result was being
     // treated as 32-bit by default.
-    uint64_t multiplicand = 2 * median_size - current_block_size;
-    multiplicand *= current_block_size;
+    uint64_t multiplicand = 2 * median_weight - current_block_weight;
+    multiplicand *= current_block_weight;
     uint64_t product_lo = mul128(base_reward, multiplicand, &product_hi);
 
     uint64_t reward_hi;
     uint64_t reward_lo;
-    div128_32(product_hi, product_lo, static_cast<uint32_t>(median_size), &reward_hi, &reward_lo);
-    div128_32(reward_hi, reward_lo, static_cast<uint32_t>(median_size), &reward_hi, &reward_lo);
+    div128_32(product_hi, product_lo, static_cast<uint32_t>(median_weight), &reward_hi, &reward_lo);
+    div128_32(reward_hi, reward_lo, static_cast<uint32_t>(median_weight), &reward_hi, &reward_lo);
     assert(0 == reward_hi);
     assert(reward_lo < base_reward);
 
@@ -308,8 +307,7 @@ namespace cryptonote {
       return true;
     bool dnssec_valid;
     std::string address_str = tools::dns_utils::get_account_address_as_str_from_url(str_or_url, dnssec_valid, dns_confirm);
-    return !address_str.empty() &&
-      get_account_address_from_str(info, nettype, address_str);
+    return !address_str.empty() && get_account_address_from_str(info, nettype, address_str);
   }
   //--------------------------------------------------------------------------------
   bool operator ==(const cryptonote::transaction& a, const cryptonote::transaction& b) {
@@ -322,7 +320,7 @@ namespace cryptonote {
 }
 
 //--------------------------------------------------------------------------------
-bool parse_hash256(const std::string str_hash, crypto::hash& hash)
+bool parse_hash256(const std::string &str_hash, crypto::hash& hash)
 {
   std::string buf;
   bool res = epee::string_tools::parse_hexstr_to_binbuff(str_hash, buf);

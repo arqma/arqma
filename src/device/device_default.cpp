@@ -84,7 +84,7 @@ namespace hw {
         }
 
         bool  device_default::set_mode(device_mode mode) {
-            return true;
+            return device::set_mode(mode);
         }
 
         /* ======================================================================= */

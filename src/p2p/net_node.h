@@ -205,6 +205,13 @@ namespace nodetool
         m_config.m_support_flags = 0; // only set in public zone
       }
     };
+    
+    enum igd_t
+    {
+      no_igd,
+      igd,
+      delayed_igd,
+    };
 
   public:
     typedef t_payload_net_handler payload_net_handler;
@@ -213,9 +220,10 @@ namespace nodetool
       : m_payload_handler(payload_handler),
         m_external_port(0),
         m_rpc_port(0),
+        m_rpc_credits_per_hash(0),
         m_allow_local_ip(false),
         m_hide_my_port(false),
-        m_no_igd(false),
+        m_igd(no_igd),
         m_offline(false),
         m_save_graph(false),
         is_closing(false),
@@ -246,7 +254,9 @@ namespace nodetool
     size_t get_zone_count() const { return m_network_zones.size(); }
 
     void change_max_out_public_peers(size_t count);
+    uint32_t get_max_out_public_peers() const;
     void change_max_in_public_peers(size_t count);
+    uint32_t get_max_in_public_peers() const;
     virtual bool block_host(const epee::net_utils::network_address &adress, time_t seconds = P2P_IP_BLOCKTIME);
     virtual bool unblock_host(const epee::net_utils::network_address &address);
     virtual std::map<std::string, time_t> get_blocked_hosts() { CRITICAL_REGION_LOCAL(m_blocked_hosts_lock); return m_blocked_hosts; }
@@ -406,6 +416,11 @@ namespace nodetool
     {
       m_rpc_port = rpc_port;
     }
+    
+    void set_rpc_credits_per_hash(uint32_t rpc_credits_per_hash)
+	{
+	  m_rpc_credits_per_hash = rpc_credits_per_hash;
+	}
 
   private:
     std::string m_config_folder;
@@ -415,9 +430,10 @@ namespace nodetool
     uint32_t m_listening_port;
     uint32_t m_external_port;
     uint16_t m_rpc_port;
+    uint32_t m_rpc_credits_per_hash;
     bool m_allow_local_ip;
     bool m_hide_my_port;
-    bool m_no_igd;
+    igd_t m_igd;
     bool m_offline;
     std::atomic<bool> m_save_graph;
     std::atomic<bool> is_closing;
@@ -490,6 +506,7 @@ namespace nodetool
     extern const command_line::arg_descriptor<bool> arg_p2p_hide_my_port;
 
     extern const command_line::arg_descriptor<bool> arg_no_igd;
+    extern const command_line::arg_descriptor<std::string> arg_igd;
     extern const command_line::arg_descriptor<bool> arg_offline;
     extern const command_line::arg_descriptor<int64_t> arg_out_peers;
     extern const command_line::arg_descriptor<int64_t> arg_in_peers;
