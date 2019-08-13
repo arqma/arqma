@@ -56,6 +56,7 @@ namespace cryptonote
     std::string ip;
     std::string port;
     uint16_t rpc_port;
+    uint32_t rpc_credits_per_hash;
 
     std::string peer_id;
 
@@ -68,16 +69,16 @@ namespace cryptonote
     std::string state;
 
     uint64_t live_time;
-
-	uint64_t avg_download;
-	uint64_t current_download;
-
-	uint64_t avg_upload;
-	uint64_t current_upload;
-
-	uint32_t support_flags;
-
-	std::string connection_id;
+    
+    uint64_t avg_download;
+    uint64_t current_download;
+    
+    uint64_t avg_upload;
+    uint64_t current_upload;
+    
+    uint32_t support_flags;
+    
+    std::string connection_id;
 
     uint64_t height;
 
@@ -92,6 +93,7 @@ namespace cryptonote
       KV_SERIALIZE(ip)
       KV_SERIALIZE(port)
       KV_SERIALIZE(rpc_port)
+      KV_SERIALIZE(rpc_credits_per_hash)
       KV_SERIALIZE(peer_id)
       KV_SERIALIZE(recv_count)
       KV_SERIALIZE(recv_idle_time)
@@ -172,11 +174,8 @@ namespace cryptonote
 
     struct request_t
     {
-      std::vector<crypto::hash>    txs;
-      std::vector<crypto::hash>    blocks;
-
+      std::vector<crypto::hash> blocks;
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(txs)
         KV_SERIALIZE_CONTAINER_POD_AS_BLOB(blocks)
       END_KV_SERIALIZE_MAP()
     };
@@ -189,13 +188,11 @@ namespace cryptonote
 
     struct request_t
     {
-      std::vector<blobdata>              txs;
       std::vector<block_complete_entry>  blocks;
       std::vector<crypto::hash>          missed_ids;
       uint64_t                         current_blockchain_height;
 
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(txs)
         KV_SERIALIZE(blocks)
         KV_SERIALIZE_CONTAINER_POD_AS_BLOB(missed_ids)
         KV_SERIALIZE(current_blockchain_height)

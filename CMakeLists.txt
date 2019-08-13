@@ -299,6 +299,12 @@ else()
 endif()
 option(STATIC "Link libraries statically" ${DEFAULT_STATIC})
 
+# On older installations of g++ STDC_FORMAT_MACROS must be defined before inttype.h is included.
+# Fixes the error: expected ‘)’ before ‘PRIx64’ 
+if(WIN32 OR MSVC OR MINGW)
+  add_definitions(-D__STDC_FORMAT_MACROS)
+endif()
+
 # This is a CMake built-in switch that concerns internal libraries
 if (NOT DEFINED BUILD_SHARED_LIBS AND NOT STATIC AND CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
     set(BUILD_SHARED_LIBS ON)

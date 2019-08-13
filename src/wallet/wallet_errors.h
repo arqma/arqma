@@ -91,6 +91,7 @@ namespace tools
     //         is_key_image_spent_error
     //         get_histogram_error
     //         get_output_distribution
+    //         payment_required
     //       wallet_files_doesnt_correspond
     //
     // * - class with protected ctor
@@ -689,35 +690,35 @@ namespace tools
     //----------------------------------------------------------------------------------------------------
     struct tx_too_big : public transfer_error
     {
-      explicit tx_too_big(std::string&& loc, const cryptonote::transaction& tx, uint64_t tx_size_limit)
+      explicit tx_too_big(std::string&& loc, const cryptonote::transaction& tx, uint64_t tx_weight_limit)
         : transfer_error(std::move(loc), "transaction is too big")
         , m_tx(tx)
         , m_tx_valid(true)
-        , m_tx_size(cryptonote::get_object_blobsize(tx))
-        , m_tx_size_limit(tx_size_limit)
+        , m_tx_weight(cryptonote::get_transaction_weight(tx))
+        , m_tx_weight_limit(tx_weight_limit)
       {
       }
 
-      explicit tx_too_big(std::string&& loc, uint64_t tx_size, uint64_t tx_size_limit)
+      explicit tx_too_big(std::string&& loc, uint64_t tx_weight, uint64_t tx_weight_limit)
         : transfer_error(std::move(loc), "transaction would be too big")
         , m_tx_valid(false)
-        , m_tx_size(tx_size)
-        , m_tx_size_limit(tx_size_limit)
+        , m_tx_weight(tx_weight)
+        , m_tx_weight_limit(tx_weight_limit)
       {
       }
 
       bool tx_valid() const { return m_tx_valid; }
       const cryptonote::transaction& tx() const { return m_tx; }
-      uint64_t tx_size() const { return m_tx_size; }
-      uint64_t tx_size_limit() const { return m_tx_size_limit; }
+      uint64_t tx_weight() const { return m_tx_weight; }
+      uint64_t tx_weight_limit() const { return m_tx_weight_limit; }
 
       std::string to_string() const
       {
         std::ostringstream ss;
         ss << transfer_error::to_string() <<
-          ", tx_size_limit = " << m_tx_size_limit <<
-          ", tx size = " << m_tx_size;
-        if (m_tx_size)
+          ", tx_weight_limit = " << m_tx_weight_limit <<
+          ", tx weight = " << m_tx_weight;
+        if (m_tx_valid)
         {
           cryptonote::transaction tx = m_tx;
           ss << ", tx:\n" << cryptonote::obj_to_json_str(tx);
@@ -728,8 +729,8 @@ namespace tools
     private:
       cryptonote::transaction m_tx;
       bool m_tx_valid;
-      uint64_t m_tx_size;
-      uint64_t m_tx_size_limit;
+      uint64_t m_tx_weight;
+      uint64_t m_tx_weight_limit;
     };
     //----------------------------------------------------------------------------------------------------
     struct zero_destination : public transfer_error
@@ -774,6 +775,20 @@ namespace tools
       const std::string m_status;
     };
     //----------------------------------------------------------------------------------------------------
+    struct wallet_coded_rpc_error : public wallet_rpc_error
+    {
+      explicit wallet_coded_rpc_error(std::string&& loc, const std::string& request, int code, const std::string& status)
+        : wallet_rpc_error(std::move(loc), std::string("error ") + std::to_string(code) + (" in ") + request + " RPC: " + status, request),
+        m_code(code), m_status(status)
+      {
+      }
+      int code() const { return m_code; }
+      const std::string& status() const { return m_status; }
+    private:
+      int m_code;
+      const std::string m_status;
+    };
+    //----------------------------------------------------------------------------------------------------
     struct daemon_busy : public wallet_rpc_error
     {
       explicit daemon_busy(std::string&& loc, const std::string& request)
@@ -810,6 +825,14 @@ namespace tools
     {
       explicit get_output_distribution(std::string&& loc, const std::string& request)
         : wallet_rpc_error(std::move(loc), "failed to get output distribution", request)
+      {
+      }
+    };
+    //----------------------------------------------------------------------------------------------------
+    struct payment_required: public wallet_rpc_error
+    {
+      explicit payment_required(std::string&& loc, const std::string& request)
+        : wallet_rpc_error(std::move(loc), "payment required", request)
       {
       }
     };

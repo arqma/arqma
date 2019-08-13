@@ -1,11 +1,11 @@
 package=eudev
-$(package)_version=v3.2.6
+$(package)_version=v3.2.8
 $(package)_download_path=https://github.com/gentoo/eudev/archive/
 $(package)_file_name=$($(package)_version).tar.gz
-$(package)_sha256_hash=a96ecb8637667897b8bd4dee4c22c7c5f08b327be45186e912ce6bc768385852
+$(package)_sha256_hash=5648d44958c82ffdd1a247a7abd602a018de49a7cb0653bb74d93e2f1220aaa6
 
 define $(package)_set_vars
-  $(package)_config_opts=--disable-gudev --disable-introspection --disable-hwdb --disable-manpages --disable-shared
+  $(package)_config_opts=--disable-gudev --enable-introspection=no --disable-hwdb --disable-manpages --host=$(HOST)
 endef
 
 define $(package)_config_cmds
@@ -22,4 +22,8 @@ endef
 
 define $(package)_stage_cmds
   $(MAKE) DESTDIR=$($(package)_staging_dir) install
+endef
+
+define $(package)_postprocess_cmds
+  rm lib/*.la
 endef

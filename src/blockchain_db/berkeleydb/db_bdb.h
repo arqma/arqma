@@ -266,7 +266,7 @@ public:
 
   virtual uint64_t get_top_block_timestamp() const;
 
-  virtual size_t get_block_size(const uint64_t& height) const;
+  virtual size_t get_block_weight(const uint64_t& height) const;
 
   virtual difficulty_type get_block_cumulative_difficulty(const uint64_t& height) const;
 
@@ -318,7 +318,7 @@ public:
   virtual bool has_key_image(const crypto::key_image& img) const;
 
   virtual uint64_t add_block( const block& blk
-                            , const size_t& block_size
+                            , size_t block_weight
                             , const difficulty_type& cumulative_difficulty
                             , const uint64_t& coins_generated
                             , const std::vector<transaction>& txs
@@ -353,7 +353,7 @@ public:
 
 private:
   virtual void add_block( const block& blk
-                , const size_t& block_size
+                , size_t block_weight
                 , const difficulty_type& cumulative_difficulty
                 , const uint64_t& coins_generated
                 , const crypto::hash& block_hash
@@ -390,24 +390,6 @@ private:
   virtual uint8_t get_hard_fork_version(uint64_t height) const;
   virtual void check_hard_fork_info();
   virtual void drop_hard_fork_info();
-
-  /**
-   * @brief convert a tx output to a blob for storage
-   *
-   * @param output the output to convert
-   *
-   * @return the resultant blob
-   */
-  blobdata output_to_blob(const tx_out& output) const;
-
-  /**
-   * @brief convert a tx output blob to a tx output
-   *
-   * @param blob the blob to convert
-   *
-   * @return the resultant tx output
-   */
-  tx_out output_from_blob(const blobdata& blob) const;
 
   /**
    * @brief get the global index of the index-th output of the given amount

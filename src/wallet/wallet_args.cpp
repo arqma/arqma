@@ -77,6 +77,10 @@ namespace wallet_args
   {
     return {"wallet-file", wallet_args::tr("Use wallet <arg>"), ""};
   }
+  command_line::arg_descriptor<std::string> arg_rpc_client_secret_key()
+  {
+    return {"rpc-client-secret-key", wallet_args::tr("Set RPC client secret key for RPC payments"), ""};
+  }
 
   const char* tr(const char* str)
   {
@@ -212,7 +216,7 @@ namespace wallet_args
     MINFO(wallet_args::tr("Logging to: ") << log_path);
 
     Print(print) << boost::format(wallet_args::tr("Logging to %s")) % log_path;
-    
+
     const ssize_t lockable_memory = tools::get_lockable_memory();
 	if (lockable_memory >= 0 && lockable_memory < 256 * 4096) // 256 pages -> at least 256 secret keys and other such small/medium objects
 	  Print(print) << tr("WARNING: You may not have a high enough lockable memory limit")

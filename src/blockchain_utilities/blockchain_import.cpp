@@ -475,17 +475,18 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
             txs.push_back(tx);
           }
 
-          size_t block_size;
+          size_t block_weight;
           difficulty_type cumulative_difficulty;
           uint64_t coins_generated;
 
-          block_size = bp.block_size;
+          block_weight = bp.block_weight;
           cumulative_difficulty = bp.cumulative_difficulty;
           coins_generated = bp.coins_generated;
 
           try
           {
-            core.get_blockchain_storage().get_db().add_block(b, block_size, cumulative_difficulty, coins_generated, txs);
+            uint64_t long_term_block_weight = core.get_blockchain_storage().get_next_long_term_block_weight(block_weight);
+            core.get_blockchain_storage().get_db().add_block(b, block_weight, long_term_block_weight, cumulative_difficulty, coins_generated, txs);
           }
           catch (const std::exception& e)
           {
@@ -764,7 +765,7 @@ int main(int argc, char* argv[])
 #else
   const GetCheckpointsCallback& get_checkpoints = nullptr;
 #endif
-  if (!core.init(vm, nullptr, nullptr, get_checkpoints))
+  if (!core.init(vm, nullptr, get_checkpoints))
   {
     std::cerr << "Failed to initialize core" << ENDL;
     return 1;
