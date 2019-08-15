@@ -151,7 +151,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.5`    
+`$ cd arqma && git checkout release-v0.5.1`    
 `$ git submodule init && git submodule update`    
 
 ### Build instructions
@@ -308,7 +308,7 @@ application.
 
 * Change branch to last Release:
 
-	`cd arqma && git checkout release-v0.5`    
+	`cd arqma && git checkout release-v0.5.1`    
 
 * Activate and update submodules:
 
