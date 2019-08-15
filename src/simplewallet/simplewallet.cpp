@@ -89,9 +89,9 @@ typedef cryptonote::simple_wallet sw;
 
 #define EXTENDED_LOGS_FILE "wallet_details.log"
 
-#define DEFAULT_MIX 10
+#define DEFAULT_MIX 6
 
-#define MIN_RING_SIZE 11 // Used to inform user about min ring size -- does not track actual protocol
+#define MIN_RING_SIZE 7 // Used to inform user about min ring size -- does not track actual protocol
 
 #define OLD_AGE_WARN_THRESHOLD (60 * 86400 / DIFFICULTY_TARGET_V11) // 60 days
 
@@ -2155,8 +2155,6 @@ bool simple_wallet::set_default_ring_size(const std::vector<std::string> &args/*
 
     if (ring_size != 0 && ring_size != DEFAULT_MIX+1)
       fail_msg_writer() << "\n" << tr("WARNING: this is a non default ring size, which may harm your privacy. Default is recommended.");
-    else if (ring_size == DEFAULT_MIX)
-	  message_writer() << tr("WARNING: from v13, ring size will be fixed and this setting will be ignored.");
 
     const auto pwd_container = get_and_verify_password();
     if (pwd_container)
@@ -5343,12 +5341,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
     return true;
   }
-  if (adjusted_fake_outs_count < fake_outs_count)
-  {
-    fail_msg_writer() << (boost::format(tr("ring size %u is too large, maximum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
-    return true;
-  }
-
+  
   const size_t min_args = (transfer_type == TransferLocked) ? 2 : 1;
   if(local_args.size() < min_args)
   {
@@ -5932,12 +5925,7 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
     fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
     return true;
   }
-  if (adjusted_fake_outs_count < fake_outs_count)
-  {
-    fail_msg_writer() << (boost::format(tr("ring size %u is too large, maximum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
-    return true;
-  }
-
+  
   uint64_t unlock_block = 0;
   if (locked) {
     uint64_t locked_blocks = 0;
@@ -6210,18 +6198,6 @@ bool simple_wallet::sweep_single(const std::vector<std::string> &args_)
       fake_outs_count = ring_size - 1;
       local_args.erase(local_args.begin());
     }
-  }
-
-  uint64_t adjusted_fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
-  if (adjusted_fake_outs_count > fake_outs_count)
-  {
-    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
-    return true;
-  }
-  if (adjusted_fake_outs_count < fake_outs_count)
-  {
-    fail_msg_writer() << (boost::format(tr("ring size %u is too large, maximum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
-    return true;
   }
 
   size_t outputs = 1;
