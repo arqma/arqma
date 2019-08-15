@@ -1162,8 +1162,6 @@ private:
     uint64_t get_fee_multiplier(uint32_t priority, int fee_algorithm = -1);
     uint64_t get_base_fee();
     uint64_t get_fee_quantization_mask();
-    uint64_t get_min_ring_size();
-    uint64_t get_max_ring_size();
     uint64_t adjust_mixin(uint64_t mixin);
 
     uint32_t adjust_priority(uint32_t priority);
