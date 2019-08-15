@@ -6619,7 +6619,7 @@ uint64_t wallet2::adjust_mixin(uint64_t mixin)
     MINFO("From Hard-Fork v13 ring size is 11");
     mixin = 10;
   }
-  else if(mixin <6 && use_fork_rules(7, 10))
+  else if(mixin < 6 && use_fork_rules(7, 10))
   {
     MWARNING("Requested ring size " << (mixin + 1) << " too low, using 7");
     mixin = 6;
