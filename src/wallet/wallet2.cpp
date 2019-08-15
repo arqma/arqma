@@ -6607,30 +6607,26 @@ int wallet2::get_fee_algorithm()
   // changes at v3 and v5 and v9
   if (use_fork_rules(HF_VERSION_PER_BYTE_FEE, 0))
     return 3;
-  if (use_fork_rules(5, 0))
+  if (use_fork_rules(HF_VERSION_MIN_MIXIN_6, 0))
     return 2;
-  if (use_fork_rules(3, -720 * 14))
-   return 1;
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_min_ring_size()
 {
-  if (use_fork_rules(13, 10))
+  if (use_fork_rules(HF_VERSION_MIN_MIXIN_10, 10))
     return 11;
-  if (use_fork_rules(12, 10))
+  if (use_fork_rules(HF_VERSION_MIN_MIXIN_6, 10))
     return 7;
-  if (use_fork_rules(6, 10))
-    return 5;
-  if (use_fork_rules(2, 10))
-    return 3;
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_max_ring_size()
 {
-  if (use_fork_rules(13, 10))
+  if (use_fork_rules(HF_VERSION_MIN_MIXIN_10, 10))
     return 11;
+  if (use_fork_rules(HF_VERSION_MIN_MIXIN_6, 10))
+    return 45;
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
@@ -9684,7 +9680,7 @@ bool wallet2::use_fork_rules(uint8_t version, int64_t early_blocks)
   result = m_node_rpc_proxy.get_earliest_height(version, earliest_height);
   THROW_WALLET_EXCEPTION_IF(result, error::wallet_internal_error, "Failed to get earliest fork height");
 
-  bool close_enough = height >= earliest_height - early_blocks && earliest_height != std::numeric_limits<uint64_t>::max(); // start using the rules that many blocks beforehand
+  bool close_enough = (int64_t)height >= (int64_t)earliest_height - early_blocks && earliest_height != std::numeric_limits<uint64_t>::max(); // start using the rules that many blocks beforehand
   if (close_enough)
     LOG_PRINT_L2("Using v" << (unsigned)version << " rules");
   else
@@ -9694,7 +9690,7 @@ bool wallet2::use_fork_rules(uint8_t version, int64_t early_blocks)
 //----------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_upper_transaction_weight_limit()
 {
-  if(use_fork_rules(13, 10))
+  if(use_fork_rules(HF_VERSION_MIN_MIXIN_10, 10))
     return config::tx_settings::TRANSACTION_SIZE_LIMIT;
   else
     return config::tx_settings::TRANSACTION_SIZE_LIMIT * 4;
