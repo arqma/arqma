@@ -2148,7 +2148,7 @@ void WalletImpl::hardForkInfo(uint8_t &version, uint64_t &earliest_height) const
 
 bool WalletImpl::useForkRules(uint8_t version, int64_t early_blocks) const
 {
-    return m_wallet->use_fork_rules(version,early_blocks);
+    return m_wallet->use_fork_rules(version, early_blocks);
 }
 
 bool WalletImpl::blackballOutputs(const std::vector<std::string> &outputs, bool add)
