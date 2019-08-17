@@ -1,8 +1,8 @@
 package=unbound
 $(package)_version=1.6.8
-$(package)_download_path=https://github.com/malbit/unbound/archive
-$(package)_file_name=$($(package)_version).tar.gz
-$(package)_sha256_hash=b7550366ef47e8ff35765175744907c18444139702995550f27072530a7eae38
+$(package)_download_path=https://www.unbound.net/downloads/
+$(package)_file_name=$(package)-$($(package)_version).tar.gz
+$(package)_sha256_hash=e3b428e33f56a45417107448418865fe08d58e0e7fea199b855515f60884dd49
 $(package)_dependencies=openssl expat ldns
 
 define $(package)_set_vars
