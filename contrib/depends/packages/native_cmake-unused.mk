@@ -1,12 +1,12 @@
 package=native_cmake
-$(package)_version=3.14.6
+$(package)_version=3.14.0
 $(package)_version_dot=v3.14
 $(package)_download_path=https://cmake.org/files/$($(package)_version_dot)/
 $(package)_file_name=cmake-$($(package)_version).tar.gz
-$(package)_sha256_hash=4e8ea11cabe459308671b476469eace1622e770317a15951d7b55a82ccaaccb9
+$(package)_sha256_hash=aa76ba67b3c2af1946701f847073f4652af5cbd9f141f221c97af99127e75502
 
 define $(package)_set_vars
-  $(package)_config_opts=
+$(package)_config_opts=
 endef
 
 define $(package)_config_cmds

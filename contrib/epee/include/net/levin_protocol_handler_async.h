@@ -64,7 +64,7 @@ class async_protocol_handler;
 template<class t_connection_context>
 class async_protocol_handler_config
 {
-  typedef boost::unordered_map<boost::uuids::uuid, async_protocol_handler<t_connection_context>*> connections_map;
+  typedef boost::unordered_map<boost::uuids::uuid, async_protocol_handler<t_connection_context>* > connections_map;
   critical_section m_connects_lock;
   connections_map m_connects;
 
@@ -99,6 +99,8 @@ public:
   template<class callback_t>
   bool for_connection(const boost::uuids::uuid &connection_id, const callback_t &cb);
   size_t get_connections_count();
+  size_t get_out_connections_count();
+  size_t get_in_connections_count();
   void set_handler(levin_commands_handler<t_connection_context>* handler, void (*destroy)(levin_commands_handler<t_connection_context>*) = NULL);
 
   async_protocol_handler_config():m_pcommands_handler(NULL), m_pcommands_handler_destroy(NULL), m_max_packet_size(LEVIN_DEFAULT_MAX_PACKET_SIZE), m_invoke_timeout(LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED)
@@ -247,10 +249,10 @@ public:
     }
   };
   critical_section m_invoke_response_handlers_lock;
-  std::list<boost::shared_ptr<invoke_response_handler_base>> m_invoke_response_handlers;
+  std::list<boost::shared_ptr<invoke_response_handler_base> > m_invoke_response_handlers;
 
   template<class callback_t>
-  bool add_invoke_response_handler(const callback_t &cb, uint64_t timeout, async_protocol_handler& con, int command)
+  bool add_invoke_response_handler(const callback_t &cb, uint64_t timeout,  async_protocol_handler& con, int command)
   {
     CRITICAL_REGION_LOCAL(m_invoke_response_handlers_lock);
     boost::shared_ptr<invoke_response_handler_base> handler(boost::make_shared<anvoke_handler<callback_t>>(cb, timeout, con, command));
@@ -259,13 +261,13 @@ public:
   }
   template<class callback_t> friend struct anvoke_handler;
 public:
-  async_protocol_handler(net_utils::i_service_endpoint* psnd_hndlr,
-    config_type& config,
+  async_protocol_handler(net_utils::i_service_endpoint* psnd_hndlr, 
+    config_type& config, 
     t_connection_context& conn_context):
             m_current_head(bucket_head2()),
-            m_pservice_endpoint(psnd_hndlr),
-            m_config(config),
-            m_connection_context(conn_context),
+            m_pservice_endpoint(psnd_hndlr), 
+            m_config(config), 
+            m_connection_context(conn_context), 
             m_cache_in_buffer(4 * 1024),
             m_state(stream_state_head)
   {
@@ -457,9 +459,9 @@ public:
             {
               std::string return_buff;
               m_current_head.m_return_code = m_config.m_pcommands_handler->invoke(
-                                                                  m_current_head.m_command,
-                                                                  buff_to_invoke,
-                                                                  return_buff,
+                                                                  m_current_head.m_command, 
+                                                                  buff_to_invoke, 
+                                                                  return_buff, 
                                                                   m_connection_context);
               m_current_head.m_cb = return_buff.size();
               m_current_head.m_have_to_return_data = false;
@@ -879,6 +881,28 @@ size_t async_protocol_handler_config<t_connection_context>::get_connections_coun
 {
   CRITICAL_REGION_LOCAL(m_connects_lock);
   return m_connects.size();
+}
+//------------------------------------------------------------------------------------------
+template<class t_connection_context>
+size_t async_protocol_handler_config<t_connection_context>::get_out_connections_count()
+{
+  CRITICAL_REGION_LOCAL(m_connects_lock);
+  size_t count = 0;
+  for(const auto &c: m_connects)
+    if(!c.second->m_connection_context.m_is_income)
+      ++count;
+  return count;
+}
+//------------------------------------------------------------------------------------------
+template<class t_connection_context>
+size_t async_protocol_handler_config<t_connection_context>::get_in_connections_count()
+{
+  CRITICAL_REGION_LOCAL(m_connects_lock);
+  size_t count = 0;
+  for(const auto &c: m_connects)
+    if(c.second->m_connection_context.m_is_income)
+      ++count;
+  return count;
 }
 //------------------------------------------------------------------------------------------
 template<class t_connection_context>
