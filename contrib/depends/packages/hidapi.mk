@@ -6,7 +6,7 @@ $(package)_sha256_hash=630ee1834bdd5c5761ab079fd04f463a89585df8fcae51a7bfe4229b1
 $(package)_linux_dependencies=libusb eudev
 
 define $(package)_set_vars
-$(package)_config_opts=--enable-static --disable-shared --disable-testgui
+$(package)_config_opts=--enable-static --disable-shared
 $(package)_config_opts+=--prefix=$(host_prefix)
 $(package)_config_opts_darwin+=RANLIB="$(host_prefix)/native/bin/x86_64-apple-darwin14-ranlib" AR="$(host_prefix)/native/bin/x86_64-apple-darwin14-ar" CC="$(host_prefix)/native/bin/$($(package)_cc)"
 $(package)_config_opts_linux+=libudev_LIBS="-L$(host_prefix)/lib -ludev"
@@ -17,8 +17,8 @@ $(package)_config_opts_linux+=--with-pic
 endef
 
 define $(package)_config_cmds
-  ./bootstrap && \
-  ./configure $($(package)_config_opts)
+  ./bootstrap &&\
+  $($(package)_autoconf) $($(package)_config_opts)
 endef
 
 define $(package)_build_cmds
@@ -32,3 +32,4 @@ endef
 define $(package)_postprocess_cmds
   rm lib/*.la
 endef
+

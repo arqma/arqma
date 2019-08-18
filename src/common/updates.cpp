@@ -49,7 +49,7 @@ namespace tools
     static const std::vector<std::string> dns_urls = {
       "updates.arqma.com",
       "updates.myarqma.com",
-      "updates.suppoerarqma.com",
+      "updates.supportarqma.eu",
       "updates.supportarqma.com"
     };
 

@@ -119,6 +119,7 @@ target_link_libraries(rpc
     cryptonote_core
     cryptonote_protocol
     net
+    version
     ${Boost_REGEX_LIBRARY}
     ${Boost_THREAD_LIBRARY}
   PRIVATE
@@ -128,6 +129,7 @@ target_link_libraries(daemon_messages
   LINK_PRIVATE
     cryptonote_core
     cryptonote_protocol
+    version
     serialization
     ${EXTRA_LIBRARIES})
 
@@ -136,6 +138,7 @@ target_link_libraries(daemon_rpc_server
     rpc
     cryptonote_core
     cryptonote_protocol
+    version
     daemon_messages
     serialization
     ${Boost_CHRONO_LIBRARY}

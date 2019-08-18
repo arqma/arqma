@@ -1,8 +1,8 @@
 package=protobuf3
-$(package)_version=3.9.0
+$(package)_version=3.6.1
 $(package)_download_path=https://github.com/protocolbuffers/protobuf/releases/download/v$($(package)_version)/
 $(package)_file_name=protobuf-cpp-$($(package)_version).tar.gz
-$(package)_sha256_hash=12d5facbb9c974be261debb81fa48f4f5be25830d43a64b552edcc4b95cd6cb6
+$(package)_sha256_hash=b3732e471a9bb7950f090fd0457ebd2536a9ba0891b7f3785919c654fe2a2529
 $(package)_cxxflags=-std=c++11
 
 define $(package)_set_vars
