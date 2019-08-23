@@ -425,7 +425,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 
   MINFO("Blockchain initialized. last block: " << m_db->height() - 1 << ", " << epee::misc_utils::get_time_interval_string(timestamp_diff) << " time ago, current difficulty: " << get_difficulty_for_next_block());
   
-  rxtn_guard.stop();
+  rtxn_guard.stop();
 
   uint64_t num_popped_blocks = 0;
   while (!m_db->is_read_only())

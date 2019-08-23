@@ -3601,7 +3601,7 @@ bool BlockchainLMDB::block_rtxn_start() const
   return block_rtxn_start(&mtxn, &mcur);
 }
 
-void BlockchainLMDB::block_wxtn_start()
+void BlockchainLMDB::block_wtxn_start()
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   // Distinguish the exceptions here from exceptions that would be thrown while
