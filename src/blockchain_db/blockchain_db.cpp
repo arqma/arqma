@@ -207,7 +207,6 @@ uint64_t BlockchainDB::add_block( const block& blk
   if (blk.tx_hashes.size() != txs.size())
     throw std::runtime_error("Inconsistent tx/hashes sizes");
 
-  block_txn_start(false);
 
   TIME_MEASURE_START(time1);
   crypto::hash blk_hash = get_block_hash(blk);
@@ -247,8 +246,6 @@ uint64_t BlockchainDB::add_block( const block& blk
   time_add_block1 += time1;
 
   m_hardfork->add(blk, prev_height);
-
-  block_txn_stop();
 
   ++num_calls;
 
