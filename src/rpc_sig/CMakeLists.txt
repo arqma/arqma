@@ -1,5 +1,4 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2019, The Arqma Network
 #
 # All rights reserved.
 #
@@ -27,41 +26,24 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(simplewallet_sources
-  simplewallet.cpp)
+set(rpc_sig_sources
+  rpc_payment_signature.cpp)
 
-set(simplewallet_headers)
+set(rpc_sig_headers
+  rpc_payment_signature.h)
 
-set(simplewallet_private_headers
-  simplewallet.h)
+set(rpc_sig_private_headers)
 
-arqma_private_headers(simplewallet
-  ${simplewallet_private_headers})
-arqma_add_executable(simplewallet
-  ${simplewallet_sources}
-  ${simplewallet_headers}
-  ${simplewallet_private_headers})
-target_link_libraries(simplewallet
+arqma_private_headers(rpc_sig
+  ${rpc_sig_private_headers})
+arqma_add_library(rpc_sig
+  ${rpc_sig_sources}
+  ${rpc_sig_headers}
+  ${rpc_sig_private_headers})
+target_link_libraries(rpc_sig
+  PUBLIC
   PRIVATE
-    wallet
-    rpc_base
-    rpc_sig
-    cryptonote_core
-    cncrypto
-    common
-    mnemonics
-    ${EPEE_READLINE}
-    version
-    ${Boost_CHRONO_LIBRARY}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_LOCALE_LIBRARY}
-    ${ICU_LIBRARIES}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${GNU_READLINE_LIBRARY}
     ${EXTRA_LIBRARIES})
-set_property(TARGET simplewallet
-  PROPERTY
-    OUTPUT_NAME "arqma-wallet-cli")
-install(TARGETS simplewallet DESTINATION bin)
+
+
+

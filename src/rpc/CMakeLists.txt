@@ -29,7 +29,6 @@
 
 set(rpc_base_sources
   rpc_args.cpp
-  rpc_payment_signature.cpp
   rpc_handler.cpp)
 
 set(rpc_sources
@@ -48,7 +47,6 @@ set(daemon_rpc_server_sources
 
 set(rpc_base_headers
   rpc_args.h
-  rpc_payment_signature.h
   rpc_handler.h)
 
 set(rpc_headers
@@ -104,6 +102,7 @@ arqma_add_library(daemon_rpc_server
 
 target_link_libraries(rpc_base
   PUBLIC
+    rpc_sig
     common
     epee
     ${Boost_REGEX_LIBRARY}
@@ -115,6 +114,7 @@ target_link_libraries(rpc_base
 target_link_libraries(rpc
   PUBLIC
     rpc_base
+    rpc_sig
     common
     cryptonote_core
     cryptonote_protocol

@@ -57,6 +57,7 @@ arqma_add_library(wallet
 target_link_libraries(wallet
   PUBLIC
     rpc_base
+    rpc_sig
     multisig
     common
     cryptonote_core
@@ -92,6 +93,7 @@ if(NOT IOS)
     PRIVATE
       wallet
       rpc_base
+      rpc_sig
       cryptonote_core
       cncrypto
       common
@@ -118,6 +120,7 @@ if(BUILD_GUI_DEPS)
             wallet_api
             wallet
             rpc_base
+            rpc_sig
             multisig
             cryptonote_core
             cryptonote_basic
@@ -134,6 +137,7 @@ if(BUILD_GUI_DEPS)
     set(libs_to_merge
             wallet_api
             wallet
+            rpc_sig
             multisig
             cryptonote_core
             cryptonote_basic
