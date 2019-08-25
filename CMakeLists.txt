@@ -37,7 +37,7 @@ include(CheckLibraryExists)
 include(CheckFunctionExists)
 
 if (IOS)
-    INCLUDE(CmakeLists_IOS.txt)
+    include(CMakeLists_IOS.txt)
     include_directories("${CMAKE_SOURCE_DIR}/external/ios-headers")
     include_directories(SYSTEM "${SODIUM_INCLUDE_DIR}")
 endif()
