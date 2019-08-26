@@ -141,7 +141,7 @@ Debian / Ubuntu one liner for all dependencies
 
 Install all dependencies at once on OSX:
 
-``` brew update && brew install cmake pkg-config boost zmq libpgm unbound libsodium miniupnpc libunwind-headers xz readline ldns expat doxygen graphviz protobuf ```
+``` brew update && brew bundle --file=contrib/apple/brew ```
 
 ### Cloning the repository
 
