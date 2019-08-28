@@ -33,9 +33,6 @@ if(WIN32 OR STATIC)
   add_definitions(-DSTATICLIB)
   # miniupnp changed their static define
   add_definitions(-DMINIUPNP_STATICLIB)
-  # On older installations of g++ STDC_FORMAT_MACROS must be defined before inttype.h is included.
-  # Fixes the error: expected ‘)’ before ‘PRIx64’ 
-  add_definitions(-D__STDC_FORMAT_MACROS)
 endif()
 
 function(arqma_private_headers group)
