@@ -403,7 +403,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   }
 
   db_rtxn_guard rtxn_guard(m_db);
-  
+
   // check how far behind we are
   uint64_t top_block_timestamp = m_db->get_top_block_timestamp();
   uint64_t timestamp_diff = time(NULL) - top_block_timestamp;
@@ -424,7 +424,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 #endif
 
   MINFO("Blockchain initialized. last block: " << m_db->height() - 1 << ", " << epee::misc_utils::get_time_interval_string(timestamp_diff) << " time ago, current difficulty: " << get_difficulty_for_next_block());
-  
+
   rtxn_guard.stop();
 
   uint64_t num_popped_blocks = 0;
@@ -1149,6 +1149,11 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::
   }
 
   m_hardfork->reorganize_from_chain_height(split_height);
+
+  std::shared_ptr<tools::Notify> reorg_notify = m_reorg_notify;
+  if (reorg_notify)
+    reorg_notify->notify("%s", std::to_string(split_height).c_str(), "%h", std::to_string(m_db->height()).c_str(),
+        "%n", std::to_string(m_db->height() - split_height).c_str());
 
   MGINFO_GREEN("REORGANIZE SUCCESS! on height: " << split_height << ", new blockchain size: " << m_db->height());
   return true;
@@ -2016,7 +2021,7 @@ bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, 
 {
   // rct outputs don't exist before v4
   // Arqma did start from v7 at blockheight 1 so our start is always 0
-  
+
   start_height = 0;
   base = 0;
 
@@ -3893,7 +3898,7 @@ leave:
 
   std::shared_ptr<tools::Notify> block_notify = m_block_notify;
   if (block_notify)
-    block_notify->notify(epee::string_tools::pod_to_hex(id).c_str());
+    block_notify->notify(epee::string_tools::pod_to_hex(id).c_str(), NULL);
 
   return true;
 }

@@ -51,11 +51,26 @@ Notify::Notify(const char *spec)
   CHECK_AND_ASSERT_THROW_MES(epee::file_io_utils::is_file_exist(filename), "File not found: " << filename);
 }
 
-int Notify::notify(const char *parameter)
+static void replace(std::vector<std::string> &v, const char *tag, const char *s)
+{
+  for (std::string &str: v)
+    boost::replace_all(str, tag, s);
+}
+
+int Notify::notify(const char *tag, const char *s, ...)
 {
   std::vector<std::string> margs = args;
-  for (std::string &s: margs)
-    boost::replace_all(s, "%s", parameter);
+
+  replace(margs, tag, s);
+
+  va_list ap;
+  va_start(ap, s);
+  while ((tag = va_arg(ap, const char*)))
+  {
+    s = va_arg(ap, const char*);
+    replace(margs, tag, s);
+  }
+  va_end(ap);
 
   return tools::spawn(filename.c_str(), margs, false);
 }
