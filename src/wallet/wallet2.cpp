@@ -149,7 +149,7 @@ namespace
     dir /= ".shared-ringdb";
     return dir.string();
   }
-  
+
   std::string pack_multisignature_keys(const std::string& prefix, const std::vector<crypto::public_key>& keys, const crypto::secret_key& signer_secret_key)
   {
     std::string data;
@@ -186,7 +186,7 @@ namespace
 
     return public_keys;
   }
-  
+
   bool keys_intersect(const std::unordered_set<crypto::public_key>& s1, const std::unordered_set<crypto::public_key>& s2)
   {
     if (s1.empty() || s2.empty())
@@ -2146,7 +2146,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
   {
     std::shared_ptr<tools::Notify> tx_notify = m_tx_notify;
     if (tx_notify)
-      tx_notify->notify(epee::string_tools::pod_to_hex(txid).c_str());
+      tx_notify->notify(epee::string_tools::pod_to_hex(txid).c_str(), NULL);
   }
 }
 //----------------------------------------------------------------------------------------------------
@@ -3172,7 +3172,7 @@ bool wallet2::get_rct_distribution(uint64_t &start_height, std::vector<uint64_t>
   {
     return false;
   }
-  
+
   if (res.distributions.size() != 1)
   {
     MWARNING("Failed to request output distribution: not the expected single result");
@@ -3366,12 +3366,12 @@ bool wallet2::store_keys(const std::string& keys_file_name, const epee::wipeable
     CHECK_AND_ASSERT_MES(r, false, "failed to serialize wallet multisig signers");
     value.SetString(multisig_signers.c_str(), multisig_signers.length());
     json.AddMember("multisig_signers", value, json.GetAllocator());
-    
+
     r = ::serialization::dump_binary(m_multisig_derivations, multisig_derivations);
     CHECK_AND_ASSERT_MES(r, false, "failed to serialize wallet multisig derivations");
     value.SetString(multisig_derivations.c_str(), multisig_derivations.length());
     json.AddMember("multisig_derivations", value, json.GetAllocator());
-    
+
     value2.SetUint(m_multisig_rounds_passed);
     json.AddMember("multisig_rounds_passed", value2, json.GetAllocator());
   }
@@ -3646,7 +3646,7 @@ bool wallet2::load_keys(const std::string& keys_file_name, const epee::wipeable_
         LOG_ERROR("Field multisig_signers found in JSON, but failed to parse");
         return false;
       }
-      
+
       // previous version of multisig does not have this field
       if(json.HasMember("multisig_derivations"))
       {
@@ -4295,13 +4295,13 @@ std::string wallet2::make_multisig(const epee::wipeable_string &password,
   CHECK_AND_ASSERT_THROW_MES(!view_keys.empty(), "empty view keys");
   CHECK_AND_ASSERT_THROW_MES(view_keys.size() == spend_keys.size(), "Mismatched view/spend key sizes");
   CHECK_AND_ASSERT_THROW_MES(threshold > 1 && threshold <= spend_keys.size() + 1, "Invalid threshold");
-  
+
   std::string extra_multisig_info;
   std::vector<crypto::secret_key> multisig_keys;
   rct::key spend_pkey = rct::identity();
   rct::key spend_skey;
   std::vector<crypto::public_key> multisig_signers;
-  
+
   // decrypt keys
   epee::misc_utils::auto_scope_leave_caller keys_reencryptor;
   if (m_ask_password == AskPasswordToDecrypt && !m_unattended && !m_watch_only)
@@ -4327,15 +4327,15 @@ std::string wallet2::make_multisig(const epee::wipeable_string &password,
   // IMPORTANT: wallet's public spend key is not equal to secret_spend_key * G!
   // Wallet's public spend key is the sum of unique public multisig keys of all participants.
   // secret_spend_key * G = public signer key
-  
+
   if(threshold == spend_keys.size() + 1)
   {
     // In N / N case we only need to do one round and calculate secret multisig keys and new secret spend key
     MINFO("Creating spend key...");
-    
+
     // Calculates all multisig keys and spend key
     cryptonote::generate_multisig_N_N(get_account().get_keys(), spend_keys, multisig_keys, spend_skey, spend_pkey);
-    
+
     // Our signer key is b * G, where b is secret spend key
     multisig_signers = spend_keys;
     multisig_signers.push_back(get_multisig_signer_public_key(get_account().get_keys().m_spend_secret_key));
@@ -4352,7 +4352,7 @@ std::string wallet2::make_multisig(const epee::wipeable_string &password,
     if(threshold == spend_keys.size())
     {
       // N - 1 / N case
-      
+
       // We need an extra step, so we package all the composite public keys
       // we know about, and make a signed string out of them
       MINFO("Creating spend key...");
@@ -4374,11 +4374,11 @@ std::string wallet2::make_multisig(const epee::wipeable_string &password,
     {
       // M / N case
       MINFO("Preparing keys for next exchange round...");
-      
+
       // Preparing data for middle round - packing new public multisig keys to exchage with others.
       extra_multisig_info = pack_multisignature_keys(MULTISIG_EXTRA_INFO_MAGIC, derivations, m_account.get_keys().m_spend_secret_key);
       spend_skey = rct::sk2rct(m_account.get_keys().m_spend_secret_key);
-      
+
       // Need to store middle keys to be able to proceed in case of wallet shutdown.
       m_multisig_derivations = derivations;
     }
@@ -4644,7 +4644,7 @@ bool wallet2::finalize_multisig(const epee::wipeable_string &password, const std
     MERROR("Bad multisig info");
     return false;
   }
-  
+
   return finalize_multisig(password, public_keys, signers);
 }
 
@@ -4686,14 +4686,14 @@ bool wallet2::verify_multisig_info(const std::string &data, crypto::secret_key &
     MERROR("Multisig info is corrupt");
     return false;
   }
-  
+
   size_t offset = 0;
   skey = *(const crypto::secret_key*)(decoded.data() + offset);
   offset += sizeof(skey);
   pkey = *(const crypto::public_key*)(decoded.data() + offset);
   offset += sizeof(pkey);
   const crypto::signature &signature = *(const crypto::signature*)(decoded.data() + offset);
-  
+
   crypto::hash hash;
   crypto::cn_fast_hash(decoded.data(), decoded.size() - sizeof(signature), hash);
   if (!crypto::check_signature(hash, pkey, signature))
@@ -5456,7 +5456,7 @@ void wallet2::rescan_blockchain(bool hard, bool refresh, bool keep_key_images)
   CHECK_AND_ASSERT_THROW_MES(!hard || !keep_key_images, "Cannot preserve key images on hard rescan");
   const size_t transfers_cnt = m_transfers.size();
   crypto::hash transfers_hash{};
-  
+
   if(hard)
   {
     clear();
@@ -5471,7 +5471,7 @@ void wallet2::rescan_blockchain(bool hard, bool refresh, bool keep_key_images)
 
   if(refresh)
     this->refresh(false);
-    
+
   if(refresh && keep_key_images)
     finish_rescan_bc_keep_key_images(transfers_cnt, transfers_hash);
 }
@@ -6317,7 +6317,7 @@ bool wallet2::parse_multisig_tx_from_str(std::string multisig_tx_st, multisig_tx
       CHECK_AND_ASSERT_MES(idx < m_transfers.size(), false, "Transfer index out of range");
     CHECK_AND_ASSERT_MES(ptx.construction_data.sources.size() == ptx.tx.vin.size(), false, "Mismatched sources/vin sizes");
   }
-  
+
   return true;
 }
 //----------------------------------------------------------------------------------------------------
@@ -7843,7 +7843,7 @@ void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry
   {
     const crypto::public_key local_signer = get_multisig_signer_public_key();
     size_t n_available_signers = 1;
-    
+
     // At this step we need to define set of participants available for signature,
     // i.e. those of them who exchanged with multisig info's
     for (const crypto::public_key &signer: m_multisig_signers)
@@ -11208,7 +11208,7 @@ uint64_t wallet2::import_key_images(const std::vector<std::pair<crypto::key_imag
     unspent = 0;
     return 0;
   }
-  
+
   req.key_images.reserve(signed_key_images.size());
 
   PERF_TIMER_START(import_key_images_A);
@@ -11291,7 +11291,7 @@ uint64_t wallet2::import_key_images(const std::vector<std::pair<crypto::key_imag
     }
   }
   PERF_TIMER_STOP(import_key_images_C);
-  
+
   // accumulate outputs before the updated data
   for(size_t i = 0; i < offset; ++i)
   {
@@ -11325,7 +11325,7 @@ uint64_t wallet2::import_key_images(const std::vector<std::pair<crypto::key_imag
     }
   }
   PERF_TIMER_STOP(import_key_images_D);
-  
+
   MDEBUG("Total: " << print_money(spent) << " spent, " << print_money(unspent) << " unspent");
 
   if (check_spent)
@@ -11537,7 +11537,7 @@ std::pair<size_t, std::vector<tools::wallet2::transfer_details>> wallet2::export
   size_t offset = 0;
   while(offset < m_transfers.size() && m_transfers[offset].m_key_image_known)
     ++offset;
-  
+
   outs.reserve(m_transfers.size() - offset);
   for(size_t n = offset; n < m_transfers.size(); ++n)
   {
@@ -11570,9 +11570,9 @@ std::string wallet2::export_outputs_to_str() const
 size_t wallet2::import_outputs(const std::pair<size_t, std::vector<tools::wallet2::transfer_details>> &outputs)
 {
   PERF_TIMER(import_outputs);
-  
+
   THROW_WALLET_EXCEPTION_IF(outputs.first > m_transfers.size(), error::wallet_internal_error, "Imported outputs omit more outputs that we know of");
-  
+
   const size_t offset = outputs.first;
   const size_t original_size = m_transfers.size();
   m_transfers.resize(offset + outputs.second.size());
@@ -11581,7 +11581,7 @@ size_t wallet2::import_outputs(const std::pair<size_t, std::vector<tools::wallet
   for (size_t i = 0; i < outputs.second.size(); ++i)
   {
     transfer_details td = outputs.second[i];
-    
+
     // skip those we've already imported, or which have different data
     if (i + offset < original_size)
     {
@@ -11762,7 +11762,7 @@ rct::multisig_kLRki wallet2::get_multisig_composite_kLRki(size_t n, const std::u
   {
     if(ignore_set.find(p.m_signer) != ignore_set.end())
       continue;
-      
+
     for(const auto &lr: p.m_LR)
     {
       if(used_L.find(lr.m_L) != used_L.end())
@@ -12485,7 +12485,7 @@ uint64_t wallet2::hash_m_transfers(int64_t transfer_height, crypto::hash &hash) 
     keccak_update(&state, (const uint8_t *) tmp_hash.data, sizeof(tmp_hash.data));
     current_height += 1;
   }
-  
+
   keccak_finish(&state, (uint8_t *) hash.data);
   return current_height;
 }
