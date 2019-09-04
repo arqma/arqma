@@ -4084,7 +4084,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   }
   success_msg_writer() << "**********************************************************************";
 
-  return std::move(password);
+  return password;
 }
 //----------------------------------------------------------------------------------------------------
 boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
@@ -4131,7 +4131,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   }
 
 
-  return std::move(password);
+  return password;
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -4168,7 +4168,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     return {};
   }
 
-  return std::move(password);
+  return password;
 }
 //----------------------------------------------------------------------------------------------------
 boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
@@ -4221,7 +4221,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     return {};
   }
 
-  return std::move(password);
+  return password;
 }
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::open_wallet(const boost::program_options::variables_map& vm)

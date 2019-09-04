@@ -36,7 +36,7 @@ include(CheckLinkerFlag)
 include(CheckLibraryExists)
 include(CheckFunctionExists)
 
-if (IOS)
+if(IOS)
     include(CMakeLists_IOS.txt)
     include_directories(/usr/local/include)
     include_directories("${CMAKE_SOURCE_DIR}/external/ios-headers")

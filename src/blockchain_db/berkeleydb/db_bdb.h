@@ -306,13 +306,11 @@ public:
   virtual void get_output_key(const uint64_t &amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs);
 
   virtual tx_out_index get_output_tx_and_index_from_global(const uint64_t& index) const;
-  virtual void get_output_tx_and_index_from_global(const std::vector<uint64_t> &global_indices,
-          std::vector<tx_out_index> &tx_out_indices) const;
+  virtual void get_output_tx_and_index_from_global(const std::vector<uint64_t> &global_indices, std::vector<tx_out_index> &tx_out_indices) const;
 
   virtual tx_out_index get_output_tx_and_index(const uint64_t& amount, const uint64_t& index);
   virtual void get_output_tx_and_index(const uint64_t& amount, const std::vector<uint64_t> &offsets, std::vector<tx_out_index> &indices);
 
-  virtual std::vector<uint64_t> get_tx_output_indices(const crypto::hash& h) const;
   virtual std::vector<uint64_t> get_tx_amount_output_indices(const crypto::hash& h) const;
 
   virtual bool has_key_image(const crypto::key_image& img) const;
