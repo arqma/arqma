@@ -29,40 +29,37 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-if (WIN32 OR STATIC)
+if(WIN32 OR STATIC)
   add_definitions(-DSTATICLIB)
   # miniupnp changed their static define
   add_definitions(-DMINIUPNP_STATICLIB)
-  # On older installations of g++ STDC_FORMAT_MACROS must be defined before inttype.h is included.
-  # Fixes the error: expected ‘)’ before ‘PRIx64’ 
-  add_definitions(-D__STDC_FORMAT_MACROS)
-endif ()
+endif()
 
-function (arqma_private_headers group)
+function(arqma_private_headers group)
   source_group("${group}\\Private"
     FILES
       ${ARGN})
-endfunction ()
+endfunction()
 
-function (arqma_install_headers subdir)
+function(arqma_install_headers subdir)
   install(
     FILES       ${ARGN}
     DESTINATION "include/${subdir}"
     COMPONENT   development)
-endfunction ()
+endfunction()
 
-function (enable_stack_trace target)
+function(enable_stack_trace target)
   if(STACK_TRACE)
     set_property(TARGET ${target}
       APPEND PROPERTY COMPILE_DEFINITIONS "STACK_TRACE")
-    if (STATIC)
+    if(STATIC)
       set_property(TARGET "${target}"
         APPEND PROPERTY LINK_FLAGS "-Wl,--wrap=__cxa_throw")
     endif()
   endif()
 endfunction()
 
-function (arqma_add_executable name)
+function(arqma_add_executable name)
   source_group("${name}"
     FILES
       ${ARGN})
@@ -79,13 +76,13 @@ function (arqma_add_executable name)
     PROPERTY
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
   enable_stack_trace("${name}")
-endfunction ()
+endfunction()
 
-function (arqma_add_library name)
+function(arqma_add_library name)
     arqma_add_library_with_deps(NAME "${name}" SOURCES ${ARGN})
 endfunction()
 
-function (arqma_add_library_with_deps)
+function(arqma_add_library_with_deps)
   cmake_parse_arguments(ARQMA_ADD_LIBRARY "" "NAME" "DEPENDS;SOURCES" ${ARGN})
   source_group("${ARQMA_ADD_LIBRARY_NAME}" FILES ${ARQMA_ADD_LIBRARY_SOURCES})
 
@@ -96,13 +93,13 @@ function (arqma_add_library_with_deps)
   set(objlib obj_${ARQMA_ADD_LIBRARY_NAME})
   add_library(${objlib} OBJECT ${ARQMA_ADD_LIBRARY_SOURCES})
   add_library("${ARQMA_ADD_LIBRARY_NAME}" $<TARGET_OBJECTS:${objlib}>)
-  if (ARQMA_ADD_LIBRARY_DEPENDS)
+  if(ARQMA_ADD_LIBRARY_DEPENDS)
     add_dependencies(${objlib} ${ARQMA_ADD_LIBRARY_DEPENDS})
   endif()
   set_property(TARGET "${ARQMA_ADD_LIBRARY_NAME}" PROPERTY FOLDER "libs")
   target_compile_definitions(${objlib}
     PRIVATE $<TARGET_PROPERTY:${ARQMA_ADD_LIBRARY_NAME},INTERFACE_COMPILE_DEFINITIONS>)
-endfunction ()
+endfunction()
 
 include(Version)
 arqma_add_library(version SOURCES ${CMAKE_BINARY_DIR}/version.cpp DEPENDS genversion)
@@ -116,24 +113,21 @@ add_subdirectory(cryptonote_core)
 add_subdirectory(lmdb)
 add_subdirectory(multisig)
 add_subdirectory(net)
-if(NOT IOS)
-  add_subdirectory(blockchain_db)
-endif()
+add_subdirectory(rpc_sig)
+add_subdirectory(blockchain_db)
 add_subdirectory(mnemonics)
-if(NOT IOS)
-  add_subdirectory(rpc)
-  add_subdirectory(serialization)
-endif()
+add_subdirectory(rpc)
+add_subdirectory(serialization)
 add_subdirectory(wallet)
-if(NOT IOS)
-  add_subdirectory(p2p)
-endif()
+add_subdirectory(p2p)
 add_subdirectory(cryptonote_protocol)
+add_subdirectory(daemonizer)
+
 if(NOT IOS)
   add_subdirectory(simplewallet)
   #add_subdirectory(gen_multisig)
   add_subdirectory(gen_ssl_cert)
-  add_subdirectory(daemonizer)
+  
   add_subdirectory(daemon)
   add_subdirectory(blockchain_utilities)
 endif()

@@ -52,7 +52,7 @@ using namespace epee;
 #include "rpc/rpc_args.h"
 #include "rpc/rpc_handler.h"
 #include "rpc/rpc_payment_costs.h"
-#include "rpc/rpc_payment_signature.h"
+#include "rpc_sig/rpc_payment_signature.h"
 #include "core_rpc_server_error_codes.h"
 #include "p2p/net_node.h"
 #include "version.h"

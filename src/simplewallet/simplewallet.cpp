@@ -57,7 +57,7 @@
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "storages/http_abstract_invoke.h"
 #include "rpc/core_rpc_server_commands_defs.h"
-#include "rpc/rpc_payment_signature.h"
+#include "rpc_sig/rpc_payment_signature.h"
 #include "crypto/crypto.h"  // for crypto::secret_key definition
 #include "mnemonics/electrum-words.h"
 #include "rapidjson/document.h"
@@ -89,9 +89,9 @@ typedef cryptonote::simple_wallet sw;
 
 #define EXTENDED_LOGS_FILE "wallet_details.log"
 
-#define DEFAULT_MIX 6
+#define DEFAULT_MIX 10
 
-#define MIN_RING_SIZE 7 // Used to inform user about min ring size -- does not track actual protocol
+#define MIN_RING_SIZE 11 // Used to inform user about min ring size -- does not track actual protocol
 
 #define OLD_AGE_WARN_THRESHOLD (60 * 86400 / DIFFICULTY_TARGET_V11) // 60 days
 
@@ -4084,7 +4084,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   }
   success_msg_writer() << "**********************************************************************";
 
-  return std::move(password);
+  return password;
 }
 //----------------------------------------------------------------------------------------------------
 boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
@@ -4131,7 +4131,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   }
 
 
-  return std::move(password);
+  return password;
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -4168,7 +4168,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     return {};
   }
 
-  return std::move(password);
+  return password;
 }
 //----------------------------------------------------------------------------------------------------
 boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
@@ -4221,7 +4221,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     return {};
   }
 
-  return std::move(password);
+  return password;
 }
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::open_wallet(const boost::program_options::variables_map& vm)

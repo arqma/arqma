@@ -95,13 +95,17 @@ namespace cryptonote
     // the whole prepare/handle/cleanup incoming block sequence.
     class LockedTXN {
     public:
-      LockedTXN(Blockchain &b): m_blockchain(b), m_batch(false) {
+      LockedTXN(Blockchain &b): m_blockchain(b), m_batch(false), m_active(false) {
         m_batch = m_blockchain.get_db().batch_start();
+        m_active = true;
       }
-      ~LockedTXN() { try { if (m_batch) { m_blockchain.get_db().batch_stop(); } } catch (const std::exception &e) { MWARNING("LockedTXN dtor filtering exception: " << e.what()); } }
+      void commit() { try { if (m_batch && m_active) { m_blockchain.get_db().batch_stop(); m_active = false; } } catch (const std::exception &e) { MWARNING("LockedTXN::commit filtering exception: " << e.what()); } }
+      void abort() { try { if (m_batch && m_active) { m_blockchain.get_db().batch_abort(); m_active = false; } } catch (const std::exception &e) { MWARNING("LockedTXN::abort filtering exception: " << e.what()); } }
+      ~LockedTXN() { abort(); }
     private:
       Blockchain &m_blockchain;
       bool m_batch;
+      bool m_active;
     };
   }
   //---------------------------------------------------------------------------------
@@ -255,6 +259,7 @@ namespace cryptonote
           if (!insert_key_images(tx, id, kept_by_block))
             return false;
           m_txs_by_fee_and_receive_time.emplace(std::pair<double, std::time_t>(fee / (double)tx_weight, receive_time), id);
+          lock.commit();
         }
         catch (const std::exception &e)
         {
@@ -299,6 +304,7 @@ namespace cryptonote
         if (!insert_key_images(tx, id, kept_by_block))
           return false;
         m_txs_by_fee_and_receive_time.emplace(std::pair<double, std::time_t>(fee / (double)tx_weight, receive_time), id);
+        lock.commit();
       }
       catch (const std::exception &e)
       {
@@ -398,9 +404,10 @@ namespace cryptonote
         return;
       }
     }
-    if (changed)
+    lock.commit();
+    if(changed)
       ++m_cookie;
-    if (m_txpool_weight > bytes)
+    if(m_txpool_weight > bytes)
       MINFO("Pool weight after pruning is larger than limit: " << m_txpool_weight << "/" << bytes);
   }
   //---------------------------------------------------------------------------------
@@ -447,7 +454,6 @@ namespace cryptonote
         //it is now empty hash container for this key_image
         m_spent_key_images.erase(it);
       }
-
     }
     ++m_cookie;
     return true;
@@ -459,25 +465,25 @@ namespace cryptonote
     CRITICAL_REGION_LOCAL1(m_blockchain);
 
     auto sorted_it = find_tx_in_sorted_container(id);
-    if (sorted_it == m_txs_by_fee_and_receive_time.end())
+    if(sorted_it == m_txs_by_fee_and_receive_time.end())
       return false;
 
     try
     {
       LockedTXN lock(m_blockchain);
       txpool_tx_meta_t meta;
-      if (!m_blockchain.get_txpool_tx_meta(id, meta))
+      if(!m_blockchain.get_txpool_tx_meta(id, meta))
       {
         MERROR("Failed to find tx in txpool");
         return false;
       }
       cryptonote::blobdata txblob = m_blockchain.get_txpool_tx_blob(id);
       auto ci = m_parsed_tx_cache.find(id);
-      if (ci != m_parsed_tx_cache.end())
+      if(ci != m_parsed_tx_cache.end())
       {
         tx = ci->second;
       }
-      else if (!parse_and_validate_tx_from_blob(txblob, tx))
+      else if(!parse_and_validate_tx_from_blob(txblob, tx))
       {
         MERROR("Failed to parse tx from txpool");
         return false;
@@ -496,6 +502,7 @@ namespace cryptonote
       m_blockchain.remove_txpool_tx(id);
       m_txpool_weight -= tx_weight;
       remove_transaction_keyimages(tx, id);
+      lock.commit();
     }
     catch (const std::exception &e)
     {
@@ -515,11 +522,10 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   sorted_tx_container::iterator tx_memory_pool::find_tx_in_sorted_container(const crypto::hash& id) const
   {
-    return std::find_if( m_txs_by_fee_and_receive_time.begin(), m_txs_by_fee_and_receive_time.end()
-                       , [&](const sorted_tx_container::value_type& a){
-                         return a.second == id;
-                       }
-    );
+    return std::find_if(m_txs_by_fee_and_receive_time.begin(), m_txs_by_fee_and_receive_time.end(), [&](const sorted_tx_container::value_type& a)
+    {
+      return a.second == id;
+    });
   }
   //---------------------------------------------------------------------------------
   //TODO: investigate whether boolean return is appropriate
@@ -579,6 +585,7 @@ namespace cryptonote
           // ignore error
         }
       }
+      lock.commit();
       ++m_cookie;
     }
     return true;
@@ -642,6 +649,7 @@ namespace cryptonote
         // continue
       }
     }
+    lock.commit();
   }
   //---------------------------------------------------------------------------------
   size_t tx_memory_pool::get_transactions_count(bool include_unrelayed_txes) const
@@ -1119,7 +1127,8 @@ namespace cryptonote
         }
       }
     }
-    if (changed)
+    lock.commit();
+    if(changed)
       ++m_cookie;
   }
   //---------------------------------------------------------------------------------
@@ -1244,14 +1253,14 @@ namespace cryptonote
       if (memcmp(&original_meta, &meta, sizeof(meta)))
       {
         try
-	{
-	  m_blockchain.update_txpool_tx(sorted_it->second, meta);
-	}
+        {
+          m_blockchain.update_txpool_tx(sorted_it->second, meta);
+        }
         catch (const std::exception &e)
-	{
-	  MERROR("Failed to update tx meta: " << e.what());
-	  // continue, not fatal
-	}
+        {
+          MERROR("Failed to update tx meta: " << e.what());
+          // continue, not fatal
+        }
       }
       if (!ready)
       {
@@ -1271,6 +1280,7 @@ namespace cryptonote
       append_key_images(k_images, tx);
       LOG_PRINT_L2("  added, new block weight " << total_weight << "/" << max_total_weight << ", coinbase " << print_money(best_coinbase));
     }
+    lock.commit();
 
     expected_reward = best_coinbase;
     LOG_PRINT_L2("Block template filled with " << bl.tx_hashes.size() << " txes, weight "
@@ -1336,8 +1346,9 @@ namespace cryptonote
           // continue
         }
       }
+      lock.commit();
     }
-    if (n_removed > 0)
+    if(n_removed > 0)
       ++m_cookie;
     return n_removed;
   }
@@ -1355,20 +1366,20 @@ namespace cryptonote
 
     // first add the not kept by block, then the kept by block,
     // to avoid rejection due to key image collision
-    for (int pass = 0; pass < 2; ++pass)
+    for(int pass = 0; pass < 2; ++pass)
     {
       const bool kept = pass == 1;
       bool r = m_blockchain.for_all_txpool_txes([this, &remove, kept](const crypto::hash &txid, const txpool_tx_meta_t &meta, const cryptonote::blobdata *bd) {
-        if (!!kept != !!meta.kept_by_block)
+        if(!!kept != !!meta.kept_by_block)
           return true;
         cryptonote::transaction_prefix tx;
-        if (!parse_and_validate_tx_prefix_from_blob(*bd, tx))
+        if(!parse_and_validate_tx_prefix_from_blob(*bd, tx))
         {
           MWARNING("Failed to parse tx from txpool, removing");
           remove.push_back(txid);
           return true;
         }
-        if (!insert_key_images(tx, txid, meta.kept_by_block))
+        if(!insert_key_images(tx, txid, meta.kept_by_block))
         {
           MFATAL("Failed to insert key images from txpool tx");
           return false;
@@ -1377,13 +1388,13 @@ namespace cryptonote
         m_txpool_weight += meta.weight;
         return true;
       }, true);
-      if (!r)
+      if(!r)
         return false;
     }
-    if (!remove.empty())
+    if(!remove.empty())
     {
       LockedTXN lock(m_blockchain);
-      for (const auto &txid: remove)
+      for(const auto &txid: remove)
       {
         try
         {
@@ -1395,6 +1406,7 @@ namespace cryptonote
           // ignore error
         }
       }
+      lock.commit();
     }
 
     m_cookie = 0;

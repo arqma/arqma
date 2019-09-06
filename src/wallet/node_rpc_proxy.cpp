@@ -29,7 +29,7 @@
 
 #include "node_rpc_proxy.h"
 #include "rpc/core_rpc_server_commands_defs.h"
-#include "rpc/rpc_payment_signature.h"
+#include "rpc_sig/rpc_payment_signature.h"
 #include "rpc/rpc_payment_costs.h"
 #include "storages/http_abstract_invoke.h"
 
