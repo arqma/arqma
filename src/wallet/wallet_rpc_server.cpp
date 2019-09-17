@@ -346,23 +346,23 @@ namespace tools
     if (!m_wallet) return not_open(er);
     try
     {
-      res.balance = req.all_accounts ? m_wallet->balance_all() : m_wallet->balance(req.account_index);
-      res.unlocked_balance = req.all_accounts ? m_wallet->unlocked_balance_all() : m_wallet->unlocked_balance(req.account_index);
+      res.balance = req.all_accounts ? m_wallet->balance_all(req.strict) : m_wallet->balance(req.account_index, req.strict);
+      res.unlocked_balance = req.all_accounts ? m_wallet->unlocked_balance_all(&res.blocks_to_unlock) : m_wallet->unlocked_balance(req.account_index, &res.blocks_to_unlock);
       res.multisig_import_needed = m_wallet->multisig() && m_wallet->has_multisig_partial_key_images();
       std::map<uint32_t, std::map<uint32_t, uint64_t>> balance_per_subaddress_per_account;
-      std::map<uint32_t, std::map<uint32_t, uint64_t>> unlocked_balance_per_subaddress_per_account;
+      std::map<uint32_t, std::map<uint32_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress_per_account;
       if (req.all_accounts)
       {
         for (uint32_t account_index = 0; account_index < m_wallet->get_num_subaddress_accounts(); ++account_index)
         {
-          balance_per_subaddress_per_account[account_index] = m_wallet->balance_per_subaddress(account_index);
-          unlocked_balance_per_subaddress_per_account[account_index] = m_wallet->unlocked_balance_per_subaddress(account_index);
+          balance_per_subaddress_per_account[account_index] = m_wallet->balance_per_subaddress(account_index, req.strict);
+          unlocked_balance_per_subaddress_per_account[account_index] = m_wallet->unlocked_balance_per_subaddress(account_index, req.strict);
         }
       }
       else
       {
-        balance_per_subaddress_per_account[req.account_index] = m_wallet->balance_per_subaddress(req.account_index);
-        unlocked_balance_per_subaddress_per_account[req.account_index] = m_wallet->unlocked_balance_per_subaddress(req.account_index);
+        balance_per_subaddress_per_account[req.account_index] = m_wallet->balance_per_subaddress(req.account_index, req.strict);
+        unlocked_balance_per_subaddress_per_account[req.account_index] = m_wallet->unlocked_balance_per_subaddress(req.account_index, req.strict);
       }
       std::vector<tools::wallet2::transfer_details> transfers;
       m_wallet->get_transfers(transfers);
@@ -370,7 +370,7 @@ namespace tools
       {
         uint32_t account_index = p.first;
         std::map<uint32_t, uint64_t> balance_per_subaddress = p.second;
-        std::map<uint32_t, uint64_t> unlocked_balance_per_subaddress = unlocked_balance_per_subaddress_per_account[account_index];
+        std::map<uint32_t, std::pair<uint64_t, uint64_t>> unlocked_balance_per_subaddress = unlocked_balance_per_subaddress_per_account[account_index];
         std::set<uint32_t> address_indices;
         if (!req.all_accounts && !req.address_indices.empty())
         {
@@ -389,7 +389,8 @@ namespace tools
           cryptonote::subaddress_index index = {info.account_index, info.address_index};
           info.address = m_wallet->get_subaddress_as_str(index);
           info.balance = balance_per_subaddress[i];
-          info.unlocked_balance = unlocked_balance_per_subaddress[i];
+          info.unlocked_balance = unlocked_balance_per_subaddress[i].first;
+          info.blocks_to_unlock = unlocked_balance_per_subaddress[i].second;
           info.label = m_wallet->get_subaddress_label(index);
           info.num_unspent_outputs = std::count_if(transfers.begin(), transfers.end(), [&](const tools::wallet2::transfer_details& td) { return !td.m_spent && td.m_subaddr_index == index; });
           res.per_subaddress.emplace_back(std::move(info));
@@ -519,8 +520,8 @@ namespace tools
         wallet_rpc::COMMAND_RPC_GET_ACCOUNTS::subaddress_account_info info;
         info.account_index = subaddr_index.major;
         info.base_address = m_wallet->get_subaddress_as_str(subaddr_index);
-        info.balance = m_wallet->balance(subaddr_index.major);
-        info.unlocked_balance = m_wallet->unlocked_balance(subaddr_index.major);
+        info.balance = m_wallet->balance(subaddr_index.major, req.strict_balances);
+        info.unlocked_balance = m_wallet->unlocked_balance(subaddr_index.major, req.strict_balances);
         info.label = m_wallet->get_subaddress_label(subaddr_index);
         info.tag = account_tags.second[subaddr_index.major];
         res.subaddress_accounts.push_back(info);
