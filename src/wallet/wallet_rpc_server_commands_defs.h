@@ -48,7 +48,7 @@
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define WALLET_RPC_VERSION_MAJOR 1
-#define WALLET_RPC_VERSION_MINOR 16
+#define WALLET_RPC_VERSION_MINOR 17
 #define MAKE_WALLET_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define WALLET_RPC_VERSION MAKE_WALLET_RPC_VERSION(WALLET_RPC_VERSION_MAJOR, WALLET_RPC_VERSION_MINOR)
 namespace tools
@@ -65,10 +65,12 @@ namespace wallet_rpc
       uint32_t account_index;
       std::set<uint32_t> address_indices;
       bool all_accounts;
+      bool strict;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(account_index)
         KV_SERIALIZE(address_indices)
         KV_SERIALIZE_OPT(all_accounts, false)
+        KV_SERIALIZE_OPT(strict, false)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -82,6 +84,7 @@ namespace wallet_rpc
       uint64_t unlocked_balance;
       std::string label;
       uint64_t num_unspent_outputs;
+      uint64_t blocks_to_unlock;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(account_index)
@@ -91,6 +94,7 @@ namespace wallet_rpc
         KV_SERIALIZE(unlocked_balance)
         KV_SERIALIZE(label)
         KV_SERIALIZE(num_unspent_outputs)
+        KV_SERIALIZE(blocks_to_unlock)
       END_KV_SERIALIZE_MAP()
     };
 
@@ -100,12 +104,14 @@ namespace wallet_rpc
       uint64_t 	 unlocked_balance;
       bool       multisig_import_needed;
       std::vector<per_subaddress_info> per_subaddress;
+      uint64_t blocks_to_unlock;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(balance)
         KV_SERIALIZE(unlocked_balance)
         KV_SERIALIZE(multisig_import_needed)
         KV_SERIALIZE(per_subaddress)
+        KV_SERIALIZE(blocks_to_unlock)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -227,9 +233,11 @@ namespace wallet_rpc
     struct request_t
     {
       std::string tag;      // all accounts if empty, otherwise those accounts with this tag
+      bool strict_balances;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(tag)
+        KV_SERIALIZE_OPT(strict_balances, false)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
