@@ -83,7 +83,7 @@ namespace
       uint64_t time;
       uint64_t credits;
     };
-    
+
     RPCTracker(const char *rpc, tools::LoggingPerformanceTimer &timer): rpc(rpc), timer(timer) {
     }
     ~RPCTracker() {
@@ -335,13 +335,13 @@ namespace cryptonote
     res.rpc_connections_count = restricted ? 0 : get_connections_count();
     res.white_peerlist_size = restricted ? 0 : m_p2p.get_public_white_peers_count();
     res.grey_peerlist_size = restricted ? 0 : m_p2p.get_public_gray_peers_count();
-    
+
     cryptonote::network_type net_type = nettype();
     res.mainnet = net_type == MAINNET;
     res.testnet = net_type == TESTNET;
     res.stagenet = net_type == STAGENET;
     res.nettype = net_type == MAINNET ? "mainnet" : net_type == TESTNET ? "testnet" : net_type == STAGENET ? "stagenet" : "fakechain";
-    
+
     res.cumulative_difficulty = m_core.get_blockchain_storage().get_db().get_block_cumulative_difficulty(res.height - 1);
     res.block_size_limit = res.block_weight_limit = m_core.get_blockchain_storage().get_current_cumulative_block_weight_limit();
     res.block_size_median = res.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
@@ -1169,7 +1169,7 @@ namespace cryptonote
   bool core_rpc_server::on_get_public_nodes(const COMMAND_RPC_GET_PUBLIC_NODES::request& req, COMMAND_RPC_GET_PUBLIC_NODES::response& res, const connection_context *ctx)
   {
     RPC_TRACKER(get_public_nodes);
-    
+
     COMMAND_RPC_GET_PEER_LIST::response peer_list_res;
     const bool success = on_get_peer_list(COMMAND_RPC_GET_PEER_LIST::request(), peer_list_res, ctx);
     res.status = peer_list_res.status;
@@ -1181,7 +1181,7 @@ namespace cryptonote
     {
       return true;
     }
-    
+
     const auto collect = [](const std::vector<peer> &peer_list, std::vector<public_node> &public_nodes)
     {
       for (const auto &entry : peer_list)
@@ -1192,7 +1192,7 @@ namespace cryptonote
         }
       }
     };
-    
+
     if (req.white)
     {
       collect(peer_list_res.white_list, res.white);
@@ -1201,7 +1201,7 @@ namespace cryptonote
     {
       collect(peer_list_res.gray_list, res.gray);
     }
-    
+
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -1854,6 +1854,92 @@ namespace cryptonote
         error_resp.message = "Internal error: can't produce valid response.";
         return false;
       }
+    }
+    res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  using std::cout;
+  using std::endl;
+  bool core_rpc_server::on_get_blocks_range(const COMMAND_RPC_GET_BLOCKS_RANGE::request& req, COMMAND_RPC_GET_BLOCKS_RANGE::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
+  {
+    RPC_TRACKER(get_blocks_range);
+    bool r;
+    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_BLOCKS_RANGE>(invoke_http_mode::JON_RPC, "getblocksrange", req, res, r))
+      return r;
+
+    const uint64_t bc_height = m_core.get_current_blockchain_height();
+    if (req.start_height >= bc_height || req.end_height >= bc_height || req.start_height > req.end_height)
+    {
+      error_resp.code = CORE_RPC_ERROR_CODE_TOO_BIG_HEIGHT;
+      error_resp.message = "Invalid start/end heights.";
+      return false;
+    }
+    CHECK_PAYMENT_MIN1(req, res, (req.end_height - req.start_height + 1) * COST_PER_BLOCK, false);
+    for (uint64_t h = req.start_height; h <= req.end_height; ++h)
+    {
+      crypto::hash block_hash = m_core.get_block_id_by_height(h);
+      block blk;
+      bool have_block = m_core.get_block_by_hash(block_hash, blk);
+      if (!have_block)
+      {
+        error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
+        error_resp.message = "Internal error: can't get block by height. Height = " + boost::lexical_cast<std::string>(h) + ". Hash = " + epee::string_tools::pod_to_hex(block_hash) + '.';
+        return false;
+      }
+      if (blk.miner_tx.vin.size() != 1 || blk.miner_tx.vin.front().type() != typeid(txin_gen))
+      {
+        error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
+        error_resp.message = "Internal error: coinbase transaction in the block has the wrong type";
+        return false;
+      }
+      uint64_t block_height = boost::get<txin_gen>(blk.miner_tx.vin.front()).height;
+      if (block_height != h)
+      {
+        error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
+        error_resp.message = "Internal error: coinbase transaction in the block has the wrong height";
+        return false;
+      }
+      block_header_response block_header = block_header_response();
+      bool response_filled = fill_block_header_response(blk, false, block_height, block_hash, block_header, true);
+      if (!response_filled)
+      {
+        error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
+        error_resp.message = "Internal error: can't produce valid response.";
+        return false;
+      }
+      // insert miner_tx at the beginning of the vector
+      blk.tx_hashes.push_back(cryptonote::get_transaction_hash(blk.miner_tx));
+      std::rotate(blk.tx_hashes.rbegin(), blk.tx_hashes.rbegin() + 1, blk.tx_hashes.rend());
+
+      std::vector<crypto::hash> missed_txs;
+      std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>> txs;
+      std::vector<COMMAND_RPC_GET_BLOCKS_RANGE::blocks_transaction_entry> txs_entries;
+
+      bool r = m_core.get_split_transactions_blobs(blk.tx_hashes, txs, missed_txs);
+
+      std::vector<crypto::hash>::const_iterator vhi = blk.tx_hashes.begin();
+      for(auto& tx: txs)
+      {
+        txs_entries.push_back(COMMAND_RPC_GET_BLOCKS_RANGE::blocks_transaction_entry());
+        COMMAND_RPC_GET_BLOCKS_RANGE::blocks_transaction_entry &e = txs_entries.back();
+
+        e.tx_hash = epee::string_tools::pod_to_hex(*vhi++);
+
+        cryptonote::blobdata tx_data;
+        cryptonote::transaction t;
+        tx_data = std::get<1>(tx) + std::get<3>(tx);
+        if (cryptonote::parse_and_validate_tx_from_blob(tx_data, t))
+          {
+            e.as_json = obj_to_json_str(t);
+          }
+          else
+          {
+            res.status = "Failed to parse and validate tx from blob";
+            return true;
+          }
+      }
+      res.blocks.emplace_back(block_header, txs_entries);
     }
     res.status = CORE_RPC_STATUS_OK;
     return true;
@@ -2570,7 +2656,7 @@ namespace cryptonote
     bool r;
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_OUTPUT_DISTRIBUTION>(invoke_http_mode::BIN, "/get_output_distribution.bin", req, res, r))
       return r;
-      
+
     size_t n_0 = 0, n_non0 = 0;
     for (uint64_t amount: req.amounts)
       if (amount) ++n_non0; else ++n_0;
