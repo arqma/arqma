@@ -89,8 +89,8 @@ If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidel
 
 That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
 
-Status (branch: master): [![Build Status](https://travis-ci.org/arqma/arqma.svg?branch=master)](https://travis-ci.org/arqma/arqma)
-
+[![TravisCI master branch](https://img.shields.io/travis/arqma/arqma/master?label=master%20branch&style=for-the-badge)](https://travis-ci.org/arqma/arqma)
+![Monitored by DiscordHooks](https://img.shields.io/static/v1?label=Monitored%20by&message=DiscordHooks&color=brightgreen&style=for-the-badge)
 
 ### Dependencies
 
