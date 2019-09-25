@@ -9,13 +9,14 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Web: [arqma.com](https://arqma.com)
 - Mail: [support@arqma.com](mailto:support@arqma.com)
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
-- Discord: [https://discord.gg/TqXZWGm](https://discord.gg/TqXZWGm)
-- Telegram: [https://t.me/joinchat/HNpOMRIiNSoCn0zYrAOofw](https://t.me/joinchat/HNpOMRIiNSoCn0zYrAOofw)
+- Discord: [https://chat.arqma.com](https://chat.arqma.com)
+- Telegram: [https://telegram.arqma.com](https://telegram.arqma.com)
 
 ## Other Arqma related websites
 
 - Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
 - Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
+- Arqma Blockchain Explorer 2: [explorer.arqma.com](https://explorer.arqma.com)
 - Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
 - Arqma Mining Pools List: [https://pools.arqma.com](https://pools.arqma.com)
@@ -37,6 +38,8 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
 - Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
+- Citex: [https://www.citex.co.kr/#/trade/ARQ_ETH](https://www.citex.co.kr/#/trade/ARQ_ETH)
+- QBTC: [https://www.qbtc.ink/trade?symbol=ARQ_CNYT](https://www.qbtc.ink/trade?symbol=ARQ_CNYT)
 
 ## Introduction
 
