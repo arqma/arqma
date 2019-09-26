@@ -1867,7 +1867,13 @@ namespace cryptonote
     bool r;
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_BLOCKS_RANGE>(invoke_http_mode::JON_RPC, "getblocksrange", req, res, r))
       return r;
-
+    size_t number_req_blocks = req.end_height - req.start_height + 1;
+    if (number_req_blocks > COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT)
+    {
+      error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
+      error_resp.message = "Requested " + boost::lexical_cast<std::string>(number_req_blocks) +  " blocks. Limit is " + boost::lexical_cast<std::string>(COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT) + " blocks!";
+      return false;
+    }
     const uint64_t bc_height = m_core.get_current_blockchain_height();
     if (req.start_height >= bc_height || req.end_height >= bc_height || req.start_height > req.end_height)
     {
@@ -1875,7 +1881,7 @@ namespace cryptonote
       error_resp.message = "Invalid start/end heights.";
       return false;
     }
-    CHECK_PAYMENT_MIN1(req, res, (req.end_height - req.start_height + 1) * COST_PER_BLOCK, false);
+    CHECK_PAYMENT_MIN1(req, res, (number_req_blocks) * COST_PER_BLOCK, false);
     for (uint64_t h = req.start_height; h <= req.end_height; ++h)
     {
       crypto::hash block_hash = m_core.get_block_id_by_height(h);
