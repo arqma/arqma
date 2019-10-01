@@ -122,6 +122,7 @@ if(BUILD_GUI_DEPS)
             rpc_base
             rpc_sig
             multisig
+            blockchain_db
             cryptonote_core
             cryptonote_basic
             mnemonics
@@ -139,6 +140,7 @@ if(BUILD_GUI_DEPS)
             wallet
             rpc_sig
             multisig
+            blockchain_db
             cryptonote_core
             cryptonote_basic
             mnemonics
