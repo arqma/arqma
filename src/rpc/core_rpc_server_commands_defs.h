@@ -1054,11 +1054,13 @@ namespace cryptonote
     struct request_t: public rpc_access_request_base
     {
       std::string hash;
+      std::vector<std::string> hashes;
       bool fill_pow_hash;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_request_base)
         KV_SERIALIZE(hash)
+        KV_SERIALIZE(hashes)
         KV_SERIALIZE_OPT(fill_pow_hash, false);
       END_KV_SERIALIZE_MAP()
     };
@@ -1067,10 +1069,12 @@ namespace cryptonote
     struct response_t: public rpc_access_response_base
     {
       block_header_response block_header;
+      std::vector<block_header_response> block_headers;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_response_base)
         KV_SERIALIZE(block_header)
+        KV_SERIALIZE(block_headers)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -2117,7 +2121,7 @@ struct request_t: public rpc_access_request_base
 
     struct response_t: public rpc_response_base
     {
-      std::list<chain_info> chains;
+      std::vector<chain_info> chains;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_response_base)
