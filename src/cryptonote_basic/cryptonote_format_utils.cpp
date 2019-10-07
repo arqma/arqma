@@ -1183,7 +1183,7 @@ namespace cryptonote
     return p;
   }
   //---------------------------------------------------------------
-  bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
+/*  bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   {
     blobdata bd = get_block_hashing_blob(b);
 
@@ -1201,7 +1201,7 @@ namespace cryptonote
     }
     return true;
   }
-  //---------------------------------------------------------------
+  //--------------------------------------------------------------- */
   std::vector<uint64_t> relative_output_offsets_to_absolute(const std::vector<uint64_t>& off)
   {
     std::vector<uint64_t> res = off;
@@ -1222,13 +1222,13 @@ namespace cryptonote
     return res;
   }
   //---------------------------------------------------------------
-  crypto::hash get_block_longhash(const block& b, uint64_t height)
+/*  crypto::hash get_block_longhash(const block& b, uint64_t height)
   {
     crypto::hash p = null_hash;
     get_block_longhash(b, p, height);
     return p;
   }
-  //---------------------------------------------------------------
+  //--------------------------------------------------------------- */
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b)
   {
     std::stringstream ss;

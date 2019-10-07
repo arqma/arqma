@@ -197,6 +197,7 @@ if(NOT MANUAL_SUBMODULES)
     check_submodule(external/miniupnp)
     check_submodule(external/unbound)
     check_submodule(external/rapidjson)
+    check_submodule(external/randomarq)
   endif()
 endif()
 

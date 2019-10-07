@@ -1404,7 +1404,7 @@ namespace cryptonote
     return 0;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, epee::json_rpc::error &error_resp)
+  bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, epee::json_rpc::error &error_resp)
   {
     b = boost::value_initialized<cryptonote::block>();
     if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
@@ -1423,6 +1423,19 @@ namespace cryptonote
       LOG_ERROR("Failed to get tx pub key in coinbase extra");
       return false;
     }
+
+    seed_hash = next_seed_hash = crypto::null_hash;
+    if(b.major_version >= RX_BLOCK_VERSION)
+    {
+      uint64_t seed_height, next_height;
+      crypto::rx_seedheights(height, &seed_height, &next_height);
+      seed_hash = m_core.get_block_id_by_height(seed_height);
+      if(next_height != seed_height)
+      {
+        next_seed_hash = m_core.get_block_id_by_height(next_height);
+      }
+    }
+
     if (extra_nonce.empty())
     {
       reserved_offset = 0;
@@ -1498,7 +1511,8 @@ namespace cryptonote
         return false;
       }
     }
-    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, error_resp))
+    crypto::hash seed_hash, next_seed_hash;
+    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, error_resp))
       return false;
     res.reserved_offset = reserved_offset;
     blobdata block_blob = t_serializable_object_to_blob(b);
@@ -1506,6 +1520,9 @@ namespace cryptonote
     res.prev_hash = string_tools::pod_to_hex(b.prev_id);
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
     res.blockhashing_blob =  string_tools::buff_to_hex_nodelimer(hashing_blob);
+    res.seed_hash = string_tools::pod_to_hex(seed_hash);
+    if(next_seed_hash != crypto::null_hash)
+      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -1617,7 +1634,7 @@ namespace cryptonote
         return false;
       }
       b.nonce = req.starting_nonce;
-      miner::find_nonce_for_given_block(b, template_res.difficulty, template_res.height);
+      miner::find_nonce_for_given_block(&(m_core.get_blockchain_storage()), b, template_res.difficulty, template_res.height);
 
       submit_req.front() = string_tools::buff_to_hex_nodelimer(block_to_blob(b));
       r = on_submitblock(submit_req, submit_res, error_resp, ctx);
@@ -1660,7 +1677,7 @@ namespace cryptonote
     response.reward = get_block_reward(blk);
     response.block_size = response.block_weight = m_core.get_blockchain_storage().get_db().get_block_weight(height);
     response.num_txes = blk.tx_hashes.size();
-    response.pow_hash = fill_pow_hash ? string_tools::pod_to_hex(get_block_longhash(blk, height)) : "";
+    response.pow_hash = fill_pow_hash ? string_tools::pod_to_hex(get_block_longhash(&(m_core.get_blockchain_storage()), blk, height, 0)) : "";
 	 response.long_term_weight = m_core.get_blockchain_storage().get_db().get_block_long_term_weight(height);
     return true;
   }
@@ -2771,23 +2788,26 @@ namespace cryptonote
       return false;
     }
 
-    crypto::hash top_hash;
+    crypto::hash top_hash, seed_hash, next_seed_hash;
     m_core.get_blockchain_top(res.height, top_hash);
     ++res.height;
     cryptonote::blobdata hashing_blob;
-    if (!m_rpc_payment->get_info(client, [&](const cryptonote::blobdata &extra_nonce, cryptonote::block &b)->bool{
+    if (!m_rpc_payment->get_info(client, [&](const cryptonote::blobdata &extra_nonce, cryptonote::block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash)->bool{
       cryptonote::difficulty_type difficulty;
       uint64_t height, expected_reward;
       size_t reserved_offset;
-      if (!get_block_template(m_rpc_payment->get_payment_address(), NULL, extra_nonce, reserved_offset, difficulty, height, expected_reward, b, error_resp))
+      if (!get_block_template(m_rpc_payment->get_payment_address(), NULL, extra_nonce, reserved_offset, difficulty, height, expected_reward, b, seed_hash, next_seed_hash, error_resp))
         return false;
       return true;
-    }, hashing_blob, top_hash, res.diff, res.credits_per_hash_found, res.credits, res.cookie))
+    }, hashing_blob, seed_hash, next_seed_hash, top_hash, res.diff, res.credits_per_hash_found, res.credits, res.cookie))
     {
       return false;
     }
     res.hashing_blob = epee::string_tools::buff_to_hex_nodelimer(hashing_blob);
     res.top_hash = epee::string_tools::pod_to_hex(top_hash);
+    res.seed_hash = string_tools::pod_to_hex(seed_hash);
+    if(next_seed_hash != crypto::null_hash)
+      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
 
     res.status = CORE_RPC_STATUS_OK;
     return true;
