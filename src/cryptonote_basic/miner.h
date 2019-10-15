@@ -53,13 +53,15 @@ namespace cryptonote
     ~i_miner_handler(){};
   };
 
+  class Blockchain;
+
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
   class miner
   {
   public:
-    miner(i_miner_handler* phandler);
+    miner(i_miner_handler* phandler, Blockchain* pbc);
     ~miner();
     bool init(const boost::program_options::variables_map& vm, network_type nettype);
     static void init_options(boost::program_options::options_description& desc);
@@ -75,7 +77,7 @@ namespace cryptonote
     bool on_idle();
     void on_synchronized();
     //synchronous analog (for fast calls)
-    static bool find_nonce_for_given_block(block& bl, const difficulty_type& diffic, uint64_t height);
+    static bool find_nonce_for_given_block(const Blockchain *pbc, block& bl, const difficulty_type& diffic, uint64_t height);
     void pause();
     void resume();
     void do_print_hashrate(bool do_hr);
@@ -104,7 +106,7 @@ namespace cryptonote
   private:
     bool worker_thread();
     bool request_block_template();
-    void  merge_hr();
+    void merge_hr();
 
     struct miner_config
     {
@@ -131,6 +133,7 @@ namespace cryptonote
     std::list<boost::thread> m_threads;
     epee::critical_section m_threads_lock;
     i_miner_handler* m_phandler;
+    Blockchain* m_pbc;
     account_public_address m_mine_address;
     epee::math_helper::once_a_time_seconds<5> m_update_block_template_interval;
     epee::math_helper::once_a_time_seconds<2> m_update_merge_hr_interval;

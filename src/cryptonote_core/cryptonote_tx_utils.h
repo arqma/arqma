@@ -102,6 +102,12 @@ namespace cryptonote
 
   bool generate_genesis_block(block& bl);
 
+  class Blockchain;
+  bool get_block_longhash(const Blockchain *pb, const block& b, crypto::hash& res, const uint64_t height, const int miners);
+  void get_altblock_longhash(const block& b, crypto::hash& res, const uint64_t main_height, const uint64_t height, const uint64_t seed_height, const crypto::hash& seed_hash);
+  crypto::hash get_block_longhash(const Blockchain *pb, const block& b, const uint64_t height, const int miners);
+  void get_block_longhash_reorg(const uint64_t split_height);
+
 }
 
 BOOST_CLASS_VERSION(cryptonote::tx_source_entry, 1)

@@ -57,9 +57,9 @@ std::string wallet2::get_client_signature() const
   return cryptonote::make_rpc_payment_signature(m_rpc_client_secret_key);
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::get_rpc_payment_info(bool mining, bool &payment_required, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &hashing_blob, uint64_t &height, uint32_t &cookie)
+bool wallet2::get_rpc_payment_info(bool mining, bool &payment_required, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &hashing_blob, uint64_t &height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, uint32_t &cookie)
 {
-  boost::optional<std::string> result = m_node_rpc_proxy.get_rpc_payment_info(mining, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie);
+  boost::optional<std::string> result = m_node_rpc_proxy.get_rpc_payment_info(mining, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie);
   credits = m_rpc_payment_state.credits;
   if (result && *result != CORE_RPC_STATUS_OK)
     return false;
@@ -72,7 +72,8 @@ bool wallet2::daemon_requires_payment()
   uint64_t credits, diff, credits_per_hash_found, height;
   uint32_t cookie;
   cryptonote::blobdata blob;
-  return get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, blob, height, cookie) && payment_required;
+  crypto::hash seed_hash, next_seed_hash;
+  return get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, blob, height, seed_hash, next_seed_hash, cookie) && payment_required;
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::make_rpc_payment(uint32_t nonce, uint32_t cookie, uint64_t &credits, uint64_t &balance)
@@ -109,9 +110,10 @@ bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::functio
   uint32_t cookie;
   unsigned int n_hashes = 0;
   cryptonote::blobdata hashing_blob;
+  crypto::hash seed_hash, next_seed_hash;
   try
   {
-    need_payment = get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie) && payment_required && credits < credits_target;
+    need_payment = get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie) && payment_required && credits < credits_target;
     if (!need_payment)
       return true;
     if (!startfunc(diff, credits_per_hash_found))
@@ -124,7 +126,7 @@ bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::functio
   {
     try
     {
-      need_payment = get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie) && payment_required && credits < credits_target;
+      need_payment = get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie) && payment_required && credits < credits_target;
       if (!need_payment)
         return true;
     }
@@ -137,10 +139,25 @@ bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::functio
       epee::misc_utils::sleep_no_w(1000);
       continue;
     }
+
+    crypto::hash hash;
     const uint32_t local_nonce = nonce++; // wrapping's OK
     *(uint32_t*)(hashing_blob.data() + 39) = SWAP32LE(local_nonce);
-    crypto::hash hash;
-    crypto::cn_turtle_hash(hashing_blob.data(), hashing_blob.size(), hash);
+    const uint8_t major_version = hashing_blob[0];
+    if(major_version >= RX_BLOCK_VERSION)
+    {
+      const int miners = 1;
+      uint64_t seed_height;
+      if(crypto::rx_needhash(height, &seed_height))
+      {
+        crypto::rx_seedhash(seed_height, seed_hash.data, miners);
+      }
+      crypto::rx_slow_hash(hashing_blob.data(), hashing_blob.size(), hash.data, miners);
+    }
+    else
+    {
+      crypto::cn_turtle_hash(hashing_blob.data(), hashing_blob.size(), hash);
+    }
     ++n_hashes;
     if (cryptonote::check_hash(hash, diff))
     {

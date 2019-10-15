@@ -48,7 +48,10 @@ set(crypto_sources
   random.c
   skein.c
   slow-hash.c
+  rx-slow-hash.c
   tree-hash.c)
+
+include_directories(${RANDOMX_INCLUDE})
 
 set(crypto_headers)
 
@@ -80,6 +83,7 @@ arqma_add_library(cncrypto
 target_link_libraries(cncrypto
   PUBLIC
     epee
+    randomx
     ${Boost_SYSTEM_LIBRARY}
     ${SODIUM_LIBRARY}
   PRIVATE

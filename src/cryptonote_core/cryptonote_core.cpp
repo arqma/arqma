@@ -189,7 +189,6 @@ namespace cryptonote
   , "Prune BlockChain"
   , false
   };
-
   static const command_line::arg_descriptor<std::string> arg_reorg_notify = {
     "reorg-notify"
   , "Run a program for each reorg, '%s' will be replaced by the split height, "
@@ -197,12 +196,17 @@ namespace cryptonote
     "replaced by the number of new blocks in the new chain"
   , ""
   };
+  static const command_line::arg_descriptor<bool> arg_keep_alt_blocks = {
+    "keep-alt-blocks"
+  , "Keep Alternative Blocks on Restart"
+  , false
+  };
 
   //-----------------------------------------------------------------------------------------------
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
               m_blockchain_storage(m_mempool),
-              m_miner(this),
+              m_miner(this, &m_blockchain_storage),
               m_miner_address(boost::value_initialized<account_public_address>()),
               m_starter_message_showed(false),
               m_target_blockchain_height(0),
@@ -312,6 +316,7 @@ namespace cryptonote
     command_line::add_arg(desc, arg_block_notify);
     command_line::add_arg(desc, arg_prune_blockchain);
     command_line::add_arg(desc, arg_reorg_notify);
+    command_line::add_arg(desc, arg_keep_alt_blocks);
 
     miner::init_options(desc);
     BlockchainDB::init_options(desc);
@@ -444,6 +449,7 @@ namespace cryptonote
     std::string check_updates_string = command_line::get_arg(vm, arg_check_updates);
     size_t max_txpool_weight = command_line::get_arg(vm, arg_max_txpool_weight);
     bool prune_blockchain = command_line::get_arg(vm, arg_prune_blockchain);
+    bool keep_alt_blocks = command_line::get_arg(vm, arg_keep_alt_blocks);
 
     boost::filesystem::path folder(m_config_folder);
     if (m_nettype == FAKECHAIN)
@@ -582,8 +588,7 @@ namespace cryptonote
       return false;
     }
 
-    m_blockchain_storage.set_user_options(blocks_threads,
-        sync_on_blocks, sync_threshold, sync_mode, fast_sync);
+    m_blockchain_storage.set_user_options(blocks_threads, sync_on_blocks, sync_threshold, sync_mode, fast_sync);
 
     try
     {
@@ -625,6 +630,8 @@ namespace cryptonote
     CHECK_AND_ASSERT_MES(r, false, "Failed to initialize blockchain storage");
 
     block_sync_size = command_line::get_arg(vm, arg_block_sync_size);
+    if(block_sync_size > BLOCKS_SYNCHRONIZING_MAX_COUNT)
+      MERROR("Error --dblock_sync_size cannot be greater than " << BLOCKS_SYNCHRONIZING_MAX_COUNT);
 
     MGINFO("Loading checkpoints");
 
@@ -648,6 +655,9 @@ namespace cryptonote
 
     r = m_miner.init(vm, m_nettype);
     CHECK_AND_ASSERT_MES(r, false, "Failed to initialize miner instance");
+    
+    if(!keep_alt_blocks && !m_blockchain_storage.get_db().is_read_only())
+      m_blockchain_storage.get_db().drop_alt_blocks();
 
     if (prune_blockchain)
     {

@@ -75,6 +75,8 @@ void NodeRPCProxy::invalidate()
   m_block_weight_limit = 0;
   m_get_info_time = 0;
   m_rpc_payment_info_time = 0;
+  m_rpc_payment_seed_hash = crypto::null_hash;
+  m_rpc_payment_next_seed_hash = crypto::null_hash;
 }
 
 boost::optional<std::string> NodeRPCProxy::get_rpc_version(uint32_t &rpc_version)
@@ -258,7 +260,7 @@ boost::optional<std::string> NodeRPCProxy::get_fee_quantization_mask(uint64_t &f
   return boost::optional<std::string>();
 }
 
-boost::optional<std::string> NodeRPCProxy::get_rpc_payment_info(bool mining, bool &payment_required, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &blob, uint64_t &height, uint32_t &cookie)
+boost::optional<std::string> NodeRPCProxy::get_rpc_payment_info(bool mining, bool &payment_required, uint64_t &credits, uint64_t &diff, uint64_t &credits_per_hash_found, cryptonote::blobdata &blob, uint64_t &height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, uint32_t &cookie)
 {
   const time_t now = time(NULL);
   if (m_rpc_payment_state.stale || now >= m_rpc_payment_info_time + 5*60 || (mining && now >= m_rpc_payment_info_time + 10)) // re-cache every 10 seconds if mining, 5 minutes otherwise
@@ -284,6 +286,20 @@ boost::optional<std::string> NodeRPCProxy::get_rpc_payment_info(bool mining, boo
       MERROR("Invalid hashing blob: " << resp_t.hashing_blob);
       return boost::optional<std::string>("Invalid hashing blob");
     }
+    if(!epee::string_tools::hex_to_pod(resp_t.seed_hash, m_rpc_payment_seed_hash))
+    {
+      MERROR("Invalid seed_hash: " << resp_t.seed_hash);
+      return boost::optional<std::string>("Invalid seed hash");
+    }
+    if(resp_t.next_seed_hash.empty())
+    {
+      m_rpc_payment_next_seed_hash = crypto::null_hash;
+    }
+    else if(!epee::string_tools::hex_to_pod(resp_t.next_seed_hash, m_rpc_payment_next_seed_hash))
+    {
+      MERROR("Invalid next_seed_hash: " << resp_t.next_seed_hash);
+      return boost::optional<std::string>("Invalid next seed hash");
+    }
     m_rpc_payment_info_time = now;
   }
 
@@ -293,6 +309,8 @@ boost::optional<std::string> NodeRPCProxy::get_rpc_payment_info(bool mining, boo
   credits_per_hash_found = m_rpc_payment_credits_per_hash_found;
   blob = m_rpc_payment_blob;
   height = m_rpc_payment_height;
+  seed_hash = m_rpc_payment_seed_hash;
+  next_seed_hash = m_rpc_payment_next_seed_hash;
   cookie = m_rpc_payment_cookie;
   return boost::optional<std::string>();
 }

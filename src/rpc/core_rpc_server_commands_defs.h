@@ -89,7 +89,7 @@ namespace cryptonote
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define CORE_RPC_VERSION_MAJOR 3
-#define CORE_RPC_VERSION_MINOR 2
+#define CORE_RPC_VERSION_MINOR 3
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -919,6 +919,8 @@ namespace cryptonote
       uint64_t reserved_offset;
       uint64_t expected_reward;
       std::string prev_hash;
+      std::string seed_hash;
+      std::string next_seed_hash;
       blobdata blocktemplate_blob;
       blobdata blockhashing_blob;
 
@@ -929,6 +931,8 @@ namespace cryptonote
         KV_SERIALIZE(reserved_offset)
         KV_SERIALIZE(expected_reward)
         KV_SERIALIZE(prev_hash)
+        KV_SERIALIZE(seed_hash)
+        KV_SERIALIZE(next_seed_hash)
         KV_SERIALIZE(blocktemplate_blob)
         KV_SERIALIZE(blockhashing_blob)
       END_KV_SERIALIZE_MAP()
@@ -1054,11 +1058,13 @@ namespace cryptonote
     struct request_t: public rpc_access_request_base
     {
       std::string hash;
+      std::vector<std::string> hashes;
       bool fill_pow_hash;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_request_base)
         KV_SERIALIZE(hash)
+        KV_SERIALIZE(hashes)
         KV_SERIALIZE_OPT(fill_pow_hash, false);
       END_KV_SERIALIZE_MAP()
     };
@@ -1067,10 +1073,12 @@ namespace cryptonote
     struct response_t: public rpc_access_response_base
     {
       block_header_response block_header;
+      std::vector<block_header_response> block_headers;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_response_base)
         KV_SERIALIZE(block_header)
+        KV_SERIALIZE(block_headers)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -2117,7 +2125,7 @@ struct request_t: public rpc_access_request_base
 
     struct response_t: public rpc_response_base
     {
-      std::list<chain_info> chains;
+      std::vector<chain_info> chains;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_response_base)
@@ -2338,6 +2346,8 @@ struct request_t: public rpc_access_request_base
     struct response_t: public rpc_access_response_base
     {
       std::string hashing_blob;
+      std::string seed_hash;
+      std::string next_seed_hash;
       uint32_t cookie;
       uint64_t diff;
       uint64_t credits_per_hash_found;
@@ -2346,6 +2356,8 @@ struct request_t: public rpc_access_request_base
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_response_base)
         KV_SERIALIZE(hashing_blob)
+        KV_SERIALIZE(seed_hash)
+        KV_SERIALIZE(next_seed_hash)
         KV_SERIALIZE(cookie)
         KV_SERIALIZE(diff)
         KV_SERIALIZE(credits_per_hash_found)
