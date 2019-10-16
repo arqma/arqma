@@ -452,7 +452,6 @@ Then you can run make as usual.
 By default, in either dynamically or statically linked builds, binaries target the specific host processor on which the build happens and are not portable to other processors. Portable binaries can be built using the following targets:
 
 * ```make release-static-linux-x86_64``` builds binaries on Linux on x86_64 portable across POSIX systems on x86_64 processors
-* ```make release-static-linux-i686``` builds binaries on Linux on x86_64 or i686 portable across POSIX systems on i686 processors
 * ```make release-static-linux-armv8``` builds binaries on Linux portable across POSIX systems on armv8 processors
 * ```make release-static-linux-armv7``` builds binaries on Linux portable across POSIX systems on armv7 processors
 * ```make release-static-linux-armv6``` builds binaries on Linux portable across POSIX systems on armv6 processors
@@ -465,7 +464,6 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 * ```make depends target=x86_64-linux-gnu``` for 64-bit linux binaries.
 * ```make depends target=x86_64-w64-mingw32``` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
 * ```make depends target=x86_64-apple-darwin14``` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python3-dev curl libtiff-tools bsdmainutils libbz2-dev python3-setuptools
-* ```make depends target=i686-linux-gnu``` for 32-bit linux binaries. Requires: g++-multilib bc
 * ```make depends target=arm-linux-gnueabihf``` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * ```make depends target=aarch64-linux-gnu``` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 

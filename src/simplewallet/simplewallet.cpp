@@ -1758,11 +1758,12 @@ bool simple_wallet::rpc_payment_info(const std::vector<std::string> &args)
     uint64_t credits, diff, credits_per_hash_found, height;
     uint32_t cookie;
     std::string hashing_blob;
+    crypto::hash seed_hash, next_seed_hash;
     crypto::public_key pkey;
     crypto::secret_key_to_public_key(m_wallet->get_rpc_client_secret_key(), pkey);
     message_writer() << tr("RPC client ID: ") << pkey;
     message_writer() << tr("RPC client secret key: ") << m_wallet->get_rpc_client_secret_key();
-    if (!m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie))
+    if (!m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie))
     {
       fail_msg_writer() << tr("Failed to query daemon");
       return true;
@@ -2056,7 +2057,8 @@ bool simple_wallet::start_mining_for_rpc(const std::vector<std::string> &args)
   uint64_t credits, diff, credits_per_hash_found, height;
   uint32_t cookie;
   std::string hashing_blob;
-  if (!m_wallet->get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie))
+  crypto::hash seed_hash, next_seed_hash;
+  if (!m_wallet->get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie))
   {
     fail_msg_writer() << tr("Failed to query daemon");
     return true;
@@ -4499,7 +4501,8 @@ bool simple_wallet::check_daemon_rpc_prices(const std::string &daemon_url, uint3
     uint64_t credits, diff, credits_per_hash_found, height;
     uint32_t cookie;
     cryptonote::blobdata hashing_blob;
-    if (m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, cookie) && payment_required)
+    crypto::hash seed_hash, next_seed_hash;
+    if (m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie) && payment_required)
     {
       actual_cph = RPC_CREDITS_PER_HASH_SCALE * (credits_per_hash_found / (float)diff);
       return true;
@@ -7215,11 +7218,7 @@ static std::string get_human_readable_timestamp(uint64_t ts)
     return "<unknown>";
   time_t tt = ts;
   struct tm tm;
-#ifdef WIN32
-  gmtime_s(&tm, &tt);
-#else
-  gmtime_r(&tt, &tm);
-#endif
+  epee::misc_utils::get_gmt_time(tt, tm);
   uint64_t now = time(NULL);
   strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
   return std::string(buffer);

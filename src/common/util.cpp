@@ -31,6 +31,7 @@
 
 #include <unistd.h>
 #include <cstdio>
+#include <wchar.h>
 
 #ifdef __GLIBC__
 #include <gnu/libc-version.h>
@@ -1056,6 +1057,35 @@ void closefrom(int fd)
       ++fd;
     }
 #endif
+  }
+  
+  std::string get_human_readable_timestamp(uint64_t ts)
+  {
+    char buffer[64];
+    if (ts < 1234567890)
+      return "<unknown>";
+    time_t tt = ts;
+    struct tm tm;
+    misc_utils::get_gmt_time(tt, tm);
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
+    return std::string(buffer);
+  }
+  
+  std::string get_human_readable_timespan(uint64_t seconds)
+  {
+    if (seconds < 60)
+      return std::to_string(seconds) + " seconds";
+    if (seconds < 3600)
+      return std::to_string((uint64_t)(seconds / 60)) + " minutes";
+    if (seconds < 3600 * 24)
+      return std::to_string((uint64_t)(seconds / 3600)) + " hours";
+    if (seconds < 3600 * 24 * 30.5)
+      return std::to_string((uint64_t)(seconds / (3600 * 24))) + " days";
+    if (seconds < 3600 * 24 * 365.25)
+      return std::to_string((uint64_t)(seconds / (3600 * 24 * 30.5))) + " months";
+    if (seconds < 3600 * 24 * 365.25 * 100)
+      return std::to_string((uint64_t)(seconds / (3600 * 24 * 30.5 * 365.25))) + " years";
+    return "a long time";
   }
 
   std::string get_human_readable_bytes(uint64_t bytes)
