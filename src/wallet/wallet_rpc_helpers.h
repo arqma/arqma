@@ -76,7 +76,7 @@ namespace tools
       MINFO("Call " << call << " cost " << cost << " credits");
       return;
     }
-    MWARNING("Call " << call << " cost " << cost << " credits, expected " << expected_credits);
+//    MWARNING("Call " << call << " cost " << cost << " credits, expected " << expected_credits); no needed in LOG0
 
     if (cost > expected_credits)
     {
