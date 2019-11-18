@@ -655,7 +655,7 @@ namespace cryptonote
 
     r = m_miner.init(vm, m_nettype);
     CHECK_AND_ASSERT_MES(r, false, "Failed to initialize miner instance");
-    
+
     if(!keep_alt_blocks && !m_blockchain_storage.get_db().is_read_only())
       m_blockchain_storage.get_db().drop_alt_blocks();
 
@@ -1179,9 +1179,10 @@ namespace cryptonote
   {
     uint64_t emission_amount = 0;
     uint64_t total_fee_amount = 0;
+    const uint64_t end = start_offset + count - 1;
+    
     if (count)
     {
-      const uint64_t end = start_offset + count - 1;
       m_blockchain_storage.for_blocks_range(start_offset, end,
         [this, &emission_amount, &total_fee_amount](uint64_t, const crypto::hash& hash, const block& b){
       std::vector<transaction> txs;
@@ -1201,7 +1202,9 @@ namespace cryptonote
     }
 
     // Remove Burned Premine Amount from coinbase emission
-    emission_amount -= config::blockchain_settings::PREMINE_BURN;
+    if (start_offset<= 1 && 1 <= end){
+      emission_amount -= config::blockchain_settings::PREMINE_BURN;
+    }
 
     return std::pair<uint64_t, uint64_t>(emission_amount, total_fee_amount);
   }
