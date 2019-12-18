@@ -84,9 +84,9 @@ namespace cryptonote
     std::string get_commands_str();
     std::string get_command_usage(const std::vector<std::string> &args);
   private:
-
+    
     enum ResetType { ResetNone, ResetSoft, ResetHard, ResetSoftKeepKI };
-
+    
     bool handle_command_line(const boost::program_options::variables_map& vm);
 
     bool run_console_handler();
@@ -249,7 +249,7 @@ namespace cryptonote
     bool print_ring_members(const std::vector<tools::wallet2::pending_tx>& ptx_vector, std::ostream& ostr);
     std::string get_prompt() const;
     bool print_seed(bool encrypted);
-    std::pair<std::string, std::string> show_outputs_line(const std::vector<uint64_t> &heights, uint64_t blockchain_height, uint64_t highlight_idx = std::numeric_limits<uint64_t>::max()) const;
+    std::pair<std::string, std::string> show_outputs_line(const std::vector<uint64_t> &heights, uint64_t blockchain_height, uint64_t highlight_height = std::numeric_limits<uint64_t>::max()) const;
     bool prompt_if_old(const std::vector<tools::wallet2::pending_tx> &ptx_vector);
 
     struct transfer_view
@@ -402,7 +402,7 @@ namespace cryptonote
     bool m_rpc_payment_mining_requested;
     bool m_daemon_rpc_payment_message_displayed;
     float m_rpc_payment_hash_rate;
-
+    
     std::unordered_map<std::string, uint32_t> m_claimed_cph;
   };
 }
