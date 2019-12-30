@@ -12,4 +12,4 @@ jobs:
     - name: submodules
       run: git checkout master && git submodule init && git submodule update
     - name: make linux
-      run: make depends target=x86_64-linux-gnu
+      run: make
