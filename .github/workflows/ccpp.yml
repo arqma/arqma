@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@release-v0.6.0
+    - uses: actions/checkout@v1
     - name: submodules
-      run: git submodule init && git submodule update
+      run: git checkout release-v0.6.0 && git submodule init && git submodule update
     - name: make linux
       run: make depends target=x86_64-linux-gnu
