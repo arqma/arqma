@@ -1,0 +1,48 @@
+name: continuous-integration/gh-actions/cli
+
+on: [push, pull_request]
+
+jobs:
+  build-macos:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: update brew and install dependencies
+      run: brew update && brew install boost hidapi zmq libpgm unbound libsodium miniupnpc ldns expat libunwind-headers protobuf
+    - name: build
+      run: make -j2
+
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: update apt
+      run: sudo apt update
+    - name: install arqma dependencies
+      run: sudo apt -y install build-essential curl cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev libudev-dev libusb-1.0-0-dev libhidapi-dev protobuf-compiler libprotobuf-dev xsltproc gperf autoconf automake libtool-bin libprotobuf-c-dev
+    - name: build
+      run: make -j2 release-static
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1
+      with:
+      path: arqma/build/Linux/release/bin
+
+  test-ubuntu:
+    needs: build-ubuntu
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: update apt
+      run: sudo apt update
+    - name: install arqma dependencies
+      run: sudo apt -y install build-essential curl cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev libudev-dev libusb-1.0-0-dev libhidapi-dev protobuf-compiler libprotobuf-dev xsltproc gperf autoconf automake libtool-bin libprotobuf-c-dev
+    - name: install requests
+      run: pip install requests
+    - name: tests
+      run: make release-test -j2
