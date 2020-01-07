@@ -1,7 +1,7 @@
 ## Arqma Network
 
-Copyright (c) 2018-2019 The Arqma Network.    
-Copyright (c) 2014-2018 The Monero Project.  
+Copyright (c) 2018-2020, The Arqma Network
+Copyright (c) 2014-2020, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
@@ -154,7 +154,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.6.0`    
+`$ cd arqma && git checkout release-v0.6.0.1`    
 `$ git submodule init && git submodule update`    
 
 ### Build instructions
@@ -311,7 +311,7 @@ application.
 
 * Change branch to last Release:
 
-	`cd arqma && git checkout release-v0.6.0`    
+	`cd arqma && git checkout release-v0.6.0.1`    
 
 * Activate and update submodules:
 

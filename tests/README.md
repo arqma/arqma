@@ -3,7 +3,7 @@
 To run all tests, run:
 
 ```
-cd /path/to/monero
+cd /path/to/arqma
 make [-jn] debug-test # where n is number of compiler processes
 ```
 
@@ -27,7 +27,7 @@ To run the same tests on a release build, replace `debug` with `release`.
 
 # Crypto Tests
 
-Crypto tests are located under the `tests/crypto` directory. 
+Crypto tests are located under the `tests/crypto` directory.
 
 - `crypto-tests.h` contains test harness headers
 - `main.cpp` implements the driver for the crypto tests

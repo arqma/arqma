@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -308,7 +308,7 @@ endif()
 option(STATIC "Link libraries statically" ${DEFAULT_STATIC})
 
 # On older installations of g++ STDC_FORMAT_MACROS must be defined before inttype.h is included.
-# Fixes the error: expected ‘)’ before ‘PRIx64’ 
+# Fixes the error: expected ‘)’ before ‘PRIx64’
 if(WIN32 OR MSVC OR MINGW)
   add_definitions(-D__STDC_FORMAT_MACROS)
 endif()

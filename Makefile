@@ -1,5 +1,5 @@
-# Copyright (c) 2018, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -162,7 +162,7 @@ clean-all:
 	read -r -p "This will destroy all build directories, continue (y/N)?: " CONTINUE; \
 	[ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] || (echo "Exiting."; exit 1;)
 	rm -rf ./build
-	
+
 tags:
 	ctags -R --sort=1 --c++-kinds=+p --fields=+iaS --extra=+q --language-force=C++ src contrib tests/gtest
 
