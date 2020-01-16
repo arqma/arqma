@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
 //
@@ -559,8 +559,6 @@ std::pair<std::unique_ptr<tools::wallet2>, tools::password_container> generate_f
       }
       viewkey = *reinterpret_cast<const crypto::secret_key*>(viewkey_data.data());
       crypto::public_key pkey;
-      if (viewkey == crypto::null_skey)
-        THROW_WALLET_EXCEPTION(tools::error::wallet_internal_error, tools::wallet2::tr("view secret key may not be all zeroes"));
       if (!crypto::secret_key_to_public_key(viewkey, pkey)) {
         THROW_WALLET_EXCEPTION(tools::error::wallet_internal_error, tools::wallet2::tr("failed to verify view key secret key"));
       }
@@ -577,8 +575,6 @@ std::pair<std::unique_ptr<tools::wallet2>, tools::password_container> generate_f
       }
       spendkey = *reinterpret_cast<const crypto::secret_key*>(spendkey_data.data());
       crypto::public_key pkey;
-      if (spendkey == crypto::null_skey)
-        THROW_WALLET_EXCEPTION(tools::error::wallet_internal_error, tools::wallet2::tr("spend secret key may not be all zeroes"));
       if (!crypto::secret_key_to_public_key(spendkey, pkey)) {
         THROW_WALLET_EXCEPTION(tools::error::wallet_internal_error, tools::wallet2::tr("failed to verify spend key secret key"));
       }

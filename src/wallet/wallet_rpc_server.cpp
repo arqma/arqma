@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
 //
@@ -1088,7 +1088,7 @@ namespace tools
         er.message = "failed to parse unsigned transfers: " + std::string(e.what());
         return false;
       }
-    } 
+    }
     else if(!req.multisig_txset.empty())
     {
       try

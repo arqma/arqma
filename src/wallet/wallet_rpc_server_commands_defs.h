@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
 //
@@ -1141,7 +1141,7 @@ namespace wallet_rpc
     struct request_t
     {
       bool hard;
-      
+
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_OPT(hard, false)
       END_KV_SERIALIZE_MAP()
@@ -1689,7 +1689,7 @@ namespace wallet_rpc
     struct request_t
     {
       bool all;
-      
+
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_OPT(all, false)
       END_KV_SERIALIZE_MAP()
@@ -2360,7 +2360,7 @@ namespace wallet_rpc
     };
     typedef epee::misc_utils::struct_init<response_t> response;
   };
-  
+
   struct COMMAND_RPC_SIGN_MULTISIG
   {
     struct request_t
