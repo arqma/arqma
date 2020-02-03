@@ -100,11 +100,9 @@ namespace cryptonote
     return k;
   }
 
-  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hf_version)
+  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward)
   {
-    if(hf_version >= 16)
-      return base_reward * 10 / 100;
-    return 0;
+    return base_reward / 20;
   }
 
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
@@ -133,6 +131,7 @@ namespace cryptonote
       case TESTNET:
         cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, governance_wallet_address_str);
         break;
+      case FAKECHAIN:
       case MAINNET:
         cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, governance_wallet_address_str);
         break;
@@ -168,9 +167,11 @@ namespace cryptonote
     in.height = height;
 
     uint64_t block_reward;
-    if (height == 1) {
+    if(height == 1)
+    {
       block_reward = MONEY_PREMINE;
     }
+
     else if(!get_block_reward(median_weight, current_block_weight, already_generated_coins, block_reward, hard_fork_version))
     {
       LOG_PRINT_L0("Block is too big");
@@ -180,10 +181,11 @@ namespace cryptonote
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
     LOG_PRINT_L1("Creating block template: reward " << block_reward << ", fee " << fee);
 #endif
+
     uint64_t governance_reward = 0;
     if(hard_fork_version >= 16)
     {
-      governance_reward = get_governance_reward(height, block_reward, hard_fork_version);
+      governance_reward = get_governance_reward(height, block_reward);
       block_reward -= governance_reward;
     }
 
@@ -223,6 +225,7 @@ namespace cryptonote
         case TESTNET:
           cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, std::string(config::governance::TESTNET_WALLET_ADDRESS));
           break;
+        case FAKECHAIN:
         case MAINNET:
           cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, std::string(config::governance::MAINNET_WALLET_ADDRESS));
           break;
@@ -230,23 +233,25 @@ namespace cryptonote
           return false;
       }
 
-    crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+      crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
 
-    if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, 1 /* second output in miner tx */, out_eph_public_key))
-    {
-      MERROR("Failed to generate deterministic output key for governance wallet output creation");
-      return false;
-    }
-
-    txout_to_key tk;
-    tk.key = out_eph_public_key;
+      if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, 1 /* second output in miner tx */, out_eph_public_key))
+      {
+        MERROR("Failed to generate deterministic output key for governance wallet output creation");
+        return false;
+      }
 
     tx_out out;
     summary_amounts += out.amount = governance_reward;
     out.target = tk;
     tx.vout.push_back(out);
 
-    CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward));
+      tx_out out;
+      summary_amounts += out.amount = governance_reward;
+      out.target = tk;
+      tx.vout.push_back(out);
+
+      CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward));
     }
 
     tx.version = config::tx_settings::ARQMA_TX_VERSION;

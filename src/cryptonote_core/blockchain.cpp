@@ -1358,10 +1358,11 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
     MERROR_VER("block weight " << cumulative_block_weight << " is bigger than allowed for this blockchain");
     return false;
   }
+  uint64_t height = m_db->height();
 
   if(version >= 16)
   {
-    uint64_t governance_reward = get_governance_reward(height, base_reward, version);
+    uint64_t governance_reward = get_governance_reward(height, base_reward);
 
     if(b.miner_tx.vout.back().amount != governance_reward)
     {
@@ -1379,6 +1380,7 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
         governance_wallet_address_str = std::string(config::governance::TESTNET_WALLET_ADDRESS);
         break;
       case MAINNET:
+      case FAKECHAIN:
         governance_wallet_address_str = std::string(config::governance::MAINNET_WALLET_ADDRESS);
         break;
       default:
@@ -1714,6 +1716,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
    */
   //make blocks coin-base tx looks close to real coinbase tx to get truthful blob weight
   uint8_t hf_version = b.major_version;
+
   bool r = construct_miner_tx(height, median_weight, already_generated_coins, txs_weight, fee, miner_address, b.miner_tx, ex_nonce, hf_version, m_nettype);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, first chance");
   size_t cumulative_weight = txs_weight + get_transaction_weight(b.miner_tx);

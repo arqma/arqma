@@ -129,7 +129,7 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT                   12
+#define P2P_DEFAULT_CONNECTIONS_COUNT                   32
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     52428800   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -278,6 +278,12 @@ namespace config
     static constexpr const char* STAGENET_WALLET_ADDRESS = "as2RzktNfxR8y3RgoDmoRFCGez6393Rd97e8c3ctupJu5i3CirGA4MVFzT7fwcSjxn8bV1orETq4eVQzkY2VTjox2TFnGUhgn";
    }
 
+   namespace governance
+   {
+     static constexpr const char* MAINNET_WALLET_ADDRESS = "";
+     static constexpr const char* TESTNET_WALLET_ADDRESS = "";
+     static constexpr const char* STAGENET_WALLET_ADDRESS = "";
+   }
 }
 
 namespace arqma_nodes
