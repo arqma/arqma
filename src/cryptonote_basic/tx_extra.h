@@ -171,15 +171,17 @@ namespace cryptonote
       FIELD(data)
     END_SERIALIZE()
   };
-  
+
   struct tx_extra_account_public_address
   {
     crypto::public_key m_spend_public_key;
     crypto::public_key m_view_public_key;
+    crypto::public_key m_service_node_key;
 
     BEGIN_SERIALIZE()
       FIELD(m_spend_public_key)
       FIELD(m_view_public_key)
+      FIELD(m_service_node_key)
     END_SERIALIZE()
   };
 
