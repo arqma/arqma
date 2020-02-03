@@ -100,9 +100,14 @@ namespace cryptonote
     return k;
   }
 
-  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward)
+  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, int hard_fork_version)
   {
-    return base_reward / 20;
+    return hard_fork_version >= 16 ? base_reward / 20 : 0;
+  }
+  
+  uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, int hard_fork_version)
+  {
+    return hard_fork_version >= 16 ? base_reward / 2 : 0;
   }
 
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
@@ -150,7 +155,7 @@ namespace cryptonote
     return correct_key == output_key;
   }
   //---------------------------------------------------------------
-  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t hard_fork_version, network_type nettype) {
+  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t hard_fork_version, network_type nettype, const account_public_address service_node_address) {
     tx.vin.clear();
     tx.vout.clear();
     tx.extra.clear();
@@ -183,73 +188,96 @@ namespace cryptonote
 #endif
 
     uint64_t governance_reward = 0;
+    uint64_t service_node_reward = 0;
     if(hard_fork_version >= 16)
     {
-      governance_reward = get_governance_reward(height, block_reward);
+      governance_reward = get_governance_reward(height, block_reward, hard_fork_version);
+      service_node_reward = get_service_node_reward(height, block_reward, hard_fork_version);
       block_reward -= governance_reward;
+      block_reward -= service_node_reward;
     }
 
     block_reward += fee;
 
     uint64_t summary_amounts = 0;
-
-    crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);;
-    crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
-    bool r = crypto::generate_key_derivation(miner_address.m_view_public_key, txkey.sec, derivation);
-    CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << miner_address.m_view_public_key << ", " << txkey.sec << ")");
-
-    r = crypto::derive_public_key(derivation, 0, miner_address.m_spend_public_key, out_eph_public_key);
-    CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", " << "0" << ", " << miner_address.m_spend_public_key << ")");
-
-    txout_to_key tk;
-    tk.key = out_eph_public_key;
-
-    tx_out out;
-    summary_amounts += out.amount = block_reward;
-    out.target = tk;
-    tx.vout.push_back(out);
-
-    if(hard_fork_version >= 16)
+    
     {
-      keypair gov_key = get_deterministic_keypair_from_height(height);
-      add_tx_pub_key_to_extra(tx, gov_key.pub);
-
-      std::string governance_wallet_address_str;
-      cryptonote::address_parse_info governance_wallet_address;
-
-      switch(nettype)
-      {
-        case STAGENET:
-          cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::STAGENET, std::string(config::governance::STAGENET_WALLET_ADDRESS));
-          break;
-        case TESTNET:
-          cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, std::string(config::governance::TESTNET_WALLET_ADDRESS));
-          break;
-        case FAKECHAIN:
-        case MAINNET:
-          cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, std::string(config::governance::MAINNET_WALLET_ADDRESS));
-          break;
-        default:
-          return false;
-      }
-
+      crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
       crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+      bool r = crypto::generate_key_derivation(miner_address.m_view_public_key, txkey.sec, derivation);
+      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << miner_address.m_view_public_key << ", " << txkey.sec << ")");
 
-      if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, 1 /* second output in miner tx */, out_eph_public_key))
-      {
-        MERROR("Failed to generate deterministic output key for governance wallet output creation");
-        return false;
-      }
+      r = crypto::derive_public_key(derivation, 0, miner_address.m_spend_public_key, out_eph_public_key);
+      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", " << "0" << ", " << miner_address.m_spend_public_key << ")");
 
       txout_to_key tk;
       tk.key = out_eph_public_key;
 
       tx_out out;
-      summary_amounts += out.amount = governance_reward;
+      summary_amounts += out.amount = block_reward;
       out.target = tk;
       tx.vout.push_back(out);
+    }
 
-      CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward));
+    if(hard_fork_version >= 16)
+    {
+      keypair gov_key = get_deterministic_keypair_from_height(height);
+      add_tx_pub_key_to_extra(tx, gov_key.pub);
+      
+      {
+        crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
+        crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+        bool r = crypto::generate_key_derivation(service_node_address.m_view_public_key, gov_key.sec, derivation);
+        CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << service_node_address.m_view_public_key << ", " << gov_key.sec << ")");
+        r = crypto::derive_public_key(derivation, 1, service_node_address.m_spend_public_key, out_eph_public_key);
+        CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", " << 1 << ", "<< service_node_address.m_spend_public_key << ")");
+
+        txout_to_key tk;
+        tk.key = out_eph_public_key;
+
+        tx_out out;
+        summary_amounts += out.amount = service_node_reward;
+        out.target = tk;
+        tx.vout.push_back(out);
+      }
+      {
+        std::string governance_wallet_address_str;
+        cryptonote::address_parse_info governance_wallet_address;
+
+        switch(nettype)
+        {
+          case STAGENET:
+            cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::STAGENET, std::string(config::governance::STAGENET_WALLET_ADDRESS));
+            break;
+          case TESTNET:
+            cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, std::string(config::governance::TESTNET_WALLET_ADDRESS));
+            break;
+          case FAKECHAIN:
+          case MAINNET:
+            cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, std::string(config::governance::MAINNET_WALLET_ADDRESS));
+            break;
+          default:
+            return false;
+        }
+
+        crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+
+        if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
+        {
+          MERROR("Failed to generate deterministic output key for governance wallet output creation");
+          return false;
+        }
+
+        txout_to_key tk;
+        tk.key = out_eph_public_key;
+
+        tx_out out;
+        summary_amounts += out.amount = governance_reward;
+        out.target = tk;
+        tx.vout.push_back(out);
+      }
+
+      CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward + service_node_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward + service_node_reward));
     }
 
     tx.version = config::tx_settings::ARQMA_TX_VERSION;
@@ -699,10 +727,15 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool construct_tx_and_get_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, bool rct, rct::RangeProofType range_proof_type, rct::multisig_out *msout)
+  bool construct_tx_and_get_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, bool rct, rct::RangeProofType range_proof_type, rct::multisig_out *msout, bool is_staking_tx)
   {
     hw::device &hwdev = sender_account_keys.get_device();
     hwdev.open_tx(tx_key);
+    
+    if(is_staking_tx)
+    {
+      tx_key = get_deterministic_keypair_from_height(1).sec;
+    }
 
     // figure out if we need to make additional tx pubkeys
     size_t num_stdaddresses = 0;

@@ -30,6 +30,7 @@
 set(cryptonote_core_sources
   blockchain.cpp
   cryptonote_core.cpp
+  service_node_list.cpp
   tx_pool.cpp
   tx_sanity_check.cpp
   cryptonote_tx_utils.cpp)
@@ -40,6 +41,7 @@ set(cryptonote_core_private_headers
   blockchain_storage_boost_serialization.h
   blockchain.h
   cryptonote_core.h
+  service_node_list.h
   tx_pool.h
   tx_sanity_check.h
   cryptonote_tx_utils.h)
