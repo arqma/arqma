@@ -314,7 +314,7 @@ namespace service_nodes
   {
     while (!m_rollback_events.empty() && m_rollback_events.back()->m_block_height >= height)
     {
-      if (!m_rollback_events.back()->apply(m_service_nodes_last_reward, m_service_node_keys))
+      if (!m_rollback_events.back()->apply(m_service_nodes_last_reward, m_service_nodes_keys))
       {
         init();
         break;
