@@ -56,7 +56,7 @@ using namespace epee;
 #include "ringct/rctSigs.h"
 #include "common/notify.h"
 #include "version.h"
-#include "config/ascii.h"
+#include "wipeable_string.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
@@ -210,6 +210,10 @@ namespace cryptonote
   , "Keep Alternative Blocks on Restart"
   , false
   };
+  static const command_line::arg_descriptor<bool> arg_service_node = {
+    "service-node"
+  , "Run as a Arqma Network Service Node"
+  };
   //-----------------------------------------------------------------------------------------------
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
@@ -329,6 +333,7 @@ namespace cryptonote
     command_line::add_arg(desc, arg_prune_blockchain);
     command_line::add_arg(desc, arg_reorg_notify);
     command_line::add_arg(desc, arg_keep_alt_blocks);
+    command_line::add_arg(desc, arg_service_node);
 
     miner::init_options(desc);
     BlockchainDB::init_options(desc);
@@ -373,6 +378,8 @@ namespace cryptonote
 
     if (command_line::get_arg(vm, arg_test_drop_download) == true)
       test_drop_download();
+
+    m_service_node = command_line::get_arg(vm, arg_service_node);
 
     epee::debug::g_test_dbg_lock_sleep() = command_line::get_arg(vm, arg_test_dbg_lock_sleep);
 
@@ -460,6 +467,12 @@ namespace cryptonote
     size_t max_txpool_weight = command_line::get_arg(vm, arg_max_txpool_weight);
     bool prune_blockchain = command_line::get_arg(vm, arg_prune_blockchain);
     bool keep_alt_blocks = command_line::get_arg(vm, arg_keep_alt_blocks);
+
+    if(m_service_node)
+    {
+      r = init_service_node_key();
+      CHECK_AND_ASSERT_MES(r, false, "Failed to create or load service node key");
+    }
 
     boost::filesystem::path folder(m_config_folder);
     if (m_nettype == FAKECHAIN)
@@ -631,7 +644,7 @@ namespace cryptonote
       MERROR("Failed to parse reorg notify spec");
     }
 
-    const std::pair<uint8_t, uint64_t> regtest_hard_forks[3] = {std::make_pair(1, 0), std::make_pair(Blockchain::get_hard_fork_heights(MAINNET).back().version, 1), std::make_pair(0, 0)};
+    const std::pair<uint8_t, uint64_t> regtest_hard_forks[1] = {std::make_pair(1, 0), std::make_pair(Blockchain::get_hard_fork_heights(MAINNET).back().version, 1), std::make_pair(0, 0)};
     const cryptonote::test_options regtest_test_options = {
       regtest_hard_forks, 0
     };
@@ -690,6 +703,40 @@ namespace cryptonote
     }
 
     return load_state_data();
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::init_service_node_key()
+  {
+    std::string keypath = m_config_folder + "/service-node_key";
+    if (epee::file_io_utils::is_file_exist(keypath))
+    {
+      std::string keystr;
+      bool r = epee::file_io_utils::load_file_to_string(keypath, keystr);
+      memcpy(&unwrap(m_service_node_key), keystr.data(), sizeof(m_service_node_key));
+      wipeable_string wipe(keystr);
+      CHECK_AND_ASSERT_MES(r, false, "failed to load service node key from file");
+
+      r = crypto::secret_key_to_public_key(m_service_node_key, m_service_node_pubkey);
+      CHECK_AND_ASSERT_MES(r, false, "failed to generate pubkey from secret key");
+    }
+    else
+    {
+      cryptonote::keypair keypair = keypair::generate(hw::get_device("default"));
+      m_service_node_pubkey = keypair.pub;
+      m_service_node_key = keypair.sec;
+
+      std::string keystr(reinterpret_cast<const char *>(&m_service_node_key), sizeof(m_service_node_key));
+      bool r = epee::file_io_utils::save_string_to_file(keypath, keystr);
+      wipeable_string wipe(keystr);
+      CHECK_AND_ASSERT_MES(r, false, "failed to save service node key to file");
+
+      using namespace boost::filesystem;
+      permissions(keypath, owner_read);
+    }
+
+    MGINFO_BLUE("Arqma Service Node pubkey is " << epee::string_tools::pod_to_hex(m_service_node_pubkey));
+
+    return true;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::set_genesis_block(const block& b)
