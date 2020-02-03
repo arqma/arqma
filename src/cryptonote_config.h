@@ -195,6 +195,9 @@ static constexpr uint64_t POISSON_CHECK_DEPTH = 128;  // Main-chain depth of the
 static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the probablity that the timestamps are genuine is below e^x, -75 = 10^-33
 
 // New constants are intended to go here
+#define STAKING_REQUIREMENT_LOCK_BLOCKS                 (30*24*31)
+#define STAKING_RELOCK_WINDOW_BLOCKS                    (30*6)
+
 namespace config
 {
    uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
@@ -281,7 +284,7 @@ namespace config
    namespace governance
    {
      static constexpr const char* MAINNET_WALLET_ADDRESS = "";
-     static constexpr const char* TESTNET_WALLET_ADDRESS = "";
+     static constexpr const char* TESTNET_WALLET_ADDRESS = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkY4zCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
      static constexpr const char* STAGENET_WALLET_ADDRESS = "";
    }
 }

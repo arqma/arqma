@@ -30,9 +30,9 @@
 #include "bootstrap_file.h"
 #include "blocksdat_file.h"
 #include "common/command_line.h"
-#include "cryptonote_core/tx_pool.h"
 #include "cryptonote_core/cryptonote_core.h"
-#include "blockchain_db/blockchain_db.h"
+#include "blockchain_objects.h"
+#include "blockchain_db/db_types.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -47,6 +47,11 @@ int main(int argc, char* argv[])
 
   epee::string_tools::set_module_name_and_folder(argv[0]);
 
+  std::string default_db_type = "lmdb";
+
+  std::string available_dbs = cryptonote::blockchain_db_types(", ");
+  available_dbs = "available: " + available_dbs;
+
   uint32_t log_level = 0;
   uint64_t block_stop = 0;
   bool blocks_dat = false;
@@ -60,6 +65,9 @@ int main(int argc, char* argv[])
   const command_line::arg_descriptor<std::string> arg_output_file = {"output-file", "Specify output file", "", true};
   const command_line::arg_descriptor<std::string> arg_log_level  = {"log-level",  "0-4 or categories", ""};
   const command_line::arg_descriptor<uint64_t> arg_block_stop = {"block-stop", "Stop at block number", block_stop};
+  const command_line::arg_descriptor<std::string> arg_database = {
+    "database", available_dbs.c_str(), default_db_type
+  };
   const command_line::arg_descriptor<bool> arg_blocks_dat = {"blocksdat", "Output in blocks.dat format", blocks_dat};
 
 
@@ -68,6 +76,7 @@ int main(int argc, char* argv[])
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_testnet_on);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_stagenet_on);
   command_line::add_arg(desc_cmd_sett, arg_log_level);
+  command_line::add_arg(desc_cmd_sett, arg_database);
   command_line::add_arg(desc_cmd_sett, arg_block_stop);
   command_line::add_arg(desc_cmd_sett, arg_blocks_dat);
 
@@ -115,6 +124,13 @@ int main(int argc, char* argv[])
 
   m_config_folder = command_line::get_arg(vm, cryptonote::arg_data_dir);
 
+  std::string db_type = command_line::get_arg(vm, arg_database);
+  if (!cryptonote::blockchain_valid_db_type(db_type))
+  {
+    std::cerr << "Invalid database type: " << db_type << std::endl;
+    return 1;
+  }
+
   if (command_line::has_arg(vm, arg_output_file))
     output_file_path = boost::filesystem::path(command_line::get_arg(vm, arg_output_file));
   else
@@ -133,17 +149,15 @@ int main(int argc, char* argv[])
   // because unlike blockchain_storage constructor, which takes a pointer to
   // tx_memory_pool, Blockchain's constructor takes tx_memory_pool object.
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  Blockchain* core_storage = NULL;
-  tx_memory_pool m_mempool(*core_storage);
-  core_storage = new Blockchain(m_mempool);
-
-  BlockchainDB* db = new_db();
+  blockchain_objects_t blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.m_blockchain;
+  BlockchainDB* db = new_db(db_type);
   if (db == NULL)
   {
-    LOG_ERROR("Failed to initialize a database");
-    throw std::runtime_error("Failed to initialize a database");
+    LOG_ERROR("Attempted to use non-existent database type: " << db_type);
+    throw std::runtime_error("Attempting to use non-existent database type");
   }
-  LOG_PRINT_L0("database: LMDB");
+  LOG_PRINT_L0("database: " << db_type);
 
   boost::filesystem::path folder(m_config_folder);
   folder /= db->get_db_name();

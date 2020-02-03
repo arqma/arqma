@@ -30,10 +30,10 @@
 #include <boost/algorithm/string.hpp>
 #include "common/command_line.h"
 #include "serialization/crypto.h"
-#include "cryptonote_core/tx_pool.h"
 #include "cryptonote_core/cryptonote_core.h"
-#include "cryptonote_core/blockchain.h"
+#include "blockchain_objects.h"
 #include "blockchain_db/blockchain_db.h"
+#include "blockchain_db/db_types.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -102,6 +102,11 @@ int main(int argc, char* argv[])
 
   epee::string_tools::set_module_name_and_folder(argv[0]);
 
+  std::string default_db_type = "lmdb";
+
+  std::string available_dbs = cryptonote::blockchain_db_types(", ");
+  available_dbs = "available: " + available_dbs;
+
   uint32_t log_level = 0;
 
   tools::on_startup();
@@ -109,6 +114,9 @@ int main(int argc, char* argv[])
   po::options_description desc_cmd_only("Command line options");
   po::options_description desc_cmd_sett("Command line options and settings options");
   const command_line::arg_descriptor<std::string> arg_log_level  = {"log-level",  "0-4 or categories", ""};
+  const command_line::arg_descriptor<std::string> arg_database = {
+    "database", available_dbs.c_str(), default_db_type
+  };
   const command_line::arg_descriptor<bool> arg_verbose  = {"verbose", "Verbose output", false};
   const command_line::arg_descriptor<bool> arg_dry_run  = {"dry-run", "Do not actually prune", false};
   const command_line::arg_descriptor<std::string> arg_input = {"input", "Path to the known spent outputs file"};
@@ -117,6 +125,7 @@ int main(int argc, char* argv[])
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_testnet_on);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_stagenet_on);
   command_line::add_arg(desc_cmd_sett, arg_log_level);
+  command_line::add_arg(desc_cmd_sett, arg_database);
   command_line::add_arg(desc_cmd_sett, arg_verbose);
   command_line::add_arg(desc_cmd_sett, arg_dry_run);
   command_line::add_arg(desc_cmd_sett, arg_input);
@@ -158,18 +167,25 @@ int main(int argc, char* argv[])
   bool opt_verbose = command_line::get_arg(vm, arg_verbose);
   bool opt_dry_run = command_line::get_arg(vm, arg_dry_run);
 
+  std::string db_type = command_line::get_arg(vm, arg_database);
+  if (!cryptonote::blockchain_valid_db_type(db_type))
+  {
+    std::cerr << "Invalid database type: " << db_type << std::endl;
+    return 1;
+  }
+
   const std::string input = command_line::get_arg(vm, arg_input);
 
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  std::unique_ptr<Blockchain> core_storage;
-  tx_memory_pool m_mempool(*core_storage);
-  core_storage.reset(new Blockchain(m_mempool));
-  BlockchainDB *db = new_db();
+  blockchain_objects_t blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.m_blockchain;
+  BlockchainDB *db = new_db(db_type);
   if (db == NULL)
   {
-    LOG_ERROR("Failed to initialize a database");
-    throw std::runtime_error("Failed to initialize a database");
+    LOG_ERROR("Attempted to use non-existent database type: " << db_type);
+    throw std::runtime_error("Attempting to use non-existent database type");
   }
+  LOG_PRINT_L0("database: " << db_type);
 
   const std::string filename = (boost::filesystem::path(opt_data_dir) / db->get_db_name()).string();
   LOG_PRINT_L0("Loading blockchain from folder " << filename << " ...");

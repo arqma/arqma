@@ -68,6 +68,8 @@
 #include "cryptonote_basic/hardfork.h"
 #include "blockchain_db/blockchain_db.h"
 
+namespace service_nodes { class service_node_list; };
+
 namespace tools { class Notify; }
 
 namespace cryptonote
@@ -112,13 +114,37 @@ namespace cryptonote
       difficulty_type cumulative_difficulty; //!< the accumulated difficulty after that block
       uint64_t already_generated_coins; //!< the total coins minted after that block
     };
+    
+    class BlockAddedHook
+    {
+    public:
+      virtual void block_added(const block& block, const std::vector<transaction>& txs) = 0;
+    };
+
+    class BlockchainDetachedHook
+    {
+    public:
+      virtual void blockchain_detached(uint64_t height) = 0;
+    };
+
+    class InitHook
+    {
+    public:
+      virtual void init() = 0;
+    };
+
+    class ValidateMinerTxHook
+    {
+    public:
+      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, int hard_fork_version, uint64_t base_reward) = 0;
+    };
 
     /**
      * @brief Blockchain constructor
      *
      * @param tx_pool a reference to the transaction pool to be kept by the Blockchain
      */
-    Blockchain(tx_memory_pool& tx_pool);
+    Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list);
 
     /**
      * @brief Initialize the Blockchain state
@@ -313,6 +339,13 @@ namespace cryptonote
      * @return the target
      */
     difficulty_type get_difficulty_for_next_block();
+    
+    /**
+     * @brief returns the staking requirement for the block at height
+     *
+     * @return the target
+     */
+    uint64_t get_staking_requirement(uint64_t height) const;
 
     /**
      * @brief adds a block to the blockchain
@@ -1015,6 +1048,14 @@ namespace cryptonote
      * @param nblocks number of blocks to be removed
      */
     void pop_blocks(uint64_t nblocks);
+    
+    /**
+     * @brief add a hook for processing new blocks and rollbacks for reorgs
+     */
+    void hook_block_added(BlockAddedHook& block_added_hook);
+    void hook_blockchain_detached(BlockchainDetachedHook& blockchain_detached_hook);
+    void hook_init(InitHook& init_hook);
+    void hook_validate_miner_tx(ValidateMinerTxHook& validate_miner_tx_hook);
 
     /**
      * @brief checks whether a given block height is included in the precompiled block hash area
@@ -1046,6 +1087,8 @@ namespace cryptonote
     BlockchainDB* m_db;
 
     tx_memory_pool& m_tx_pool;
+    
+    service_nodes::service_node_list& m_service_node_list;
 
     mutable epee::critical_section m_blockchain_lock; // TODO: add here reader/writer lock
 
@@ -1091,8 +1134,12 @@ namespace cryptonote
 
     // some invalid blocks
     blocks_ext_by_hash m_invalid_blocks;     // crypto::hash -> block_extended_info
-
-
+    
+    std::vector<BlockAddedHook*> m_block_added_hooks;
+    std::vector<BlockchainDetachedHook*> m_blockchain_detached_hooks;
+    std::vector<InitHook*> m_init_hooks;
+    std::vector<ValidateMinerTxHook*> m_validate_miner_tx_hooks;
+    
     checkpoints m_checkpoints;
     bool m_enforce_dns_checkpoints;
 
