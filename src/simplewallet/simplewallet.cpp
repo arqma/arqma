@@ -232,7 +232,7 @@ namespace
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
   const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
-  const char* USAGE_STAKE_ALL("stake_all [index=<N1>[,<N2>,...]] [<priority>] [lockblocks]");
+  const char* USAGE_STAKE_ALL("stake_all [index=<N1>[,<N2>,...]] [<priority>] <service node pubkey>");
 
   std::string input_line(const std::string& prompt, bool yesno = false)
   {
@@ -5777,7 +5777,7 @@ bool simple_wallet::locked_sweep_all(const std::vector<std::string> &args_)
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 {
-  // stake_all [index=<N1>[,<N2>,...]] [priority]
+  // stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>
   if(!try_connect_to_daemon())
     return true;
 
@@ -5794,6 +5794,19 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
   uint32_t priority = 0;
   if (local_args.size() > 0 && parse_priority(local_args[0], priority))
     local_args.erase(local_args.begin());
+
+  if(local_args.empty())
+  {
+    fail_msg_writer() << tr("Usage: stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>");
+    return true;
+  }
+
+  crypto::public_key service_node_key;
+  if (!epee::string_tools::hex_to_pod(local_args[0], service_node_key))
+  {
+    fail_msg_writer() << tr("failed to parse service node pubkey");
+    return true;
+  }
 
   priority = m_wallet->adjust_priority(priority);
 
@@ -5815,7 +5828,7 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 
   std::vector<uint8_t> extra;
 
-  if (!add_account_public_address_to_tx_extra(extra, address))
+  if (!add_account_public_address_to_tx_extra(extra, address, service_node_key))
   {
     fail_msg_writer() << tr("failed to add account public address to tx extra");
     return true;
