@@ -122,7 +122,7 @@ namespace service_nodes
     address = cryptonote::get_account_public_address_from_tx_extra(tx.extra);
     service_node_key = cryptonote::get_service_node_key_from_tx_extra(tx.extra);
     tx_pub_key = cryptonote::get_tx_pub_key_from_extra(tx.extra);
-    return address.m_spend_public_key != crypto::null_pkey && address.m_view_public_key != crypto::null_pkey && tx_pub_key != crypto::null_pkey && serveice_node_key != crypto::null_pkey;
+    return address.m_spend_public_key != crypto::null_pkey && address.m_view_public_key != crypto::null_pkey && tx_pub_key != crypto::null_pkey && service_node_key != crypto::null_pkey;
   }
 
   bool service_node_list::is_reg_tx_staking_output(const cryptonote::transaction& tx, int i, uint64_t block_height, crypto::key_derivation derivation, hw::device& hwdev) const
