@@ -644,7 +644,7 @@ namespace cryptonote
       MERROR("Failed to parse reorg notify spec");
     }
 
-    const std::pair<uint8_t, uint64_t> regtest_hard_forks[1] = {std::make_pair(1, 0), std::make_pair(Blockchain::get_hard_fork_heights(MAINNET).back().version, 1), std::make_pair(0, 0)};
+    const std::pair<uint8_t, uint64_t> regtest_hard_forks[3] = {std::make_pair(1, 0), std::make_pair(Blockchain::get_hard_fork_heights(MAINNET).back().version, 1), std::make_pair(0, 0)};
     const cryptonote::test_options regtest_test_options = {
       regtest_hard_forks, 0
     };
