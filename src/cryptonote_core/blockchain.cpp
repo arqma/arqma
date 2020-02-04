@@ -90,7 +90,6 @@ static const struct {
  uint8_t threshold;
  time_t time;
 } mainnet_hard_forks[] = {
- // version 1 from the start of the blockchain
  { 1, 0, 0, 1341378000 },
  { 7, 1, 0, 1528750800 },
  { 8, 100, 0, 1528751200 },
@@ -109,7 +108,6 @@ static const struct {
  uint8_t threshold;
  time_t time;
 } testnet_hard_forks[] = {
- // version 1 from the start of the blockchain
  { 1, 0, 0, 1341378000 },
  { 7, 1, 0, 1528750800 },
  { 8, 10, 0, 1528751200 },
@@ -129,7 +127,6 @@ static const struct {
  uint8_t threshold;
  time_t time;
 } stagenet_hard_forks[] = {
- // version 1 from the start of the blockchain
  { 1, 0, 0, 1341378000 },
  { 7, 1, 0, 1528750800 },
  { 8, 100, 0, 1528751200 },
