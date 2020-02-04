@@ -5777,7 +5777,7 @@ bool simple_wallet::locked_sweep_all(const std::vector<std::string> &args_)
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 {
-  // stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>
+  // stake_all [index=<N1>[,<N2>,...]] [priority] [lockblocks] <service node pubkey>
   if(!try_connect_to_daemon())
     return true;
 
@@ -5797,7 +5797,7 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 
   if(local_args.empty())
   {
-    fail_msg_writer() << tr("Usage: stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>");
+    fail_msg_writer() << tr("Usage: stake_all [index=<N1>[,<N2>,...]] [priority] [lockblocks] <service node pubkey>");
     return true;
   }
 

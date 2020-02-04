@@ -92,7 +92,6 @@ static const struct {
  uint8_t threshold;
  time_t time;
 } mainnet_hard_forks[] = {
- // version 1 from the start of the blockchain
  { 1, 0, 0, 1341378000 },
  { 7, 1, 0, 1528750800 },
  { 8, 100, 0, 1528751200 },
@@ -104,7 +103,6 @@ static const struct {
  { 14, 248920, 0, 1566598080 },
  { 15, 303666, 0, 1573257000 }
 };
-static const uint64_t mainnet_hard_fork_version_1_till = 0;
 
 static const struct {
  uint8_t version;
@@ -112,7 +110,6 @@ static const struct {
  uint8_t threshold;
  time_t time;
 } testnet_hard_forks[] = {
- // version 1 from the start of the blockchain
  { 1, 0, 0, 1341378000 },
  { 7, 1, 0, 1528750800 },
  { 8, 10, 0, 1528751200 },
@@ -125,7 +122,6 @@ static const struct {
  { 15, 80, 0, 1566598080 },
  { 16, 90, 0, 1566598280 }
 };
-static const uint64_t testnet_hard_fork_version_1_till = 0;
 
 static const struct {
  uint8_t version;
@@ -133,7 +129,6 @@ static const struct {
  uint8_t threshold;
  time_t time;
 } stagenet_hard_forks[] = {
- // version 1 from the start of the blockchain
  { 1, 0, 0, 1341378000 },
  { 7, 1, 0, 1528750800 },
  { 8, 100, 0, 1528751200 },
@@ -146,7 +141,6 @@ static const struct {
  { 15, 12100, 0, 1570414500 },
  { 16, 52000, 0, 1581292800 }
 };
-static const uint64_t stagenet_hard_fork_version_1_till = 0;
 
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list) :
@@ -360,11 +354,11 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   if (m_hardfork == nullptr)
   {
     if (m_nettype ==  FAKECHAIN || m_nettype == STAGENET)
-      m_hardfork = new HardFork(*db, 1, stagenet_hard_fork_version_1_till);
+      m_hardfork = new HardFork(*db, 1);
     else if (m_nettype == TESTNET)
-      m_hardfork = new HardFork(*db, 1, testnet_hard_fork_version_1_till);
+      m_hardfork = new HardFork(*db, 1);
     else
-      m_hardfork = new HardFork(*db, 1, mainnet_hard_fork_version_1_till);
+      m_hardfork = new HardFork(*db, 1);
   }
   if (m_nettype == FAKECHAIN)
   {
