@@ -218,7 +218,7 @@ namespace cryptonote
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
               m_service_node_list(m_blockchain_storage),
-              m_blockchain_storage(m_mempool, m_service_node_list),
+              m_blockchain_storage(m_mempool, m_service_node_list, m_deregister_vote_pool),
               m_miner(this, [this](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash) {
                 return cryptonote::get_block_longhash(&m_blockchain_storage, b, hash, height, threads);
               }),
@@ -847,9 +847,11 @@ namespace cryptonote
     }
     bad_semantics_txes_lock.unlock();
 
-    if (tx.version == 0 || tx.version > config::tx_settings::ARQMA_TX_VERSION)
+    uint8_t version = m_blockchain_storage.get_current_hard_fork_version();
+    const size_t max_tx_version = version == 1 ? 1 : version < 16 ? 2 : 3;
+    if (tx.version == 0 || tx.version > max_tx_version)
     {
-      MERROR_VER("Bad tx version (" << tx.version << ", max is " << config::tx_settings::ARQMA_TX_VERSION << ")");
+      // v3 is the latest one we know
       tvc.m_verifivation_failed = true;
       return false;
     }
@@ -947,7 +949,7 @@ namespace cryptonote
         continue;
       }
 
-      if (tx_info[n].tx->version < 2)
+      if (tx_info[n].tx->version == transaction::version_2)
         continue;
       const rct::rctSig &rv = tx_info[n].tx->rct_signatures;
       switch (rv.type) {
@@ -1150,7 +1152,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::check_tx_semantic(const transaction& tx, bool keeped_by_block) const
   {
-    if(!tx.vin.size())
+    if(!tx.vin.size() && tx.version != transaction::version_3_deregister_tx)
     {
       MERROR_VER("tx with empty inputs, rejected for tx id= " << get_transaction_hash(tx));
       return false;
@@ -1167,7 +1169,7 @@ namespace cryptonote
       MERROR_VER("tx with invalid outputs, rejected for tx id= " << get_transaction_hash(tx));
       return false;
     }
-    if (tx.version > 1)
+    if (tx.version == transaction::version_2)
     {
       if (tx.rct_signatures.outPk.size() != tx.vout.size())
       {
@@ -1182,7 +1184,7 @@ namespace cryptonote
       return false;
     }
 
-    if (tx.version == 1)
+    if (tx.version == transaction::version_1)
     {
       uint64_t amount_in = 0;
       get_inputs_money_amount(tx, amount_in);
@@ -1194,7 +1196,6 @@ namespace cryptonote
         return false;
       }
     }
-    // for version > 1, ringct signatures check verifies amounts match
 
     if(!keeped_by_block && get_transaction_weight(tx) >= m_blockchain_storage.get_current_cumulative_block_weight_limit() - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE)
     {
@@ -1202,7 +1203,6 @@ namespace cryptonote
       return false;
     }
 
-    //check if tx use different key images
     if(!check_tx_inputs_keyimages_diff(tx))
     {
       MERROR_VER("tx uses a single key image more than once");
@@ -1425,7 +1425,25 @@ namespace cryptonote
     m_mempool.set_relayed(txs);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_block_template(block& b, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash)
+  void core::set_deregister_votes_relayed(const std::vector<loki::service_node_deregister::vote>& votes)
+  {
+    m_deregister_vote_pool.set_relayed(votes);
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::relay_deregister_votes()
+  {
+    NOTIFY_NEW_DEREGISTER_VOTE::request req;
+    req.votes = m_deregister_vote_pool.get_relayable_votes();
+    if (!req.votes.empty())
+    {
+      cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
+      get_protocol()->relay_deregister_votes(req, fake_context);
+    }
+
+    return true;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::get_block_template(block& b, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce)
   {
     return m_blockchain_storage.create_block_template(b, adr, diffic, height, expected_reward, ex_nonce, seed_height, seed_hash);
   }
@@ -1754,6 +1772,7 @@ namespace cryptonote
     }
 
     m_txpool_auto_relayer.do_call(boost::bind(&core::relay_txpool_transactions, this));
+    m_deregisters_auto_relayer.do_call(boost::bind(&core::relay_deregister_votes, this));
     m_check_updates_interval.do_call(boost::bind(&core::check_updates, this));
     m_check_disk_space_interval.do_call(boost::bind(&core::check_disk_space, this));
     m_blockchain_pruning_interval.do_call(boost::bind(&core::update_blockchain_pruning, this));
@@ -1974,6 +1993,69 @@ namespace cryptonote
   bool core::has_block_weights(uint64_t height, uint64_t nblocks) const
   {
     return get_blockchain_storage().has_block_weights(height, nblocks);
+  }
+  //-----------------------------------------------------------------------------------------------
+  const std::shared_ptr<service_nodes::quorum_state> core::get_quorum_state(uint64_t height) const
+  {
+    const std::shared_ptr<service_nodes::quorum_state> result = m_service_node_list.get_quorum_state(height);
+    return result;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::add_deregister_vote(const service_nodes::service_node_deregister::vote& vote, vote_verification_context &vvc)
+  {
+    {
+      uint64_t latest_block_height = std::max(get_current_blockchain_height(), get_target_blockchain_height());
+      uint64_t delta_height = latest_block_height - vote.block_height;
+
+      if(vote.block_height < latest_block_height && delta_height > loki::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
+      {
+        LOG_ERROR("Received vote for height: " << vote.block_height
+                  << " and service node: "     << vote.service_node_index
+                  << ", is older than: "       << loki::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT
+                  << " blocks and has been rejected.");
+        vvc.m_invalid_block_height = true;
+      }
+      else if(vote.block_height > latest_block_height)
+      {
+        LOG_ERROR("Received vote for height: " << vote.block_height
+                  << " and service node: "     << vote.service_node_index
+                  << ", is newer than: "       << latest_block_height
+                  << " (latest block height) and has been rejected.");
+        vvc.m_invalid_block_height = true;
+      }
+
+      if(vvc.m_invalid_block_height)
+      {
+        vvc.m_verification_failed = true;
+        return false;
+      }
+    }
+
+    const std::shared_ptr<service_nodes::quorum_state> quorum_state = m_service_node_list.get_quorum_state(vote.block_height);
+    if(!quorum_state)
+    {
+      vvc.m_verification_failed  = true;
+      vvc.m_invalid_block_height = true;
+      LOG_ERROR("Could not get quorum state for height: " << vote.block_height);
+      return false;
+    }
+
+    cryptonote::transaction deregister_tx;
+    bool result = m_deregister_vote_pool.add_vote(vote, vvc, *quorum_state, deregister_tx);
+    if(result && vvc.m_full_tx_deregister_made)
+    {
+      tx_verification_context tvc;
+      blobdata const tx_blob = tx_to_blob(deregister_tx);
+
+      result = handle_incoming_tx(tx_blob, tvc, false /*keeped_by_block*/, false /*relayed*/, false /*do_not_relay*/);
+      if(!result || tvc.m_verifivation_failed)
+      {
+        LOG_ERROR("A full deregister tx for height: " << vote.block_height << " and service node: "
+                  << vote.service_node_index << " could not be verified and was not added to the memory pool.");
+      }
+    }
+
+    return result;
   }
   //-----------------------------------------------------------------------------------------------
   std::time_t core::get_start_time() const

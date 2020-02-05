@@ -195,8 +195,9 @@ static constexpr uint64_t POISSON_CHECK_DEPTH = 128;  // Main-chain depth of the
 static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the probablity that the timestamps are genuine is below e^x, -75 = 10^-33
 
 // New constants are intended to go here
-#define STAKING_REQUIREMENT_LOCK_BLOCKS                 (30*24*31)
-#define STAKING_RELOCK_WINDOW_BLOCKS                    (30*6)
+#define STAKING_REQUIREMENT_LOCK_BLOCKS                 21600
+#define STAKING_RELOCK_WINDOW_BLOCKS                    180
+#define STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS          20
 
 namespace config
 {
@@ -256,16 +257,11 @@ namespace config
 
    namespace tx_settings
    {
-     const size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     const size_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
-     const uint64_t TRANSACTION_SIZE_LIMIT = 49152; // I did set it to 48kB for now but it need to be verified.
-     const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
-
-     static const uint64_t min_tx_amount = 10000;
-     static const uint64_t min_amount_blockage_fee = (MONEY_SUPPLY - 1);
-
+     static constexpr uint8_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     static constexpr uint8_t CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
+     static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
+     static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
-
 
    namespace sync
    {

@@ -57,6 +57,7 @@
 #include "common/base58.h"
 #include "common/scoped_message_writer.h"
 #include "cryptonote_protocol/cryptonote_protocol_handler.h"
+#include "cryptonote_core/service_node_deregister.h"
 #include "simplewallet.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "storages/http_abstract_invoke.h"
@@ -240,7 +241,7 @@ namespace
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
   const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
-  const char* USAGE_STAKE_ALL("stake_all [index=<N1>[,<N2>,...]] [<priority>] <service node pubkey>");
+  const char* USAGE_STAKE_ALL("stake_all [index=<N1>[,<N2>,...]] [<priority>] [lockblocks] <service node pubkey>");
 
   std::string input_line(const std::string& prompt, bool yesno = false)
   {
@@ -5373,7 +5374,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
   uint64_t adjusted_fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
   if (adjusted_fake_outs_count > fake_outs_count)
   {
-    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
+    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count + 1) % (adjusted_fake_outs_count + 1)).str();
     return true;
   }
 
@@ -5795,25 +5796,43 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
   if (local_args.size() > 0 && parse_priority(local_args[0], priority))
     local_args.erase(local_args.begin());
 
+  size_t fake_outs_count = 0;
+  if(local_args.size() > 0) {
+    size_t ring_size;
+    if(!epee::string_tools::get_xtype_from_string(ring_size, local_args[0]))
+    {
+      fake_outs_count = m_wallet->default_mixin();
+      if (fake_outs_count == 0)
+        fake_outs_count = DEFAULT_MIX;
+    }
+    else if (ring_size == 0)
+    {
+      fail_msg_writer() << tr("Ring size must not be 0");
+      return true;
+    }
+    else
+    {
+      fake_outs_count = ring_size - 1;
+      local_args.erase(local_args.begin());
+    }
+  }
+  uint64_t adjusted_fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
+  if (adjusted_fake_outs_count > fake_outs_count)
+  {
+    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count + 1) % (adjusted_fake_outs_count + 1)).str();
+    return true;
+  }
+
   if(local_args.empty())
   {
     fail_msg_writer() << tr("Usage: stake_all [index=<N1>[,<N2>,...]] [priority] [lockblocks] <service node pubkey>");
     return true;
   }
 
-  crypto::public_key service_node_key;
-  if (!epee::string_tools::hex_to_pod(local_args[0], service_node_key))
-  {
-    fail_msg_writer() << tr("failed to parse service node pubkey");
-    return true;
-  }
-
   priority = m_wallet->adjust_priority(priority);
 
-  size_t fake_outs_count = DEFAULT_MIX;
-
   uint64_t unlock_block = 0;
-  uint64_t locked_blocks = STAKING_REQUIREMENT_LOCK_BLOCKS;
+  uint64_t locked_blocks = STAKING_REQUIREMENT_LOCK_BLOCKS + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
 
   std::string err;
   uint64_t bc_height = get_daemon_blockchain_height(err);
@@ -5828,11 +5847,15 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 
   std::vector<uint8_t> extra;
 
-  if (!add_account_public_address_to_tx_extra(extra, address, service_node_key))
+  tx_extra_service_node_register register_;
+  register_.public_view_key = address.m_view_public_key;
+  register_.public_spend_key = address.m_spend_public_key;
+  if(!epee::string_tools::hex_to_pod(local_args[0], register_.service_node_key))
   {
-    fail_msg_writer() << tr("failed to add account public address to tx extra");
+    fail_msg_writer() << tr("failed to add parse service node pubkey");
     return true;
   }
+  add_service_node_register_to_tx_extra(extra, register_);
 
   SCOPED_WALLET_UNLOCK();
 
@@ -5873,8 +5896,8 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
       return true;
     if (ptx_vector.size() > 1) {
       prompt << boost::format(tr("Staking %s for %u blocks in %llu transactions for a total fee of %s.")) %
-        locked_blocks %
         print_money(total_sent) %
+        locked_blocks %
         ((unsigned long long)ptx_vector.size()) %
         print_money(total_fee);
     }
