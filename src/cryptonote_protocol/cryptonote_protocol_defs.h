@@ -35,6 +35,8 @@
 #include "serialization/keyvalue_serialization.h"
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "cryptonote_basic/blobdatatype.h"
+#include "cryptonote_core/service_node_deregister.h"
+
 namespace cryptonote
 {
 
@@ -69,15 +71,15 @@ namespace cryptonote
     std::string state;
 
     uint64_t live_time;
-    
+
     uint64_t avg_download;
     uint64_t current_download;
-    
+
     uint64_t avg_upload;
     uint64_t current_upload;
-    
+
     uint32_t support_flags;
-    
+
     std::string connection_id;
 
     uint64_t height;
@@ -155,7 +157,7 @@ namespace cryptonote
 
     struct request_t
     {
-      std::vector<blobdata>   txs;
+      std::vector<blobdata> txs;
       std::string _; // padding
 
       BEGIN_KV_SERIALIZE_MAP()
@@ -174,8 +176,8 @@ namespace cryptonote
 
     struct request_t
     {
-      std::vector<crypto::hash>    txs;
-      std::vector<crypto::hash>    blocks;
+      std::vector<crypto::hash> txs;
+      std::vector<crypto::hash> blocks;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_CONTAINER_POD_AS_BLOB(txs)
@@ -191,10 +193,10 @@ namespace cryptonote
 
     struct request_t
     {
-      std::vector<blobdata>              txs;
-      std::vector<block_complete_entry>  blocks;
-      std::vector<crypto::hash>          missed_ids;
-      uint64_t                         current_blockchain_height;
+      std::vector<blobdata> txs;
+      std::vector<block_complete_entry> blocks;
+      std::vector<crypto::hash> missed_ids;
+      uint64_t current_blockchain_height;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(txs)
@@ -278,7 +280,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-  };  
+  };
 
   /************************************************************************/
   /*                                                                      */
@@ -300,6 +302,23 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-  }; 
-    
+  };
+
+  /************************************************************************/
+  /*                                                                      */
+  /************************************************************************/
+  struct NOTIFY_NEW_DEREGISTER_VOTE
+  {
+    const static int ID = BC_COMMANDS_POOL_BASE + 10;
+
+    struct request_t
+    {
+      std::vector<service_nodes::service_node_deregister::vote> votes;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(votes)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+  };
+
 }

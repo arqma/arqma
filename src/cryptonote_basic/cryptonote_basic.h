@@ -152,7 +152,7 @@ namespace cryptonote
 
 
   };
-  
+
   template<typename T> static inline unsigned int getpos(T &ar) { return 0; }
   template<> inline unsigned int getpos(binary_archive<true> &ar) { return ar.stream().tellp(); }
   template<> inline unsigned int getpos(binary_archive<false> &ar) { return ar.stream().tellg(); }
@@ -161,6 +161,14 @@ namespace cryptonote
   {
 
   public:
+    enum version
+    {
+      version_0 = 0,
+      version_1,
+      version_2,
+      version_3_deregister_tx,
+    };
+    
     // tx information
     size_t   version;
     uint64_t unlock_time;  //number of block (or time), used as a limitation like: spend this tx not early then block/time
@@ -199,7 +207,7 @@ namespace cryptonote
     mutable size_t blob_size;
 
     bool pruned;
-    
+
     std::atomic<unsigned int> unprunable_size;
     std::atomic<unsigned int> prefix_size;
 
@@ -222,11 +230,11 @@ namespace cryptonote
         set_hash_valid(false);
         set_blob_size_valid(false);
       }
-      
+
       const unsigned int start_pos = getpos(ar);
 
       FIELDS(*static_cast<transaction_prefix *>(this))
-      
+
       if (std::is_same<Archive<W>, binary_archive<W>>())
         prefix_size = getpos(ar) - start_pos;
 
@@ -234,7 +242,7 @@ namespace cryptonote
       {
         if (std::is_same<Archive<W>, binary_archive<W>>())
           unprunable_size = getpos(ar) - start_pos;
-          
+
         ar.tag("signatures");
         ar.begin_array();
         PREPARE_CUSTOM_VECTOR_SERIALIZATION(vin.size(), signatures);
@@ -273,10 +281,10 @@ namespace cryptonote
           bool r = rct_signatures.serialize_rctsig_base(ar, vin.size(), vout.size());
           if (!r || !ar.stream().good()) return false;
           ar.end_object();
-          
+
           if (std::is_same<Archive<W>, binary_archive<W>>())
             unprunable_size = getpos(ar) - start_pos;
-            
+
           if (!pruned && rct_signatures.type != rct::RCTTypeNull)
           {
             ar.tag("rctsig_prunable");

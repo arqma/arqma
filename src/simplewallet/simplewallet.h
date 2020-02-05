@@ -84,9 +84,9 @@ namespace cryptonote
     std::string get_commands_str();
     std::string get_command_usage(const std::vector<std::string> &args);
   private:
-    
+
     enum ResetType { ResetNone, ResetSoft, ResetHard, ResetSoftKeepKI };
-    
+
     bool handle_command_line(const boost::program_options::variables_map& vm);
 
     bool run_console_handler();
@@ -161,8 +161,8 @@ namespace cryptonote
     bool transfer_main(int transfer_type, const std::vector<std::string> &args);
     bool transfer(const std::vector<std::string> &args);
     bool locked_transfer(const std::vector<std::string> &args);
+    bool stake_all(const std::vector<std::string> &args_);
     bool locked_sweep_all(const std::vector<std::string> &args);
-    bool stake_all(const std::vector<std::string> &args);
     bool sweep_main(uint64_t below, bool locked, const std::vector<std::string> &args);
     bool sweep_all(const std::vector<std::string> &args);
     bool sweep_below(const std::vector<std::string> &args);
@@ -403,7 +403,7 @@ namespace cryptonote
     bool m_rpc_payment_mining_requested;
     bool m_daemon_rpc_payment_message_displayed;
     float m_rpc_payment_hash_rate;
-    
+
     std::unordered_map<std::string, uint32_t> m_claimed_cph;
   };
 }
