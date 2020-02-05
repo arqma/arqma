@@ -158,6 +158,24 @@ bool t_command_parser_executor::print_blockchain_info(const std::vector<std::str
   return m_executor.print_blockchain_info(start_index, end_index);
 }
 
+bool t_command_parser_executor::print_quorum_state(const std::vector<std::string>& args)
+{
+  if(args.size() != 1)
+  {
+    std::cout << "need block height parameter" << std::endl;
+    return false;
+  }
+
+  uint64_t height = 0;
+  if(!epee::string_tools::get_xtype_from_string(height, args[0]))
+  {
+    std::cout << "wrong block height parameter" << std::endl;
+    return false;
+  }
+
+  return m_executor.print_quorum_state(height);
+}
+
 bool t_command_parser_executor::set_log_level(const std::vector<std::string>& args)
 {
   if(args.size() > 1)
@@ -466,12 +484,12 @@ bool t_command_parser_executor::out_peers(const std::vector<std::string>& args)
       set = true;
     }
   }
-  
+
   catch(const std::exception& ex) {
     _erro("stoi exception");
     return false;
   }
-  
+
   return m_executor.out_peers(set, limit);
 }
 
@@ -487,12 +505,12 @@ bool t_command_parser_executor::in_peers(const std::vector<std::string>& args)
       set = true;
     }
   }
-  
+
   catch(const std::exception& ex) {
     _erro("stoi exception");
     return false;
   }
-  
+
   return m_executor.in_peers(set, limit);
 }
 
