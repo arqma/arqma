@@ -126,7 +126,7 @@ namespace cryptonote
       return false;
     }
 
-    std::list<transaction> pool_txs;
+    std::vector<transaction> pool_txs;
     get_transactions(pool_txs);
     for(const transaction& pool_tx : pool_txs)
     {

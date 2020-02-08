@@ -1247,7 +1247,7 @@ namespace cryptonote
       return true;
       });
       // Remove Burned Premine Amount from coinbase emission
-      if (start_offset<= 1 && 1 <= end){
+      if (start_offset <= 1 && 1 <= end){
         emission_amount -= config::blockchain_settings::PREMINE_BURN;
       }
     }
@@ -1360,7 +1360,7 @@ namespace cryptonote
     m_mempool.set_relayed(txs);
   }
   //-----------------------------------------------------------------------------------------------
-  void core::set_deregister_votes_relayed(const std::vector<loki::service_node_deregister::vote>& votes)
+  void core::set_deregister_votes_relayed(const std::vector<service_nodes::service_node_deregister::vote>& votes)
   {
     m_deregister_vote_pool.set_relayed(votes);
   }
@@ -1976,11 +1976,11 @@ namespace cryptonote
       uint64_t latest_block_height = std::max(get_current_blockchain_height(), get_target_blockchain_height());
       uint64_t delta_height = latest_block_height - vote.block_height;
 
-      if(vote.block_height < latest_block_height && delta_height > loki::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
+      if(vote.block_height < latest_block_height && delta_height > service_nodes::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
       {
         LOG_ERROR("Received vote for height: " << vote.block_height
                   << " and service node: "     << vote.service_node_index
-                  << ", is older than: "       << loki::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT
+                  << ", is older than: "       << service_nodes::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT
                   << " blocks and has been rejected.");
         vvc.m_invalid_block_height = true;
       }
