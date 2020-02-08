@@ -2434,7 +2434,7 @@ skip:
   template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::relay_deregister_votes(NOTIFY_NEW_DEREGISTER_VOTE::request& arg, cryptonote_connection_context& exclude_context)
   {
-    bool result = relay_post_notify<NOTIFY_NEW_DEREGISTER_VOTE>(arg, exclude_context);
+    bool result = post_notify<NOTIFY_NEW_DEREGISTER_VOTE>(arg, exclude_context);
     m_core.set_deregister_votes_relayed(arg.votes);
     return result;
   }
