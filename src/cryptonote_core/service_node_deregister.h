@@ -41,6 +41,7 @@
 namespace cryptonote
 {
   struct vote_verification_context;
+  struct tx_extra_service_node_deregister;
 };
 
 namespace service_nodes
@@ -77,7 +78,6 @@ namespace service_nodes
        */
       bool add_vote(const service_node_deregister::vote& new_vote, cryptonote::vote_verification_context& vvc, const service_nodes::quorum_state &quorum_state, cryptonote::transaction &tx);
 
-      // TODO(loki): Review relay behaviour and all the cases when it should be triggered
       void set_relayed(const std::vector<service_node_deregister::vote>& votes);
       void remove_expired_votes(uint64_t height);
       void remove_used_votes(std::vector<cryptonote::transaction> const &txs);

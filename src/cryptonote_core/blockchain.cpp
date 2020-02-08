@@ -40,6 +40,7 @@
 #include "blockchain.h"
 #include "blockchain_db/blockchain_db.h"
 #include "cryptonote_basic/cryptonote_boost_serialization.h"
+#include "cryptonote_core/service_node_deregister.h"
 #include "cryptonote_config.h"
 #include "cryptonote_basic/miner.h"
 #include "misc_language.h"
@@ -153,7 +154,7 @@ Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list
   m_difficulty_for_next_block_top_hash(crypto::null_hash),
   m_difficulty_for_next_block(1),
   m_service_node_list(service_node_list),
-  m_deregister_node_list(deregister_vote_pool),
+  m_deregister_vote_pool(deregister_vote_pool),
   m_btc_valid(false),
   m_batch_success(true),
   m_prepare_height(0)
@@ -3482,7 +3483,7 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
       return false;
     }
 
-    const uint64_t height            = deregister.block_height;
+    const uint64_t height = deregister.block_height;
     const size_t num_blocks_to_check = service_nodes::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT;
 
     std::vector<std::pair<cryptonote::blobdata,block>> blocks;
@@ -3508,7 +3509,7 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
           continue;
         }
 
-        if(existing_deregister.block_height       == deregister.block_height && existing_deregister.service_node_index == deregister.service_node_index)
+        if(existing_deregister.block_height == deregister.block_height && existing_deregister.service_node_index == deregister.service_node_index)
         {
           tvc.m_double_spend = true;
           return false;
