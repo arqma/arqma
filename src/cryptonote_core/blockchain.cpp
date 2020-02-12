@@ -998,7 +998,7 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
   }
 
   if(version >= 16) {
-    return next_difficulty_v16(timestamps, difficulties, height, version);
+    return next_difficulty_v16(timestamps, difficulties);
   } else if(version >= 10) {
     return next_difficulty_lwma_4(timestamps, difficulties);
   } else if(version >= 7) {
@@ -1314,7 +1314,7 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
 
   // FIXME: This will fail if fork activation heights are subject to voting
   if(version >= 16) {
-    return next_difficulty_v16(timestamps, cumulative_difficulties, height, version);
+    return next_difficulty_v16(timestamps, cumulative_difficulties);
   } else if(version >= 10) {
     return next_difficulty_lwma_4(timestamps, cumulative_difficulties);
   } else if(version >= 7) {
