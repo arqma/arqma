@@ -54,7 +54,8 @@ namespace cryptonote
      */
     bool check_hash(const crypto::hash &hash, difficulty_type difficulty);
     difficulty_type next_difficulty(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, size_t target_seconds);
-	  difficulty_type next_difficulty_lwma(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, const uint8_t version);
+    difficulty_type next_difficulty_lwma(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, const uint8_t version);
     difficulty_type next_difficulty_lwma_3(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties);
     difficulty_type next_difficulty_lwma_4(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties);
+    difficulty_type next_difficulty_v16(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties);
 }

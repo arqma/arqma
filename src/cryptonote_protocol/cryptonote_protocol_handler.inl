@@ -356,12 +356,18 @@ namespace cryptonote
     int64_t diff = static_cast<int64_t>(hshd.current_height) - static_cast<int64_t>(m_core.get_current_blockchain_height());
     uint64_t abs_diff = std::abs(diff);
     uint64_t max_block_height = std::max(hshd.current_height,m_core.get_current_blockchain_height());
-    MCLOG(is_inital ? el::Level::Info : el::Level::Debug, "global", el::Color::Yellow, context <<  "Sync data returned a new top block candidate: " << m_core.get_current_blockchain_height() << " -> " << hshd.current_height
-      << " [Your node is " << abs_diff << " blocks (" << (abs_diff / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) << " days) "
+    // Need to be fill in when we will know correct fork values
+    uint64_t last_block_v10 = m_core.get_nettype() == TESTNET ? 30 : m_core.get_nettype() == MAINNET ? 61250 : 500;
+    uint64_t last_block_v15 = m_core.get_nettype() == TESTNET ? 90 : m_core.get_nettype() == MAINNET ? (uint64_t)-1 : 52000;
+    uint64_t diff_v11 = max_block_height > last_block_v10 ? std::min(abs_diff, max_block_height - last_block_v10) : 0;
+    uint64_t diff_v16 = max_block_height > last_block_v15 ? std::min(abs_diff, max_block_height - last_block_v15) : 0;
+
+    MCLOG(is_inital ? el::Level::Info : el::Level::Debug, "global", context <<  "Sync data returned a new top block candidate: " << m_core.get_current_blockchain_height() << " -> " << hshd.current_height
+      << " [Your node is " << abs_diff << " blocks (" << (((abs_diff - diff_v16) / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) + (diff_v16 / (24 * 60 * 60 / DIFFICULTY_TARGET_V16)) + ((diff_v16 - diff_v11) / (24 * 60 * 60 / DIFFICULTY_TARGET_V2)) + (diff_v11 / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)))  << " days) "
       << (0 <= diff ? std::string("behind") : std::string("ahead"))
       << "] " << ENDL << "SYNCHRONIZATION started");
 
-      if (m_core.get_target_blockchain_height() == 0) // only when sync starts
+      if(m_core.get_target_blockchain_height() == 0) // only when sync starts
       {
         m_sync_timer.resume();
         m_sync_timer.reset();
@@ -882,7 +888,7 @@ namespace cryptonote
   int t_cryptonote_protocol_handler<t_core>::handle_notify_new_transactions(int command, NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& context)
   {
     MLOG_P2P_MESSAGE("Received NOTIFY_NEW_TRANSACTIONS (" << arg.txs.size() << " txes)");
-    
+
     if(context.m_state != cryptonote_connection_context::state_normal)
       return 1;
 
