@@ -899,8 +899,23 @@ size_t get_difficulty_blocks_count(uint8_t version)
     return DIFFICULTY_BLOCKS_COUNT_V2;
   } else if(version < 10) {
     return DIFFICULTY_BLOCKS_COUNT_V3;
-  } else {
+  } else if(version < 16) {
     return DIFFICULTY_BLOCKS_COUNT_V11;
+  } else {
+    return DIFFICULTY_BLOCKS_COUNT_V16;
+  }
+}
+//-----------------------------------------------------------------
+uint8_t get_current_diff_target(uint8_t version)
+{
+  LOG_PRINT_L3("Blockchain::" << __func__);
+
+  if(version < 10) {
+    return DIFFICULTY_TARGET_V2;
+  } else if(version < 16) {
+    return DIFFICULTY_TARGET_V11;
+  } else {
+    return DIFFICULTY_TARGET_V16;
   }
 }
 //------------------------------------------------------------------
@@ -977,9 +992,11 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
     m_difficulties = difficulties;
   }
 
-  if (version >= 10) {
+  if(version >= 16) {
+    return next_difficulty_v16(timestamps, difficulties);
+  } else if(version >= 10) {
     return next_difficulty_lwma_4(timestamps, difficulties);
-  } else if (version >= 7) {
+  } else if(version >= 7) {
     return next_difficulty_lwma(timestamps, difficulties, version);
   } else {
     return next_difficulty(timestamps, difficulties, DIFFICULTY_TARGET_V2);
@@ -1289,9 +1306,11 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   }
 
   // FIXME: This will fail if fork activation heights are subject to voting
-  if (version >= 10) {
+  if(version >= 16) {
+    return next_difficulty_v16(timestamps, cumulative_difficulties);
+  } else if(version >= 10) {
     return next_difficulty_lwma_4(timestamps, cumulative_difficulties);
-  } else if (version >= 7) {
+  } else if(version >= 7) {
     return next_difficulty_lwma(timestamps, cumulative_difficulties, version);
   } else {
     return next_difficulty(timestamps, cumulative_difficulties, DIFFICULTY_TARGET_V2);
@@ -5157,7 +5176,8 @@ bool Blockchain::get_hard_fork_voting_info(uint8_t version, uint32_t &window, ui
 uint64_t Blockchain::get_difficulty_target() const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
-  return get_current_hard_fork_version() >= 10 ? DIFFICULTY_TARGET_V11 : DIFFICULTY_TARGET_V2;
+  uint8_t version = get_current_hard_fork_version();
+  return get_current_diff_target(version);
 }
 
 std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> Blockchain:: get_output_histogram(const std::vector<uint64_t> &amounts, bool unlocked, uint64_t recent_cutoff, uint64_t min_count) const
