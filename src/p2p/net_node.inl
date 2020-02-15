@@ -462,12 +462,16 @@ namespace nodetool
     if (nettype == cryptonote::TESTNET)
     {
       full_addrs.insert("5.172.219.174:43461");
+      full_addrs.insert("51.158.65.16:43461"); //eu
+      full_addrs.insert("207.244.120.53:43461"); //us
       full_addrs.insert("galaxia-project.go.ro:43461");
 
     }
     else if (nettype == cryptonote::STAGENET)
     {
       full_addrs.insert("5.172.219.174:44461");
+      full_addrs.insert("51.158.65.16:44461"); //eu
+      full_addrs.insert("207.244.120.53:44461"); //us
       full_addrs.insert("galaxia-project.go.ro:44461");
 
     }
@@ -477,6 +481,8 @@ namespace nodetool
     else
     {
       full_addrs.insert("5.172.219.174:42461");
+      full_addrs.insert("51.158.65.16:42461"); //eu
+      full_addrs.insert("207.244.120.53:42461"); //us
       full_addrs.insert("galaxia-project.go.ro:42461");
 
     }
@@ -1639,7 +1645,7 @@ namespace nodetool
         --i;
         continue;
       }
-      
+
 #ifdef CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
       be.pruning_seed = tools::make_pruning_seed(1 + (be.adr.as<epee::net_utils::ipv4_network_address>().ip()) % (1ul << CRYPTONOTE_PRUNING_LOG_STRIPES), CRYPTONOTE_PRUNING_LOG_STRIPES);
 #endif
@@ -2220,7 +2226,7 @@ namespace nodetool
         public_zone->second.m_net_server.get_config_object().del_out_connections(current - count);
     }
   }
-  
+
   template<class t_payload_net_handler>
   uint32_t node_server<t_payload_net_handler>::get_max_out_public_peers() const
   {
@@ -2242,7 +2248,7 @@ namespace nodetool
         public_zone->second.m_net_server.get_config_object().del_in_connections(current - count);
     }
   }
-  
+
   template<class t_payload_net_handler>
   uint32_t node_server<t_payload_net_handler>::get_max_in_public_peers() const
   {
