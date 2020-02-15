@@ -223,6 +223,7 @@ namespace cryptonote
 
     if(version >= 16)
     {
+      tx.version = transaction_prefix::version_3_deregister_tx;
       keypair gov_key = get_deterministic_keypair_from_height(height);
       add_tx_pub_key_to_extra(tx, gov_key.pub);
 
@@ -282,7 +283,7 @@ namespace cryptonote
       CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward + service_node_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward + service_node_reward));
     }
 
-    tx.version = config::tx_settings::ARQMA_TX_VERSION;
+    tx.version = transaction_prefix::version_2;
 
     //lock
     tx.unlock_time = height + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
@@ -315,7 +316,7 @@ namespace cryptonote
     return addr.m_view_public_key;
   }
   //---------------------------------------------------------------
-  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, rct::RangeProofType range_proof_type, rct::multisig_out *msout)
+  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, bool rct, rct::RangeProofType range_proof_type, rct::multisig_out *msout, bool shuffle_outs, uint8_t hard_fork_version)
   {
     hw::device &hwdev = sender_account_keys.get_device();
 
@@ -333,14 +334,14 @@ namespace cryptonote
       msout->c.clear();
     }
 
-    tx.version = config::tx_settings::ARQMA_TX_VERSION;
-
-    if(range_proof_type == rct::RangeProofPaddedBulletproof && destinations.size() > BULLETPROOF_MAX_OUTPUTS)
+    if(hard_fork_version >= 16)
     {
-      LOG_ERROR("It is allowed to use max 15 outputs (1 needed for change) with current Bulletproofs.");
-      return false;
+      tx.version = config::tx_settings::CURRENT_TX_VERSION;
     }
-
+    else
+    {
+      tx.version = 2;
+    }
     tx.unlock_time = unlock_time;
 
     tx.extra = extra;
