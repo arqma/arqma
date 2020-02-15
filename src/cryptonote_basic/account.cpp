@@ -42,8 +42,8 @@ extern "C"
 #include "cryptonote_basic_impl.h"
 #include "cryptonote_format_utils.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "account"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "account"
 
 #define KEYS_ENCRYPTION_SALT 'k'
 

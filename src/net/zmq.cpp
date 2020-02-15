@@ -176,7 +176,7 @@ namespace zmq
     expect<std::string> receive(void* const socket, const int flags)
     {
         std::string payload{};
-        ARQMA_CHECK(retry_op(do_receive{}, payload, socket, flags));
+        GALAXIA_CHECK(retry_op(do_receive{}, payload, socket, flags));
         return {std::move(payload)};
     }
 

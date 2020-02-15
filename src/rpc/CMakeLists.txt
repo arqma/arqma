@@ -74,29 +74,29 @@ set(daemon_rpc_server_private_headers
   zmq_server.h)
 
 
-arqma_private_headers(rpc
+galaxia_private_headers(rpc
   ${rpc_private_headers})
 
-arqma_private_headers(daemon_rpc_server
+galaxia_private_headers(daemon_rpc_server
   ${daemon_rpc_server_private_headers})
 
 
-arqma_add_library(rpc_base
+galaxia_add_library(rpc_base
   ${rpc_base_sources}
   ${rpc_base_headers}
   ${rpc_base_private_headers})
 
-arqma_add_library(rpc
+galaxia_add_library(rpc
   ${rpc_sources}
   ${rpc_headers}
   ${rpc_private_headers})
 
-arqma_add_library(daemon_messages
+galaxia_add_library(daemon_messages
   ${daemon_messages_sources}
   ${daemon_messages_headers}
   ${daemon_messages_private_headers})
 
-arqma_add_library(daemon_rpc_server
+galaxia_add_library(daemon_rpc_server
   ${daemon_rpc_server_sources}
   ${daemon_rpc_server_headers}
   ${daemon_rpc_server_private_headers})

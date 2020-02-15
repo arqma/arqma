@@ -44,8 +44,8 @@
 #include "common/i18n.h"
 #include "common/util.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "wallet.wallet2.rpc_payments"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "wallet.wallet2.rpc_payments"
 
 #define RPC_PAYMENT_POLL_PERIOD 10 /* seconds*/
 

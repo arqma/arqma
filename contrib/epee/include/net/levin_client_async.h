@@ -31,8 +31,8 @@
 #include "net_helper.h"
 #include "levin_base.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "net"
 
 
 namespace epee

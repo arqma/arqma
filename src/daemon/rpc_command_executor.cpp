@@ -42,8 +42,8 @@
 #include <ctime>
 #include <string>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace daemonize {
 
@@ -1219,8 +1219,8 @@ bool t_rpc_command_executor::stop_daemon()
 //# ifdef WIN32
 //    // Stop via service API
 //    // TODO - this is only temporary!  Get rid of hard-coded constants!
-//    bool ok = windows::stop_service("Arqma Daemon");
-//    ok = windows::uninstall_service("Arqma Daemon");
+//    bool ok = windows::stop_service("Galaxia Daemon");
+//    ok = windows::uninstall_service("Galaxia Daemon");
 //    //bool ok = windows::stop_service(SERVICE_NAME);
 //    //ok = windows::uninstall_service(SERVICE_NAME);
 //    if (ok)
@@ -1264,10 +1264,10 @@ bool t_rpc_command_executor::print_status()
   bool daemon_is_alive = m_rpc_client->check_connection();
 
   if(daemon_is_alive) {
-    tools::success_msg_writer() << "arqmad is running";
+    tools::success_msg_writer() << "galaxiad is running";
   }
   else {
-    tools::fail_msg_writer() << "arqmad is NOT running";
+    tools::fail_msg_writer() << "galaxiad is NOT running";
   }
 
   return true;

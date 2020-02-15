@@ -101,7 +101,7 @@ namespace daemonizer
     }
     else
     {
-      //LOG_PRINT_L0("ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL);
+      //LOG_PRINT_L0("Galaxia '" << GALAXIA_RELEASE_NAME << "' (v" << GALAXIA_VERSION_FULL);
       return executor.run_interactive(vm);
     }
   }

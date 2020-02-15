@@ -62,9 +62,9 @@ set(cryptonote_basic_private_headers
   tx_extra.h
   verification_context.h)
 
-arqma_private_headers(cryptonote_basic
+galaxia_private_headers(cryptonote_basic
   ${cryptonote_basic_private_headers})
-arqma_add_library(cryptonote_basic
+galaxia_add_library(cryptonote_basic
   ${cryptonote_basic_sources}
   ${cryptonote_basic_headers}
   ${cryptonote_basic_private_headers})

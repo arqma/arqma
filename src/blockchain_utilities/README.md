@@ -1,4 +1,4 @@
-# Arqma Blockchain Utilities
+# Galaxia Blockchain Utilities
 
 Copyright (c) 2018-2019, The Arqma Project
 Copyright (c) 2014-2018, The Monero Project
@@ -13,16 +13,16 @@ See also each utility's "--help" option.
 
 ### Export an existing blockchain database
 
-`$ arqma-blockchain-export`
+`$ galaxia-blockchain-export`
 
-This loads the existing blockchain and exports it to `$ARQMA_DATA_DIR/export/blockchain.raw`
+This loads the existing blockchain and exports it to `$GALAXIA_DATA_DIR/export/blockchain.raw`
 
 ### Import the exported file
 
-`$ arqma-blockchain-import`
+`$ galaxia-blockchain-import`
 
-This imports blocks from `$ARQMA_DATA_DIR/export/blockchain.raw` (exported using the
-`arqma-blockchain-export` tool as described above) into the current database.
+This imports blocks from `$GALAXIA_DATA_DIR/export/blockchain.raw` (exported using the
+`galaxia-blockchain-export` tool as described above) into the current database.
 
 Defaults: `--batch on`, `--batch size 20000`, `--verify on`
 
@@ -31,14 +31,14 @@ Batch size refers to number of blocks and can be adjusted for performance based 
 Verification should only be turned off if importing from a trusted blockchain.
 
 If you encounter an error like "resizing not supported in batch mode", you can just re-run
-the `arqma-blockchain-import` command again, and it will restart from where it left off.
+the `galaxia-blockchain-import` command again, and it will restart from where it left off.
 
 ```bash
 ## use default settings to import blockchain.raw into database
-$ arqma-blockchain-import
+$ galaxia-blockchain-import
 
 ## fast import with large batch size, database mode "fastest", verification off
-$ arqma-blockchain-import --batch-size 20000 --database lmdb#fastest --verify off
+$ galaxia-blockchain-import --batch-size 20000 --database lmdb#fastest --verify off
 
 ```
 
@@ -81,9 +81,9 @@ LMDB flags (more than one may be specified):
 ## Examples:
 
 ```
-$ arqma-blockchain-import --database lmdb#fastest
+$ galaxia-blockchain-import --database lmdb#fastest
 
-$ arqma-blockchain-import --database lmdb#nosync
+$ galaxia-blockchain-import --database lmdb#nosync
 
-$ arqma-blockchain-import --database lmdb#nosync,nometasync
+$ galaxia-blockchain-import --database lmdb#nosync,nometasync
 ```

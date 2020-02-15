@@ -38,18 +38,18 @@
 /*! Calculates types and offset of struct field. Use in template arguments for
     `table::get_value`, `value_iterator::get_value`,
     `value_stream::make_iterator`, or `value_stream::make_range`. */
-#define ARQMA_FIELD(obj, field)                                 \
+#define GALAXIA_FIELD(obj, field)                                 \
     obj , decltype(std::declval<obj>().field) , offsetof(obj, field)
 
 //! Expands to `lmdb::less` for the value `field` within `obj`.
-#define ARQMA_SORT_BY(obj, field)                               \
+#define GALAXIA_SORT_BY(obj, field)                               \
     &::lmdb::less<                                              \
         lmdb::native_type<decltype(std::declval<obj>().field)>, \
         offsetof(obj, field)                                    \
     >
 
 //! Expands to `lmdb::compare` for the value `field` within `obj`.
-#define ARQMA_COMPARE(obj, field)            \
+#define GALAXIA_COMPARE(obj, field)            \
     &::lmdb::compare<                        \
         decltype(std::declval<obj>().field), \
         offsetof(obj, field)                 \

@@ -42,11 +42,11 @@ base_dir=`pwd`
  	PATH=/opt/android/tool/$arch/$target_host/bin:/opt/android/tool/$arch/bin:$PATH CC=clang CXX=clang++ cmake -D BUILD_GUI_DEPS=1 -D BUILD_TESTS=OFF -D ARCH="$xarch" -D STATIC=ON -D BUILD_64=$sixtyfour -D CMAKE_BUILD_TYPE=$build_type -D ANDROID=true -D BUILD_TAG="android" -D BOOST_ROOT=/opt/android/build/boost/$arch -D BOOST_LIBRARYDIR=/opt/android/build/boost/$arch/lib -D OPENSSL_INCLUDE_DIR=/opt/android/build/openssl/include OPENSSL_ROOT_DIR=/opt/android/build/openssl/$arch -D OPENSSL_CRYPTO_LIBRARY=/opt/android/build/openssl/$arch/lib/libcrypto.so -D OPENSSL_SSL_LIBRARY=/opt/android/build/openssl/$arch/lib/libssl.so -D CMAKE_POSITION_INDEPENDENT_CODE:BOOL=true ../..
 	make -j2 wallet_api
 	find . -path ./lib -prune -o -name '*.a' -exec cp '{}' lib \;
-     TARGET_LIB_DIR=/opt/android/build/arqma/$arch/lib
+     TARGET_LIB_DIR=/opt/android/build/galaxia/$arch/lib
     rm -rf $TARGET_LIB_DIR
     mkdir -p $TARGET_LIB_DIR
     cp $OUTPUT_DIR/lib/*.a $TARGET_LIB_DIR
-     TARGET_INC_DIR=/opt/android/build/arqma/include
+     TARGET_INC_DIR=/opt/android/build/galaxia/include
     rm -rf $TARGET_INC_DIR
     mkdir -p $TARGET_INC_DIR
 	cp -a ../../src/wallet/api/wallet2_api.h $TARGET_INC_DIR

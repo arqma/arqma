@@ -50,8 +50,8 @@
 #define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V9            BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2
 
 // MONEY_SUPPLY - total number coins to be generated
-#define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define MONEY_PREMINE                                   ((uint64_t)7500000000000000)
+#define MONEY_SUPPLY                                    ((uint64_t)500000000000000000)
+#define MONEY_PREMINE                                   ((uint64_t)7500000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
@@ -148,7 +148,7 @@
 
 #define ALLOW_DEBUG_COMMANDS
 
-#define CRYPTONOTE_NAME                                 "arqma"
+#define CRYPTONOTE_NAME                                 "galaxia"
 #define CRYPTONOTE_POOLDATA_FILENAME                    "poolstate.bin"
 #define CRYPTONOTE_BLOCKCHAINDATA_FILENAME              "data.mdb"
 #define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
@@ -196,41 +196,41 @@ namespace config
    uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
    std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
-   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
-   uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
-   uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
-   uint16_t const P2P_DEFAULT_PORT = 19993;
-   uint16_t const RPC_DEFAULT_PORT = 19994;
-   uint16_t const ZMQ_RPC_DEFAULT_PORT = 19995;
+   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x786e; // Wallet prefix: gx... // decimal prefix: ......
+   uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1cf46e; // Wallet prefix: gxi... // decimal prefix: .....
+   uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x77ee; // Wallet prefix: gxx... // decimal prefix: ......
+   uint16_t const P2P_DEFAULT_PORT = 42461; 
+   uint16_t const RPC_DEFAULT_PORT = 42462; 
+   uint16_t const ZMQ_RPC_DEFAULT_PORT = 42463; 
    boost::uuids::uuid const NETWORK_ID = { {
-       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
+       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x44, 0x11, 0xFF, 0xFF, 0xFF, 0x55, 0x11, 0x1A
      } }; // Bender's nightmare
    std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
-   uint32_t const GENESIS_NONCE = 19993;
+   uint32_t const GENESIS_NONCE = 42461; 
 
    namespace testnet
    {
-     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x53ca; // Wallet prefix: at... // decimal prefix: 21450
-     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x504a; // Wallet prefix: ati... // decimal prefix: 20554
-     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x524a; // Wallet prefix: ats... // decimal prefix: 21066
-     uint16_t const P2P_DEFAULT_PORT = 29993;
-     uint16_t const RPC_DEFAULT_PORT = 29994;
-     uint16_t const ZMQ_RPC_DEFAULT_PORT = 29995;
+     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x186d; // Wallet prefix: gg... // decimal prefix: 21450
+     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x72ee; // Wallet prefix: gxa... // decimal prefix: 20554
+     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1132ee; // Wallet prefix: gxb... // decimal prefix: 21066
+     uint16_t const P2P_DEFAULT_PORT = 43461;
+     uint16_t const RPC_DEFAULT_PORT = 43462;
+     uint16_t const ZMQ_RPC_DEFAULT_PORT = 43463;
      boost::uuids::uuid const NETWORK_ID = { {
-         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
+         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x66, 0xFF, 0xFF, 0xFF, 0x66, 0x11, 0x1B
        } }; // Bender's daydream
    }
 
    namespace stagenet
    {
-     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x39ca; // Wallet prefix: as... // decimal prefix: 14794
-     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1742ca; // Wallet prefix: asi... // decimal prefix: 1524426
-     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1d84ca; // Wallet prefix: ass... // decimal prefix: 1934538
-     uint16_t const P2P_DEFAULT_PORT = 39993;
-     uint16_t const RPC_DEFAULT_PORT = 39994;
-     uint16_t const ZMQ_RPC_DEFAULT_PORT = 39995;
+     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x36ee; // Wallet prefix: gt... // decimal prefix: 14794
+     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1102ee; // Wallet prefix: gtx... // decimal prefix: 1524426
+     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x41ee; // Wallet prefix: gts... // decimal prefix: 1934538
+     uint16_t const P2P_DEFAULT_PORT = 44461;
+     uint16_t const RPC_DEFAULT_PORT = 44462;
+     uint16_t const ZMQ_RPC_DEFAULT_PORT = 44463;
      boost::uuids::uuid const NETWORK_ID = { {
-         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
+         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x77, 0xFF, 0xFF, 0xFF, 0x77, 0x11, 0x1C
        } }; // Bender's daydream
    }
 
@@ -239,14 +239,14 @@ namespace config
      static constexpr uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
      static constexpr uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
      static constexpr uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
-     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     static constexpr uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+     static constexpr uint8_t GALAXIA_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     static constexpr uint8_t GALAXIA_GENESIS_BLOCK_MINOR_VERSION = 1;
+     static constexpr uint8_t GALAXIA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
    }
 
    namespace tx_settings
    {
-     static constexpr uint8_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     static constexpr uint8_t GALAXIA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
      static constexpr uint8_t CURRENT_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
      static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
@@ -254,8 +254,8 @@ namespace config
    
    namespace sync
    {
-     static constexpr size_t NORMAL_SYNC = 20; // Amount of Blocks to download and Validate at ones while Synchronizung with Arqma Network.
-     static constexpr size_t RAPID_SYNC = 250; // Amount of Blocks to download at ones from already known by Arqma Daemon and Checkpoint are hardcoded into codebase
+     static constexpr size_t NORMAL_SYNC = 20; // Amount of Blocks to download and Validate at ones while Synchronizung with Galaxia Network.
+     static constexpr size_t RAPID_SYNC = 250; // Amount of Blocks to download at ones from already known by Galaxia Daemon and Checkpoint are hardcoded into codebase
    }
 }
 

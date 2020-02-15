@@ -30,7 +30,7 @@
 set(gen_ssl_cert_sources
   gen_ssl_cert.cpp)
 
-arqma_add_executable(gen_ssl_cert
+galaxia_add_executable(gen_ssl_cert
   ${gen_ssl_cert_sources})
 target_link_libraries(gen_ssl_cert
   PRIVATE
@@ -46,5 +46,5 @@ add_dependencies(gen_ssl_cert
   version)
 set_property(TARGET gen_ssl_cert
   PROPERTY
-    OUTPUT_NAME "arqma-generate-ssl-certificate")
+    OUTPUT_NAME "galaxia-generate-ssl-certificate")
 install(TARGETS gen_ssl_cert DESTINATION bin)

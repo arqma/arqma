@@ -87,9 +87,9 @@ set(common_private_headers
   aligned.h
   combinator.h)
 
-arqma_private_headers(common
+galaxia_private_headers(common
   ${common_private_headers})
-arqma_add_library(common
+galaxia_add_library(common
   ${common_sources}
   ${common_headers}
   ${common_private_headers}
@@ -109,5 +109,5 @@ target_link_libraries(common
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})
 
-#arqma_install_headers(common
+#galaxia_install_headers(common
 #  ${common_headers})

@@ -63,8 +63,8 @@
 #include "language_base.h"
 #include "singleton.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "mnemonic"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "mnemonic"
 
 namespace crypto
 {

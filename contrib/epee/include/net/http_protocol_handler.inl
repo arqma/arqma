@@ -34,8 +34,8 @@
 #include "net_parse_helpers.h"
 #include "time_helper.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net.http"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "net.http"
 
 #define HTTP_MAX_URI_LEN		 9000
 #define HTTP_MAX_HEADER_LEN		 100000

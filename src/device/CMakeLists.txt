@@ -58,10 +58,10 @@ set(device_headers
 
 set(device_private_headers)
 
-arqma_private_headers(device
+galaxia_private_headers(device
   ${device_private_headers})
 
-arqma_add_library(device
+galaxia_add_library(device
   ${device_sources}
   ${device_headers}
   ${device_private_headers})

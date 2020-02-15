@@ -34,8 +34,8 @@
 #include <boost/program_options/variables_map.hpp>
 #include <string>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace daemonize
 {

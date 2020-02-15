@@ -369,7 +369,7 @@ STATIC INLINE int force_software_aes(void)
   if (use != -1)
     return use;
 
-  const char *env = getenv("ARQMA_USE_SOFTWARE_AES");
+  const char *env = getenv("GALAXIA_USE_SOFTWARE_AES");
   if (!env) {
     use = 0;
   }

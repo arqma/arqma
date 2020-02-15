@@ -110,7 +110,7 @@ public:
    * @brief Gets a DNS address from OpenAlias format
    *
    * If the address looks good, but contains one @ symbol, replace that with a .
-   * e.g. donations@arqma.com becomes donations.arqma.com
+   * e.g. donations@galaxia-project.rf.gd becomes donations.galaxia-project.rf.gd
    *
    * @param oa_addr  OpenAlias address
    *

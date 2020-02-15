@@ -73,8 +73,8 @@
   #include <unistd.h>
 #endif
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "miner"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "miner"
 
 using namespace epee;
 

@@ -59,9 +59,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions(-DDEBUG_TMPDIR_LOG=1)
 endif()
 
-arqma_private_headers(daemonizer
+galaxia_private_headers(daemonizer
   ${daemonizer_private_headers})
-arqma_add_library(daemonizer
+galaxia_add_library(daemonizer
   ${daemonizer_sources}
   ${daemonizer_headers}
   ${daemonizer_private_headers})

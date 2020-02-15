@@ -37,8 +37,8 @@
 #include "wallet_errors.h"
 #include "ringdb.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "wallet.ringdb"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "wallet.ringdb"
 
 static const char zerokey[8] = {0};
 static const MDB_val zerokeyval = { sizeof(zerokey), (void *)zerokey };

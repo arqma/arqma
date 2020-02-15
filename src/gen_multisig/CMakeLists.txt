@@ -30,7 +30,7 @@
 set(gen_multisig_sources
   gen_multisig.cpp)
 
-arqma_add_executable(gen_multisig
+galaxia_add_executable(gen_multisig
   ${gen_multisig_sources})
 target_link_libraries(gen_multisig
   PRIVATE
@@ -51,5 +51,5 @@ add_dependencies(gen_multisig
   version)
 set_property(TARGET gen_multisig
   PROPERTY
-    OUTPUT_NAME "arqma-gen-trusted-multisig")
+    OUTPUT_NAME "galaxia-gen-trusted-multisig")
 install(TARGETS gen_multisig DESTINATION bin)

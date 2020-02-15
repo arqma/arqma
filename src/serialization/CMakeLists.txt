@@ -35,9 +35,9 @@ set(serialization_headers)
 set(serialization_private_headers
   json_object.h)
 
-arqma_private_headers(serialization
+galaxia_private_headers(serialization
   ${serialization_private_headers})
-arqma_add_library(serialization
+galaxia_add_library(serialization
   ${serialization_sources}
   ${serialization_headers}
   ${serialization_private_headers})

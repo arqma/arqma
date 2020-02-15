@@ -42,8 +42,8 @@
 
 using namespace epee;
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "cn"
+#undef GALAXIA_DEFAULT_LOG_CATEGORY
+#define GALAXIA_DEFAULT_LOG_CATEGORY "cn"
 
 #define ENCRYPTED_PAYMENT_ID_TAIL 0x8d
 
@@ -938,13 +938,13 @@ namespace cryptonote
     switch (std::atomic_load(&default_decimal_point))
     {
       case 9:
-        return "arq";
+        return "gxi";
       case 6:
-        return "milliarq";
+        return "milligxi";
       case 3:
-        return "microarq";
+        return "microgxi";
       case 0:
-        return "nanoarq";
+        return "nanogxi";
       default:
         ASSERT_MES_AND_THROW("Invalid decimal point specification: " << default_decimal_point);
     }

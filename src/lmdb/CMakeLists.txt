@@ -30,5 +30,5 @@
 set(lmdb_sources database.cpp error.cpp table.cpp value_stream.cpp)
 set(lmdb_headers database.h error.h key_stream.h table.h transaction.h util.h value_stream.h)
 
-arqma_add_library(lmdb_lib ${lmdb_sources} ${lmdb_headers})
+galaxia_add_library(lmdb_lib ${lmdb_sources} ${lmdb_headers})
 target_link_libraries(lmdb_lib common ${LMDB_LIBRARY})

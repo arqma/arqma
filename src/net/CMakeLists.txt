@@ -30,5 +30,5 @@
 set(net_sources error.cpp i2p_address.cpp parse.cpp socks.cpp socks_connect.cpp tor_address.cpp zmq.cpp)
 set(net_headers error.h i2p_address.h parse.h socks.h socks_connect.h tor_address.h zmq.h)
 
-arqma_add_library(net ${net_sources} ${net_headers})
+galaxia_add_library(net ${net_sources} ${net_headers})
 target_link_libraries(net common epee ${Boost_ASIO_LIBRARY})

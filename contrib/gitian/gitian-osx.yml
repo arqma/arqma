@@ -1,5 +1,5 @@
 ---
-name: "arqma-osx-0.10"
+name: "galaxia-osx-0.10"
 enable_cache: true
 suites:
 - "bionic"
@@ -28,8 +28,8 @@ packages:
 - "python-setuptools"
 - "fonts-tuffy"
 remotes:
-- "url": "https://github.com/arqma/arqma.git"
-  "dir": "arqma"
+- "url": "https://github.com/ElSamaritan/galaxia.git"
+  "dir": "galaxia"
 files:
 - "MacOSX10.11.sdk.tar.gz"
 script: |
@@ -81,7 +81,7 @@ script: |
   create_per-host_faketime_wrappers "2000-01-01 12:00:00"
   export PATH=${WRAP_DIR}:${PATH}
 
-  cd arqma
+  cd galaxia
   BASEPREFIX=`pwd`/contrib/depends
 
   mkdir -p ${BASEPREFIX}/SDKs
@@ -105,7 +105,7 @@ script: |
     mkdir build && cd build
     cmake .. -DCMAKE_TOOLCHAIN_FILE=${BASEPREFIX}/${i}/share/toolchain.cmake
     make
-    DISTNAME=arqma-${i}
+    DISTNAME=galaxia-${i}
     mv bin ${DISTNAME}
     find ${DISTNAME}/ | sort | tar --no-recursion --mode='u+rw,go+r-w,a+X' --owner=0 --group=0 -c -T - | gzip -9n > ${OUTDIR}/${DISTNAME}.tar.gz
     cd ..
