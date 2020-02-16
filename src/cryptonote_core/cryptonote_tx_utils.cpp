@@ -100,14 +100,18 @@ namespace cryptonote
     return k;
   }
 
-  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, int hard_fork_version)
+  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t version)
   {
-    return hard_fork_version >= 16 ? base_reward / 20 : 0;
+    if(version >= 16)
+      return base_reward * 10 /100; // 10 %
+    return 0;
   }
-  
-  uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, int hard_fork_version)
+
+  uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, uint8_t version)
   {
-    return hard_fork_version >= 16 ? base_reward / 2 : 0;
+    if(version >= 16)
+      return base_reward * 45 / 100; // 45%
+    return 0;
   }
 
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
@@ -155,7 +159,7 @@ namespace cryptonote
     return correct_key == output_key;
   }
   //---------------------------------------------------------------
-  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t hard_fork_version, network_type nettype, const account_public_address service_node_address) {
+  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t version, network_type nettype, const account_public_address service_node_address) {
     tx.vin.clear();
     tx.vout.clear();
     tx.extra.clear();
@@ -177,7 +181,7 @@ namespace cryptonote
       block_reward = MONEY_PREMINE;
     }
 
-    else if(!get_block_reward(median_weight, current_block_weight, already_generated_coins, block_reward, hard_fork_version))
+    if(!get_block_reward(median_weight, current_block_weight, already_generated_coins, fee, block_reward, version))
     {
       LOG_PRINT_L0("Block is too big");
       return false;
@@ -189,18 +193,16 @@ namespace cryptonote
 
     uint64_t governance_reward = 0;
     uint64_t service_node_reward = 0;
-    if(hard_fork_version >= 16)
+    if(version >= 16)
     {
-      governance_reward = get_governance_reward(height, block_reward, hard_fork_version);
-      service_node_reward = get_service_node_reward(height, block_reward, hard_fork_version);
+      governance_reward = get_governance_reward(height, block_reward, version);
+      service_node_reward = get_service_node_reward(height, block_reward, version);
       block_reward -= governance_reward;
       block_reward -= service_node_reward;
     }
 
-    block_reward += fee;
-
     uint64_t summary_amounts = 0;
-    
+
     {
       crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
       crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
@@ -219,11 +221,11 @@ namespace cryptonote
       tx.vout.push_back(out);
     }
 
-    if(hard_fork_version >= 16)
+    if(version >= 16)
     {
       keypair gov_key = get_deterministic_keypair_from_height(height);
       add_tx_pub_key_to_extra(tx, gov_key.pub);
-      
+
       {
         crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
         crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
@@ -733,7 +735,7 @@ namespace cryptonote
   {
     hw::device &hwdev = sender_account_keys.get_device();
     hwdev.open_tx(tx_key);
-    
+
     if(is_staking_tx)
     {
       tx_key = get_deterministic_keypair_from_height(1).sec;
