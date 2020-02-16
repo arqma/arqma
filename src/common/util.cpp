@@ -69,6 +69,7 @@ using namespace epee;
 #include "memwipe.h"
 #include "cryptonote_config.h"
 #include "net/http_client.h"                        // epee::net_utils::...
+#include "readline_buffer.h"
 
 #ifdef WIN32
 #ifndef STRSAFE_NO_DEPRECATE
@@ -1058,7 +1059,7 @@ void closefrom(int fd)
     }
 #endif
   }
-  
+
   std::string get_human_readable_timestamp(uint64_t ts)
   {
     char buffer[64];
@@ -1070,7 +1071,7 @@ void closefrom(int fd)
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
     return std::string(buffer);
   }
-  
+
   std::string get_human_readable_timespan(uint64_t seconds)
   {
     if (seconds < 60)
@@ -1121,5 +1122,4 @@ void closefrom(int fd)
     const std::uint64_t divisor = size->bytes / 1024;
     return (boost::format(size->format) % (double(bytes) / divisor)).str();
   }
-
- }
+}

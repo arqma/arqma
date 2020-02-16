@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -308,7 +308,7 @@ endif()
 option(STATIC "Link libraries statically" ${DEFAULT_STATIC})
 
 # On older installations of g++ STDC_FORMAT_MACROS must be defined before inttype.h is included.
-# Fixes the error: expected ‘)’ before ‘PRIx64’ 
+# Fixes the error: expected ‘)’ before ‘PRIx64’
 if(WIN32 OR MSVC OR MINGW)
   add_definitions(-D__STDC_FORMAT_MACROS)
 endif()
@@ -671,12 +671,10 @@ else()
   add_cxx_flag_if_supported(-Wformat-security CXX_SECURITY_FLAGS)
 
   #-fstack-protector
-  if (NOT WIN32)
     add_c_flag_if_supported(-fstack-protector C_SECURITY_FLAGS)
     add_cxx_flag_if_supported(-fstack-protector CXX_SECURITY_FLAGS)
     add_c_flag_if_supported(-fstack-protector-strong C_SECURITY_FLAGS)
     add_cxx_flag_if_supported(-fstack-protector-strong CXX_SECURITY_FLAGS)
-  endif()
 
   # New in GCC 8.2
   if (NOT WIN32)
@@ -718,6 +716,7 @@ else()
   if (WIN32)
     add_linker_flag_if_supported(-Wl,--dynamicbase LD_SECURITY_FLAGS)
     add_linker_flag_if_supported(-Wl,--nxcompat LD_SECURITY_FLAGS)
+    add_linker_flag_if_supported(-Wl,--high-entropy-va LD_SECURITY_FLAGS)
   endif()
 
   message(STATUS "Using C security hardening flags: ${C_SECURITY_FLAGS}")

@@ -1,7 +1,7 @@
 ## Arqma Network
 
-Copyright (c) 2018-2019 The Arqma Network.    
-Copyright (c) 2014-2018 The Monero Project.  
+Copyright (c) 2018-2020, The Arqma Network
+Copyright (c) 2014-2020, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
@@ -140,7 +140,7 @@ build the library binary manually. This can be done with the following command `
 
 Debian / Ubuntu one liner for all dependencies
 
-``` sudo apt update && sudo apt install build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev libudev-dev libusb-1.0-0-dev libhidapi-dev protobuf-compiler libprotobuf-dev xsltproc gperf autoconf automake libtool-bin libprotobuf-c-dev ```
+``` sudo apt update && sudo apt install build-essential curl cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev libudev-dev libusb-1.0-0-dev libhidapi-dev protobuf-compiler libprotobuf-dev xsltproc gperf autoconf automake libtool-bin libprotobuf-c-dev ```
 
 Install all dependencies at once on OSX:
 
@@ -154,7 +154,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.5.1`    
+`$ cd arqma && git checkout release-v0.6.0`    
 `$ git submodule init && git submodule update`    
 
 ### Build instructions
@@ -311,7 +311,7 @@ application.
 
 * Change branch to last Release:
 
-	`cd arqma && git checkout release-v0.5.1`    
+	`cd arqma && git checkout release-v0.6.0`    
 
 * Activate and update submodules:
 

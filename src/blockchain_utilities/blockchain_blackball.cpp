@@ -1,4 +1,5 @@
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
 //
@@ -135,8 +136,9 @@ static std::string get_default_db_path()
 {
   boost::filesystem::path dir = tools::get_default_data_dir();
   // remove .arqma, replace with .shared-ringdb
-  dir = dir.remove_filename();
-  dir /= ".shared-ringdb";
+  //dir = dir.remove_filename();
+  // store in .arqma/shared-ringdb no colision with monero
+  dir /= "shared-ringdb";
   return dir.string();
 }
 

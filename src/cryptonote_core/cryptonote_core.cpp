@@ -655,7 +655,7 @@ namespace cryptonote
 
     r = m_miner.init(vm, m_nettype);
     CHECK_AND_ASSERT_MES(r, false, "Failed to initialize miner instance");
-    
+
     if(!keep_alt_blocks && !m_blockchain_storage.get_db().is_read_only())
       m_blockchain_storage.get_db().drop_alt_blocks();
 
@@ -1160,7 +1160,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 215000 : 0;
+    static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 300000 : 0;
     if(block_sync_size > 0)
       return block_sync_size;
     if(height >= quick_height)
@@ -1198,10 +1198,11 @@ namespace cryptonote
       total_fee_amount += tx_fee_amount;
       return true;
       });
+      // Remove Burned Premine Amount from coinbase emission
+      if (start_offset<= 1 && 1 <= end){
+        emission_amount -= config::blockchain_settings::PREMINE_BURN;
+      }
     }
-
-    // Remove Burned Premine Amount from coinbase emission
-    emission_amount -= config::blockchain_settings::PREMINE_BURN;
 
     return std::pair<uint64_t, uint64_t>(emission_amount, total_fee_amount);
   }
