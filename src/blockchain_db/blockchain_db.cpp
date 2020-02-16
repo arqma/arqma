@@ -1,4 +1,5 @@
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
 //
@@ -394,14 +395,14 @@ void BlockchainDB::fixup()
 
   set_batch_transactions(true);
   batch_start();
-  
+
   // Premine Burn Transaction key_images
   static const char* const burn_vout_images[] =
   {
     "55fbaf353dc0750a522a3d5b9dc5500659681b8b8d5e7126e529a34f6887d8c6", // tx_hash: e8642cc515dc92e7fe31a5c5dc0558ed336e7ce5139a173e2f1680d2f46453fc
     "c37f0d76d9143384ee1f2cf9d6f05f131ec0f11c8b20b4c69179a5a563cd2792", // tx_hash: e8642cc515dc92e7fe31a5c5dc0558ed336e7ce5139a173e2f1680d2f46453fc
   };
-  
+
   for(const auto &kis : burn_vout_images)
   {
     crypto::key_image ki;
