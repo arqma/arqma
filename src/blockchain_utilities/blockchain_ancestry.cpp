@@ -80,7 +80,7 @@ namespace std
 
 struct tx_data_t
 {
-  std::vector<std::pair<uint64_t, std::vector<uint64_t>>> vin;
+  std::vector<std::pair<uint64_t, std::vector<uint64_t> > > vin;
   std::vector<crypto::public_key> vout;
   bool coinbase;
 
