@@ -1003,7 +1003,7 @@ namespace cryptonote
      *
      * @return a vector of chains
      */
-    std::vector<std::pair<block_extended_info,std::vector<crypto::hash>>> get_alternative_chains() const;
+    std::vector<std::pair<block_extended_info,std::vector<crypto::hash> > > get_alternative_chains() const;
 
     void add_txpool_tx(const crypto::hash &txid, const cryptonote::blobdata &blob, const txpool_tx_meta_t &meta);
     void update_txpool_tx(const crypto::hash &txid, const txpool_tx_meta_t &meta);
@@ -1075,7 +1075,7 @@ namespace cryptonote
     size_t m_current_block_cumul_weight_median;
 
     // metadata containers
-    std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, std::vector<output_data_t>>> m_scan_table;
+    std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, std::vector<output_data_t> > > m_scan_table;
     std::unordered_map<crypto::hash, crypto::hash> m_blocks_longhash_table;
     std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, bool>> m_check_txin_table;
 

@@ -484,7 +484,7 @@ eof:
   class command_handler {
   public:
     typedef boost::function<bool (const std::vector<std::string> &)> callback;
-    typedef std::map<std::string, std::pair<callback, std::pair<std::string, std::string>>> lookup;
+    typedef std::map<std::string, std::pair<callback, std::pair<std::string, std::string> > > lookup;
 
     std::string get_usage()
     {
