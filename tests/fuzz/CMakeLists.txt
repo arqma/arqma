@@ -1,4 +1,5 @@
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -172,4 +173,3 @@ target_link_libraries(levin_fuzz_tests
 set_property(TARGET levin_fuzz_tests
   PROPERTY
     FOLDER "tests")
-

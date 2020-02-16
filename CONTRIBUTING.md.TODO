@@ -15,7 +15,7 @@ of software solid and usable.
 Patches are preferably to be sent via a Github pull request. If that
 can't be done, patches in "git format-patch" format can be sent
 (eg, posted to fpaste.org with a long enough timeout and a link
-posted to Telegram Arqma Group: https://t.me/joinchat/ILmRXEVOi85CjDGtK8C9zQ).
+posted to Telegram Arqma Group: https://telegram.arqma.com).
 
 Patches should be self contained. A good rule of thumb is to have
 one patch per separate issue, feature, or logical change. Also, no
@@ -55,8 +55,8 @@ the previous paragraph is here.
 ## License
 
 Copyright (c) 2009-2015 Pieter Hintjens.
-Copyright (c) 2017-2018 The Monero Project.
-Copyright (c) 2018-2019 The Arqma Network.
+Copyright (c) 2017-2020 The Monero Project.
+Copyright (c) 2018-2020 The Arqma Network.
 
 This Specification is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
 
@@ -72,7 +72,7 @@ The "Arqma Development Team" is defined in this document as the following users:
 - malbit
 - ArqTras
 - SmajeNz0
-- Arg0nator
+- muscleman
 
 ## Goals
 

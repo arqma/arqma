@@ -1,4 +1,5 @@
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
 //
@@ -760,7 +761,7 @@ public:
    * subclass of DB_EXCEPTION
    */
   virtual void batch_stop() = 0;
-  
+
   /**
    * @brief aborts a batch transaction
    *
@@ -1544,12 +1545,12 @@ public:
    * @return success iff true
    */
   virtual bool check_pruning() = 0;
-  
+
   /**
    * @brief get the max block size
    */
   virtual uint64_t get_max_block_size() = 0;
-	
+
   /**
    * @brief add a new max block size
    *
@@ -1595,7 +1596,7 @@ public:
    * @brief drop all alternative blocks
    */
   virtual void drop_alt_blocks() = 0;
-  
+
   /**
    * @brief runs a function over all txpool transactions
    *
@@ -1827,10 +1828,10 @@ private:
   bool readonly;
   bool active;
 };
-	
+
   class db_rtxn_guard: public db_txn_guard { public: db_rtxn_guard(BlockchainDB *db): db_txn_guard(db, true) {} };
   class db_wtxn_guard: public db_txn_guard { public: db_wtxn_guard(BlockchainDB *db): db_txn_guard(db, false) {} };
-	
+
 BlockchainDB *new_db(const std::string& db_type);
 
 }  // namespace cryptonote

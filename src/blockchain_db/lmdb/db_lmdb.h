@@ -1,4 +1,5 @@
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2014-2020, The Monero Project
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification, are
@@ -66,7 +67,7 @@ typedef struct mdb_txn_cursors
 
   MDB_cursor *m_txc_txpool_meta;
   MDB_cursor *m_txc_txpool_blob;
-  
+
   MDB_cursor *m_txc_alt_blocks;
 
   MDB_cursor *m_txc_hf_versions;
@@ -291,7 +292,7 @@ public:
   virtual bool prune_blockchain(uint32_t pruning_seed = 0);
   virtual bool update_pruning();
   virtual bool check_pruning();
-  
+
   virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob);
   virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob);
   virtual void remove_alt_block(const crypto::hash &blkid);
@@ -327,7 +328,7 @@ public:
   virtual bool block_rtxn_start() const;
   virtual void block_rtxn_stop() const;
   virtual void block_rtxn_abort() const;
-	
+
   bool block_rtxn_start(MDB_txn **mtxn, mdb_txn_cursors **mcur) const;
 
   virtual void pop_block(block& blk, std::vector<transaction>& txs);
@@ -413,7 +414,7 @@ private:
   virtual uint64_t get_database_size() const;
 
   std::vector<uint64_t> get_block_info_64bit_fields(uint64_t start_height, size_t count, off_t offset) const;
-  
+
   uint64_t get_max_block_size();
   void add_max_block_size(uint64_t sz);
 
@@ -459,7 +460,7 @@ private:
 
   MDB_dbi m_txpool_meta;
   MDB_dbi m_txpool_blob;
-  
+
   MDB_dbi m_alt_blocks;
 
   MDB_dbi m_hf_starting_heights;
