@@ -45,6 +45,7 @@ using namespace epee;
 #include "crypto/hash.h"
 #include "ringct/rctSigs.h"
 #include "multisig/multisig.h"
+#include "int-util.h"
 
 using namespace crypto;
 
@@ -77,7 +78,7 @@ namespace cryptonote
     LOG_PRINT_L2("destinations include " << num_stdaddresses << " standard addresses and " << num_subaddresses << " subaddresses");
   }
   //---------------------------------------------------------------
-  // Governance code credit to Loki project https://github.com/loki-project/loki
+  // Governance & Service-Node code credit to Loki project https://github.com/loki-project/ or https://loki.network/
   keypair get_deterministic_keypair_from_height(uint64_t height)
   {
     keypair k;
@@ -99,24 +100,39 @@ namespace cryptonote
 
     return k;
   }
-
+  //---------------------------------------------------------------
   uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t version)
   {
     if(version >= 16)
       return base_reward * 10 /100; // 10 %
     return 0;
   }
-
+  //---------------------------------------------------------------
   uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, uint8_t version)
   {
     if(version >= 16)
       return base_reward * 45 / 100; // 45%
     return 0;
   }
-
+  //---------------------------------------------------------------
+  uint64_t get_share_of_reward(uint32_t shares, uint64_t total_service_node_reward)
+  {
+    uint64_t hi, lo, rewardhi, rewardlo;
+    lo = mul128(total_service_node_reward, shares, &hi);
+    div128_32(hi, lo, STAKING_SHARES, &rewardhi, &rewardlo);
+    return rewardlo;
+  }
+  //---------------------------------------------------------------
+  static uint64_t calculate_sum_of_shares(const std::vector<std::pair<cryptonote::account_public_address, uint32_t>>& shares, uint64_t total_service_node_reward)
+  {
+    uint64_t reward = 0;
+    for(size_t i = 0; i < shares.size(); i++)
+      reward += get_share_of_reward(shares[i].second, total_service_node_reward);
+    return reward;
+  }
+  //---------------------------------------------------------------
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
   {
-
     crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
     bool r = crypto::generate_key_derivation(address.m_view_public_key, tx_key.sec, derivation);
     CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << address.m_view_public_key << ", " << tx_key.sec << ")");
@@ -126,7 +142,7 @@ namespace cryptonote
 
     return true;
   }
-
+  //---------------------------------------------------------------
   bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
   {
     keypair gov_key = get_deterministic_keypair_from_height(height);
@@ -159,7 +175,7 @@ namespace cryptonote
     return correct_key == output_key;
   }
   //---------------------------------------------------------------
-  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t version, network_type nettype, const account_public_address service_node_address) {
+  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t version, network_type nettype, const crypto::public_key& service_node_key, const std::vector<std::pair<account_public_address, uint32_t>>& service_node_info) {
     tx.vin.clear();
     tx.vout.clear();
     tx.extra.clear();
@@ -169,8 +185,10 @@ namespace cryptonote
     if(!extra_nonce.empty())
       if(!add_extra_nonce_to_tx_extra(tx.extra, extra_nonce))
         return false;
-    if (!sort_tx_extra(tx.extra, tx.extra))
+    if(!sort_tx_extra(tx.extra, tx.extra))
       return false;
+
+    add_service_node_winner_to_tx_extra(tx.extra, service_node_key);
 
     txin_gen in;
     in.height = height;
@@ -192,13 +210,13 @@ namespace cryptonote
 #endif
 
     uint64_t governance_reward = 0;
-    uint64_t service_node_reward = 0;
+    uint64_t total_service_node_reward = 0;
     if(version >= 16)
     {
       governance_reward = get_governance_reward(height, block_reward, version);
-      service_node_reward = get_service_node_reward(height, block_reward, version);
+      total_service_node_reward = get_service_node_reward(height, block_reward, version);
       block_reward -= governance_reward;
-      block_reward -= service_node_reward;
+      block_reward -= calculate_sum_of_shares(service_node_info, total_service_node_reward);
     }
 
     uint64_t summary_amounts = 0;
@@ -223,23 +241,23 @@ namespace cryptonote
 
     if(version >= 16)
     {
-      tx.version = transaction_prefix::version_3_deregister_tx;
       keypair gov_key = get_deterministic_keypair_from_height(height);
       add_tx_pub_key_to_extra(tx, gov_key.pub);
 
+      for(size_t i = 0; i < service_node_info.size(); i++)
       {
         crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
         crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
-        bool r = crypto::generate_key_derivation(service_node_address.m_view_public_key, gov_key.sec, derivation);
-        CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << service_node_address.m_view_public_key << ", " << gov_key.sec << ")");
-        r = crypto::derive_public_key(derivation, 1, service_node_address.m_spend_public_key, out_eph_public_key);
-        CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", " << 1 << ", "<< service_node_address.m_spend_public_key << ")");
+        bool r = crypto::generate_key_derivation(service_node_info[i].first.m_view_public_key, gov_key.sec, derivation);
+        CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << service_node_info[i].first.m_view_public_key << ", " << gov_key.sec << ")");
+        r = crypto::derive_public_key(derivation, 1+i, service_node_info[i].first.m_spend_public_key, out_eph_public_key);
+        CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", " << (1+i) << ", " << service_node_info[i].first.m_spend_public_key << ")");
 
         txout_to_key tk;
         tk.key = out_eph_public_key;
 
         tx_out out;
-        summary_amounts += out.amount = service_node_reward;
+        summary_amounts += out.amount = get_share_of_reward(service_node_info[i].second, total_service_node_reward);
         out.target = tk;
         tx.vout.push_back(out);
       }
@@ -280,10 +298,13 @@ namespace cryptonote
         tx.vout.push_back(out);
       }
 
-      CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward + service_node_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward + service_node_reward));
+      CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward + total_service_node_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward + total_service_node_reward));
     }
 
-    tx.version = transaction_prefix::version_2;
+    if(version >= 16)
+      tx.version = config::tx_settings::CURRENT_TX_VERSION;
+    else
+      tx.version = transaction_prefix::version_2;
 
     //lock
     tx.unlock_time = height + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
@@ -335,13 +356,9 @@ namespace cryptonote
     }
 
     if(hard_fork_version >= 16)
-    {
       tx.version = config::tx_settings::CURRENT_TX_VERSION;
-    }
     else
-    {
-      tx.version = 2;
-    }
+      tx.version = transaction_prefix::version_2;
     tx.unlock_time = unlock_time;
 
     tx.extra = extra;

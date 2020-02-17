@@ -197,6 +197,7 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define STAKING_REQUIREMENT_LOCK_BLOCKS                 21600
 #define STAKING_RELOCK_WINDOW_BLOCKS                    180
 #define STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS          20
+#define STAKING_SHARES                                  UINT32_MAX
 
 namespace config
 {
