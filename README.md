@@ -122,7 +122,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.6.0`    
+`$ cd galaxia && git checkout release-v0.6.0`    
 `$ git submodule init && git submodule update`    
 
 ### Build instructions
@@ -148,7 +148,7 @@ invokes cmake commands as needed.
 
 * The resulting executables can be found in `build/release/bin`
 
-* Add `PATH="$PATH:$HOME/arqma/build/release/bin"` to `.profile`
+* Add `PATH="$PATH:$HOME/galaxia/build/release/bin"` to `.profile`
 
 * Run Galaxia with `galaxiad --detach`
 
@@ -187,10 +187,10 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 	CONF_SWAPSIZE=1024  
 	sudo /etc/init.d/dphys-swapfile start  
 ```
-* Clone arqma and checkout most recent release version:
+* Clone galaxia and checkout most recent release version:
 ```
-  git clone https://github.com/arqma/arqma.git
-	cd arqma
+  git clone https://github.com/ElSamaritan/galaxia.git
+	cd galaxia
 
 ```
 * Build:
@@ -220,7 +220,7 @@ If you are using the older Raspbian Jessie image, compiling Galaxia is a bit mor
 	sudo /etc/init.d/dphys-swapfile start  
 ```
 
-* Then, install the dependencies for ArQmA except `libunwind` and `libboost-all-dev`
+* Then, install the dependencies for galaxia except `libunwind` and `libboost-all-dev`
 
 * Install the latest version of boost (this may first require invoking `apt-get remove --purge libboost*` to remove a previous version if you're not using a clean install):
 ```
@@ -237,7 +237,7 @@ If you are using the older Raspbian Jessie image, compiling Galaxia is a bit mor
 ```
 * Wait ~4 hours
 
-* From here, follow the [general Raspberry Pi instructions](#on-the-raspberry-pi) from the "Clone arqma and checkout most recent release version" step.
+* From here, follow the [general Raspberry Pi instructions](#on-the-raspberry-pi) from the "Clone galaxia and checkout most recent release version" step.
 
 #### On Windows:
 
@@ -301,7 +301,7 @@ application.
 
 ### On FreeBSD:
 
-The project can be built from scratch by following instructions for Linux above. If you are running arqma in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
+The project can be built from scratch by following instructions for Linux above. If you are running galaxia in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
 
 We expect to add Galaxia into the ports tree in the near future, which will aid in managing installations using ports or packages.
 
@@ -409,11 +409,11 @@ Then you can run make as usual.
 ### On Linux for Android (using docker):
 
         # Build image
-        docker build -f utils/build_scripts/android32.Dockerfile -t arqma-android .
+        docker build -f utils/build_scripts/android32.Dockerfile -t galaxia-android .
         # Create container
-        docker create -it --name arqma-android arqma-android bash
+        docker create -it --name galaxia-android galaxia-android bash
         # Get binaries
-        docker cp arqma-android:/opt/android/arqma/build/release/bin .
+        docker cp galaxia-android:/opt/android/galaxia/build/release/bin .
 
 ### Building portable statically linked binaries
 
@@ -437,7 +437,7 @@ You can also cross-compile Galaxia static binaries on Linux for Windows and macO
 
 *** For `x86_64-apple-darwin14` you need to download SDK first ***    
 
-* ```git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs ```    
+* ```git clone -b galaxia https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs ```    
 
 You can download SDK at https://github.com/malbit/MacOSX-SDKs/releases/download/MacOSX10.11.sdk.arqma/MacOSX10.11.sdk.tar.gz and unpack it and put to contrib/depends/SDKs    
 
@@ -450,7 +450,7 @@ Using `depends` might also be easier to compile Galaxia on Windows than using MS
 * ```make depends-compat target=x86_64-linux-gnu``` for 64-bit linux binaries.
 
 
-## Running arqmad
+## Running galaxiad
 
 The build places the binary in `bin/` sub-directory within the build directory
 from which cmake was invoked (repository root by default). To run in
@@ -466,17 +466,17 @@ of the argument without the leading dashes, for example `log-level=1`.
 
 To run in background:
 
-    ./bin/galaxiad --log-file arqmad.log --detach
+    ./bin/galaxiad --log-file galaxiad.log --detach
 
 To run as a systemd service, copy
 [galaxiad.service](utils/systemd/galaxiad.service) to `/etc/systemd/system/` and
-[galaxiad.conf](utils/conf/arqmad.conf) to `/etc/`. The [example
-service](utils/systemd/arqmad.service) assumes that the user `arqma` exists
+[galaxiad.conf](utils/conf/galaxiad.conf) to `/etc/`. The [example
+service](utils/systemd/galaxiad.service) assumes that the user `galaxia` exists
 and its home is the data directory specified in the [example
-config](utils/conf/arqmad.conf).
+config](utils/conf/galaxiad.conf).
 
 If you're on Mac, you may need to add the `--max-concurrency 1` option to
-arqma-wallet-cli, and possibly arqmad, if you get crashes refreshing.
+galaxia-wallet-cli, and possibly galaxiad, if you get crashes refreshing.
 
 ## Internationalization
 
@@ -494,25 +494,25 @@ While Galaxia isn't made to integrate with Tor, it can be used wrapped with tors
 setting the following configuration parameters and environment variables:
 
 * `--p2p-bind-ip 127.0.0.1` on the command line or `p2p-bind-ip=127.0.0.1` in
-  arqmad.conf to disable listening for connections on external interfaces.
-* `--no-igd` on the command line or `no-igd=1` in arqmad.conf to disable IGD
+  galaxiad.conf to disable listening for connections on external interfaces.
+* `--no-igd` on the command line or `no-igd=1` in galaxiad.conf to disable IGD
   (UPnP port forwarding negotiation), which is pointless with Tor.
 * `DNS_PUBLIC=tcp` or `DNS_PUBLIC=tcp://x.x.x.x` where x.x.x.x is the IP of the
   desired DNS server, for DNS requests to go over TCP, so that they are routed
-  through Tor. When IP is not specified, arqmad uses the default list of
+  through Tor. When IP is not specified, galaxiad uses the default list of
   servers defined in [src/common/dns_utils.cpp](src/common/dns_utils.cpp).
-* `TORSOCKS_ALLOW_INBOUND=1` to tell torsocks to allow arqmad to bind to interfaces
+* `TORSOCKS_ALLOW_INBOUND=1` to tell torsocks to allow galaxiad to bind to interfaces
    to accept connections from the wallet. On some Linux systems, torsocks
    allows binding to localhost by default, so setting this variable is only
    necessary to allow binding to local LAN/VPN interfaces to allow wallets to
    connect from remote hosts. On other systems, it may be needed for local wallets
    as well.
 * Do NOT pass `--detach` when running through torsocks with systemd, (see
-  [utils/systemd/arqmad.service](utils/systemd/arqmad.service) for details).
+  [utils/systemd/galaxiad.service](utils/systemd/galaxiad.service) for details).
 * If you use the wallet with a Tor daemon via the loopback IP (eg, 127.0.0.1:9050),
   then use `--untrusted-daemon` unless it is your own hidden service.
 
-Example command line to start arqmad through Tor:
+Example command line to start galaxiad through Tor:
 
     DNS_PUBLIC=tcp torsocks galaxiad --p2p-bind-ip 127.0.0.1 --no-igd
 
@@ -541,7 +541,7 @@ Run the build.
 Once it stalls, enter the following command:
 
 ```
-gdb /path/to/galaxiad `pidof arqmad`
+gdb /path/to/galaxiad `pidof galaxiad`
 ```
 
 Type `thread apply all bt` within gdb in order to obtain the stack trace
@@ -554,15 +554,15 @@ Enter `echo core | sudo tee /proc/sys/kernel/core_pattern` to stop cores from be
 
 Run the build.
 
-When it terminates with an output along the lines of "Segmentation fault (core dumped)", there should be a core dump file in the same directory as arqmad. It may be named just `core`, or `core.xxxx` with numbers appended.
+When it terminates with an output along the lines of "Segmentation fault (core dumped)", there should be a core dump file in the same directory as galaxiad. It may be named just `core`, or `core.xxxx` with numbers appended.
 
 You can now analyse this core dump with `gdb` as follows:
 
-`gdb /path/to/arqmad /path/to/dumpfile`
+`gdb /path/to/galaxiad /path/to/dumpfile`
 
 Print the stack trace with `bt`
 
-* To run arqma within gdb:
+* To run galaxia within gdb:
 
 Type `gdb /path/to/galaxiad`
 
