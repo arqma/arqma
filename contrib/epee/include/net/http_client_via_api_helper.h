@@ -32,8 +32,8 @@
 #include <atlutil.h>
 #pragma comment(lib, "Wininet.lib")
 
-#undef GALAXIA_DEFAULT_LOG_CATEGORY
-#define GALAXIA_DEFAULT_LOG_CATEGORY "net.http"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "net.http"
 
 namespace epee
 {

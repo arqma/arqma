@@ -33,8 +33,8 @@
 #include "abstract_tcp_server2.h"
 #include "http_protocol_handler.h"
 
-#undef GALAXIA_DEFAULT_LOG_CATEGORY
-#define GALAXIA_DEFAULT_LOG_CATEGORY "net.http"
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "net.http"
 
 namespace epee
 {

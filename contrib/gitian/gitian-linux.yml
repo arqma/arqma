@@ -1,5 +1,5 @@
 ---
-name: "galaxia-linux-0.10"
+name: "arqma-linux-0.10"
 enable_cache: true
 suites:
 - "bionic"
@@ -43,8 +43,8 @@ packages:
 - "libprotobuf-dev"
 - "python3-zmq"
 remotes:
-- "url": "https://github.com/ElSamaritan/galaxia.git"
-  "dir": "galaxia"
+- "url": "https://github.com/arqma/arqma.git"
+  "dir": "arqma"
 files: []
 script: |
 
@@ -129,7 +129,7 @@ script: |
   chmod +x ${WRAP_DIR}/${prog}
   done
 
-  cd galaxia
+  cd arqma
   BASEPREFIX=`pwd`/contrib/depends
   # Build dependencies for each host
   for i in $HOSTS; do
@@ -154,7 +154,7 @@ script: |
     mkdir build && cd build
     cmake .. -DCMAKE_TOOLCHAIN_FILE=${BASEPREFIX}/${i}/share/toolchain.cmake -DBACKCOMPAT=ON
     make
-    DISTNAME=galaxia-${i}
+    DISTNAME=arqma-${i}
     mv bin ${DISTNAME}
     find ${DISTNAME}/ | sort | tar --no-recursion --mode='u+rw,go+r-w,a+X' --owner=0 --group=0 -c -T - | gzip -9n > ${OUTDIR}/${DISTNAME}.tar.gz
     cd ..

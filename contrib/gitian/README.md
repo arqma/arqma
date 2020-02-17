@@ -1,9 +1,9 @@
 Gitian building
 ================
 
-*Setup instructions for a Gitian build of Galaxia using a VM or physical system.*
+*Setup instructions for a Gitian build of Arqma using a VM or physical system.*
 
-Gitian is the deterministic build process that is used to build the Galaxia CLI
+Gitian is the deterministic build process that is used to build the Arqma CLI
 executables. It provides a way to be reasonably sure that the
 executables are really built from the git source. It also makes sure that
 the same, tested dependencies are used and statically built into the executable.
@@ -74,7 +74,7 @@ Initial Gitian Setup
 The `gitian-build.py` script will checkout different release tags, so it's best to copy it:
 
 ```bash
-cp galaxia/contrib/gitian/gitian-build.py .
+cp arqma/contrib/gitian/gitian-build.py .
 ```
 
 Setup the required environment, you only need to do this once:
@@ -92,7 +92,7 @@ fork the gitian.sigs repository and clone it on your host machine,
 or pass the signed assert file back to your build machine.
 
 ```
-git clone git@github.com:galaxia/gitian.sigs.git
+git clone git@github.com:arqma/gitian.sigs.git
 git remote add malbit git@github.com:malbit/gitian.sigs.git
 ```
 
@@ -111,13 +111,13 @@ If you do detached, offline signing, you need to copy these uncommited changes t
 ```
 export NAME=malbit
 export VERSION=v0.10.0
-gpg --output $VERSION-linux/$NAME/galaxia-linux-$VERSION-build.assert.sig --detach-sign $VERSION-linux/$NAME/galaxia-linux-$VERSION-build.assert
-gpg --output $VERSION-osx-unsigned/$NAME/galaxia-osx-$VERSION-build.assert.sig --detach-sign $VERSION-osx-unsigned/$NAME/galaxia-osx-$VERSION-build.assert
-gpg --output $VERSION-win-unsigned/$NAME/galaxia-win-$VERSION-build.assert.sig --detach-sign $VERSION-win-unsigned/$NAME/galaxia-win-$VERSION-build.assert
+gpg --output $VERSION-linux/$NAME/arqma-linux-$VERSION-build.assert.sig --detach-sign $VERSION-linux/$NAME/arqma-linux-$VERSION-build.assert
+gpg --output $VERSION-osx-unsigned/$NAME/arqma-osx-$VERSION-build.assert.sig --detach-sign $VERSION-osx-unsigned/$NAME/arqma-osx-$VERSION-build.assert
+gpg --output $VERSION-win-unsigned/$NAME/arqma-win-$VERSION-build.assert.sig --detach-sign $VERSION-win-unsigned/$NAME/arqma-win-$VERSION-build.assert
 ```
 
 Make a pull request (both the `.assert` and `.assert.sig` files) to the
-[galaxia/gitian.sigs](https://github.com/ElSamaritan/gitian.sigs/) repository:
+[arqma/gitian.sigs](https://github.com/arqma/gitian.sigs/) repository:
 
 ```
 git checkout -b v0.10.0
@@ -126,7 +126,7 @@ git push --set-upstream $NAME v0.10.0
 ```
 
 ```bash
-    gpg --detach-sign ${VERSION}-linux/${SIGNER}/galaxia-linux-*-build.assert
-    gpg --detach-sign ${VERSION}-win-unsigned/${SIGNER}/galaxia-win-*-build.assert
-    gpg --detach-sign ${VERSION}-osx-unsigned/${SIGNER}/galaxia-osx-*-build.assert
+    gpg --detach-sign ${VERSION}-linux/${SIGNER}/arqma-linux-*-build.assert
+    gpg --detach-sign ${VERSION}-win-unsigned/${SIGNER}/arqma-win-*-build.assert
+    gpg --detach-sign ${VERSION}-osx-unsigned/${SIGNER}/arqma-osx-*-build.assert
 ```
