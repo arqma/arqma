@@ -241,7 +241,7 @@ namespace
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
   const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
-  const char* USAGE_STAKE_ALL("stake_all [index=<N1>[,<N2>,...]] [<priority>] [lockblocks] <service node pubkey>");
+  const char* USAGE_STAKE_ALL("stake_all [index=<N1>[,<N2>,...]] [<priority>] <service node pubkey>");
 
   std::string input_line(const std::string& prompt, bool yesno = false)
   {
@@ -2736,7 +2736,7 @@ simple_wallet::simple_wallet()
   m_cmd_binder.set_handler("stake_all",
                            boost::bind(&simple_wallet::stake_all, this, _1),
                            tr(USAGE_STAKE_ALL),
-                           tr("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
+                           tr("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
   m_cmd_binder.set_handler("sweep_unmixable",
                            boost::bind(&simple_wallet::sweep_unmixable, this, _1),
                            tr(command_helper::SWEEP_UNMIXABLE));
@@ -5778,7 +5778,7 @@ bool simple_wallet::locked_sweep_all(const std::vector<std::string> &args_)
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 {
-  // stake_all [index=<N1>[,<N2>,...]] [priority] [lockblocks] <service node pubkey>
+  // stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>
   if(!try_connect_to_daemon())
     return true;
 
@@ -5825,7 +5825,14 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 
   if(local_args.empty())
   {
-    fail_msg_writer() << tr("Usage: stake_all [index=<N1>[,<N2>,...]] [priority] [lockblocks] <service node pubkey>");
+    fail_msg_writer() << tr("Usage: stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>");
+    return true;
+  }
+
+  crypto::public_key service_node_key;
+  if(!epee::string_tools::hex_to_pod(local_args[0], service_node_key))
+  {
+    fail_msg_writer() << tr("failed to parse service node pubkey");
     return true;
   }
 
@@ -5845,17 +5852,16 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 
   cryptonote::account_public_address address = m_wallet->get_address();
 
+  std::vector<cryptonote::account_public_address> addresses = { address };
+  std::vector<uint32_t> shares = { STAKING_SHARES };
+
   std::vector<uint8_t> extra;
 
-  tx_extra_service_node_register register_;
-  register_.public_view_key = address.m_view_public_key;
-  register_.public_spend_key = address.m_spend_public_key;
-  if(!epee::string_tools::hex_to_pod(local_args[0], register_.service_node_key))
+  if(!add_service_node_register_to_tx_extra(extra, addresses, shares, service_node_key))
   {
-    fail_msg_writer() << tr("failed to add parse service node pubkey");
+    fail_msg_writer() << tr("failed to add serialize service node registration tx extra");
     return true;
   }
-  add_service_node_register_to_tx_extra(extra, register_);
 
   SCOPED_WALLET_UNLOCK();
 

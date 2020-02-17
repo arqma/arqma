@@ -97,8 +97,7 @@ static void add_size(MDB_env *env, uint64_t bytes)
     boost::filesystem::space_info si = boost::filesystem::space(path);
     if(si.available < bytes)
     {
-      MERROR("!! WARNING: Insufficient free space to extend database !!: " <<
-          (si.available >> 20L) << " MB available, " << (bytes >> 20L) << " MB needed");
+      MERROR("!! WARNING: Insufficient free space to extend database !!: " << (si.available >> 20L) << " MB available, " << (bytes >> 20L) << " MB needed");
       return;
     }
   }
@@ -456,16 +455,14 @@ int main(int argc, char* argv[])
 
   po::options_description desc_cmd_only("Command line options");
   po::options_description desc_cmd_sett("Command line options and settings options");
-  const command_line::arg_descriptor<std::string> arg_log_level  = {"log-level",  "0-4 or categories", ""};
-  const command_line::arg_descriptor<std::string> arg_database = {
-    "database", available_dbs.c_str(), default_db_type
-  };
+  const command_line::arg_descriptor<std::string> arg_log_level = {"log-level",  "0-4 or categories", ""};
+  const command_line::arg_descriptor<std::string> arg_database = {"database", available_dbs.c_str(), default_db_type};
   const command_line::arg_descriptor<std::string> arg_db_sync_mode = {
     "db-sync-mode"
   , "Specify sync option, using format [safe|fast|fastest]:[nrecords_per_sync]."
   , "fast:1000"
   };
-  const command_line::arg_descriptor<bool> arg_copy_pruned_database  = {"copy-pruned-database",  "Copy database anyway if already pruned"};
+  const command_line::arg_descriptor<bool> arg_copy_pruned_database = {"copy-pruned-database",  "Copy database anyway if already pruned"};
 
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_data_dir);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_testnet_on);

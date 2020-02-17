@@ -42,6 +42,7 @@
 #define TX_EXTRA_TAG_ADDITIONAL_PUBKEYS       0x04
 #define TX_EXTRA_TAG_SERVICE_NODE_REGISTER    0x70
 #define TX_EXTRA_TAG_SERVICE_NODE_DEREGISTER  0x71
+#define TX_EXTRA_TAG_SERVICE_NODE_WINNER      0x72
 #define TX_EXTRA_MYSTERIOUS_MINERGATE_TAG     0xDE
 
 #define TX_EXTRA_NONCE_PAYMENT_ID             0x00
@@ -182,16 +183,27 @@ namespace cryptonote
     END_SERIALIZE()
   };
 
-  struct tx_extra_service_node_register
+  struct tx_extra_service_node_winner
   {
-    crypto::public_key public_view_key;
-    crypto::public_key public_spend_key;
-    crypto::public_key service_node_key;
+    crypto::public_key m_service_node_key;
 
     BEGIN_SERIALIZE()
-      FIELD(public_view_key)
-      FIELD(public_spend_key)
-      FIELD(service_node_key)
+      FIELD(m_service_node_key)
+    END_SERIALIZE()
+  };
+
+  struct tx_extra_service_node_register
+  {
+    std::vector<crypto::public_key> m_public_spend_keys;
+    std::vector<crypto::public_key> m_public_view_keys;
+    std::vector<uint32_t> m_shares;
+    crypto::public_key m_service_node_key;
+
+    BEGIN_SERIALIZE()
+      FIELD(m_public_spend_keys)
+      FIELD(m_public_view_keys)
+      FIELD(m_shares)
+      FIELD(m_service_node_key)
     END_SERIALIZE()
   };
 
@@ -225,6 +237,7 @@ namespace cryptonote
                          tx_extra_additional_pub_keys,
                          tx_extra_mysterious_minergate,
                          tx_extra_service_node_register,
+                         tx_extra_service_node_winner,
                          tx_extra_service_node_deregister> tx_extra_field;
 }
 
@@ -238,3 +251,4 @@ VARIANT_TAG(binary_archive, cryptonote::tx_extra_additional_pub_keys, TX_EXTRA_T
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_mysterious_minergate, TX_EXTRA_MYSTERIOUS_MINERGATE_TAG);
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_service_node_register, TX_EXTRA_TAG_SERVICE_NODE_REGISTER);
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_service_node_deregister, TX_EXTRA_TAG_SERVICE_NODE_DEREGISTER);
+VARIANT_TAG(binary_archive, cryptonote::tx_extra_service_node_winner, TX_EXTRA_TAG_SERVICE_NODE_WINNER);
