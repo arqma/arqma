@@ -2029,7 +2029,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
       std::vector<uint64_t> offsets = cryptonote::relative_output_offsets_to_absolute(in_to_key.key_offsets);
       for (transfer_details &td: m_transfers)
       {
-        if ((td.is_rct() ? 0 : td.amount()) != in_to_key.amount)
+        if ((td.is_rct() ? td.amount() : 0) != in_to_key.amount)
           continue;
         for (uint64_t offset: offsets)
           if (offset == td.m_global_output_index)
@@ -2038,7 +2038,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
     }
   }
 
-  uint64_t fee = miner_tx ? 0 : tx.version == 1 ? tx_money_spent_in_ins - get_outs_money_amount(tx) : tx.rct_signatures.txnFee;
+  uint64_t fee = miner_tx ? tx.version == 1 : 0 ? tx_money_spent_in_ins - get_outs_money_amount(tx) : tx.rct_signatures.txnFee;
 
   if (tx_money_spent_in_ins > 0 && !pool)
   {
@@ -7037,7 +7037,7 @@ void wallet2::light_wallet_get_outs(std::vector<std::vector<tools::wallet2::get_
   // Amounts to ask for
   // MyMonero api handle amounts and fees as strings
   for(size_t idx: selected_transfers) {
-    const uint64_t ask_amount = m_transfers[idx].is_rct() ? 0 : m_transfers[idx].amount();
+    const uint64_t ask_amount = m_transfers[idx].is_rct() ? m_transfers[idx].amount() : 0;
     std::ostringstream amount_ss;
     amount_ss << ask_amount;
     oreq.amounts.push_back(amount_ss.str());
@@ -7074,7 +7074,7 @@ void wallet2::light_wallet_get_outs(std::vector<std::vector<tools::wallet2::get_
 
     // add real output first
     const transfer_details &td = m_transfers[idx];
-    const uint64_t amount = td.is_rct() ? 0 : td.amount();
+    const uint64_t amount = td.is_rct() ? td.amount() : 0;
     outs.back().push_back(std::make_tuple(td.m_global_output_index, td.get_public_key(), rct::commit(td.amount(), td.m_mask)));
     MDEBUG("added real output " << string_tools::pod_to_hex(td.get_public_key()));
 
@@ -7086,7 +7086,7 @@ void wallet2::light_wallet_get_outs(std::vector<std::vector<tools::wallet2::get_
     std::shuffle(order.begin(), order.end(), std::default_random_engine(crypto::rand<unsigned>()));
 
 
-    LOG_PRINT_L2("Looking for " << (fake_outputs_count+1) << " outputs with amounts " << print_money(td.is_rct() ? 0 : td.amount()));
+    LOG_PRINT_L2("Looking for " << (fake_outputs_count+1) << " outputs with amounts " << print_money(td.is_rct() ? td.amount() : 0));
     MDEBUG("OUTS SIZE: " << outs.back().size());
     for (size_t o = 0; o < light_wallet_requested_outputs_count && outs.back().size() < fake_outputs_count + 1; ++o)
     {
@@ -7183,7 +7183,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     // request histogram for all outputs, except 0 if we have the rct distribution
     for(size_t idx: selected_transfers)
       if (!m_transfers[idx].is_rct() || !has_rct_distribution)
-        req_t.amounts.push_back(m_transfers[idx].is_rct() ? 0 : m_transfers[idx].amount());
+        req_t.amounts.push_back(m_transfers[idx].is_rct() ? m_transfers[idx].amount() : 0);
     if (!req_t.amounts.empty())
     {
       std::sort(req_t.amounts.begin(), req_t.amounts.end());
@@ -7209,7 +7209,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request req_t = AUTO_VAL_INIT(req_t);
       cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response resp_t = AUTO_VAL_INIT(resp_t);
       for(size_t idx: selected_transfers)
-        req_t.amounts.push_back(m_transfers[idx].is_rct() ? 0 : m_transfers[idx].amount());
+        req_t.amounts.push_back(m_transfers[idx].is_rct() ? m_transfers[idx].amount() : 0);
       std::sort(req_t.amounts.begin(), req_t.amounts.end());
       auto end = std::unique(req_t.amounts.begin(), req_t.amounts.end());
       req_t.amounts.resize(std::distance(req_t.amounts.begin(), end));
@@ -7232,7 +7232,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       // check we got all data
       for(size_t idx: selected_transfers)
       {
-        const uint64_t amount = m_transfers[idx].is_rct() ? 0 : m_transfers[idx].amount();
+        const uint64_t amount = m_transfers[idx].is_rct() ? m_transfers[idx].amount() : 0;
         bool found = false;
         for (const auto &d: resp_t.distributions)
         {
@@ -7271,7 +7271,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     {
       ++num_selected_transfers;
       const transfer_details &td = m_transfers[idx];
-      const uint64_t amount = td.is_rct() ? 0 : td.amount();
+      const uint64_t amount = td.is_rct() ? td.amount() : 0;
       std::unordered_set<uint64_t> seen_indices;
       // request more for rct in base recent (locked) coinbases are picked, since they're locked for longer
       size_t requested_outputs_count = base_requested_outputs_count + (td.is_rct() ? config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS - config::tx_settings::ARQMA_TX_CONFIRMATIONS_REQUIRED : 0);
@@ -7595,7 +7595,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       const rct::key mask = td.is_rct() ? rct::commit(td.amount(), td.m_mask) : rct::zeroCommit(td.amount());
 
       uint64_t num_outs = 0;
-      const uint64_t amount = td.is_rct() ? 0 : td.amount();
+      const uint64_t amount = td.is_rct() ? td.amount() : 0;
       const bool output_is_pre_fork = td.m_block_height < segregation_fork_height;
       if (is_after_segregation_fork && m_segregate_pre_fork_outputs && output_is_pre_fork)
         num_outs = segregation_limit[amount].first;
@@ -7667,7 +7667,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
         order[n] = n;
       std::shuffle(order.begin(), order.end(), std::default_random_engine(crypto::rand<unsigned>()));
 
-      LOG_PRINT_L2("Looking for " << (fake_outputs_count+1) << " outputs of size " << print_money(td.is_rct() ? 0 : td.amount()));
+      LOG_PRINT_L2("Looking for " << (fake_outputs_count+1) << " outputs of size " << print_money(td.is_rct() ? td.amount() : 0));
       for (size_t o = 0; o < requested_outputs_count && outs.back().size() < fake_outputs_count + 1; ++o)
       {
         size_t i = base + order[o];
@@ -7676,7 +7676,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       }
       if (outs.back().size() < fake_outputs_count + 1)
       {
-        scanty_outs[td.is_rct() ? 0 : td.amount()] = outs.back().size();
+        scanty_outs[td.is_rct() ? td.amount() : 0] = outs.back().size();
       }
       else
       {
@@ -7826,6 +7826,14 @@ void wallet2::transfer_selected(const std::vector<cryptonote::tx_destination_ent
   crypto::secret_key tx_key;
   std::vector<crypto::secret_key> additional_tx_keys;
   rct::multisig_out msout;
+
+  const bool hf = use_fork_rules(13, 0);
+  rct::RangeProofType range_proof_type;
+  if(hf)
+    range_proof_type = rct::RangeProofPaddedBulletproof;
+  else
+    range_proof_type = rct::RangeProofMultiOutputBulletproof;
+
   LOG_PRINT_L2("constructing tx");
   bool r = cryptonote::construct_tx_and_get_tx_key(m_account.get_keys(), m_subaddresses, sources, splitted_dsts, change_dts.addr, extra, tx, unlock_time, tx_key, additional_tx_keys, false, range_proof_type, m_multisig ? &msout : NULL);
   LOG_PRINT_L2("constructed tx, r="<<r);
@@ -9770,7 +9778,7 @@ std::vector<uint64_t> wallet2::get_unspent_amounts_vector(bool strict)
   for (const auto &td: m_transfers)
   {
     if(!is_spent(td, strict))
-      set.insert(td.is_rct() ? 0 : td.amount());
+      set.insert(td.is_rct() ? td.amount() : 0);
   }
   std::vector<uint64_t> vector;
   vector.reserve(set.size());
@@ -9811,7 +9819,7 @@ std::vector<size_t> wallet2::select_available_outputs_from_histogram(uint64_t co
   return select_available_outputs([mixable, atleast, allow_rct](const transfer_details &td) {
     if (!allow_rct && td.is_rct())
       return false;
-    const uint64_t amount = td.is_rct() ? 0 : td.amount();
+    const uint64_t amount = td.is_rct() ? td.amount() : 0;
     if (atleast) {
       if (mixable.find(amount) != mixable.end())
         return true;
