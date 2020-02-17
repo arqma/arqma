@@ -65,9 +65,7 @@ int main(int argc, char* argv[])
   const command_line::arg_descriptor<std::string> arg_output_file = {"output-file", "Specify output file", "", true};
   const command_line::arg_descriptor<std::string> arg_log_level  = {"log-level",  "0-4 or categories", ""};
   const command_line::arg_descriptor<uint64_t> arg_block_stop = {"block-stop", "Stop at block number", block_stop};
-  const command_line::arg_descriptor<std::string> arg_database = {
-    "database", available_dbs.c_str(), default_db_type
-  };
+  const command_line::arg_descriptor<std::string> arg_database = {"database", available_dbs.c_str(), default_db_type};
   const command_line::arg_descriptor<bool> arg_blocks_dat = {"blocksdat", "Output in blocks.dat format", blocks_dat};
 
 
@@ -133,6 +131,8 @@ int main(int argc, char* argv[])
 
   if (command_line::has_arg(vm, arg_output_file))
     output_file_path = boost::filesystem::path(command_line::get_arg(vm, arg_output_file));
+  else if (command_line::has_arg(vm, arg_blocks_dat))
+    output_file_path = boost::filesystem::path(m_config_folder) / "blocks-dat" / BLOCKSDAT_FILE;
   else
     output_file_path = boost::filesystem::path(m_config_folder) / "export" / BLOCKCHAIN_RAW;
   LOG_PRINT_L0("Export output file: " << output_file_path.string());

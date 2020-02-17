@@ -1667,9 +1667,10 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
   //make blocks coin-base tx looks close to real coinbase tx to get truthful blob weight
   uint8_t hf_version = b.major_version;
 
-  account_public_address service_node_address = m_service_node_list.select_winner(b.prev_id);
+  crypto::public_key winner = m_service_node_list.select_winner(b.prev_id);
+  std::vector<std::pair<account_public_address, uint32_t>> service_node_addresses = m_service_node_list.get_winner_addresses_and_shares(b.prev_id);
 
-  bool r = construct_miner_tx(height, median_weight, already_generated_coins, txs_weight, fee, miner_address, b.miner_tx, ex_nonce, hf_version, m_nettype, service_node_address);
+  bool r = construct_miner_tx(height, median_weight, already_generated_coins, txs_weight, fee, miner_address, b.miner_tx, ex_nonce, hf_version, m_nettype, winner, service_node_addresses);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, first chance");
   size_t cumulative_weight = txs_weight + get_transaction_weight(b.miner_tx);
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
@@ -1677,7 +1678,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
 #endif
   for (size_t try_count = 0; try_count != 10; ++try_count)
   {
-    r = construct_miner_tx(height, median_weight, already_generated_coins, cumulative_weight, fee, miner_address, b.miner_tx, ex_nonce, hf_version, m_nettype, service_node_address);
+    r = construct_miner_tx(height, median_weight, already_generated_coins, cumulative_weight, fee, miner_address, b.miner_tx, ex_nonce, hf_version, m_nettype, winner, service_node_addresses);
 
     CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, second chance");
     size_t coinbase_weight = get_transaction_weight(b.miner_tx);
