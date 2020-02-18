@@ -122,7 +122,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd galaxia && git checkout release-v0.6.0`    
+`$ cd galaxia && git checkout release-v0.1.0`    
 `$ git submodule init && git submodule update`    
 
 ### Build instructions
