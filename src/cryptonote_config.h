@@ -200,14 +200,14 @@ namespace config
    uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x786e; // Wallet prefix: gx... // decimal prefix: ......
    uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1cf46e; // Wallet prefix: gxi... // decimal prefix: .....
    uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x77ee; // Wallet prefix: gxx... // decimal prefix: ......
-   uint16_t const P2P_DEFAULT_PORT = 42461; 
-   uint16_t const RPC_DEFAULT_PORT = 42462; 
-   uint16_t const ZMQ_RPC_DEFAULT_PORT = 42463; 
+   uint16_t const P2P_DEFAULT_PORT = 42461;
+   uint16_t const RPC_DEFAULT_PORT = 42462;
+   uint16_t const ZMQ_RPC_DEFAULT_PORT = 42463;
    boost::uuids::uuid const NETWORK_ID = { {
        0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x44, 0x11, 0xFF, 0xFF, 0xFF, 0x55, 0x11, 0x1B
      } }; // Bender's nightmare
-   std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
-   uint32_t const GENESIS_NONCE = 42461; 
+   std::string const GENESIS_TX = "021201ff000901029270a8002f4b37b84c048dc9668fb669e9d4b9b48a079c80368f4df216af55ffbc0502c1b2e8c4790215561f834d3494286b80f44e5bc88bd158d1987e84d9c995e50fb81702226dc69f5de27022c8a30ee136d3c1a508a72af90e0b817b7fea244daea6a709c0b80202ba58716a71946ef916efc13cf14e44257c8d8ebea4b45f946efd9c84dca84cb3809bee0202bbd17e361a9483990eccfe73dc9f7fbf1a18ef1a978b362d51550521bdb344af80dac40902cf61c48b6d1287728bb62675b3124b4c14ea6e6fe13c2c61ceba52dfd54b01d68084af5f022e980dd30f9c30dcd3253c9df93500c3e8bdeb9dcae86a40ac9ce2a71bc870d180f882ad16022346d5db2c5deee05bffdb7cee003269b0be3bb5e39ed22c29b54d1abdbbb7f78090dfc04a024a7216357c6e802e9fc10a93dcda3cb79147495f0332f83237bdc7898ead1c5621018fc615c6d2f13a5a7994c93fceb6f77440c27063e689f619a62fd55a12e1f87900";
+   uint32_t const GENESIS_NONCE = 42461;
 
    namespace testnet
    {
@@ -252,7 +252,7 @@ namespace config
      static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
-   
+
    namespace sync
    {
      static constexpr size_t NORMAL_SYNC = 20; // Amount of Blocks to download and Validate at ones while Synchronizung with Galaxia Network.
