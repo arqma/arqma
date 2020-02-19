@@ -53,6 +53,12 @@ namespace daemon_args
       return val;
     }
   };
+
+  const command_line::arg_descriptor<unsigned> arg_make_genesis_tx = {
+    "make-genesis-tx"
+  , "Makes a new genesis transaction (useful for making a new coin based off of this project)\n1 for Mainnet, 2 for Testnet, 3 for Stagenet"
+  , 0
+  };
   const command_line::arg_descriptor<std::string, false, true, 2> arg_log_file = {
     "log-file"
   , "Specify log file"
@@ -96,7 +102,7 @@ namespace daemon_args
   , "Max number of threads to use for a parallel job"
   , 0
   };
-  
+
   const command_line::arg_descriptor<bool> arg_public_node = {
     "public-node"
   , "Allow -Net Users to use this Galaxia Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"

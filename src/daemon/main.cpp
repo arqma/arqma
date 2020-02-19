@@ -66,7 +66,7 @@ uint16_t parse_public_rpc_port(const po::variables_map &vm)
   {
 	return 0;
   }
-	
+
   std::string rpc_port_str;
   const auto &restricted_rpc_port = cryptonote::core_rpc_server::arg_rpc_restricted_bind_port;
   if (!command_line::is_arg_defaulted(vm, restricted_rpc_port))
@@ -81,13 +81,13 @@ uint16_t parse_public_rpc_port(const po::variables_map &vm)
   {
 	throw std::runtime_error("restricted RPC mode is required");
   }
-	
+
   uint16_t rpc_port;
   if (!string_tools::get_xtype_from_string(rpc_port, rpc_port_str))
   {
 	throw std::runtime_error("invalid RPC port " + rpc_port_str);
   }
-	
+
   const auto rpc_bind_address = command_line::get_arg(vm, cryptonote::rpc_args::descriptors().rpc_bind_ip);
   const auto address = net::get_network_address(rpc_bind_address, rpc_port);
   if (!address) {
@@ -98,17 +98,69 @@ uint16_t parse_public_rpc_port(const po::variables_map &vm)
 	throw std::runtime_error(std::string(zone_to_string(address->get_zone()))
 	  + " network zone is not supported, please check RPC server bind address");
   }
-	
+
   if (address->is_loopback() || address->is_local())
   {
-	MLOG_RED(el::Level::Warning, "--" << public_node_arg.name 
-	  << " is enabled, but RPC server " << address->str() 
+	MLOG_RED(el::Level::Warning, "--" << public_node_arg.name
+	  << " is enabled, but RPC server " << address->str()
 	  << " may be unreachable from outside, please check RPC server bind address");
   }
-	
+
   return rpc_port;
 }
-	
+// Helper function to generate genesis transaction made by TheDevMinerTV#9308
+void print_genesis_tx_hex(uint8_t nettype, std::string net_type)
+{
+  using namespace cryptonote;
+
+  account_base miner_acc1;
+  miner_acc1.generate();
+
+  std::cout << "Generating miner wallet..." << std::endl;
+  std::cout << "Miner account address:" << std::endl;
+  std::cout << cryptonote::get_account_address_as_str((network_type)nettype, false, miner_acc1.get_keys().m_account_address);
+  std::cout << std::endl << "Miner spend secret key:"  << std::endl;
+  epee::to_hex::formatted(std::cout, epee::as_byte_span(miner_acc1.get_keys().m_spend_secret_key));
+  std::cout << std::endl << "Miner view secret key:" << std::endl;
+  epee::to_hex::formatted(std::cout, epee::as_byte_span(miner_acc1.get_keys().m_view_secret_key));
+  std::cout << std::endl << std::endl;
+
+  //Create file with miner keys information
+  auto t = std::time(nullptr);
+  auto tm = *std::localtime(&t);
+  std::stringstream key_fine_name_ss;
+  key_fine_name_ss << "./premine_keys_" << std::put_time(&tm, "%Y%m%d%H%M%S") << ".txt";
+  std::string key_file_name = key_fine_name_ss.str();
+  std::ofstream miner_key_file;
+  miner_key_file.open (key_file_name);
+  miner_key_file << "Network type:" << std::endl;
+  miner_key_file << net_type << std::endl;
+  miner_key_file << "Miner account address:" << std::endl;
+  miner_key_file << cryptonote::get_account_address_as_str((network_type)nettype, false, miner_acc1.get_keys().m_account_address) << std::endl;
+  miner_key_file << "Miner spend secret key:" << std::endl;
+  epee::to_hex::formatted(miner_key_file, epee::as_byte_span(miner_acc1.get_keys().m_spend_secret_key));
+  miner_key_file << std::endl << "Miner view secret key:" << std::endl;
+  epee::to_hex::formatted(miner_key_file, epee::as_byte_span(miner_acc1.get_keys().m_view_secret_key));
+  miner_key_file << std::endl;
+  miner_key_file.close();
+
+  //Prepare genesis_tx
+  cryptonote::transaction tx_genesis;
+  cryptonote::construct_miner_tx(0, 0, 0, 10, 0, miner_acc1.get_keys().m_account_address, tx_genesis);
+
+  std::cout << "Transaction object:" << std::endl;
+  std::cout << obj_to_json_str(tx_genesis) << std::endl << std::endl;
+
+  std::stringstream ss;
+  binary_archive<true> ba(ss);
+  ::serialization::serialize(ba, tx_genesis);
+  std::string tx_hex = ss.str();
+  std::cout << "Insert this line into your coin configuration file: " << std::endl;
+  std::cout << "std::string const GENESIS_TX = \"" << string_tools::buff_to_hex_nodelimer(tx_hex) << "\";" << std::endl;
+
+  return;
+}
+
 int main(int argc, char const * argv[])
 {
   try {
@@ -132,6 +184,7 @@ int main(int argc, char const * argv[])
       command_line::add_arg(visible_options, command_line::arg_version);
       command_line::add_arg(visible_options, daemon_args::arg_os_version);
       command_line::add_arg(visible_options, daemon_args::arg_config_file);
+      command_line::add_arg(visible_options, daemon_args::arg_make_genesis_tx);
 
       // Settings
       command_line::add_arg(core_settings, daemon_args::arg_log_file);
@@ -223,6 +276,30 @@ int main(int argc, char const * argv[])
       std::cerr << "Can't specify more than one of --tesnet and --stagenet and --regtest" << ENDL;
       return 1;
     }
+    // Make genesis tx
+    unsigned int genesis_tx_type = command_line::get_arg(vm, daemon_args::arg_make_genesis_tx);
+    switch (genesis_tx_type)
+    {
+      case 1:
+        print_genesis_tx_hex(cryptonote::MAINNET, "mainnet");
+        return 0;
+
+      case 2:
+        print_genesis_tx_hex(cryptonote::TESTNET, "testnet");
+        return 0;
+
+      case 3:
+        print_genesis_tx_hex(cryptonote::STAGENET, "stagenet");
+        return 0;
+
+      default:
+        if(genesis_tx_type > 3)
+        {
+          std::cout << "You might have messed something up, this should be 1 to 3, everything else will be ignored." << ENDL;
+          return 1;
+        }
+      break;
+    }
 
     std::string db_type = command_line::get_arg(vm, cryptonote::arg_db_type);
 
@@ -269,17 +346,17 @@ int main(int argc, char const * argv[])
 
     // after logs initialized
     tools::create_directories_if_necessary(data_dir.string());
-    
+
 #ifdef STACK_TRACE
 	tools::set_stack_trace_log(log_file_path.filename().string());
 #endif // STACK_TRACE
-	
+
 	if (!command_line::is_arg_defaulted(vm, daemon_args::arg_max_concurrency))
 	  tools::set_max_concurrency(command_line::get_arg(vm, daemon_args::arg_max_concurrency));
-	
+
 	// logging is now set up
 	MGINFO("Galaxia '" << GALAXIA_RELEASE_NAME << "' (v" << GALAXIA_VERSION_FULL << ")");
-	
+
 
     // If there are positional options, we're running a daemon command
     {
