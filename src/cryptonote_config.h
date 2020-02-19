@@ -123,7 +123,7 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT                   8
+#define P2P_DEFAULT_CONNECTIONS_COUNT                   4
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50000000 bytes maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -204,7 +204,7 @@ namespace config
    uint16_t const RPC_DEFAULT_PORT = 42462; 
    uint16_t const ZMQ_RPC_DEFAULT_PORT = 42463; 
    boost::uuids::uuid const NETWORK_ID = { {
-       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x44, 0x11, 0xFF, 0xFF, 0xFF, 0x55, 0x11, 0x1A
+       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x44, 0x11, 0xFF, 0xFF, 0xFF, 0x55, 0x11, 0x1B
      } }; // Bender's nightmare
    std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
    uint32_t const GENESIS_NONCE = 42461; 
