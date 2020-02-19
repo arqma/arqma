@@ -52,7 +52,7 @@ depends:
 	cd build/$(target)/release && cmake -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake ../../.. && $(MAKE)
 
 depends-compat:
-	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target-compat)/release
+	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target)-compat/release
 	cd build/$(target)-compat/release && cmake -DBACKCOMPAT=ON -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake ../../.. && $(MAKE)
 
 cmake-debug:
