@@ -602,6 +602,15 @@ namespace cryptonote
 
     try
     {
+      m_blockchain_storage.set_zmq_block_notify(std::shared_ptr<arqmaMQ::INotifier>(new arqmaMQ::ArqmaNotifier()));
+    }
+    catch( const std::exception &e)
+    {
+      MERROR("Failed to construct arqma notifier");
+    }
+
+    try
+    {
       if (!command_line::is_arg_defaulted(vm, arg_reorg_notify))
       m_blockchain_storage.set_reorg_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_reorg_notify).c_str())));
     }

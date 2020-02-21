@@ -59,6 +59,8 @@
 #include "cryptonote_basic/hardfork.h"
 #include "blockchain_db/blockchain_db.h"
 
+#include "arqma-mq/arqmaMQ.h"
+
 namespace tools { class Notify; }
 
 namespace cryptonote
@@ -742,7 +744,6 @@ namespace cryptonote
      * @param notify the notify object to cal at every new block
      */
     void set_block_notify(const std::shared_ptr<tools::Notify> &notify) { m_block_notify = notify; }
-
     /**
      * @brief sets a reorg notify object to call for every reorg
      *
@@ -751,7 +752,7 @@ namespace cryptonote
     void set_reorg_notify(const std::shared_ptr<tools::Notify> &notify) { m_reorg_notify = notify; }
 
 
-    void set_zmq_block_notify(const std::shared_ptr<tools::Notify> &notify) {m_zmq_notify = notify; }
+    void set_zmq_block_notify(const std::shared_ptr<arqmaMQ::INotifier> &notify) {m_arqma_notifier = notify; }
     /**
      * @brief Put DB in safe sync mode
      */
@@ -1078,12 +1079,12 @@ namespace cryptonote
     uint64_t m_btc_pool_cookie;
     uint64_t m_btc_expected_reward;
     bool m_btc_valid;
-    
+
     bool m_batch_success;
 
     std::shared_ptr<tools::Notify> m_block_notify;
     std::shared_ptr<tools::Notify> m_reorg_notify;
-    std::shared_ptr<tools::Notify> m_zmq_notify;
+    std::shared_ptr<arqmaMQ::INotifier> m_arqma_notifier;
 
     // for prepare_handle_incoming_blocks
     uint64_t m_prepare_height;
