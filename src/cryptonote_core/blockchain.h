@@ -61,6 +61,9 @@
 
 #include "arqma-mq/arqmaMQ.h"
 
+using namespace arqmaMQ;
+
+
 namespace tools { class Notify; }
 
 namespace cryptonote

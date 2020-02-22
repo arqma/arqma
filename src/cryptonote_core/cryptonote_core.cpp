@@ -34,6 +34,9 @@
 #include "string_tools.h"
 using namespace epee;
 
+#include "arqma-mq/arqmaMQ.h"
+using namespace arqmaMQ;
+
 #include <unordered_set>
 #include "cryptonote_core.h"
 #include "common/util.h"
@@ -53,6 +56,7 @@ using namespace epee;
 #include "ringct/rctSigs.h"
 #include "common/notify.h"
 #include "version.h"
+
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"

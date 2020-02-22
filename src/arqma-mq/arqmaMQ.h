@@ -1,21 +1,20 @@
 #pragma once
 
+#include "INotifier.h"
 #include <string>
+#include <zmq.hpp>
 
 
 namespace arqmaMQ {
 
-    class INotifier {
-        public:
-            virtual void notify(std::string &&data) = 0;
-    };
-
-
     class ArqmaNotifier: public INotifier {
         public:
-            void notify(std::string &&data) {
-                //auto *buffer = new std::string(std::move(data));
-                std::cout << data << std::endl;
-            }
+            ArqmaNotifier();
+            ~ArqmaNotifier();
+            void notify(std::string &&data);
+
+        private:
+            zmq::socket_t socket;
     };
 }
+
