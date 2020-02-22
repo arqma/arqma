@@ -406,8 +406,8 @@ namespace cryptonote {
       if ( i > 4 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-4] < (14*T)/10 ) {   ST = 2*T; }
       else if ( i > 7 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-7] < 4*T ) {   ST = 2*T; }
       else { // Assume normal conditions, so get ST.
-        // LWMA drops too much from long ST, so limit drops with a 5*T limit
-        ST = std::min(5*T ,TS[i] - TS[i-1]);
+        // LWMA drops too much from long ST, so limit drops with a 3*T limit
+        ST = std::min(3*T ,TS[i] - TS[i-1]);
       }
       L +=  ST * i ;
     }

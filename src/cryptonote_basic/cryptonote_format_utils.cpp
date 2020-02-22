@@ -32,6 +32,7 @@
 #include <atomic>
 #include <boost/algorithm/string.hpp>
 #include "wipeable_string.h"
+#include "common/i18n.h"
 #include "string_tools.h"
 #include "serialization/string.h"
 #include "cryptonote_format_utils.h"
@@ -753,6 +754,41 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
+  void add_service_node_pubkey_to_tx_extra(std::vector<uint8_t>& tx_extra, const crypto::public_key& pubkey)
+  {
+    add_data_to_tx_extra(tx_extra, reinterpret_cast<const char *>(&pubkey), sizeof(pubkey), TX_EXTRA_TAG_SERVICE_NODE_PUBKEY);
+  }
+  //---------------------------------------------------------------
+  bool get_service_node_pubkey_from_tx_extra(const std::vector<uint8_t>& tx_extra, crypto::public_key& pubkey)
+  {
+    std::vector<tx_extra_field> tx_extra_fields;
+    parse_tx_extra(tx_extra, tx_extra_fields);
+    tx_extra_service_node_pubkey service_node_pubkey;
+    bool result = find_tx_extra_field_by_type(tx_extra_fields, service_node_pubkey);
+    if (!result)
+      return false;
+    pubkey = service_node_pubkey.m_service_node_key;
+    return true;
+  }
+  //---------------------------------------------------------------
+  void add_service_node_contributor_to_tx_extra(std::vector<uint8_t>& tx_extra, const cryptonote::account_public_address& address)
+  {
+    add_data_to_tx_extra(tx_extra, reinterpret_cast<const char *>(&address), sizeof(address), TX_EXTRA_TAG_SERVICE_NODE_CONTRIBUTOR);
+  }
+  //---------------------------------------------------------------
+  bool get_service_node_contributor_from_tx_extra(const std::vector<uint8_t>& tx_extra, cryptonote::account_public_address& address)
+  {
+    std::vector<tx_extra_field> tx_extra_fields;
+    parse_tx_extra(tx_extra, tx_extra_fields);
+    tx_extra_service_node_contributor contributor;
+    bool result = find_tx_extra_field_by_type(tx_extra_fields, contributor);
+    if (!result)
+      return false;
+    address.m_spend_public_key = contributor.m_spend_public_key;
+    address.m_view_public_key = contributor.m_view_public_key;
+    return true;
+  }
+  //---------------------------------------------------------------
   bool get_service_node_register_from_tx_extra(const std::vector<uint8_t>& tx_extra, tx_extra_service_node_register &registration)
   {
     std::vector<tx_extra_field> tx_extra_fields;
@@ -761,11 +797,11 @@ namespace cryptonote
     return result && registration.m_public_spend_keys.size() == registration.m_public_view_keys.size();
   }
   //---------------------------------------------------------------
-  bool add_service_node_register_to_tx_extra(std::vector<uint8_t>& tx_extra, const std::vector<cryptonote::account_public_address>& addresses, const std::vector<uint32_t>& shares, const crypto::public_key& service_node_key)
+  bool add_service_node_register_to_tx_extra(std::vector<uint8_t>& tx_extra, const std::vector<cryptonote::account_public_address>& addresses, const std::vector<uint32_t>& portions, uint64_t expiration_timestamp, const crypto::signature& service_node_signature)
   {
-    if (addresses.size() != shares.size())
+    if (addresses.size() != portions.size())
     {
-      LOG_ERROR("Tried to serialize registration with more addresses than shares, this should never happen");
+      LOG_ERROR("Tried to serialize registration with more addresses than portions, this should never happen");
       return false;
     }
     std::vector<crypto::public_key> public_view_keys(addresses.size());
@@ -776,7 +812,7 @@ namespace cryptonote
       public_spend_keys[i] = addresses[i].m_spend_public_key;
     }
     // convert to variant
-    tx_extra_field field = tx_extra_service_node_register{ public_spend_keys, public_view_keys, shares, service_node_key };
+    tx_extra_field field = tx_extra_service_node_register{ public_spend_keys, public_view_keys, portions, expiration_timestamp, service_node_signature };
     // serialize
     std::ostringstream oss;
     binary_archive<true> ar(oss);
@@ -912,6 +948,16 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool check_outs_valid(const transaction& tx)
   {
+    if(tx.is_deregister_tx())
+    {
+      CHECK_AND_NO_ASSERT_MES(tx.vout.size() == 0, false, "tx version deregister must have 0 outputs, received: " << tx.vout.size() << ", id=" << get_transaction_hash(tx));
+    }
+
+    if(tx.version >= 3)
+    {
+      CHECK_AND_NO_ASSERT_MES(tx.vout.size() == tx.output_unlock_times.size(), false, "tx version 3 must have equal number of output unlock times and outputs");
+    }
+
     for(const tx_out& out: tx.vout)
     {
       CHECK_AND_ASSERT_MES(out.target.type() == typeid(txout_to_key), false, "wrong variant type: "
@@ -1264,6 +1310,39 @@ namespace cryptonote
       *blob_size = t.blob_size;
     }
 
+    return true;
+  }
+  //---------------------------------------------------------------
+  bool get_registration_hash(const std::vector<cryptonote::account_public_address>& addresses, const std::vector<uint32_t>& portions, uint64_t expiration_timestamp, crypto::hash& hash)
+  {
+    if (addresses.size() != portions.size())
+    {
+      LOG_ERROR("get_registration_hash addresses.size() != portions.size()");
+      return false;
+    }
+    uint64_t total_portions = 0;
+    for (uint32_t portion : portions)
+      total_portions += portion;
+    if(total_portions > STAKING_PORTIONS)
+    {
+      LOG_ERROR(tr("Your registration has more than ") << STAKING_PORTIONS << tr(" portions, this registration is invalid!"));
+      return false;
+    }
+    size_t size = addresses.size() * (sizeof(cryptonote::account_public_address) + sizeof(uint32_t)) + sizeof(uint64_t);
+    char* buffer = new char[size];
+    char* buffer_iter = buffer;
+    for (size_t i = 0; i < addresses.size(); i++)
+    {
+      memcpy(buffer_iter, &addresses[i], sizeof(cryptonote::account_public_address));
+      buffer_iter += sizeof(cryptonote::account_public_address);
+      memcpy(buffer_iter, &portions[i], sizeof(uint32_t));
+      buffer_iter += sizeof(uint32_t);
+    }
+    memcpy(buffer_iter, &expiration_timestamp, sizeof(expiration_timestamp));
+    buffer_iter += sizeof(expiration_timestamp);
+    assert(buffer + size == buffer_iter);
+    crypto::cn_fast_hash(buffer, size, hash);
+    delete[] buffer;
     return true;
   }
   //---------------------------------------------------------------
