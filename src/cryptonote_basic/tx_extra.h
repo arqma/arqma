@@ -43,6 +43,8 @@
 #define TX_EXTRA_TAG_SERVICE_NODE_REGISTER    0x70
 #define TX_EXTRA_TAG_SERVICE_NODE_DEREGISTER  0x71
 #define TX_EXTRA_TAG_SERVICE_NODE_WINNER      0x72
+#define TX_EXTRA_TAG_SERVICE_NODE_CONTRIBUTOR 0x73
+#define TX_EXTRA_TAG_SERVICE_NODE_PUBKEY      0x74
 #define TX_EXTRA_MYSTERIOUS_MINERGATE_TAG     0xDE
 
 #define TX_EXTRA_NONCE_PAYMENT_ID             0x00
@@ -192,18 +194,40 @@ namespace cryptonote
     END_SERIALIZE()
   };
 
+  struct tx_extra_service_node_pubkey
+  {
+    crypto::public_key m_service_node_key;
+
+    BEGIN_SERIALIZE()
+      FIELD(m_service_node_key)
+    END_SERIALIZE()
+  };
+
   struct tx_extra_service_node_register
   {
     std::vector<crypto::public_key> m_public_spend_keys;
     std::vector<crypto::public_key> m_public_view_keys;
-    std::vector<uint32_t> m_shares;
-    crypto::public_key m_service_node_key;
+    std::vector<uint32_t> m_portions;
+    uint64_t m_expiration_timestamp;
+    crypto::signature m_service_node_signature;
 
     BEGIN_SERIALIZE()
       FIELD(m_public_spend_keys)
       FIELD(m_public_view_keys)
-      FIELD(m_shares)
-      FIELD(m_service_node_key)
+      FIELD(m_portions)
+      FIELD(m_expiration_timestamp)
+      FIELD(m_service_node_signature)
+    END_SERIALIZE()
+  };
+
+  struct tx_extra_service_node_contributor
+  {
+    crypto::public_key m_spend_public_key;
+    crypto::public_key m_view_public_key;
+
+    BEGIN_SERIALIZE()
+      FIELD(m_spend_public_key)
+      FIELD(m_view_public_key)
     END_SERIALIZE()
   };
 
@@ -236,7 +260,9 @@ namespace cryptonote
                          tx_extra_merge_mining_tag,
                          tx_extra_additional_pub_keys,
                          tx_extra_mysterious_minergate,
+                         tx_extra_service_node_pubkey,
                          tx_extra_service_node_register,
+                         tx_extra_service_node_contributor,
                          tx_extra_service_node_winner,
                          tx_extra_service_node_deregister> tx_extra_field;
 }
@@ -251,4 +277,6 @@ VARIANT_TAG(binary_archive, cryptonote::tx_extra_additional_pub_keys, TX_EXTRA_T
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_mysterious_minergate, TX_EXTRA_MYSTERIOUS_MINERGATE_TAG);
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_service_node_register, TX_EXTRA_TAG_SERVICE_NODE_REGISTER);
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_service_node_deregister, TX_EXTRA_TAG_SERVICE_NODE_DEREGISTER);
+VARIANT_TAG(binary_archive, cryptonote::tx_extra_service_node_contributor, TX_EXTRA_TAG_SERVICE_NODE_CONTRIBUTOR);
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_service_node_winner, TX_EXTRA_TAG_SERVICE_NODE_WINNER);
+VARIANT_TAG(binary_archive, cryptonote::tx_extra_service_node_pubkey, TX_EXTRA_TAG_SERVICE_NODE_PUBKEY);

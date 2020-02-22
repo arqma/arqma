@@ -37,6 +37,7 @@ using namespace epee;
 #include "arqma_mq/arqmaMQ.h"
 
 #include <unordered_set>
+#include <iomanip>
 #include "cryptonote_core.h"
 #include "common/util.h"
 #include "common/updates.h"
@@ -57,6 +58,7 @@ using namespace epee;
 #include "common/notify.h"
 #include "version.h"
 #include "wipeable_string.h"
+#include "common/i18n.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
@@ -215,6 +217,7 @@ namespace cryptonote
               m_mempool(m_blockchain_storage),
               m_service_node_list(m_blockchain_storage),
               m_blockchain_storage(m_mempool, m_service_node_list, m_deregister_vote_pool),
+              m_quorum_cop(*this, m_service_node_list),
               m_miner(this, &m_blockchain_storage),
               m_miner_address(boost::value_initialized<account_public_address>()),
               m_starter_message_showed(false),
@@ -626,6 +629,9 @@ namespace cryptonote
       MERROR("Failed to parse reorg notify spec");
     }
 
+    // NOTE: Hooks must be registered before blockchain is initialised for the blockchain init hook to occur.
+    m_service_node_list.register_hooks(m_quorum_cop);
+
     const std::pair<uint8_t, uint64_t> regtest_hard_forks[3] = {std::make_pair(1, 0), std::make_pair(Blockchain::get_hard_fork_heights(MAINNET).back().version, 1), std::make_pair(0, 0)};
     const cryptonote::test_options regtest_test_options = {
       regtest_hard_forks, 0
@@ -813,10 +819,9 @@ namespace cryptonote
     bad_semantics_txes_lock.unlock();
 
     uint8_t version = m_blockchain_storage.get_current_hard_fork_version();
-    const size_t max_tx_version = version == 1 ? 1 : version < 16 ? 2 : 3;
+    const size_t max_tx_version = (version == 1) ? 1 : (version < 16) ? transaction::version_2 : transaction::version_3;
     if (tx.version == 0 || tx.version > max_tx_version)
     {
-      // v3 is the latest one we know
       tvc.m_verifivation_failed = true;
       return false;
     }
@@ -914,7 +919,7 @@ namespace cryptonote
         continue;
       }
 
-      if (tx_info[n].tx->version == transaction::version_2)
+      if (tx_info[n].tx->version >= transaction::version_2 && !tx.is_deregister_tx())
         continue;
       const rct::rctSig &rv = tx_info[n].tx->rct_signatures;
       switch (rv.type) {
@@ -1119,7 +1124,15 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::check_tx_semantic(const transaction& tx, bool keeped_by_block) const
   {
-    if(!tx.vin.size() && tx.version != transaction::version_3_deregister_tx)
+    if(tx.is_deregister_tx())
+    {
+      if(tx.vin.size() != 0)
+      {
+        MERROR_VER("tx version deregister must have 0 inputs, received: " << tx.vin.size() << ", rejected for tx id = " << get_transaction_hash(tx));
+        return false;
+      }
+    }
+    else if(!tx.vin.size())
     {
       MERROR_VER("tx with empty inputs, rejected for tx id= " << get_transaction_hash(tx));
       return false;
@@ -1136,7 +1149,7 @@ namespace cryptonote
       MERROR_VER("tx with invalid outputs, rejected for tx id= " << get_transaction_hash(tx));
       return false;
     }
-    if (tx.version == transaction::version_2)
+    if (tx.version >= transaction::version_2)
     {
       if (tx.rct_signatures.outPk.size() != tx.vout.size())
       {
@@ -1344,6 +1357,23 @@ namespace cryptonote
       m_mempool.set_relayed(txs);
     }
     return true;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::submit_uptime_proof()
+  {
+    if (m_service_node)
+    {
+      cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
+      NOTIFY_UPTIME_PROOF::request r;
+      m_quorum_cop.generate_uptime_proof_request(m_service_node_pubkey, m_service_node_key, r);
+      get_protocol()->relay_uptime_proof(r, fake_context);
+    }
+    return true;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::handle_uptime_proof(uint64_t timestamp, const crypto::public_key& pubkey, const crypto::signature& sig)
+  {
+    return m_quorum_cop.handle_uptime_proof(timestamp, pubkey, sig);
   }
   //-----------------------------------------------------------------------------------------------
   void core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
@@ -1734,6 +1764,12 @@ namespace cryptonote
     m_check_updates_interval.do_call(boost::bind(&core::check_updates, this));
     m_check_disk_space_interval.do_call(boost::bind(&core::check_disk_space, this));
     m_blockchain_pruning_interval.do_call(boost::bind(&core::update_blockchain_pruning, this));
+    if(m_service_node && m_service_node_list.is_service_node(m_service_node_pubkey))
+    {
+      m_submit_uptime_proof_interval.do_call(boost::bind(&core::submit_uptime_proof, this));
+      m_uptime_proof_pruner.do_call(boost::bind(&service_nodes::quorum_cop::prune_uptime_proof, &m_quorum_cop));
+    }
+
     m_miner.on_idle();
     m_mempool.on_idle();
     return true;
@@ -2013,7 +2049,7 @@ namespace cryptonote
     bool result = m_deregister_vote_pool.add_vote(vote, vvc, *quorum_state, deregister_tx);
     if(result && vvc.m_full_tx_deregister_made)
     {
-      tx_verification_context tvc;
+      tx_verification_context tvc = AUTO_VAL_INIT(tvc);
       blobdata const tx_blob = tx_to_blob(deregister_tx);
 
       result = handle_incoming_tx(tx_blob, tvc, false /*keeped_by_block*/, false /*relayed*/, false /*do_not_relay*/);
@@ -2025,6 +2061,61 @@ namespace cryptonote
     }
 
     return result;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::get_service_node_keys(crypto::public_key &pub_key, crypto::secret_key &sec_key) const
+  {
+    if (m_service_node)
+    {
+      pub_key = m_service_node_pubkey;
+      sec_key = m_service_node_key;
+    }
+    return m_service_node;
+  }
+  //-----------------------------------------------------------------------------------------------
+  std::string core::prepare_registration(const std::vector<std::string>& args)
+  {
+    std::vector<cryptonote::account_public_address> addresses;
+    std::vector<uint32_t> portions;
+    bool r = service_nodes::convert_registration_args(m_nettype, args, addresses, portions);
+    CHECK_AND_ASSERT_MES(r, "", tr("Failed to convert registration args"));
+    assert(addresses.size() == portions.size());
+    uint64_t exp_timestamp = time(nullptr) + STAKING_AUTHORIZATION_EXPIRATION_WINDOW;
+    crypto::hash hash;
+    r = cryptonote::get_registration_hash(addresses, portions, exp_timestamp, hash);
+    CHECK_AND_ASSERT_MES(r, "", tr("Failed to get the registration hash"));
+    crypto::signature signature;
+    crypto::generate_signature(hash, m_service_node_pubkey, m_service_node_key, signature);
+    std::stringstream ss;
+    ss << tr("Run this command in the wallet that will fund this registration:\n\n");
+    ss << "register_service_node ";
+    ss << std::setprecision(17);
+    for (size_t i = 0; i < addresses.size(); i++)
+      ss << get_account_address_as_str(m_nettype, false, addresses[i]) << " " << (portions[i]/(double)STAKING_PORTIONS) << " ";
+    ss << exp_timestamp << " " << epee::string_tools::pod_to_hex(m_service_node_pubkey) << " " << epee::string_tools::pod_to_hex(signature) << "\n\n";
+    time_t tt = exp_timestamp;
+    struct tm tm;
+#ifdef WIN32
+    gmtime_s(&tm, &tt);
+#else
+    gmtime_r(&tt, &tm);
+#endif
+    char buffer[128];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %I:%M:%S %p", &tm);
+    ss << tr("This registration expires at ") << buffer << tr(". This should be in about 2 weeks. If it isn't, check this computer's clock") << std::endl;
+    ss << tr("Please submit your registration into the blockchain before this time or it will be invalid.");
+    return ss.str();
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::cmd_prepare_registration(const boost::program_options::variables_map& vm, const std::vector<std::string>& args)
+  {
+    bool r = handle_command_line(vm);
+    CHECK_AND_ASSERT_MES(r, false, "Unable to parse command line arguments");
+    r = init_service_node_key();
+    CHECK_AND_ASSERT_MES(r, false, "Failed to create or load service node key");
+    std::string registration = prepare_registration(args);
+    std::cout << registration << std::endl;
+    return true;
   }
   //-----------------------------------------------------------------------------------------------
   std::time_t core::get_start_time() const

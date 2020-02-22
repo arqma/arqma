@@ -63,8 +63,8 @@ namespace cryptonote
     //      codebase.  As it stands, it is at best nontrivial to test
     //      whether or not changing these parameters (or adding new)
     //      will work correctly.
-    time_t const MIN_RELAY_TIME = (60 * 5); // only start re-relaying transactions after that many seconds
-    time_t const MAX_RELAY_TIME = (60 * 60 * 4); // at most that many seconds between resends
+    time_t const MIN_RELAY_TIME = (30 * 3); // only start re-relaying transactions after that many seconds
+    time_t const MAX_RELAY_TIME = (60 * 3); // at most that many seconds between resends
     float const ACCEPT_THRESHOLD = 1.0f;
 
     // a kind of increasing backoff within min/max bounds
@@ -116,7 +116,7 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::have_deregister_tx_already(transaction const &tx) const
   {
-    if(tx.version != transaction::version_3_deregister_tx)
+    if(!tx.is_deregister_tx())
       return false;
 
     tx_extra_service_node_deregister deregister;
@@ -130,7 +130,7 @@ namespace cryptonote
     get_transactions(pool_txs);
     for(const transaction& pool_tx : pool_txs)
     {
-      if(pool_tx.version != transaction::version_3_deregister_tx)
+      if(!tx.is_deregister_tx())
         continue;
 
       tx_extra_service_node_deregister pool_tx_deregister;
@@ -140,7 +140,7 @@ namespace cryptonote
         continue;
       }
 
-      if((pool_tx_deregister.block_height       == deregister.block_height) && (pool_tx_deregister.service_node_index == deregister.service_node_index))
+      if((pool_tx_deregister.block_height == deregister.block_height) && (pool_tx_deregister.service_node_index == deregister.service_node_index))
       {
         return true;
       }
@@ -215,7 +215,7 @@ namespace cryptonote
       fee = tx.rct_signatures.txnFee;
     }
 
-    if(!kept_by_block && !m_blockchain.check_fee(tx_weight, fee) && tx.version != transaction::version_3_deregister_tx)
+    if(!kept_by_block && !m_blockchain.check_fee(tx_weight, fee) && !tx.is_deregister_tx())
     {
       tvc.m_verifivation_failed = true;
       tvc.m_fee_too_low = true;
@@ -255,7 +255,7 @@ namespace cryptonote
       return false;
     }
 
-    if(tx.version == transaction::version_3_deregister_tx)
+    if(tx.is_deregister_tx())
     {
       tx_extra_service_node_deregister deregister;
       if(!get_service_node_deregister_from_tx_extra(tx.extra, deregister))
@@ -391,7 +391,7 @@ namespace cryptonote
       }
       tvc.m_added_to_pool = true;
 
-      if((meta.fee > 0 || tx.version ==3) && !do_not_relay)
+      if((meta.fee > 0 || tx.is_deregister_tx()) && !do_not_relay)
         tvc.m_should_be_relayed = true;
     }
 
@@ -689,7 +689,7 @@ namespace cryptonote
             if(meta.fee == 0)
             {
               cryptonote::transaction tx;
-              if(cryptonote::parse_and_validate_tx_from_blob(bd, tx) && tx.version != transaction::version_3_deregister_tx)
+              if(cryptonote::parse_and_validate_tx_from_blob(bd, tx) && !tx.is_deregister_tx())
               {
                 return true;
               }
@@ -1113,7 +1113,7 @@ namespace cryptonote
       if(txd.last_failed_id != null_hash && m_blockchain.get_current_blockchain_height() > txd.last_failed_height && txd.last_failed_id == m_blockchain.get_block_id_by_height(txd.last_failed_height))
         return false;//we already sure that this tx is broken for this height
 
-      tx_verification_context tvc;
+      tx_verification_context tvc = AUTO_VAL_INIT(tvc);
       if(!check_tx_inputs([&lazy_tx]()->cryptonote::transaction&{ return lazy_tx(); }, txid, txd.max_used_block_height, txd.max_used_block_id, tvc))
       {
         txd.last_failed_height = m_blockchain.get_current_blockchain_height()-1;
@@ -1130,7 +1130,7 @@ namespace cryptonote
         if(txd.last_failed_id == m_blockchain.get_block_id_by_height(txd.last_failed_height))
           return false;
         //check ring signature again, it is possible (with very small chance) that this transaction become again valid
-        tx_verification_context tvc;
+        tx_verification_context tvc = AUTO_VAL_INIT(tvc);
         if(!check_tx_inputs([&lazy_tx]()->cryptonote::transaction&{ return lazy_tx(); }, txid, txd.max_used_block_height, txd.max_used_block_id, tvc))
         {
           txd.last_failed_height = m_blockchain.get_current_blockchain_height()-1;

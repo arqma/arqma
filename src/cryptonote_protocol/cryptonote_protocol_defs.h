@@ -322,4 +322,26 @@ namespace cryptonote
     typedef epee::misc_utils::struct_init<request_t> request;
   };
 
+  /************************************************************************/
+  /*                                                                      */
+  /************************************************************************/
+  struct NOTIFY_UPTIME_PROOF
+  {
+    const static int ID = BC_COMMANDS_POOL_BASE + 11;
+
+    struct request_t
+    {
+      uint64_t timestamp;
+      crypto::public_key pubkey;
+      crypto::signature sig;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(timestamp)
+        KV_SERIALIZE_VAL_POD_AS_BLOB(pubkey)
+        KV_SERIALIZE_VAL_POD_AS_BLOB(sig)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+  };
+
 }

@@ -1386,7 +1386,7 @@ namespace cryptonote
      *
      * @return true if spendable, otherwise false
      */
-    bool is_tx_spendtime_unlocked(uint64_t unlock_time) const;
+    bool is_output_spendtime_unlocked(uint64_t unlock_time) const;
 
     /**
      * @brief stores an invalid block in a separate container

@@ -1177,6 +1177,22 @@ public:
    */
   virtual uint64_t get_tx_unlock_time(const crypto::hash& h) const = 0;
 
+  // return unlock time of output with the given amount and output amount index
+  /**
+   * @brief fetch an output's unlock time/height
+   *
+   * The subclass should return the stored unlock time for the output
+   * with the given amount and output amount index.
+   *
+   * If no such output exists, the subclass should throw OUTPUT_DNE.
+   *
+   * @param amount the amount of the requested output
+   * @param amount_index the amount index of the requested output
+   *
+   * @return the unlock time/height
+   */
+  uint64_t get_output_unlock_time(const uint64_t amount, const uint64_t global_index) const;
+
   // return tx with hash <h>
   // throw if no such tx exists
   /**

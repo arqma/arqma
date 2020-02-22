@@ -200,7 +200,13 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define STAKING_REQUIREMENT_LOCK_BLOCKS                 21600
 #define STAKING_RELOCK_WINDOW_BLOCKS                    180
 #define STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS          20
-#define STAKING_SHARES                                  UINT32_MAX
+#define STAKING_PORTIONS                                UINT32_MAX
+#define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (86400 * 14) // (seconds_per_day times days)
+#define MAX_NUMBER_OF_CONTRIBUTORS                      10
+
+#define UPTIME_PROOF_BUFFER_IN_SECONDS                  (300)
+#define UPTIME_PROOF_FREQUENCY_IN_SECONDS               (3600)
+#define UPTIME_PROOF_MAX_TIME_IN_SECONDS                (UPTIME_PROOF_FREQUENCY_IN_SECONDS + (2 * UPTIME_PROOF_BUFFER_IN_SECONDS))
 
 namespace config
 {

@@ -166,9 +166,9 @@ namespace cryptonote
       version_0 = 0,
       version_1,
       version_2,
-      version_3_deregister_tx,
+      version_3,
     };
-    
+
     // tx information
     size_t   version;
     uint64_t unlock_time;  //number of block (or time), used as a limitation like: spend this tx not early then block/time
@@ -178,8 +178,16 @@ namespace cryptonote
     //extra
     std::vector<uint8_t> extra;
 
+    std::vector<uint64_t> output_unlock_times;
+    bool is_deregister; //service node deregister tx
+
     BEGIN_SERIALIZE()
       VARINT_FIELD(version)
+      if(version > 2)
+      {
+        FIELD(output_unlock_times)
+        FIELD(is_deregister)
+      }
       if(version == 0 || config::tx_settings::CURRENT_TX_VERSION < version) return false;
       VARINT_FIELD(unlock_time)
       FIELD(vin)
@@ -221,6 +229,7 @@ namespace cryptonote
     void set_hash_valid(bool v) const { hash_valid.store(v,std::memory_order_release); }
     bool is_blob_size_valid() const { return blob_size_valid.load(std::memory_order_acquire); }
     void set_blob_size_valid(bool v) const { blob_size_valid.store(v,std::memory_order_release); }
+    bool is_deregister_tx() const { return (version == version_3_per_output_unlock_times) && is_deregister; }
     void set_hash(const crypto::hash &h) { hash = h; set_hash_valid(true); }
     void set_blob_size(size_t sz) { blob_size = sz; set_blob_size_valid(true); }
 
@@ -346,6 +355,8 @@ namespace cryptonote
   {
     version = 1;
     unlock_time = 0;
+    output_unlock_times.clear();
+    is_deregister = false;
     vin.clear();
     vout.clear();
     extra.clear();
