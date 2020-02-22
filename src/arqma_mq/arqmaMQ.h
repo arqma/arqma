@@ -2,7 +2,8 @@
 
 #include <iostream>
 #include <string>
-//#include <zmq.hpp>
+//#include <memory>
+#include <zmq.hpp>
 #include "INotifier.h"
 
 
@@ -12,10 +13,15 @@ namespace arqmaMQ {
         public:
             ArqmaNotifier();
             ~ArqmaNotifier();
-            void notify(std::string &&data);
+            ArqmaNotifier(const ArqmaNotifier&) = delete;
+            ArqmaNotifier& operator=(const ArqmaNotifier&) = delete;
+            ArqmaNotifier(ArqmaNotifier&&) = delete;
+            ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
+          void notify(std::string &&data);
 
         private:
-//            zmq::socket_t socket;
+            zmq::context_t context;
+            zmq::socket_t socket{context, ZMQ_PUB};
     };
 }
 

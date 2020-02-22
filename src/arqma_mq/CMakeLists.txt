@@ -43,5 +43,6 @@ arqma_add_library(arqma_mq
   ${arqma_mq_private_headers})
 target_link_libraries(arqma_mq
   PUBLIC
+    cppzmq
   PRIVATE
     ${EXTRA_LIBRARIES})
