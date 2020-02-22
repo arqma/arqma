@@ -773,6 +773,17 @@ namespace cryptonote
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
+  int t_cryptonote_protocol_handler<t_core>::handle_uptime_proof(int command, NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& context)
+  {
+    MLOG_P2P_MESSAGE("Received NOTIFY_UPTIME_PROOF");
+    if(context.m_state != cryptonote_connection_context::state_normal)
+      return 1;
+    if (m_core.handle_uptime_proof(arg.timestamp, arg.pubkey, arg.sig))
+      relay_uptime_proof(arg, context);
+    return 1;
+  }
+  //------------------------------------------------------------------------------------------------------------------------
+  template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::handle_request_fluffy_missing_tx(int command, NOTIFY_REQUEST_FLUFFY_MISSING_TX::request& arg, cryptonote_connection_context& context)
   {
     MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_FLUFFY_MISSING_TX (" << arg.missing_tx_indices.size() << " txes), block hash " << arg.block_hash);
@@ -2415,9 +2426,9 @@ skip:
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
-  bool t_cryptonote_protocol_handler<t_core>::relay_deregister_votes(NOTIFY_NEW_DEREGISTER_VOTE::request& arg, cryptonote_connection_context& exclude_context)
+  bool t_cryptonote_protocol_handler<t_core>::relay_deregister_votes(NOTIFY_NEW_DEREGISTER_VOTE::request& arg, cryptonote_connection_context& context)
   {
-    bool result = post_notify<NOTIFY_NEW_DEREGISTER_VOTE>(arg, exclude_context);
+    bool result = post_notify<NOTIFY_NEW_DEREGISTER_VOTE>(arg, context);
     m_core.set_deregister_votes_relayed(arg.votes);
     return result;
   }
@@ -2561,10 +2572,9 @@ skip:
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
-  bool t_cryptonote_protocol_handler<t_core>::currently_busy_syncing()
+  bool t_cryptonote_protocol_handler<t_core>::relay_uptime_proof(NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& context)
   {
-    const boost::unique_lock<boost::mutex> sync{m_sync_lock, boost::try_to_lock};
-    return !sync.owns_lock();
+    return post_notify<NOTIFY_UPTIME_PROOF>(arg, context);
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>

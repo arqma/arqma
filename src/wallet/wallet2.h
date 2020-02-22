@@ -1491,6 +1491,8 @@ private:
 
     std::shared_ptr<tools::Notify> m_tx_notify;
 
+    bool m_per_output_unlock;
+
   };
 }
 BOOST_CLASS_VERSION(tools::wallet2, 26)

@@ -27,7 +27,9 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-include_directories(${OPENSSL_INCLUDE_DIR})
+## exp2 + round <-- if somebody would like to do some precise equations near future :)
+
+include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
 set(common_sources
   base58.cpp
@@ -38,9 +40,12 @@ set(common_sources
   expect.cpp
   util.cpp
   i18n.cpp
+  exp2.cpp
+  round.cpp
   notify.cpp
   password.cpp
   perf_timer.cpp
+  rules.cpp
   pruning.cpp
   spawn.cpp
   threadpool.cpp
@@ -66,6 +71,8 @@ set(common_private_headers
   common_fwd.h
   dns_utils.h
   download.h
+  exp2.h
+  round.h
   error.h
   expect.h
   http_connection.h
@@ -80,6 +87,7 @@ set(common_private_headers
   i18n.h
   password.h
   perf_timer.h
+  rules.h
   spawn.h
   stack_trace.h
   threadpool.h

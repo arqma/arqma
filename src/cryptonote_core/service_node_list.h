@@ -30,14 +30,14 @@
 
 #include "blockchain.h"
 
-#define ROLLBACK_EVENT_EXPIRATION_BLOCKS 30
-
 namespace service_nodes
 {
-  const size_t QUORUM_SIZE = 3;
-  const size_t MIN_VOTES_TO_KICK_SERVICE_NODE = 3;
+  const size_t QUORUM_SIZE = 10;
+  const size_t MIN_VOTES_TO_KICK_SERVICE_NODE = 7;
   const size_t NTH_OF_THE_NETWORK_TO_TEST = 100;
   const size_t MIN_NODES_TO_TEST = 50;
+
+  class quorum_cop;
 
   struct quorum_state
   {
@@ -53,15 +53,18 @@ namespace service_nodes
       public cryptonote::Blockchain::ValidateMinerTxHook
   {
   public:
+    const size_t MAX_NUMBER_OF_SHAREHOLDERS = 10;
+
     service_node_list(cryptonote::Blockchain& blockchain);
     void block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs);
     void blockchain_detached(uint64_t height);
+    void register_hooks(service_nodes::quorum_cop &quorum_cop);
     void init();
     bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, int hard_fork_version, uint64_t base_reward);
 
     std::vector<crypto::public_key> get_expired_nodes(uint64_t block_height) const;
 
-    std::vector<std::pair<cryptonote::account_public_address, uint32_t>> get_winner_addresses_and_shares(const crypto::hash& prev_id) const;
+    std::vector<std::pair<cryptonote::account_public_address, uint32_t>> get_winner_addresses_and_portions(const crypto::hash& prev_id) const;
     crypto::public_key select_winner(const crypto::hash& prev_id) const;
 
     bool is_service_node(const crypto::public_key& pubkey) const;
@@ -71,6 +74,11 @@ namespace service_nodes
 
     struct service_node_info
     {
+      struct contribution {
+        uint64_t amount;
+        cryptonote::account_public_address address;
+      };
+
       // block_height and transaction indexes are used only to have
       // ### registration / last reward received ###
       // information on record.
@@ -78,23 +86,33 @@ namespace service_nodes
       // Every time when Service Node win reward is treaten like
       // it would register just at winning blockheight with tx_index -= 1.
 
-      uint64_t block_height;
-      int transaction_index;
+      uint64_t last_reward_block_height;
+      uint32_t last_reward_transaction_index;
       std::vector<cryptonote::account_public_address> addresses;
-      std::vector<uint32_t> shares;
+      std::vector<uint32_t> portions;
+      std::vector<contribution> contributions;
+      uint64_t total_contributions;
+      uint64_t staking_requirement;
+
+      bool is_fully_funded() const { return total_contributions >= staking_requirement; }
     };
 
-    bool is_registration_tx(const cryptonote::transaction& tx, uint64_t block_height, int index, crypto::public_key& key, service_node_info& info) const;
-    bool is_deregistration_tx(const cryptonote::transaction& tx, crypto::public_key& address) const;
+    bool is_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index, crypto::public_key& key, service_node_info& info) const;
 
-    std::vector<crypto::public_key> get_service_node_pubkeys() const;
+    void process_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index);
+    void process_contribution_tx(const cryptonote::transaction& tx, uint64_t block_height, uint32_t index);
+    void process_deregistration_tx(const cryptonote::transaction& tx, uint64_t block_height);
+
+    std::vector<crypto::public_key> get_service_nodes_pubkeys() const;
 
     template<typename T>
     void block_added_generic(const cryptonote::block& block, const T& txs);
 
-    bool reg_tx_has_correct_unlock_time(const cryptonote::transaction& tx, uint64_t block_height) const;
-    bool reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint32_t>& shares, crypto::public_key& service_node_key, crypto::public_key& tx_pub_key) const;
+    bool contribution_tx_output_has_correct_unlock_time(const cryptonote::transaction& tx, size_t i, uint64_t block_height) const;
+    bool reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint32_t>& portions, uint64_t& expiration_timestamp, crypto::public_key& service_node_key, crypto::signature& signature, crypto::public_key& tx_pub_key) const;
     uint64_t get_reg_tx_staking_output_contribution(const cryptonote::transaction& tx, int i, crypto::key_derivation derivation, hw::device& hwdev) const;
+
+    uint64_t get_min_contribution(uint64_t height) const;
 
     crypto::public_key find_service_node_from_miner_tx(const cryptonote::transaction& miner_tx, uint64_t block_height) const;
 
@@ -138,11 +156,14 @@ namespace service_nodes
     std::unordered_map<crypto::public_key, service_node_info> m_service_nodes_infos;
     std::list<std::unique_ptr<rollback_event>> m_rollback_events;
     cryptonote::Blockchain& m_blockchain;
+    bool m_hooks_registered;
 
     using block_height = uint64_t;
     std::map<block_height, std::shared_ptr<quorum_state>> m_quorum_states;
 
   };
+
+  bool convert_registration_args(cryptonote::network_type nettype, const std::vector<std::string>& args, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint32_t>& portions);
 
   const static cryptonote::account_public_address null_address{ crypto::null_pkey, crypto::null_pkey };
 }

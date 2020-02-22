@@ -46,6 +46,7 @@
 #include "tx_pool.h"
 #include "blockchain.h"
 #include "service_node_list.h"
+#include "quorum_cop.h"
 #include "cryptonote_basic/miner.h"
 #include "cryptonote_basic/connection_context.h"
 #include "warnings.h"
@@ -111,6 +112,15 @@ namespace cryptonote
       * @return true
       */
      bool on_idle();
+
+     /**
+      * @brief handles an incoming uptime proof
+      *
+      * Parses an incoming uptime proof
+      *
+      * @return true if we haven't seen it before and thus need to relay.
+      */
+     bool handle_uptime_proof(uint64_t timestamp, const crypto::public_key& pubkey, const crypto::signature& sig);
 
      /**
       * @brief handles an incoming transaction
@@ -806,6 +816,31 @@ namespace cryptonote
      bool add_deregister_vote(const service_nodes::service_node_deregister::vote& vote, vote_verification_context &vvc);
 
      /**
+      * @brief Prepare a registration tx using the service node keys for this
+      * daemon. This function is intended to be called without being core
+      * initialized with core::init; for use when generating txs from the shell
+      *
+      * @param vm The command line variable map.
+      * @return whether or not the command was able to prepare the registration.
+      */
+     bool cmd_prepare_registration(const boost::program_options::variables_map& vm, const std::vector<std::string>& args);
+
+     /**
+      * @brief Return the account associated to this service node.
+      * @param pub_key The public key for the service node, unmodified if not a service node
+      * @param sec_key The secret key for the service node, unmodified if not a service node
+      * @return True if we are a service node
+      */
+     bool get_service_node_keys(crypto::public_key &pub_key, crypto::secret_key &sec_key) const;
+
+     /**
+      * @brief attempts to submit an uptime proof to the network, if this is running in service node mode
+      *
+      * @return true
+      */
+     bool submit_uptime_proof();
+
+     /**
       * @brief get the blockchain pruning seed
       *
       * @return the blockchain pruning seed
@@ -1029,6 +1064,16 @@ namespace cryptonote
       */
      bool init_service_node_key();
 
+     /**
+      * @brief Prepare a registration tx using the service node keys for this
+      * daemon.
+      *
+      * @param args The arguments, as a string. <address1> <fraction1> [<address2> <fraction2> [...]]
+      *
+      * @return whether or not the command was able to prepare the registration.
+      */
+     std::string prepare_registration(const std::vector<std::string>& args);
+
      bool m_test_drop_download = true; //!< whether or not to drop incoming blocks (for testing)
 
      uint64_t m_test_drop_download_height = 0; //!< height under which to drop incoming blocks, if doing so
@@ -1037,6 +1082,7 @@ namespace cryptonote
      tx_memory_pool m_mempool; //!< transaction pool instance
      Blockchain m_blockchain_storage; //!< Blockchain instance
      service_nodes::service_node_list m_service_node_list;
+     service_nodes::quorum_cop m_quorum_cop;
 
      i_cryptonote_protocol* m_pprotocol; //!< cryptonote protocol instance
 
@@ -1057,6 +1103,8 @@ namespace cryptonote
      epee::math_helper::once_a_time_seconds<60*60*12, true> m_check_updates_interval; //!< interval for checking for new versions
      epee::math_helper::once_a_time_seconds<60*10, true> m_check_disk_space_interval; //!< interval for checking for disk space
      epee::math_helper::once_a_time_seconds<60*60*5, true> m_blockchain_pruning_interval; //!< interval for incremental blockchain pruning
+     epee::math_helper::once_a_time_seconds<UPTIME_PROOF_FREQUENCY_IN_SECONDS, true> m_submit_uptime_proof_interval; //!< interval for submitting uptime proof
+     epee::math_helper::once_a_time_seconds<30, true> m_uptime_proof_pruner;
 
      std::atomic<bool> m_starter_message_showed; //!< has the "daemon will sync now" message been shown?
 
