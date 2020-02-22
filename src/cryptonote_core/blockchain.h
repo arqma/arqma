@@ -59,7 +59,7 @@
 #include "cryptonote_basic/hardfork.h"
 #include "blockchain_db/blockchain_db.h"
 
-#include "arqma-mq/arqmaMQ.h"
+#include "arqma_mq/arqmaMQ.h"
 
 using namespace arqmaMQ;
 

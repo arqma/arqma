@@ -122,6 +122,7 @@ add_subdirectory(wallet)
 add_subdirectory(p2p)
 add_subdirectory(cryptonote_protocol)
 add_subdirectory(daemonizer)
+add_subdirectory(arqma_mq)
 
 if(NOT IOS)
   add_subdirectory(simplewallet)

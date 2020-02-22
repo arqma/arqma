@@ -1,8 +1,9 @@
 #pragma once
 
-#include "INotifier.h"
+#include <iostream>
 #include <string>
-#include <zmq.hpp>
+//#include <zmq.hpp>
+#include "INotifier.h"
 
 
 namespace arqmaMQ {
@@ -14,7 +15,7 @@ namespace arqmaMQ {
             void notify(std::string &&data);
 
         private:
-            zmq::socket_t socket;
+//            zmq::socket_t socket;
     };
 }
 

@@ -34,7 +34,7 @@
 #include "string_tools.h"
 using namespace epee;
 
-#include "arqma-mq/arqmaMQ.h"
+#include "arqma_mq/arqmaMQ.h"
 using namespace arqmaMQ;
 
 #include <unordered_set>

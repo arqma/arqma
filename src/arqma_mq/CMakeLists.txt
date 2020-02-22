@@ -1,5 +1,4 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2019, The Arqma Network
 #
 # All rights reserved.
 #
@@ -27,44 +26,22 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(cryptonote_core_sources
-  blockchain.cpp
-  cryptonote_core.cpp
-  tx_pool.cpp
-  tx_sanity_check.cpp
-  cryptonote_tx_utils.cpp)
+set(arqma_mq_sources
+  arqmaMQ.cpp)
 
-set(cryptonote_core_headers)
+set(arqma_mq_headers
+  INotifier.h
+  arqmaMQ.h)
 
-set(cryptonote_core_private_headers
-  blockchain_storage_boost_serialization.h
-  blockchain.h
-  cryptonote_core.h
-  tx_pool.h
-  tx_sanity_check.h
-  cryptonote_tx_utils.h)
+set(arqma_mq_private_headers)
 
-arqma_private_headers(cryptonote_core
-  ${cryptonote_core_private_headers})
-arqma_add_library(cryptonote_core
-  ${cryptonote_core_sources}
-  ${cryptonote_core_headers}
-  ${cryptonote_core_private_headers})
-target_link_libraries(cryptonote_core
+arqma_private_headers(arqma_mq
+  ${arqma_mq_private_headers})
+arqma_add_library(arqma_mq
+  ${arqma_mq_sources}
+  ${arqma_mq_headers}
+  ${arqma_mq_private_headers})
+target_link_libraries(arqma_mq
   PUBLIC
-    version
-    common
-    cncrypto
-    blockchain_db
-    multisig
-    ringct
-    device
-    arqma_mq
-    ${Boost_DATE_TIME_LIBRARY}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_SERIALIZATION_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
   PRIVATE
     ${EXTRA_LIBRARIES})
