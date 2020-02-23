@@ -22,6 +22,7 @@ namespace arqmaMQ {
         private:
             zmq::context_t context;
             zmq::socket_t socket{context, ZMQ_PUB};
+            zmq::message_t create_message(std::string &&data);
     };
 }
 
