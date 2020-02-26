@@ -63,6 +63,7 @@ namespace service_nodes
       m_blockchain.hook_block_added(quorum_cop);
       m_blockchain.hook_blockchain_detached(quorum_cop);
     }
+  }
 
   void service_node_list::init()
   {
@@ -149,9 +150,9 @@ namespace service_nodes
     uint64_t unlock_time = tx.unlock_time;
 
     if(tx.version >= cryptonote::transaction::version_3)
-      unlock_time = tx.output_inlock_times[i];
+      unlock_time = tx.output_unlock_times[i];
 
-    return unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER && unlock_time >= block_height + STAKING_REQUIREMENTS_LOCK_BLOCKS;
+    return unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER && unlock_time >= block_height + STAKING_REQUIREMENT_LOCK_BLOCKS;
   }
 
   bool service_node_list::reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint32_t>& portions, uint64_t& expiration_timestamp, crypto::public_key& service_node_key, crypto::signature& signature, crypto::public_key& tx_pub_key) const
@@ -212,7 +213,7 @@ namespace service_nodes
     return money_transferred;
   }
 
-  void service_node_list::process_deregistration_tx(const cryptonote::transaction& tx, uint64_t block_height) const
+  void service_node_list::process_deregistration_tx(const cryptonote::transaction& tx, uint64_t block_height)
   {
     if(!tx.is_deregister_tx())
       return;
@@ -250,7 +251,7 @@ namespace service_nodes
     m_service_nodes_infos.erase(iter);
   }
 
-  bool service_node_list::is_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, unit32_t index, crypto::public_key& key, service_node_info& info) const
+  bool service_node_list::is_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index, crypto::public_key& key, service_node_info& info) const
   {
     crypto::public_key tx_pub_key, service_node_key;
     std::vector<cryptonote::account_public_address> service_node_addresses;
@@ -292,7 +293,7 @@ namespace service_nodes
     return true;
   }
 
-  void service_node_list::process_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, unit32_t index)
+  void service_node_list::process_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index)
   {
     crypto::public_key key;
     service_node_info info;
@@ -309,7 +310,7 @@ namespace service_nodes
     m_service_nodes_infos[key] = info;
   }
 
-  void service_node_list::process_contribution_tx(const cryptonote::transaction& tx, uint64_t block_height, unit32_t index)
+  void service_node_list::process_contribution_tx(const cryptonote::transaction& tx, uint64_t block_height, uint32_t index)
   {
     crypto::public_key pubkey;
     cryptonote::account_public_address address;
@@ -395,7 +396,7 @@ namespace service_nodes
       }
     }
 
-    unit32_t index = 0;
+    uint32_t index = 0;
     for(const cryptonote::transaction& tx : txs)
     {
       crypto::public_key key;
@@ -409,7 +410,7 @@ namespace service_nodes
 
     const uint64_t curr_height = m_blockchain.get_current_blockchain_height();
 
-    const size_t QUORUM_LIFETIME = service_nodes::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT;
+    const size_t QUORUM_LIFETIME = arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT;
     const size_t cache_state_from_height = (curr_height < QUORUM_LIFETIME) ? 0 : curr_height - QUORUM_LIFETIME;
 
     if(block_height >= cache_state_from_height)
@@ -466,7 +467,7 @@ namespace service_nodes
       return expired_nodes;
     }
 
-    unit32_t index = 0;
+    uint32_t index = 0;
     for(const cryptonote::transaction& tx : txs)
     {
       crypto::public_key key;
@@ -528,7 +529,6 @@ namespace service_nodes
     auto oldest_waiting = std::pair<uint64_t, uint32_t>(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint32_t>::max());
     crypto::public_key key = crypto::null_pkey;
     for(const auto& info : m_service_nodes_infos)
-    {
       if(info.second.is_fully_funded())
       {
         auto waiting_since = std::make_pair(info.second.last_reward_block_height, info.second.last_reward_transaction_index);
@@ -543,7 +543,7 @@ namespace service_nodes
 
   /// validates the miner TX for the next block
   //
-  bool service_node_list::validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, int hard_fork_version, uint64_t base_reward)
+  bool service_node_list::validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, uint64_t base_reward)
   {
     if(hard_fork_version < 16)
       return true;

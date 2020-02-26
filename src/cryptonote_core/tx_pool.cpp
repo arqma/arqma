@@ -277,11 +277,11 @@ namespace cryptonote
       }
 
       uint64_t delta_height = curr_height - deregister.block_height;
-      if(delta_height > service_nodes::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT)
+      if(delta_height > arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT)
       {
         LOG_PRINT_L1("Received deregister tx for height: " << deregister.block_height
                      << " and service node: " << deregister.service_node_index
-                     << ", is older than: " << service_nodes::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT
+                     << ", is older than: " << arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT
                      << " blocks and has been rejected.");
         tvc.m_vote_ctx.m_invalid_block_height = true;
         tvc.m_verifivation_failed             = true;
@@ -1253,6 +1253,7 @@ namespace cryptonote
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     CRITICAL_REGION_LOCAL1(m_blockchain);
 
+    uint64_t height = m_blockchain.get_current_blockchain_height();
     uint64_t best_coinbase = 0, coinbase = 0;
     total_weight = 0;
     fee = 0;

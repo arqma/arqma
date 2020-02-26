@@ -140,7 +140,7 @@ namespace cryptonote
     "enforce-dns-checkpointing"
   , "checkpoints from DNS server will be enforced - Obsolete. ON by Default"
   , true
-  };
+  }; 
   static const command_line::arg_descriptor<uint64_t> arg_fast_block_sync = {
     "fast-block-sync"
   , "Sync up most of the way by using embedded, known block hashes."
@@ -368,7 +368,7 @@ namespace cryptonote
     m_fluffy_blocks_enabled = !get_arg(vm, arg_no_fluffy_blocks);
     m_pad_transactions = get_arg(vm, arg_pad_transactions);
     m_offline = get_arg(vm, arg_offline);
-    m_disable_dns_checkpoints = get_arg(vm, arg_disable_dns_checkpoints);
+//    m_disable_dns_checkpoints = get_arg(vm, arg_disable_dns_checkpoints);
     if (!command_line::is_arg_defaulted(vm, arg_fluffy_blocks))
       MWARNING(arg_fluffy_blocks.name << " is obsolete, it is now default");
 
@@ -919,10 +919,10 @@ namespace cryptonote
         continue;
       }
 
-      if (tx_info[n].tx->version >= transaction::version_2 && !tx.is_deregister_tx())
+      if(tx_info[n].tx->version >= transaction::version_2 && !tx_info[n].tx->is_deregister_tx())
         continue;
       const rct::rctSig &rv = tx_info[n].tx->rct_signatures;
-      switch (rv.type) {
+      switch(rv.type) {
         case rct::RCTTypeNull:
           // coinbase should not come here, so we reject for all other types
           MERROR_VER("Unexpected Null rctSig type");
@@ -931,7 +931,7 @@ namespace cryptonote
           tx_info[n].result = false;
           break;
         case rct::RCTTypeSimpleBulletproof:
-          if (!rct::verRctSemanticsSimple_old(rv))
+          if(!rct::verRctSemanticsSimple_old(rv))
           {
             MERROR_VER("rct signature semantics check failed");
             set_semantics_failed(tx_info[n].tx_hash);
@@ -941,7 +941,7 @@ namespace cryptonote
           }
           break;
         case rct::RCTTypeSimple:
-          if (!rct::verRctSemanticsSimple(rv))
+          if(!rct::verRctSemanticsSimple(rv))
           {
             MERROR_VER("rct signature semantics check failed");
             set_semantics_failed(tx_info[n].tx_hash);
@@ -952,7 +952,7 @@ namespace cryptonote
           break;
         case rct::RCTTypeFull:
         case rct::RCTTypeFullBulletproof:
-          if (!rct::verRct(rv, true))
+          if(!rct::verRct(rv, true))
           {
             MERROR_VER("rct signature semantics check failed");
             set_semantics_failed(tx_info[n].tx_hash);
@@ -962,7 +962,7 @@ namespace cryptonote
           }
           break;
         case rct::RCTTypeBulletproof:
-          if (!is_canonical_bulletproof_layout(rv.p.bulletproofs))
+          if(!is_canonical_bulletproof_layout(rv.p.bulletproofs))
           {
             MERROR_VER("Bulletproof does not have canonical form");
             set_semantics_failed(tx_info[n].tx_hash);
@@ -980,18 +980,18 @@ namespace cryptonote
           break;
       }
     }
-    if (!rvv.empty() && !rct::verRctSemanticsSimple(rvv))
+    if(!rvv.empty() && !rct::verRctSemanticsSimple(rvv))
     {
       LOG_PRINT_L1("One transaction among this group has bad semantics, verifying one at a time");
       ret = false;
       const bool assumed_bad = rvv.size() == 1; // if there's only one tx, it must be the bad one
-      for (size_t n = 0; n < tx_info.size(); ++n)
+      for(size_t n = 0; n < tx_info.size(); ++n)
       {
-        if (!tx_info[n].result)
+        if(!tx_info[n].result)
           continue;
-        if (tx_info[n].tx->rct_signatures.type != rct::RCTTypeBulletproof)
+        if(tx_info[n].tx->rct_signatures.type != rct::RCTTypeBulletproof)
           continue;
-        if (assumed_bad || !rct::verRctSemanticsSimple(tx_info[n].tx->rct_signatures))
+        if(assumed_bad || !rct::verRctSemanticsSimple(tx_info[n].tx->rct_signatures))
         {
           set_semantics_failed(tx_info[n].tx_hash);
           tx_info[n].tvc.m_verifivation_failed = true;
@@ -1149,9 +1149,9 @@ namespace cryptonote
       MERROR_VER("tx with invalid outputs, rejected for tx id= " << get_transaction_hash(tx));
       return false;
     }
-    if (tx.version >= transaction::version_2)
+    if(tx.version >= transaction::version_2)
     {
-      if (tx.rct_signatures.outPk.size() != tx.vout.size())
+      if(tx.rct_signatures.outPk.size() != tx.vout.size())
       {
         MERROR_VER("tx with mismatched vout/outPk count, rejected for tx id= " << get_transaction_hash(tx));
         return false;
@@ -1164,7 +1164,7 @@ namespace cryptonote
       return false;
     }
 
-    if (tx.version == transaction::version_1)
+    if(tx.version == transaction::version_1)
     {
       uint64_t amount_in = 0;
       get_inputs_money_amount(tx, amount_in);
@@ -1189,13 +1189,13 @@ namespace cryptonote
       return false;
     }
 
-    if (!check_tx_inputs_ring_members_diff(tx))
+    if(!check_tx_inputs_ring_members_diff(tx))
     {
       MERROR_VER("tx uses duplicate ring members");
       return false;
     }
 
-    if (!check_tx_inputs_keyimages_domain(tx))
+    if(!check_tx_inputs_keyimages_domain(tx))
     {
       MERROR_VER("tx uses key image not in the valid domain");
       return false;
@@ -1390,7 +1390,7 @@ namespace cryptonote
     m_mempool.set_relayed(txs);
   }
   //-----------------------------------------------------------------------------------------------
-  void core::set_deregister_votes_relayed(const std::vector<service_nodes::service_node_deregister::vote>& votes)
+  void core::set_deregister_votes_relayed(const std::vector<arqma_sn::service_node_deregister::vote>& votes)
   {
     m_deregister_vote_pool.set_relayed(votes);
   }
@@ -2006,17 +2006,17 @@ namespace cryptonote
     return result;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::add_deregister_vote(const service_nodes::service_node_deregister::vote& vote, vote_verification_context &vvc)
+  bool core::add_deregister_vote(const arqma_sn::service_node_deregister::vote& vote, vote_verification_context &vvc)
   {
     {
       uint64_t latest_block_height = std::max(get_current_blockchain_height(), get_target_blockchain_height());
       uint64_t delta_height = latest_block_height - vote.block_height;
 
-      if(vote.block_height < latest_block_height && delta_height > service_nodes::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
+      if(vote.block_height < latest_block_height && delta_height > arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
       {
         LOG_ERROR("Received vote for height: " << vote.block_height
                   << " and service node: "     << vote.service_node_index
-                  << ", is older than: "       << service_nodes::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT
+                  << ", is older than: "       << arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT
                   << " blocks and has been rejected.");
         vvc.m_invalid_block_height = true;
       }

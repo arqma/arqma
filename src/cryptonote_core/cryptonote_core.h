@@ -232,7 +232,7 @@ namespace cryptonote
      /**
       * @brief mark the deregister vote as having been relayed in the vote pool
       */
-     virtual void set_deregister_votes_relayed(const std::vector<service_nodes::service_node_deregister::vote>& votes);
+     virtual void set_deregister_votes_relayed(const std::vector<arqma_sn::service_node_deregister::vote>& votes);
 
      /**
       * @brief gets the miner instance
@@ -820,7 +820,7 @@ namespace cryptonote
       * @param vote The vote for deregistering a service node.
       * @return Whether the vote was added to the partial deregister pool
       */
-     bool add_deregister_vote(const service_nodes::service_node_deregister::vote& vote, vote_verification_context &vvc);
+     bool add_deregister_vote(const arqma_sn::service_node_deregister::vote& vote, vote_verification_context &vvc);
 
      /**
       * @brief Prepare a registration tx using the service node keys for this
@@ -1073,7 +1073,7 @@ namespace cryptonote
 
      uint64_t m_test_drop_download_height = 0; //!< height under which to drop incoming blocks, if doing so
 
-     service_nodes::deregister_vote_pool m_deregister_vote_pool;
+     arqma_sn::deregister_vote_pool m_deregister_vote_pool;
      tx_memory_pool m_mempool; //!< transaction pool instance
      Blockchain m_blockchain_storage; //!< Blockchain instance
      service_nodes::service_node_list m_service_node_list;

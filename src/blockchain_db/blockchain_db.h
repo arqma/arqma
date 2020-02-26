@@ -1191,7 +1191,7 @@ public:
    *
    * @return the unlock time/height
    */
-  uint64_t get_output_unlock_time(const uint64_t amount, const uint64_t global_index) const;
+  uint64_t get_output_unlock_time(const uint64_t amount, const uint64_t amount_index) const;
 
   // return tx with hash <h>
   // throw if no such tx exists

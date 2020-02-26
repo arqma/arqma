@@ -235,7 +235,7 @@ namespace
   const char* USAGE_HELP("help [<command>]");
   const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
   const char* USAGE_STAKE_ALL("stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>");
-  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fractions1> [<address2> <fractions2> [...]]] <expiration timestamp> <pubkey> <signature>")
+  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fractions1> [<address2> <fractions2> [...]]] <expiration timestamp> <pubkey> <signature>");
 
   std::string input_line(const std::string& prompt, bool yesno = false)
   {
@@ -5798,6 +5798,7 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
     local_args.erase(local_args.begin());
   }
 
+  size_t fake_outs_count = 0;
   uint32_t priority = 0;
   if (local_args.size() > 0 && parse_priority(local_args[0], priority))
     local_args.erase(local_args.begin());
@@ -5885,8 +5886,6 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
     return true;
   }
 
-  SCOPED_WALLET_UNLOCK();
-
   cryptonote::account_public_address address = m_wallet->get_address();
 
   add_service_node_contributor_to_tx_extra(extra, address);
@@ -5945,7 +5944,7 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
         locked_blocks %
         print_money(total_fee);
     }
-    std::string accepted = input_line(prompt_str, true);
+    std::string accepted = input_line(prompt.str(), true);
     if (std::cin.eof())
       return true;
     if (!command_line::is_yes(accepted))
@@ -5987,7 +5986,7 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
   }
   catch (const std::exception& e)
   {
-    handle_transfer_exception(std::current_exception(), is_daemon_trusted());
+    handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
   }
   catch (...)
   {
@@ -6016,6 +6015,7 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
     local_args.erase(local_args.begin());
   }
 
+  size_t fake_outs_count = 0;
   uint32_t priority = 0;
   if (local_args.size() > 0 && parse_priority(local_args[0], priority))
     local_args.erase(local_args.begin());
@@ -6056,8 +6056,6 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
   cryptonote::account_public_address address = m_wallet->get_address();
 
   add_service_node_contributor_to_tx_extra(extra, address);
-
-  SCOPED_WALLET_UNLOCK();
 
   try
   {
@@ -7752,7 +7750,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
         else
         {
           uint64_t current_time = static_cast<uint64_t>(time(NULL));
-          uint64_t threshold = current_time + (m_wallet->use_fork_rules(2, 0) ? CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_SECONDS_V2 : CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_SECONDS_V1);
+          uint64_t threshold = current_time + (m_wallet->use_fork_rules(16, 0) ? config::tx_settings::ARQMA_TX_LOCK_SECONDS : (config::tx_settings::ARQMA_TX_LOCK_SECONDS * 2));
           if(threshold < pd.m_unlock_time)
             locked_msg = get_human_readable_timespan(std::chrono::seconds(pd.m_unlock_time - threshold));
         }

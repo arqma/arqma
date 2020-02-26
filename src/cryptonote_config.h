@@ -51,7 +51,6 @@
 
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define MONEY_PREMINE                                   ((uint64_t)7500000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
@@ -64,8 +63,6 @@
 #define CRYPTONOTE_SHORT_TERM_BLOCK_WEIGHT_SURGE_FACTOR 50
 #define CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE          600
 #define CRYPTONOTE_DISPLAY_DECIMAL_POINT                9
-// COIN - number of smallest units in one coin
-#define COIN                                            ((uint64_t)1000000000)
 
 #define FEE_PER_KB_OLD                                  ((uint64_t)10000000)
 #define FEE_PER_KB                                      ((uint64_t)20000)
@@ -254,6 +251,8 @@ namespace config
 
    namespace blockchain_settings
    {
+     static constexpr uint64_t ARQMA = 1000000000; // Atomic representation of a value 1 ARQMA
+     static constexpr uint64_t PREMINE = 7500000000000000; // Premine Reward (already burned).
      static constexpr uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
      static constexpr uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
      static constexpr uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
@@ -265,6 +264,7 @@ namespace config
    namespace tx_settings
    {
      static constexpr uint8_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     static constexpr uint64_t ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
      static constexpr uint8_t CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
      static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
