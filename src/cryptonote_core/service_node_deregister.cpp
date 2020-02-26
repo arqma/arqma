@@ -47,7 +47,7 @@
 #define ARQMA_DEFAULT_LOG_CATEGORY "service_nodes"
 
 
-namespace service_nodes
+namespace arqma_sn
 {
   static crypto::hash make_hash_from(uint64_t block_height, uint32_t service_node_index)
   {
@@ -303,4 +303,4 @@ namespace service_nodes
       }
     }
   }
-}; // namespace service_nodes
+}; // namespace arqma_sn

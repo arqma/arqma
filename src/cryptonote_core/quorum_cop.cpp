@@ -67,10 +67,10 @@ namespace service_nodes
     uint64_t const height        = cryptonote::get_block_height(block);
     uint64_t const latest_height = m_core.get_current_blockchain_height();
 
-    if(latest_height < loki::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
+    if(latest_height < arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
       return;
 
-    uint64_t const execute_justice_from_height = latest_height - loki::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT;
+    uint64_t const execute_justice_from_height = latest_height - arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT;
     if(height < execute_justice_from_height)
       return;
 
@@ -83,7 +83,6 @@ namespace service_nodes
       const std::shared_ptr<quorum_state> state = m_core.get_quorum_state(m_last_height);
       if(!state)
       {
-        // TODO(loki): Fatal error
         LOG_ERROR("Quorum state for height: " << m_last_height << "was not cached in daemon!");
         continue;
       }
@@ -103,11 +102,11 @@ namespace service_nodes
         if(!vote_off_node)
           continue;
 
-        service_nodes::service_node_deregister::vote vote = {};
+        arqma_sn::service_node_deregister::vote vote = {};
         vote.block_height        = m_last_height;
         vote.service_node_index  = node_index;
         vote.voters_quorum_index = my_index_in_quorum;
-        vote.signature           = service_nodes::service_node_deregister::sign_vote(vote.block_height, vote.service_node_index, my_pubkey, my_seckey);
+        vote.signature           = arqma_sn::service_node_deregister::sign_vote(vote.block_height, vote.service_node_index, my_pubkey, my_seckey);
 
         cryptonote::vote_verification_context vvc = {};
         if(!m_core.add_deregister_vote(vote, vvc))

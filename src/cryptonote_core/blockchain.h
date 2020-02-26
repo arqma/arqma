@@ -68,12 +68,9 @@
 #include "cryptonote_basic/hardfork.h"
 #include "blockchain_db/blockchain_db.h"
 
-namespace service_nodes
-{
-  class service_node_list;
-  class deregister_vote_pool;
-};
+namespace service_nodes { class service_node_list; }
 
+namespace arqma_sn { class deregister_vote_pool; }
 namespace tools { class Notify; }
 
 namespace cryptonote
@@ -140,7 +137,7 @@ namespace cryptonote
     class ValidateMinerTxHook
     {
     public:
-      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, int hard_fork_version, uint64_t base_reward) = 0;
+      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, uint64_t base_reward) = 0;
     };
 
     /**
@@ -148,7 +145,7 @@ namespace cryptonote
      *
      * @param tx_pool a reference to the transaction pool to be kept by the Blockchain
      */
-    Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list, service_nodes::deregister_vote_pool &deregister_vote_pool);
+    Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list, arqma_sn::deregister_vote_pool &deregister_vote_pool);
 
     /**
      * @brief Initialize the Blockchain state
@@ -1093,7 +1090,7 @@ namespace cryptonote
     tx_memory_pool& m_tx_pool;
 
     service_nodes::service_node_list& m_service_node_list;
-    service_nodes::deregister_vote_pool& m_deregister_vote_pool;
+    arqma_sn::deregister_vote_pool& m_deregister_vote_pool;
 
     mutable epee::critical_section m_blockchain_lock; // TODO: add here reader/writer lock
 
@@ -1102,7 +1099,7 @@ namespace cryptonote
     size_t m_current_block_cumul_weight_median;
 
     // metadata containers
-    std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, std::vector<output_data_t> > > m_scan_table;
+    std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, std::vector<output_data_t>>> m_scan_table;
     std::unordered_map<crypto::hash, crypto::hash> m_blocks_longhash_table;
 
     // SHA-3 hashes for each block and for fast pow checking
@@ -1369,7 +1366,7 @@ namespace cryptonote
      *
      * @return false if anything is found wrong with the miner transaction, otherwise true
      */
-    bool validate_miner_transaction(const block& b, size_t cumulative_block_weight, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, bool &partial_block_reward, uint8_t version, uint64_t height);
+    bool validate_miner_transaction(const block& b, size_t cumulative_block_weight, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, bool &partial_block_reward, uint8_t hard_fork_version);
 
     /**
      * @brief reverts the blockchain to its previous state following a failed switch

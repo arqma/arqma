@@ -3109,12 +3109,14 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
     LOG_PRINT_L1("Failed to check pending transactions");
   }
 
-  if(use_fork_rules(16, 0))
+  if(use_fork_rules(16, 10))
+  {
     m_per_output_unlock = true;
+  }
   else
+  {
     m_per_output_unlock = false;
-
-  m_first_refresh_done = true;
+  }
 
   LOG_PRINT_L1("Refresh done, blocks received: " << blocks_fetched << ", balance (all accounts): " << print_money(balance_all(false)) << ", unlocked: " << print_money(unlocked_balance_all(false)));
 }
@@ -5540,7 +5542,7 @@ bool wallet2::is_transfer_unlocked(uint64_t unlock_time, uint64_t block_height) 
 //----------------------------------------------------------------------------------------------------
 bool wallet2::is_tx_spendtime_unlocked(uint64_t unlock_time, uint64_t block_height) const
 {
-  return cryptonote::rules::is_output_unlocked(unlock_time, m_local_bc_height);
+  return cryptonote::rules::is_output_unlocked(unlock_time, get_blockchain_current_height());
 }
 //----------------------------------------------------------------------------------------------------
 namespace
@@ -5756,7 +5758,7 @@ crypto::hash wallet2::get_payment_id(const pending_tx &ptx) const
 }
 
 //----------------------------------------------------------------------------------------------------
-void wallet2::commit_deregister_vote(service_nodes::service_node_deregister::vote& vote)
+void wallet2::commit_deregister_vote(arqma_sn::service_node_deregister::vote& vote)
 {
   if(m_light_wallet)
   {
@@ -7814,7 +7816,7 @@ void wallet2::transfer_selected(const std::vector<cryptonote::tx_destination_ent
   std::vector<crypto::secret_key> additional_tx_keys;
   rct::multisig_out msout;
   LOG_PRINT_L2("constructing tx");
-  bool r = cryptonote::construct_tx_and_get_tx_key(m_account.get_keys(), m_subaddresses, sources, splitted_dsts, change_dts.addr, extra, tx, unlock_time, tx_key, additional_tx_keys, false, range_proof_type, m_multisig ? &msout : NULL, m_per_output_unlock);
+  bool r = cryptonote::construct_tx_and_get_tx_key(m_account.get_keys(), m_subaddresses, sources, splitted_dsts, change_dts.addr, extra, tx, unlock_time, tx_key, additional_tx_keys, false, rct::RangeProofBorromean, m_multisig ? &msout : NULL, m_per_output_unlock);
   LOG_PRINT_L2("constructed tx, r="<<r);
   THROW_WALLET_EXCEPTION_IF(!r, error::tx_not_constructed, sources, splitted_dsts, unlock_time, m_nettype);
   THROW_WALLET_EXCEPTION_IF(upper_transaction_weight_limit <= get_transaction_weight(tx), error::tx_too_big, tx, upper_transaction_weight_limit);
