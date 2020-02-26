@@ -31,11 +31,9 @@
 namespace cryptonote
 {
 
-namespace rules
-{
-
-bool is_output_unlocked(uint64_t unlock_time, uint64_t height);
-
-} // namespace rules
+  namespace rules
+  {
+    bool is_output_unlocked(uint64_t unlock_time, uint64_t height);
+  } // namespace rules
 
 } // namespace cryptonote

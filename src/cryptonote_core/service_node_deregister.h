@@ -47,7 +47,10 @@ namespace cryptonote
 namespace service_nodes
 {
   struct quorum_state;
+};
 
+namespace arqma_sn
+{
   namespace service_node_deregister
   {
     const uint64_t VOTE_LIFETIME_BY_HEIGHT = (60 * 60 * 2) / DIFFICULTY_TARGET_V16;
@@ -120,4 +123,4 @@ namespace service_nodes
       std::unordered_map<deregister_group, std::vector<deregister>, deregister_group_hasher> m_deregisters;
       mutable epee::critical_section m_lock;
   };
-}; // namespace service_nodes
+}; // namespace srqma_sn

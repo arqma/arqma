@@ -49,6 +49,8 @@ using namespace epee;
 
 using namespace crypto;
 
+namespace arqma = config::blockchain_settings;
+
 namespace cryptonote
 {
   //---------------------------------------------------------------
@@ -101,16 +103,16 @@ namespace cryptonote
     return k;
   }
   //---------------------------------------------------------------
-  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t version)
+  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hard_fork_version)
   {
-    if(version >= 16)
-      return base_reward * 10 /100; // 10 %
+    if(hard_fork_version >= 16)
+      return base_reward * 10 / 100; // 10 %
     return 0;
   }
   //---------------------------------------------------------------
-  uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, uint8_t version)
+  uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, uint8_t hard_fork_version)
   {
-    if(version >= 16)
+    if(hard_fork_version >= 16)
       return base_reward * 45 / 100; // 45%
     return 0;
   }
@@ -156,7 +158,6 @@ namespace cryptonote
       case TESTNET:
         cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, governance_wallet_address_str);
         break;
-      case FAKECHAIN:
       case MAINNET:
         cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, governance_wallet_address_str);
         break;
@@ -179,8 +180,9 @@ namespace cryptonote
     tx.vin.clear();
     tx.vout.clear();
     tx.extra.clear();
-    tx.output_unlock_times.clear();
+    if(hard_fork_version >= 16) { tx.output_unlock_times.clear(); }
     tx.is_deregister = false;
+
 
     keypair txkey = keypair::generate(hw::get_device("default"));
     add_tx_pub_key_to_extra(tx, txkey.pub);
@@ -196,12 +198,8 @@ namespace cryptonote
     in.height = height;
 
     uint64_t block_reward;
-    if(height == 1)
-    {
-      block_reward = MONEY_PREMINE;
-    }
 
-    if(!get_block_reward(median_weight, current_block_weight, already_generated_coins, fee, block_reward, version))
+    if(!get_block_reward(median_weight, current_block_weight, already_generated_coins, fee, block_reward, hard_fork_version))
     {
       LOG_PRINT_L0("Block is too big");
       return false;
@@ -216,8 +214,8 @@ namespace cryptonote
     uint64_t total_paid_service_node_reward = 0;
     if(hard_fork_version >= 16)
     {
-      governance_reward = get_governance_reward(height, block_reward, version);
-      total_service_node_reward = get_service_node_reward(height, block_reward, version);
+      governance_reward = get_governance_reward(height, block_reward, hard_fork_version);
+      total_service_node_reward = get_service_node_reward(height, block_reward, hard_fork_version);
       total_paid_service_node_reward = calculate_sum_of_portions(service_node_info, total_service_node_reward);
       block_reward -= governance_reward;
       block_reward -= total_paid_service_node_reward;
@@ -241,7 +239,7 @@ namespace cryptonote
       summary_amounts += out.amount = block_reward;
       out.target = tk;
       tx.vout.push_back(out);
-      tx.output_unlock_times.push_back(height + CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW);
+      tx.output_unlock_times.push_back(height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
     }
 
     if(hard_fork_version >= 16)
@@ -265,7 +263,7 @@ namespace cryptonote
         summary_amounts += out.amount = get_portion_of_reward(service_node_info[i].second, total_service_node_reward);
         out.target = tk;
         tx.vout.push_back(out);
-        tx.output_unlock_times.push_back(height + CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW);
+        tx.output_unlock_times.push_back(height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
       }
       {
         std::string governance_wallet_address_str;
@@ -279,7 +277,6 @@ namespace cryptonote
           case TESTNET:
             cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, std::string(config::governance::TESTNET_WALLET_ADDRESS));
             break;
-          case FAKECHAIN:
           case MAINNET:
             cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, std::string(config::governance::MAINNET_WALLET_ADDRESS));
             break;
@@ -302,16 +299,17 @@ namespace cryptonote
         summary_amounts += out.amount = governance_reward;
         out.target = tk;
         tx.vout.push_back(out);
-        tx.output_unlock_times.push_back(height + CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW);
+        tx.output_unlock_times.push_back(height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
       }
 
-      CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward + total_paid_service_node_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward + total_service_node_reward));
+      CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward + total_paid_service_node_reward), false, "Failed to construct miner tx, summary_amounts: " << summary_amounts << " not equal total block_reward: " << (block_reward + governance_reward + total_service_node_reward)
+                         << ". Where block_reward: " << block_reward << ", Governance Reward: " << governance_reward << ", Service-Nodes reward: " << total_service_node_reward << ".");
     }
 
-    tx.version = 3;
+    tx.version = hard_fork_version >= 16 ? 3 : 2;
 
     //lock
-    tx.unlock_time = height + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
+    tx.unlock_time = height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
     tx.vin.push_back(in);
 
     tx.invalidate_hashes();
@@ -366,7 +364,7 @@ namespace cryptonote
     else
     {
       tx.version = rct ? 2 : 1;
-      tx.unlock_time = unlock_time;
+      tx.unlock_time = unlock_time; //height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
     }
 
     tx.extra = extra;
@@ -520,7 +518,7 @@ namespace cryptonote
     size_t output_index = 0;
     for(const tx_destination_entry& dst_entr: destinations)
     {
-      //CHECK_AND_ASSERT_MES(dst_entr.amount > 0 || tx.version > 1, false, "Destination with wrong amount: " << dst_entr.amount);
+      CHECK_AND_ASSERT_MES(dst_entr.amount > 0 || tx.version > 1, false, "Destination with wrong amount: " << dst_entr.amount);
       crypto::key_derivation derivation;
       crypto::public_key out_eph_public_key;
 
@@ -564,7 +562,7 @@ namespace cryptonote
         additional_tx_public_keys.push_back(additional_txkey.pub);
       }
 
-      if (tx.version >= 1)
+      if (tx.version > 1)
       {
         crypto::secret_key scalar1;
         hwdev.derivation_to_scalar(derivation, output_index, scalar1);
@@ -807,7 +805,7 @@ namespace cryptonote
      crypto::secret_key tx_key;
      std::vector<crypto::secret_key> additional_tx_keys;
      std::vector<tx_destination_entry> destinations_copy = destinations;
-     return construct_tx_and_get_tx_key(sender_account_keys, subaddresses, sources, destinations_copy, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, false, range_proof_type, NULL);
+     return construct_tx_and_get_tx_key(sender_account_keys, subaddresses, sources, destinations_copy, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, false, rct::RangeProofBorromean, NULL);
   }
   //---------------------------------------------------------------
   bool generate_genesis_block(block& bl)
@@ -820,8 +818,8 @@ namespace cryptonote
     CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
     r = parse_and_validate_tx_from_blob(tx_bl, bl.miner_tx);
     CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
-    bl.major_version = config::blockchain_settings::ARQMA_GENESIS_BLOCK_MAJOR_VERSION;
-    bl.minor_version = config::blockchain_settings::ARQMA_GENESIS_BLOCK_MINOR_VERSION;
+    bl.major_version = arqma::ARQMA_GENESIS_BLOCK_MAJOR_VERSION;
+    bl.minor_version = arqma::ARQMA_GENESIS_BLOCK_MINOR_VERSION;
     bl.timestamp = 0;
     bl.nonce = config::GENESIS_NONCE;
     miner::find_nonce_for_given_block([](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash){

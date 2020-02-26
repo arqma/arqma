@@ -47,6 +47,9 @@ using namespace epee;
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
 
+namespace arqma_tx = config::tx_settings;
+namespace arqma_bc = config::blockchain_settings;
+
 namespace cryptonote {
 
   struct integrated_address {
@@ -68,20 +71,16 @@ namespace cryptonote {
   /* Cryptonote helper functions                                          */
   /************************************************************************/
   //-----------------------------------------------------------------------------------------------
-  size_t get_min_block_weight(uint8_t version)
+  size_t get_min_block_weight(uint8_t hard_fork_version)
   {
-    if(version < 2)
-      return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1;
-    else if(version < 5)
-      return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2;
-    else if(version < 13)
+    if(hard_fork_version < 13)
       return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5;
-    return config::blockchain_settings::MINIMUM_BLOCK_SIZE_LIMIT;
+    return arqma_bc::MINIMUM_BLOCK_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
   size_t get_max_tx_size()
   {
-    return config::tx_settings::TRANSACTION_SIZE_LIMIT;
+    return arqma_tx::TRANSACTION_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
   uint64_t get_penalized_amount(const uint64_t amount, const size_t median_weight, const size_t current_block_weight)
@@ -111,13 +110,14 @@ namespace cryptonote {
     return amount_lo;
   }
   //-----------------------------------------------------------------------------------------------
-  bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t fee, uint64_t &reward, uint8_t version) {
+  bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t fee, uint64_t &reward, uint8_t hard_fork_version)
+  {
     static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
     static_assert(DIFFICULTY_TARGET_V16 % 30 == 0,"After HF-16 we are changing Rules");
-    const int target_minutes = version < 16 ? DIFFICULTY_TARGET_V2 / 60: DIFFICULTY_TARGET_V16 / 30;
+    const int target_minutes = hard_fork_version < 16 ? DIFFICULTY_TARGET_V2 / 60: DIFFICULTY_TARGET_V16 / 30;
     const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes-3);
 
-    uint64_t full_reward_zone = get_min_block_weight(version);
+    uint64_t full_reward_zone = get_min_block_weight(hard_fork_version);
 
     //make it soft
     if (median_weight < full_reward_zone) {
@@ -129,19 +129,31 @@ namespace cryptonote {
       return false;
     }
 
-    if(version > 12)
+    if(hard_fork_version > 12)
     {
-      already_generated_coins -= config::blockchain_settings::PREMINE_BURN;
+      already_generated_coins -= arqma_bc::PREMINE_BURN;
     }
 
     uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
-    if (base_reward < FINAL_SUBSIDY_PER_MINUTE*target_minutes)
+    if(base_reward < FINAL_SUBSIDY_PER_MINUTE*target_minutes)
     {
       base_reward = FINAL_SUBSIDY_PER_MINUTE*target_minutes;
     }
 
+    const uint64_t arqma_reward = arqma_bc::PREMINE;
+
     reward = get_penalized_amount(base_reward, median_weight, current_block_weight);
-    reward += version < 16 ? get_penalized_amount(fee, median_weight, current_block_weight) : fee;
+
+    if(median_weight > 0 && already_generated_coins < 30000000000 && hard_fork_version < 12)
+    {
+      reward = arqma_reward;
+      return true;
+    }
+    else
+    {
+      reward += hard_fork_version < 16 ? get_penalized_amount(fee, median_weight, current_block_weight) : fee;
+    }
+
     return true;
   }
   //------------------------------------------------------------------------------------

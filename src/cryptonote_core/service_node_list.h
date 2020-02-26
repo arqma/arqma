@@ -30,6 +30,8 @@
 
 #include "blockchain.h"
 
+#define ROLLBACK_EVENT_EXPIRATION_BLOCKS 30
+
 namespace service_nodes
 {
   const size_t QUORUM_SIZE = 10;
@@ -60,7 +62,7 @@ namespace service_nodes
     void blockchain_detached(uint64_t height);
     void register_hooks(service_nodes::quorum_cop &quorum_cop);
     void init();
-    bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, int hard_fork_version, uint64_t base_reward);
+    bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, uint64_t base_reward);
 
     std::vector<crypto::public_key> get_expired_nodes(uint64_t block_height) const;
 

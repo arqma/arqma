@@ -51,7 +51,7 @@ namespace service_nodes
     void generate_uptime_proof_request(const crypto::public_key& pubkey, const crypto::secret_key& seckey, cryptonote::NOTIFY_UPTIME_PROOF::request& req) const;
 
     static const uint64_t REORG_SAFETY_BUFFER_IN_BLOCKS = 20;
-    static_assert(REORG_SAFETY_BUFFER_IN_BLOCKS < loki::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT,
+    static_assert(REORG_SAFETY_BUFFER_IN_BLOCKS < arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT,
                   "Safety buffer should always be less than the vote lifetime");
     bool prune_uptime_proof();
 

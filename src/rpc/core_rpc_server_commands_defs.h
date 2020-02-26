@@ -2632,7 +2632,7 @@ struct request_t: public rpc_access_request_base
   {
       struct request_t: public rpc_request_base
       {
-        service_nodes::service_node_deregister::vote vote;
+        arqma_sn::service_node_deregister::vote vote;
 
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE_VAL_POD_AS_BLOB(vote)

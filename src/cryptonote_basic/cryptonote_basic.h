@@ -171,6 +171,7 @@ namespace cryptonote
 
     // tx information
     size_t   version;
+
     uint64_t unlock_time;  //number of block (or time), used as a limitation like: spend this tx not early then block/time
 
     std::vector<txin_v> vin;
