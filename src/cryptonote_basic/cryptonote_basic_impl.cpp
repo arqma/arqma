@@ -144,7 +144,7 @@ namespace cryptonote {
 
     reward = get_penalized_amount(base_reward, median_weight, current_block_weight);
 
-    if(median_weight > 0 && already_generated_coins < 30000000000 && hard_fork_version < 12)
+    if(median_weight >= 100 && already_generated_coins < 30000000000 && hard_fork_version == 7)
     {
       reward = arqma_reward;
       return true;
