@@ -59,7 +59,6 @@ target_link_libraries(cryptonote_core
     multisig
     ringct
     device
-    cppzmq
     arqma_mq
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
@@ -68,4 +67,5 @@ target_link_libraries(cryptonote_core
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
   PRIVATE
+    ${ZMQ_LIB}
     ${EXTRA_LIBRARIES})

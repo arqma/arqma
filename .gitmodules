@@ -13,7 +13,3 @@
 	path = external/randomarq
 	url = https://github.com/arqma/RandomARQ.git
 	branch = master
-[submodule "external/cppzmq"]
-	path = external/cppzmq
-	url = https://github.com/zeromq/cppzmq.git
-	branch = master
