@@ -37,7 +37,7 @@ namespace arqmaMQ
     }
 
 
-    ArqmaNotifier::ArqmaNotifier()
+    ArqmaNotifier::ArqmaNotifier(DaemonHandler& h): handler(h)
     {
         producer.bind("inproc://backend");
         proxy_thread = std::thread{&ArqmaNotifier::proxy_loop, this};
@@ -58,29 +58,11 @@ namespace arqmaMQ
         return zmq::message_t{&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer};
     };
 
-    void ArqmaNotifier::notify(const cryptonote::block bl)
-    {
-        //std::cout << data << std::endl;
-	rapidjson::StringBuffer sb;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-	writer.StartObject();
-	writer.Key("result");
-	writer.Key("top_block_hash");
-	writer.String("stuff");
-//        writer.Key("height");
-//        writer.Uint64(bl.height);
-	writer.EndObject();
-
-        producer.send(create_message(std::move("getblocktemplate")), ZMQ_SNDMORE);
-        producer.send(create_message(std::move(sb.GetString())), 0);
-    }
-
-
     void ArqmaNotifier::notify(std::string &&data)
     {
         //std::cout << data << std::endl;
-        producer.send(create_message(std::move("getblocktemplate")), ZMQ_SNDMORE);
-        producer.send(create_message(std::move(data)), 0);
+        //producer.send(create_message(std::move("getblocktemplate")), ZMQ_SNDMORE);
+        //producer.send(create_message(std::move(data)), 0);
     }
 
     void ArqmaNotifier::proxy_loop()
@@ -99,9 +81,6 @@ namespace arqmaMQ
         std::string id;
         std::string quit("QUIT");
 
-	rapidjson::StringBuffer sb;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-
         while (true) 
         {
             int rc = zmq::poll(items, 2, 1);
@@ -112,27 +91,25 @@ namespace arqmaMQ
                 std::string stop = std::string(static_cast<char*>(envelope.data()), envelope.size());
                 if (stop == quit) 
                 {
-                    std::cout << "closing thread" << std::endl;
+                    LOG_PRINT_L1("closing thread");
                     break;
                 }
                 subscriber.recv(&envelope);
                 std::string identity = std::string(static_cast<char*>(envelope.data()), envelope.size());
-                std::cout << identity << std::endl;
 
-                //TODO: iterate list of <id, command>
+				//TODO: iterate list of <id, command>
                 if (!id.empty())
                 {
 
-//		    rapidjson::StringBuffer sb;
-//                    rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-//		    writer.StartObject();
-//			writer.Key("result");
-//			writer.Key("top_block_hash");
-//			writer.String(identity.c_str());
-//		    writer.EndObject();
-
-                  s_sendmore(listener, id);
-                    s_send(listener, identity);
+				    rapidjson::StringBuffer sb;
+                	rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+				    writer.StartObject();
+					writer.Key("result");
+					writer.Key("top_block_hash");
+					writer.String(identity.c_str());
+		    		writer.EndObject();
+                	s_sendmore(listener, id);
+                	s_send(listener, sb.GetString());
                 }
 
             }
@@ -147,7 +124,7 @@ namespace arqmaMQ
                 listener.recv(&envelope1);
                 listener.recv(&envelope1);
                 std::string msg1 = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
-                std::cout << "received " <<  id << " " << msg1 << std::endl;
+                LOG_PRINT_L1("received " <<  id << " " << msg1);
             }
         }
         zmq_close(&listener);

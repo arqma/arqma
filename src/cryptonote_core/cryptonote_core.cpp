@@ -604,14 +604,7 @@ namespace cryptonote
       MERROR("Failed to parse block notify spec");
     }
 
-    try
-    {
-      m_blockchain_storage.set_zmq_block_notify(std::shared_ptr<arqmaMQ::INotifier>(new arqmaMQ::ArqmaNotifier()));
-    }
-    catch( const std::exception &e)
-    {
-      MERROR("Failed to construct arqma notifier");
-    }
+
 
     try
     {

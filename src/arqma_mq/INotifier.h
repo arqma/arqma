@@ -12,7 +12,6 @@ namespace arqmaMQ {
     class INotifier {
         public:
             virtual void notify(std::string &&data) = 0;
-	    virtual void notify(const cryptonote::block bl) = 0;
     };
 }
 

@@ -44,6 +44,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <zmq.hpp>
+
 #include "span.h"
 #include "syncobj.h"
 #include "string_tools.h"
@@ -58,11 +60,6 @@
 #include "checkpoints/checkpoints.h"
 #include "cryptonote_basic/hardfork.h"
 #include "blockchain_db/blockchain_db.h"
-
-#include "arqma_mq/arqmaMQ.h"
-
-using namespace arqmaMQ;
-
 
 namespace tools { class Notify; }
 
@@ -754,8 +751,6 @@ namespace cryptonote
      */
     void set_reorg_notify(const std::shared_ptr<tools::Notify> &notify) { m_reorg_notify = notify; }
 
-
-    void set_zmq_block_notify(const std::shared_ptr<arqmaMQ::INotifier> &notify) {m_arqma_notifier = notify; }
     /**
      * @brief Put DB in safe sync mode
      */
@@ -1087,7 +1082,10 @@ namespace cryptonote
 
     std::shared_ptr<tools::Notify> m_block_notify;
     std::shared_ptr<tools::Notify> m_reorg_notify;
-    std::shared_ptr<arqmaMQ::INotifier> m_arqma_notifier;
+
+	zmq::context_t context;
+    zmq::socket_t producer{context, ZMQ_PAIR};
+    zmq::message_t create_message(std::string &&data);
 
     // for prepare_handle_incoming_blocks
     uint64_t m_prepare_height;

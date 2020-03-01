@@ -10,28 +10,30 @@
 //#include "cryptonote_basic/cryptonote_basic.h"
 //#include "cryptonote_core/cryptonote_core.h"
 
+#include "rpc/daemon_handler.h"
+
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
 
 using namespace cryptonote;
-
+using namespace rpc;
 
 
 namespace arqmaMQ {
 
     class ArqmaNotifier: public INotifier {
         public:
-            ArqmaNotifier();
+            ArqmaNotifier(DaemonHandler& h);
             ~ArqmaNotifier();
             ArqmaNotifier(const ArqmaNotifier&) = delete;
             ArqmaNotifier& operator=(const ArqmaNotifier&) = delete;
             ArqmaNotifier(ArqmaNotifier&&) = delete;
             ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
             void notify(std::string &&data);
-            void notify(const cryptonote::block bl);
         private:
             std::thread proxy_thread;
+			DaemonHandler& handler;
             zmq::context_t context;
             zmq::socket_t listener{context, ZMQ_ROUTER};
             zmq::socket_t producer{context, ZMQ_PAIR};

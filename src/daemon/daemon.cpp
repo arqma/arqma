@@ -49,6 +49,8 @@
 #include "net/net_ssl.h"
 #include "version.h"
 
+#include "arqma_mq/arqmaMQ.h"
+
 using namespace epee;
 
 #include <functional>
@@ -183,6 +185,8 @@ bool t_daemon::run(bool interactive)
 
       return false;
     }
+
+	arqmaMQ::ArqmaNotifier arqmaNotifier{rpc_daemon_handler};
 
     MINFO("Starting ZMQ server...");
     zmq_server.run();

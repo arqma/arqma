@@ -343,6 +343,8 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     return false;
   }
 
+
+
   m_db = db;
 
   m_nettype = test_options != NULL ? FAKECHAIN : nettype;
@@ -489,6 +491,14 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     if(!update_next_cumulative_weight_limit())
       return false;
   }
+ try {
+   producer.bind("inproc://backend");
+   MINFO("Blockchain zmq producer binding");
+ }
+ catch( const std::exception &e)
+ {
+   MERROR("Failed to construct arqma notifier");
+ }
   return true;
 }
 //------------------------------------------------------------------
@@ -543,6 +553,7 @@ bool Blockchain::deinit()
   m_async_pool.join_all();
   m_async_service.stop();
 
+
   // as this should be called if handling a SIGSEGV, need to check
   // if m_db is a NULL pointer (and thus may have caused the illegal
   // memory operation), otherwise we may cause a loop.
@@ -569,6 +580,9 @@ bool Blockchain::deinit()
   m_hardfork = NULL;
   delete m_db;
   m_db = NULL;
+
+  zmq_close(&producer);
+  zmq_term(&context);
   return true;
 }
 //------------------------------------------------------------------
@@ -3973,10 +3987,16 @@ leave:
   get_difficulty_for_next_block(); // just to cache it
   invalidate_block_template_cache();
 
-  std::shared_ptr<arqmaMQ::INotifier> zmq_notify = m_arqma_notifier;
-  if (zmq_notify)
-    zmq_notify->notify(epee::string_tools::pod_to_hex(id));
-//    zmq_notify->notify(bl);
+
+  try {
+    std::string hex = epee::string_tools::pod_to_hex(id);
+    producer.send(create_message(std::move("block")), ZMQ_SNDMORE);
+  	producer.send(create_message(std::move(hex)), 0);
+  }
+  catch( const std::exception &e)
+  {
+    MERROR("Failed to construct arqma notifier");
+  }
 
   std::shared_ptr<tools::Notify> block_notify = m_block_notify;
   if (block_notify)
@@ -3984,6 +4004,17 @@ leave:
 
   return true;
 }
+
+extern "C" void message_buffer_cleanup(void*, void* hint) {
+   delete reinterpret_cast<std::string*>(hint);
+}
+
+zmq::message_t Blockchain::create_message(std::string &&data)
+{
+    auto *buffer = new std::string(std::move(data));
+	return zmq::message_t{&(*buffer)[0], buffer->size(), message_buffer_cleanup, buffer};
+}
+
 //------------------------------------------------------------------
 bool Blockchain::prune_blockchain(uint32_t pruning_seed)
 {
