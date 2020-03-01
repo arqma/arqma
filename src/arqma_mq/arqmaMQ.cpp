@@ -1,5 +1,6 @@
 #include "arqmaMQ.h"
 
+
 namespace arqmaMQ 
 {
     extern "C" void message_buffer_destroy(void*, void* hint) {
@@ -35,6 +36,7 @@ namespace arqmaMQ
         return (rc);
     }
 
+
     ArqmaNotifier::ArqmaNotifier()
     {
         producer.bind("inproc://backend");
@@ -56,6 +58,24 @@ namespace arqmaMQ
         return zmq::message_t{&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer};
     };
 
+    void ArqmaNotifier::notify(const cryptonote::block bl)
+    {
+        //std::cout << data << std::endl;
+	rapidjson::StringBuffer sb;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+	writer.StartObject();
+	writer.Key("result");
+	writer.Key("top_block_hash");
+	writer.String("stuff");
+//        writer.Key("height");
+//        writer.Uint64(bl.height);
+	writer.EndObject();
+
+        producer.send(create_message(std::move("getblocktemplate")), ZMQ_SNDMORE);
+        producer.send(create_message(std::move(sb.GetString())), 0);
+    }
+
+
     void ArqmaNotifier::notify(std::string &&data)
     {
         //std::cout << data << std::endl;
@@ -63,10 +83,10 @@ namespace arqmaMQ
         producer.send(create_message(std::move(data)), 0);
     }
 
-    void ArqmaNotifier::proxy_loop() 
+    void ArqmaNotifier::proxy_loop()
     {
         subscriber.connect("inproc://backend");
-        listener.bind("tcp://127.0.0.1:3000");
+        listener.bind("tcp://*:3000");
 
         zmq::pollitem_t items[2];
         items[0].socket = (void*)subscriber;
@@ -78,6 +98,9 @@ namespace arqmaMQ
 
         std::string id;
         std::string quit("QUIT");
+
+	rapidjson::StringBuffer sb;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
 
         while (true) 
         {
@@ -99,7 +122,16 @@ namespace arqmaMQ
                 //TODO: iterate list of <id, command>
                 if (!id.empty())
                 {
-                    s_sendmore(listener, id);
+
+//		    rapidjson::StringBuffer sb;
+//                    rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+//		    writer.StartObject();
+//			writer.Key("result");
+//			writer.Key("top_block_hash");
+//			writer.String(identity.c_str());
+//		    writer.EndObject();
+
+                  s_sendmore(listener, id);
                     s_send(listener, identity);
                 }
 

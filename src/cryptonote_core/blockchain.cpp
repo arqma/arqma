@@ -3976,6 +3976,7 @@ leave:
   std::shared_ptr<arqmaMQ::INotifier> zmq_notify = m_arqma_notifier;
   if (zmq_notify)
     zmq_notify->notify(epee::string_tools::pod_to_hex(id));
+//    zmq_notify->notify(bl);
 
   std::shared_ptr<tools::Notify> block_notify = m_block_notify;
   if (block_notify)
