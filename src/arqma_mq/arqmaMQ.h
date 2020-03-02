@@ -4,6 +4,8 @@
 #include <string>
 #include <thread>
 #include <zmq.hpp>
+#include <map>
+#include <iterator>
 #include "INotifier.h"
 
 #include "cryptonote_basic/cryptonote_basic_impl.h"
@@ -38,9 +40,9 @@ namespace arqmaMQ {
             zmq::socket_t listener{context, ZMQ_ROUTER};
             zmq::socket_t producer{context, ZMQ_PAIR};
             zmq::socket_t subscriber{context, ZMQ_PAIR};
-//            zmq::socket_t daemon{context, ZMQ_ROUTER};
             zmq::message_t create_message(std::string &&data);
             void proxy_loop();
+            std::map<std::string, std::string> remotes;
     };
 }
 

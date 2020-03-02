@@ -78,7 +78,6 @@ namespace arqmaMQ
         items[1].fd = 0;
         items[1].events = ZMQ_POLLIN;
 
-        std::string id;
         std::string quit("QUIT");
 
         while (true) 
@@ -90,9 +89,9 @@ namespace arqmaMQ
    	        {
        	        zmq::message_t envelope1;
            	    listener.recv(&envelope1);
-           	 	std::string msg = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
+           	 	std::string remote_identifier = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
            	 	//TODO: record <id, command>
-				if (msg.compare("block") == 0)
+				if (remote_identifier.compare("block") == 0)
 				{
                		listener.recv(&envelope1);
                		listener.recv(&envelope1);
@@ -101,18 +100,18 @@ namespace arqmaMQ
 				}
 				else 
 				{
-            	    id = std::move(msg);
                		listener.recv(&envelope1);
                		listener.recv(&envelope1);
                		std::string request = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
                 	LOG_PRINT_L1("received from client " <<  request);
+            	    remotes.insert(std::pair<std::string, std::string>(std::move(remote_identifier), std::move(request)));
 				}
 				//TODO: iterate list of <id, command>
-                if (!id.empty())
+                for(auto &remote : remotes)
                 {
 					std::string response = handler.handle("{\"jsonrpc\": \"2.0\", \"id\" : \"1\", \"method\" : \"get_info\", \"params\": {}}");
-                	LOG_PRINT_L1("sending client " << response);
-                	s_sendmore(listener, id);
+                	LOG_PRINT_L1("sending client " << remote.first << " " << response);
+                	s_sendmore(listener, remote.first);
                 	s_send(listener, response);
                 }
             }
