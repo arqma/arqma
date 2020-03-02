@@ -83,9 +83,45 @@ namespace arqmaMQ
 
         while (true) 
         {
+			std::string  block_hash;
             int rc = zmq::poll(items, 2, 1);
+
+            if (items[1].revents & ZMQ_POLLIN)
+   	        {
+       	        zmq::message_t envelope1;
+           	    listener.recv(&envelope1);
+           	 	std::string msg = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
+           	 	//TODO: record <id, command>
+				if (msg.compare("block") == 0)
+				{
+               		listener.recv(&envelope1);
+               		listener.recv(&envelope1);
+               		block_hash = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
+                	LOG_PRINT_L1("received from blockchain " <<  block_hash);
+				}
+				else 
+				{
+            	    id = std::move(msg);
+               		listener.recv(&envelope1);
+               		listener.recv(&envelope1);
+               		std::string request = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
+                	LOG_PRINT_L1("received from client " <<  request);
+				}
+				//TODO: iterate list of <id, command>
+                if (!id.empty())
+                {
+					std::string response = handler.handle("{\"jsonrpc\": \"2.0\", \"id\" : \"1\", \"method\" : \"get_info\", \"params\": {}}");
+                	LOG_PRINT_L1("sending client " << response);
+                	s_sendmore(listener, id);
+                	s_send(listener, response);
+                }
+            }
+
+
+
             if (items[0].revents & ZMQ_POLLIN)
             {
+
                 zmq::message_t envelope;
                 subscriber.recv(&envelope);
                 std::string stop = std::string(static_cast<char*>(envelope.data()), envelope.size());
@@ -94,37 +130,6 @@ namespace arqmaMQ
                     LOG_PRINT_L1("closing thread");
                     break;
                 }
-                subscriber.recv(&envelope);
-                std::string identity = std::string(static_cast<char*>(envelope.data()), envelope.size());
-
-				//TODO: iterate list of <id, command>
-                if (!id.empty())
-                {
-
-				    rapidjson::StringBuffer sb;
-                	rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-				    writer.StartObject();
-					writer.Key("result");
-					writer.Key("top_block_hash");
-					writer.String(identity.c_str());
-		    		writer.EndObject();
-                	s_sendmore(listener, id);
-                	s_send(listener, sb.GetString());
-                }
-
-            }
-
-            if (items[1].revents & ZMQ_POLLIN)
-            {
-                zmq::message_t envelope1;
-                listener.recv(&envelope1);
-                std::string msg = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
-                //TODO: record <id, command>
-                id = std::move(msg);
-                listener.recv(&envelope1);
-                listener.recv(&envelope1);
-                std::string msg1 = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
-                LOG_PRINT_L1("received " <<  id << " " << msg1);
             }
         }
         zmq_close(&listener);

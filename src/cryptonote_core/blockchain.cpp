@@ -492,7 +492,8 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
       return false;
   }
  try {
-   producer.bind("inproc://backend");
+   producer.setsockopt(ZMQ_IDENTITY, "block", 5);
+   producer.connect("tcp://0.0.0.0:3000"); //"inproc://daemon");
    MINFO("Blockchain zmq producer binding");
  }
  catch( const std::exception &e)
@@ -581,8 +582,15 @@ bool Blockchain::deinit()
   delete m_db;
   m_db = NULL;
 
-  zmq_close(&producer);
-  zmq_term(&context);
+  try
+  {
+    zmq_close(&producer);
+    zmq_term(&context);
+  }
+  catch (const std::exception& e)
+  {
+    LOG_ERROR(std::string("Error closing zmq: ") + e.what());
+  }
   return true;
 }
 //------------------------------------------------------------------
@@ -3990,7 +3998,9 @@ leave:
 
   try {
     std::string hex = epee::string_tools::pod_to_hex(id);
-    producer.send(create_message(std::move("block")), ZMQ_SNDMORE);
+//    producer.send(create_message(std::move("block")), ZMQ_SNDMORE);
+    producer.send(create_message(std::move("")), ZMQ_SNDMORE);
+//	std::cout << "from the block " << hex << std::endl;
   	producer.send(create_message(std::move(hex)), 0);
   }
   catch( const std::exception &e)

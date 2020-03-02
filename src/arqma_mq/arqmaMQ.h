@@ -38,6 +38,7 @@ namespace arqmaMQ {
             zmq::socket_t listener{context, ZMQ_ROUTER};
             zmq::socket_t producer{context, ZMQ_PAIR};
             zmq::socket_t subscriber{context, ZMQ_PAIR};
+//            zmq::socket_t daemon{context, ZMQ_ROUTER};
             zmq::message_t create_message(std::string &&data);
             void proxy_loop();
     };

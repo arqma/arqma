@@ -1084,7 +1084,7 @@ namespace cryptonote
     std::shared_ptr<tools::Notify> m_reorg_notify;
 
 	zmq::context_t context;
-    zmq::socket_t producer{context, ZMQ_PAIR};
+    zmq::socket_t producer{context, ZMQ_DEALER};
     zmq::message_t create_message(std::string &&data);
 
     // for prepare_handle_incoming_blocks
