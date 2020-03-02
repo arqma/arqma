@@ -109,7 +109,7 @@ namespace arqmaMQ
 				//TODO: iterate list of <id, command>
                 for(auto &remote : remotes)
                 {
-					std::string response = handler.handle("{\"jsonrpc\": \"2.0\", \"id\" : \"1\", \"method\" : \"get_info\", \"params\": {}}");
+					std::string response = handler.handle(remote.second); //handler.handle("{\"jsonrpc\": \"2.0\", \"id\" : \"1\", \"method\" : \"get_info\", \"params\": {}}");
                 	LOG_PRINT_L1("sending client " << remote.first << " " << response);
                 	s_sendmore(listener, remote.first);
                 	s_send(listener, response);
