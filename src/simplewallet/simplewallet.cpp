@@ -234,8 +234,8 @@ namespace
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
   const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
-  const char* USAGE_STAKE_ALL("stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>");
-  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fractions1> [<address2> <fractions2> [...]]] <expiration timestamp> <pubkey> <signature>");
+  const char* USAGE_STAKE_ALL("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount>");
+  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fractions1> [<address2> <fractions2> [...]]] <expiration timestamp> <pubkey> <signature> <amount>");
 
   std::string input_line(const std::string& prompt, bool yesno = false)
   {
@@ -2677,8 +2677,8 @@ simple_wallet::simple_wallet()
                            boost::bind(&simple_wallet::register_service_node, this, _1),
                            tr(USAGE_REGISTER_SERVICE_NODE),
                            tr("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
-  m_cmd_binder.set_handler("stake_all",
-                           boost::bind(&simple_wallet::stake_all, this, _1),
+  m_cmd_binder.set_handler("stake",
+                           boost::bind(&simple_wallet::stake, this, _1),
                            tr(USAGE_STAKE_ALL),
                            tr("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
   m_cmd_binder.set_handler("sweep_unmixable",
@@ -5819,13 +5819,13 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
   }
   unlock_block = bc_height + locked_blocks;
 
-  if(local_args.size() < 3)
+  if(local_args.size() < 4)
   {
-    fail_msg_writer() << tr("Usage: register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fraction1> [<address2> <fraction2> [...]]] <expiration timestamp> <service node pubkey> <signature>");
+    fail_msg_writer() << tr("Usage: register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fraction1> [<address2> <fraction2> [...]]] <amount> <expiration timestamp> <service node pubkey> <signature>");
     fail_msg_writer() << tr("");
     fail_msg_writer() << tr("Prepare this command with the service node using:");
     fail_msg_writer() << tr("");
-    fail_msg_writer() << tr("./arqmad --prepare-registration <address> <fraction> [<address2> <fractions2> [...]]");
+    fail_msg_writer() << tr("./arqmad --prepare-registration <address> <fraction> [<address2> <fractions2> [...]]] <initial contribution amount>");
     fail_msg_writer() << tr("");
     fail_msg_writer() << tr("This command must be run from the daemon that will be acting as a service node");
     return true;
@@ -5834,7 +5834,8 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
   std::vector<std::string> address_portions_args(local_args.begin(), local_args.begin() + local_args.size() - 3);
   std::vector<cryptonote::account_public_address> addresses;
   std::vector<uint32_t> portions;
-  if(!service_nodes::convert_registration_args(m_wallet->nettype(), address_portions_args, addresses, portions))
+  uint64_t amount;
+  if(!service_nodes::convert_registration_args(m_wallet->nettype(), address_portions_args, addresses, portions, amount))
   {
     fail_msg_writer() << tr("Could not convert registration args");
     return true;
@@ -5890,18 +5891,25 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
   add_service_node_contributor_to_tx_extra(extra, address);
 
+  vector<cryptonote::tx_destination_entry> dsts;
+  cryptonote::tx_destination_entry de;
+  de.addr = address;
+  de.is_subaddress = false;
+  de.amount = amount;
+  dsts.push_back(de);
+
   try
   {
     // figure out what tx will be necessary
-    auto ptx_vector = m_wallet->create_transactions_all(0, address, false, 1, fake_outs_count, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, true);
+    auto ptx_vector = m_wallet->create_transactions_2(dsts, fake_outs_count, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, true);
 
-    if (ptx_vector.empty())
+    if(ptx_vector.empty())
     {
       fail_msg_writer() << tr("No outputs found, or daemon is not ready");
       return true;
     }
 
-    if (ptx_vector.size() > 1)
+    if(ptx_vector.size() > 1)
     {
       fail_msg_writer() << tr("Too many outputs. Please sweep_all first");
       return true;
@@ -5914,8 +5922,8 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
       total_fee += ptx_vector[n].fee;
       for (auto i: ptx_vector[n].selected_transfers)
         total_sent += m_wallet->get_transfer_details(i).amount();
+      total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
     }
-    total_sent -= total_fee;
 
     std::ostringstream prompt;
     for (size_t n = 0; n < ptx_vector.size(); ++n)
@@ -5997,9 +6005,9 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool simple_wallet::stake_all(const std::vector<std::string> &args_)
+bool simple_wallet::stake(const std::vector<std::string> &args_)
 {
-  // stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>
+  // stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey>
 
   SCOPED_WALLET_UNLOCK();
   if (!try_connect_to_daemon())
@@ -6036,9 +6044,9 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
   }
   unlock_block = bc_height + locked_blocks;
 
-  if (local_args.size() < 1)
+  if (local_args.size() < 2)
   {
-    fail_msg_writer() << tr("Usage: stake_all [index=<N1>[,<N2>,...]] [priority] <service node pubkey>");
+    fail_msg_writer() << tr("Usage: stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount>");
     return true;
   }
 
@@ -6046,6 +6054,13 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
   if (!epee::string_tools::hex_to_pod(local_args[0], service_node_key))
   {
     fail_msg_writer() << tr("failed to parse service node pubkey");
+    return true;
+  }
+
+  uint64_t amount;
+  if (!cryptonote::parse_amount(amount, local_args[1]) || amount == 0)
+  {
+    fail_msg_writer() << tr("amount is wrong: ") << local_args[1] << ", " << tr("expected number from ") << print_money(1) << " to " << print_money(std::numeric_limits<uint64_t>::max());
     return true;
   }
 
@@ -6057,10 +6072,17 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
 
   add_service_node_contributor_to_tx_extra(extra, address);
 
+  vector<cryptonote::tx_destination_entry> dsts;
+  cryptonote::tx_destination_entry de;
+  de.addr = address;
+  de.is_subaddress = false;
+  de.amount = amount;
+  dsts.push_back(de);
+
   try
   {
     // figure out what tx will be necessary
-    auto ptx_vector = m_wallet->create_transactions_all(0, address, false, 1, fake_outs_count, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, true);
+    auto ptx_vector = m_wallet->create_transactions_2(dsts, fake_outs_count, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, true);
 
     if(ptx_vector.empty())
     {
@@ -6081,8 +6103,8 @@ bool simple_wallet::stake_all(const std::vector<std::string> &args_)
       total_fee += ptx_vector[n].fee;
       for (auto i: ptx_vector[n].selected_transfers)
         total_sent += m_wallet->get_transfer_details(i).amount();
+      total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
     }
-    total_sent -= total_fee;
 
     std::ostringstream prompt;
     for (size_t n = 0; n < ptx_vector.size(); ++n)

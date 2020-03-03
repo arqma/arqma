@@ -1059,16 +1059,6 @@ namespace cryptonote
       */
      bool init_service_node_key();
 
-     /**
-      * @brief Prepare a registration tx using the service node keys for this
-      * daemon.
-      *
-      * @param args The arguments, as a string. <address1> <fraction1> [<address2> <fraction2> [...]]
-      *
-      * @return whether or not the command was able to prepare the registration.
-      */
-     std::string prepare_registration(const std::vector<std::string>& args);
-
      bool m_test_drop_download = true; //!< whether or not to drop incoming blocks (for testing)
 
      uint64_t m_test_drop_download_height = 0; //!< height under which to drop incoming blocks, if doing so

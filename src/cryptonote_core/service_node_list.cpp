@@ -314,10 +314,13 @@ namespace service_nodes
   {
     crypto::public_key pubkey;
     cryptonote::account_public_address address;
+    crypto::secret_key gov_key;
 
     if(!cryptonote::get_service_node_pubkey_from_tx_extra(tx.extra, pubkey))
       return;
     if(!cryptonote::get_service_node_contributor_from_tx_extra(tx.extra, address))
+      return;
+    if(!cryptonote::get_tx_secret_key_from_tx_extra(tx.extra, gov_key))
       return;
 
     auto iter = m_service_nodes_infos.find(pubkey);
@@ -327,9 +330,8 @@ namespace service_nodes
     if(iter->second.is_fully_funded())
       return;
 
-    cryptonote::keypair gov_key = cryptonote::get_deterministic_keypair_from_height(1);
     crypto::key_derivation derivation;
-    if(!crypto::generate_key_derivation(address.m_view_public_key, gov_key.sec, derivation))
+    if(!crypto::generate_key_derivation(address.m_view_public_key, gov_key, derivation))
       return;
 
     hw::device& hwdev = hw::get_device("default");
@@ -374,6 +376,18 @@ namespace service_nodes
       m_rollback_events.pop_front();
     }
 
+    for(const crypto::public_key& pubkey : get_expired_nodes(block_height))
+    {
+      auto i = m_service_nodes_infos.find(pubkey);
+      if(i != m_service_nodes_infos.end())
+      {
+        m_rollback_events.push_back(std::unique_ptr<rollback_event>(new rollback_change(block_height, pubkey, i->second)));
+        m_service_nodes_infos.erase(i);
+      }
+      // Service nodes may expire early if they double staked by accident, so
+      // expiration doesn't mean the node is in the list.
+    }
+
     crypto::public_key winner_pubkey = cryptonote::get_service_node_winner_from_tx_extra(block.miner_tx.extra);
     if(m_service_nodes_infos.count(winner_pubkey) == 1)
     {
@@ -384,16 +398,6 @@ namespace service_nodes
       );
       m_service_nodes_infos[winner_pubkey].last_reward_block_height = block_height;
       m_service_nodes_infos[winner_pubkey].last_reward_transaction_index = UINT32_MAX;
-    }
-
-    for(const crypto::public_key& pubkey : get_expired_nodes(block_height))
-    {
-      auto i = m_service_nodes_infos.find(pubkey);
-      if(i != m_service_nodes_infos.end())
-      {
-        m_rollback_events.push_back(std::unique_ptr<rollback_event>(new rollback_change(block_height, pubkey, i->second)));
-        m_service_nodes_infos.erase(i);
-      }
     }
 
     uint32_t index = 0;
@@ -703,21 +707,26 @@ namespace service_nodes
     return false;
   }
 
-  bool convert_registration_args(cryptonote::network_type nettype, const std::vector<std::string>& args, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint32_t>& portions)
+  bool convert_registration_args(cryptonote::network_type nettype, const std::vector<std::string>& args, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint32_t>& portions, uint64_t& initial_contribution)
   {
-    if (args.size() % 2 != 0)
+    if(args.size() % 2 == 0)
     {
-      MERROR(tr("Expected an even number of arguments: [<address> <fraction> [<address> <fraction> [...]]]"));
+      MERROR(tr("Expected an odd number of arguments: [<address> <fraction> [<address> <fraction> [...]]] <initial contribution>"));
       return false;
     }
-    if(args.size() / 2 > MAX_NUMBER_OF_CONTRIBUTORS)
+    if(args.size() < 1)
+    {
+      MERROR(tr("Missing <initial contribution>"));
+      return false;
+    }
+    if((args.size()-1) / 2 > MAX_NUMBER_OF_CONTRIBUTORS)
     {
       MERROR(tr("Exceeds the maximum of allowed contributors, which is: ") << MAX_NUMBER_OF_CONTRIBUTORS);
     }
     addresses.clear();
     portions.clear();
     uint64_t total_portions = 0;
-    for (size_t i = 0; i < args.size(); i += 2)
+    for (size_t i = 0; i < args.size()-1; i += 2)
     {
       cryptonote::address_parse_info info;
       if (!cryptonote::get_account_address_from_str(info, nettype, args[i]))
@@ -743,7 +752,7 @@ namespace service_nodes
       try
       {
         double portion_fraction = boost::lexical_cast<double>(args[i+1]);
-        if (portion_fraction <= 0 || portion_fraction > 1)
+        if(portion_fraction <= 0 || portion_fraction > 1)
         {
           MERROR(tr("Invalid portion amount: ") << args[i+1] << tr(". ") << tr("Must be more than 0 and no greater than 1"));
           return false;
@@ -758,12 +767,79 @@ namespace service_nodes
         return false;
       }
     }
-    if (total_portions > (uint64_t)STAKING_PORTIONS)
+    if(!cryptonote::parse_amount(initial_contribution, args.back()) || initial_contribution == 0)
+    {
+      MERROR(tr("amount is wrong: ") << args.back() << ", " << tr("expected number from ") << cryptonote::print_money(1) << " to " << cryptonote::print_money(std::numeric_limits<uint64_t>::max()));
+      return true;
+    }
+    if(total_portions > (uint64_t)STAKING_PORTIONS)
     {
       MERROR(tr("Invalid share amounts, portions must sum to at most 1."));
       MERROR(tr("If it looks correct,  this may be because of rounding. Try reducing one of the portionholders portions by a very tiny amount"));
       return false;
     }
+
+    return true;
+  }
+
+  bool make_registration_cmd(cryptonote::network_type nettype, const std::vector<std::string> args, const crypto::public_key& service_node_pubkey, const crypto::secret_key service_node_key, std::string &cmd, bool make_friendly)
+  {
+    std::vector<cryptonote::account_public_address> addresses;
+    std::vector<uint32_t> shares;
+    uint64_t initial_contribution;
+    if(!convert_registration_args(nettype, args, addresses, shares, initial_contribution))
+    {
+      MERROR(tr("Could not convert registration args"));
+      return false;
+    }
+
+    uint64_t exp_timestamp = time(nullptr) + STAKING_AUTHORIZATION_EXPIRATION_WINDOW;
+
+    crypto::hash hash;
+    bool hashed = cryptonote::get_registration_hash(addresses, shares, exp_timestamp, hash);
+    if(!hashed)
+    {
+      MERROR(tr("Could not make registration hash from addresses and shares"));
+      return false;
+    }
+
+    crypto::signature signature;
+    crypto::generate_signature(hash, service_node_pubkey, service_node_key, signature);
+
+    std::stringstream stream;
+    if(make_friendly)
+    {
+      stream << tr("Run this command in the wallet that will fund this registration:\n\n");
+    }
+
+    stream << "register_service_node";
+    for(size_t i = 0; i < args.size(); ++i)
+    {
+      stream << " " << args[i];
+    }
+
+    stream << " " << exp_timestamp << " ";
+    stream << epee::string_tools::pod_to_hex(service_node_pubkey) << " ";
+    stream << epee::string_tools::pod_to_hex(signature);
+
+    if(make_friendly)
+    {
+      stream << "\n\n";
+      time_t tt = exp_timestamp;
+      struct tm tm;
+#ifdef WIN32
+      gmtime_s(&tm, &tt);
+#else
+      gmtime_r(&tt, &tm);
+#endif
+
+      char buffer[128];
+      strftime(buffer, sizeof(buffer), "%Y-%m-%d %I:%M:%S %p", &tm);
+      stream << tr("This registration expires at ") << buffer << tr(". This should be in about 2 weeks. If it isn't, check this computer's clock") << std::endl;
+      stream << tr("Please submit your registration into the blockchain before this time or it will be invalid.");
+    }
+
+    cmd = stream.str();
     return true;
   }
 }
