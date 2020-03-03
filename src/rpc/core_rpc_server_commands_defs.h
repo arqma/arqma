@@ -2680,38 +2680,30 @@ struct request_t: public rpc_access_request_base
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
-  struct COMMAND_RPC_SEND_DEREGISTER_VOTE
+  struct COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD
   {
-      struct request_t: public rpc_request_base
-      {
-        arqma_sn::service_node_deregister::vote vote;
+    struct request_t: public rpc_request_base
+    {
+      std::vector<std::string> args;
+      bool make_friendly;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(args)
+        KV_SERIALIZE(make_friendly)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
 
-        BEGIN_KV_SERIALIZE_MAP()
-          KV_SERIALIZE_VAL_POD_AS_BLOB(vote)
-        END_KV_SERIALIZE_MAP()
-      };
-      typedef epee::misc_utils::struct_init<request_t> request;
+    struct response_t: public rpc_response_base
+    {
+      std::string status;
+      std::string registration_cmd;
 
-      struct response_t: public rpc_response_base
-      {
-        std::string status;
-        std::string reason;
-
-        bool invalid_block_height;
-        bool voters_quorum_index_out_of_bounds;
-        bool service_node_index_out_of_bounds;
-        bool signature_not_valid;
-
-        BEGIN_KV_SERIALIZE_MAP()
-          KV_SERIALIZE(status)
-          KV_SERIALIZE(reason)
-          KV_SERIALIZE(invalid_block_height)
-          KV_SERIALIZE(voters_quorum_index_out_of_bounds)
-          KV_SERIALIZE(service_node_index_out_of_bounds)
-          KV_SERIALIZE(signature_not_valid)
-        END_KV_SERIALIZE_MAP()
-      };
-      typedef epee::misc_utils::struct_init<response_t> response;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(registration_cmd)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
   };
 
 }

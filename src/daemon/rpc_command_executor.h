@@ -167,6 +167,8 @@ public:
   bool rpc_payments();
 
   bool print_net_stats();
+
+  bool get_service_node_registration_cmd(const std::vector<std::string> &args);
 };
 
 } // namespace daemonize

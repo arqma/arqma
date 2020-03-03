@@ -194,6 +194,7 @@ namespace cryptonote
       VARINT_FIELD(unlock_time)
       FIELD(vin)
       FIELD(vout)
+      if(version >= 3 && vout.size() != output_unlock_times.size()) return false;
       FIELD(extra)
     END_SERIALIZE()
 
@@ -208,6 +209,20 @@ namespace cryptonote
       vin.clear();
       vout.clear();
       extra.clear();
+    }
+
+    uint64_t get_unlock_time(size_t out_index) const
+    {
+      if(version >= version_3)
+      {
+        if(out_index >= output_unlock_times.size())
+        {
+          LOG_ERROR("Tried to get unlock time of a v3 transaction with missing output unlock time");
+          return unlock_time;
+        }
+        return output_unlock_times[out_index];
+      }
+      return unlock_time;
     }
   };
 
