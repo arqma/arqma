@@ -8,15 +8,13 @@
 #include <iterator>
 #include "INotifier.h"
 
+
 #include "cryptonote_basic/cryptonote_basic_impl.h"
-//#include "cryptonote_basic/cryptonote_basic.h"
-//#include "cryptonote_core/cryptonote_core.h"
 
 #include "rpc/daemon_handler.h"
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-
 
 using namespace cryptonote;
 using namespace rpc;

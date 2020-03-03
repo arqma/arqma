@@ -50,6 +50,7 @@ const char* const MiningStatus::name = "mining_status";
 const char* const GetInfo::name = "get_info";
 const char* const SaveBC::name = "save_bc";
 const char* const GetBlockHash::name = "get_block_hash";
+const char* const GetBlockTemplate::name = "get_block_template";
 const char* const GetLastBlockHeader::name = "get_last_block_header";
 const char* const GetBlockHeaderByHash::name = "get_block_header_by_hash";
 const char* const GetBlockHeaderByHeight::name = "get_block_header_by_height";
@@ -465,6 +466,23 @@ void GetBlockHash::Response::fromJson(rapidjson::Value& val)
   GET_FROM_JSON_OBJECT(val, hash, hash);
 }
 
+rapidjson::Value GetBlockTemplate::Response::toJson(rapidjson::Document& doc) const
+{
+  auto val = Message::toJson(doc);
+
+
+//  INSERT_INTO_JSON_OBJECT(val, doc, reserve_size, reserve_size);
+//  INSERT_INTO_JSON_OBJECT(val, doc, wallet_address, wallet_address);
+//  INSERT_INTO_JSON_OBJECT(val, doc, prev_block, prev_block); 
+  return val;
+}
+
+void GetBlockTemplate::Response::fromJson(rapidjson::Value& val)
+{
+//  GET_FROM_JSON_OBJECT(val, reserve_size, reserve_size);
+//  GET_FROM_JSON_OBJECT(val, wallet_address, wallet_address);
+//  GET_FROM_JSON_OBJECT(val, prev_block, prev_block);
+}
 
 rapidjson::Value GetLastBlockHeader::Request::toJson(rapidjson::Document& doc) const
 {

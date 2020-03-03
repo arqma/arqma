@@ -525,10 +525,141 @@ namespace rpc
     res.status = Message::STATUS_OK;
   }
 
+  uint64_t slow_memmem(const void* start_buff, size_t buflen,const void* pat,size_t patlen)
+  {
+    const void* buf = start_buff;
+    const void* end=(const char*)buf+buflen;
+    if (patlen > buflen || patlen == 0) return 0;
+    while(buflen>0 && (buf=memchr(buf,((const char*)pat)[0],buflen-patlen+1)))
+    {
+      if(memcmp(buf,pat,patlen)==0)
+        return (const char*)buf - (const char*)start_buff;
+      buf=(const char*)buf+1;
+      buflen = (const char*)end - (const char*)buf;
+    }
+    return 0;
+  }
+
   void DaemonHandler::handle(const GetBlockTemplate::Request& req, GetBlockTemplate::Response& res)
   {
-    res.status = Message::STATUS_FAILED;
-    res.error_details = "RPC method not yet implemented.";
+/*
+    if(!check_core_ready())
+    {
+      res.status  = Message::STATUS_FAILED; 
+      res.error_details = "Core is busy";
+      return;
+    }
+*/
+    if(req.reserve_size > 255)
+    {
+      res.status  = Message::STATUS_FAILED;
+      res.error_details  = "Too big reserved size, maximum 255";
+      return;
+    }
+
+    cryptonote::address_parse_info info;
+
+    if(!req.wallet_address.size() || !cryptonote::get_account_address_from_str(info, nettype(), req.wallet_address))
+    {
+      res.status  = Message::STATUS_FAILED;
+      res.error_details = "Failed to parse wallet address";
+      return;
+    }
+    if (info.is_subaddress)
+    {
+      res.status  = Message::STATUS_FAILED;
+      res.error_details = "Mining to subaddress is not supported yet";
+      return;
+    }
+
+    block b;
+    cryptonote::blobdata blob_reserve;
+    blob_reserve.resize(req.reserve_size, 0);
+    size_t reserved_offset;
+    crypto::hash prev_block;
+    if (!req.prev_block.empty())
+    {
+      if (!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
+      {
+        res.status  = Message::STATUS_FAILED;
+        res.error_details = "Invalid prev_block";
+        return;
+      }
+    }
+    crypto::hash seed_hash, next_seed_hash;
+    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, res))
+      return;
+    res.reserved_offset = reserved_offset;
+    blobdata block_blob = t_serializable_object_to_blob(b);
+    blobdata hashing_blob = get_block_hashing_blob(b);
+    res.prev_hash = string_tools::pod_to_hex(b.prev_id);
+    res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
+    res.blockhashing_blob =  string_tools::buff_to_hex_nodelimer(hashing_blob);
+    res.seed_hash = string_tools::pod_to_hex(seed_hash);
+    if(next_seed_hash != crypto::null_hash)
+      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
+    res.status = Message::STATUS_OK;
+    return;
+//    res.status = Message::STATUS_FAILED;
+//    res.error_details = "RPC method not yet implemented.";
+  }
+
+
+  bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
+  {
+    b = boost::value_initialized<cryptonote::block>();
+    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Internal error: failed to create block template";
+      LOG_ERROR("Failed to create block template");
+      return false;
+    }
+    blobdata block_blob = t_serializable_object_to_blob(b);
+    crypto::public_key tx_pub_key = cryptonote::get_tx_pub_key_from_extra(b.miner_tx);
+    if(tx_pub_key == crypto::null_pkey)
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Internal error: failed to create block template";
+      LOG_ERROR("Failed to get tx pub key in coinbase extra");
+      return false;
+    }
+
+    seed_hash = next_seed_hash = crypto::null_hash;
+    if(b.major_version >= RX_BLOCK_VERSION)
+    {
+      uint64_t seed_height, next_height;
+      crypto::rx_seedheights(height, &seed_height, &next_height);
+      seed_hash = m_core.get_block_id_by_height(seed_height);
+      if(next_height != seed_height)
+      {
+        next_seed_hash = m_core.get_block_id_by_height(next_height);
+      }
+    }
+
+    if (extra_nonce.empty())
+    {
+      reserved_offset = 0;
+      return true;
+    }
+
+    reserved_offset = slow_memmem((void*)block_blob.data(), block_blob.size(), &tx_pub_key, sizeof(tx_pub_key));
+    if(!reserved_offset)
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Internal error: failed to create block template";
+      LOG_ERROR("Failed to find tx pub key in blockblob");
+      return false;
+    }
+    reserved_offset += sizeof(tx_pub_key) + 2; //2 bytes: tag for TX_EXTRA_NONCE(1 byte), counter in TX_EXTRA_NONCE(1 byte)
+    if(reserved_offset + extra_nonce.size() > block_blob.size())
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Internal error: failed to create block template";
+      LOG_ERROR("Failed to calculate offset for ");
+      return false;
+    }
+    return true;
   }
 
   void DaemonHandler::handle(const SubmitBlock::Request& req, SubmitBlock::Response& res)
@@ -859,6 +990,7 @@ namespace rpc
       REQ_RESP_TYPES_MACRO(request_type, MiningStatus, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, SaveBC, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, GetBlockHash, req_json, resp_message, handle);
+      REQ_RESP_TYPES_MACRO(request_type, GetBlockTemplate, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, GetLastBlockHeader, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, GetBlockHeaderByHash, req_json, resp_message, handle);
       REQ_RESP_TYPES_MACRO(request_type, GetBlockHeaderByHeight, req_json, resp_message, handle);

@@ -1187,6 +1187,43 @@ void fromJsonValue(const rapidjson::Value& val, rct::mgSig& sig)
   GET_FROM_JSON_OBJECT(val, sig.cc, cc);
 }
 
+void toJsonValue(rapidjson::Document& doc, const cryptonote::rpc::BlockTemplateResponse& resp, rapidjson::Value& val)
+{
+  val.SetObject();
+
+  INSERT_INTO_JSON_OBJECT(val, doc, blocktemplate_blob, resp.blocktemplate_blob);
+  INSERT_INTO_JSON_OBJECT(val, doc, blockhashing_blob, resp.blockhashing_blob);
+  INSERT_INTO_JSON_OBJECT(val, doc, difficulty, resp.difficulty);
+  INSERT_INTO_JSON_OBJECT(val, doc, expected_reward, resp.expected_reward);
+  INSERT_INTO_JSON_OBJECT(val, doc, height, resp.height);
+  INSERT_INTO_JSON_OBJECT(val, doc, prev_hash, resp.prev_hash);
+  INSERT_INTO_JSON_OBJECT(val, doc, reserved_offset, resp.reserved_offset);
+  INSERT_INTO_JSON_OBJECT(val, doc, status, resp.status);
+  INSERT_INTO_JSON_OBJECT(val, doc, seed_hash, resp.seed_hash);
+  INSERT_INTO_JSON_OBJECT(val, doc, next_seed_hash, resp.next_seed_hash);
+
+}
+
+void fromJsonValue(const rapidjson::Value& val, cryptonote::rpc::BlockTemplateResponse resp)
+{
+  if (!val.IsObject())
+  {
+    throw WRONG_TYPE("json object");
+  }
+
+  GET_FROM_JSON_OBJECT(val, resp.blocktemplate_blob, blocktemplate_blob);
+  GET_FROM_JSON_OBJECT(val, resp.blockhashing_blob, blockhashing_blob);
+  GET_FROM_JSON_OBJECT(val, resp.difficulty, difficulty);
+  GET_FROM_JSON_OBJECT(val, resp.expected_reward, expected_reward);
+  GET_FROM_JSON_OBJECT(val, resp.height, height);
+  GET_FROM_JSON_OBJECT(val, resp.prev_hash, prev_hash);
+  GET_FROM_JSON_OBJECT(val, resp.reserved_offset, reserved_offset);
+  GET_FROM_JSON_OBJECT(val, resp.status, status);
+  GET_FROM_JSON_OBJECT(val, resp.seed_hash, seed_hash);
+  GET_FROM_JSON_OBJECT(val, resp.next_seed_hash, next_seed_hash);
+
+}
+
 void toJsonValue(rapidjson::Document& doc, const cryptonote::rpc::DaemonInfo& info, rapidjson::Value& val)
 {
   val.SetObject();
