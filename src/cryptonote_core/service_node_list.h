@@ -80,8 +80,8 @@ namespace service_nodes
       {
         uint64_t amount;
         uint64_t reserved;
-        uint8_t order;
-        contribution() : amount(0), reserved(0), order(0) { }
+        cryptonote::account_public_address address;
+        contribution(uint64_t _reserved, const cryptonote::account_public_address& _address) : amount(0), reserved(_reserved), address(_address) { }
       };
 
       // block_height and transaction indexes are used only to have
@@ -94,7 +94,7 @@ namespace service_nodes
       uint64_t last_reward_block_height;
       uint32_t last_reward_transaction_index;
       
-      std::unordered_map<crypotonote::account_public_address, contribution> contributors;
+      std::vector<contribution> contributors;
       uint64_t total_contributed;
       uint64_t total_reserved;
       uint64_t staking_requirement;
