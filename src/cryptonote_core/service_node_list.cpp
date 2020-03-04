@@ -288,7 +288,7 @@ namespace service_nodes
     uint64_t transferred = 0;
     if(!get_contribution(tx, block_height, address, transferred))
       return false;
-    if(transferred < info.staking_requirement)
+    if(transferred < info.staking_requirement / MAX_NUMBER_OF_CONTRIBUTORS)
       return false;
     int is_this_a_new_address = 0;
     if(std::find(service_node_addresses.begin(), service_node_addresses.end(), address) == service_node_addresses.end())
@@ -306,15 +306,13 @@ namespace service_nodes
     
     for(size_t i = 0; i < service_node_addresses.size(); i++)
     {
-      if(info.contributors.count(service_node_addresses[i]))
+      auto iter = std::find(service_node_addresses.begin(), service_node_addresses.begin() + i, service_node_addresses[i]);
+      if(iter != service_node_addresses.end())
         return false;
-      auto& contributor = info.contributors[service_node_addresses[i]];
-      contributor.order = (uint8_t)i;
       uint64_t hi, lo, resulthi, resultlo;
       lo = mul128(info.staking_requirement, service_node_portions[i], &hi);
       div128_32(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
-      contributor.reserved = resultlo;
-      contributor.amount = 0;
+      info.contributors.push_back(service_node_info::contribution(resultlo, service_node_addresses[i]));
     }
 
     return true;
@@ -382,16 +380,22 @@ namespace service_nodes
 
     auto& contributors = info.contributors;
     
-    if(contributors.count(address) == 0 && (contributors.size() >= MAX_NUMBER_OF_CONTRIBUTORS || transferred < info.get_min_contribution()))
-      return;
+    auto contrib_iter = std::find_if(contributors.begin(), contributors.end(), [&address](const service_node_info::contribution& contributor) { return contributor.address == address; });
+    if(contrib_iter == contributors.end())
+    {
+      if(contributors.size() >= MAX_NUMBER_OF_CONTRIBUTORS || transferred < info.get_min_contribution())
+        return;
+    }
 
     m_rollback_events.push_back(std::unique_ptr<rollback_event>(new rollback_change(block_height, pubkey, info)));
 
-    const uint8_t order = (uint8_t)contributors.size();
-    if(contributors.count(address) == 0)
-      contributors[address].order = order;
+    if(contrib_iter == contributors.end())
+    {
+      contributors.push_back(service_node_info::contribution(0, address));
+      contrib_iter = --contributors.end();
+    }
 
-    service_node_info::contribution& contributor = contributors[address];
+    service_node_info::contribution& contributor = *contrib_iter;
     
     uint64_t can_increase_reserved_by = info.staking_requirement - info.total_reserved;
     uint64_t max_amount = contributor.reserved + can_increase_reserved_by;
@@ -552,37 +556,15 @@ namespace service_nodes
     std::vector<std::pair<cryptonote::account_public_address, uint32_t>> winners;
     uint64_t remaining_portions = STAKING_SHARE_PARTS;
 
-/*
-    auto add_to_winners = [&winners](cryptonote::account_public_address address, uint64_t amount_of_portions)
-    {
-      if(amount_of_portions == 0) return;
-      auto iter = std::find_if(std::begin(winners), std::end(winners), [&address](const std::pair<cryptonote::account_public_address, uint32_t>& winner) { return winner.first == address; });
-      if(iter == winners.end())
-        winners.push_back(std::make_pair(address, amount_of_portions));
-      else
-        iter->second += amount_of_portions;
-    };
-    for(size_t i = 0; i < m_service_nodes_infos.at(key).addresses.size(); i++)
-    {
-      add_to_winners(m_service_nodes_infos.at(key).addresses[i], m_service_nodes_infos.at(key).portions[i]);
-      remaining_portions -= m_service_nodes_infos.at(key).portions[i];
-    }
-*/
-
     const service_node_info& info = m_service_nodes_infos.at(key);
-    std::vector<cryptonote::account_public_address> addresses;
-    for (const auto& iter : info.contributors)
-      addresses.push_back(iter.first);
-    std::sort(addresses.begin(), addresses.end(),
-        [&info](const cryptonote::account_public_address& a, const cryptonote::account_public_address& b) { return info.contributors.at(a).order < info.contributors.at(b).order; });
 
-    for (const auto& address : addresses)
+    for (const auto& contributor : info.contributors)
     {
       uint64_t hi, lo, resulthi, resultlo;
-      lo = mul128(info.contributors.at(address).amount, remaining_portions, &hi);
+      lo = mul128(contributor.amount, remaining_portions, &hi);
       div128_64(hi, lo, info.staking_requirement, &resulthi, &resultlo);
 
-      winners.push_back(std::make_pair(address, resultlo));
+      winners.push_back(std::make_pair(contributor.address, resultlo));
     }
     return winners;
   }
