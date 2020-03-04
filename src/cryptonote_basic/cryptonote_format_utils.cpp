@@ -1263,9 +1263,9 @@ namespace cryptonote
     uint64_t total_portions = 0;
     for (uint32_t portion : portions)
       total_portions += portion;
-    if(total_portions > STAKING_PORTIONS)
+    if(total_portions > STAKING_SHARE_PARTS)
     {
-      LOG_ERROR(tr("Your registration has more than ") << STAKING_PORTIONS << tr(" portions, this registration is invalid!"));
+      LOG_ERROR(tr("Your registration has more than ") << STAKING_SHARE_PARTS << tr(" portions, this registration is invalid!"));
       return false;
     }
     size_t size = addresses.size() * (sizeof(cryptonote::account_public_address) + sizeof(uint32_t)) + sizeof(uint64_t);

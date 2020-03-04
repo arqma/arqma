@@ -5821,13 +5821,13 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
   if(local_args.size() < 4)
   {
-    fail_msg_writer() << tr("Usage: register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fraction1> [<address2> <fraction2> [...]]] <amount> <expiration timestamp> <service node pubkey> <signature>");
+    fail_msg_writer() << tr("Usage: register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <contribution %> [<address2> <contribution %> [...]]] <amount> <expiration timestamp> <service node pubkey> <signature> | where <contribution %> '1' is 100%");
     fail_msg_writer() << tr("");
     fail_msg_writer() << tr("Prepare this command with the service node using:");
     fail_msg_writer() << tr("");
-    fail_msg_writer() << tr("./arqmad --prepare-registration <address> <fraction> [<address2> <fractions2> [...]]] <initial contribution amount>");
+    fail_msg_writer() << tr("./arqmad --prepare-registration <address> <contribution %> [<address2> <contribution %> [...]]] <initial contribution amount>");
     fail_msg_writer() << tr("");
-    fail_msg_writer() << tr("This command must be run from the daemon that will be acting as a service node");
+    fail_msg_writer() << tr("This command must be run from the daemon that will be acting as a Service Node");
     return true;
   }
 
@@ -5916,13 +5916,14 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
     }
 
     // give user total and fee, and prompt to confirm
-    uint64_t total_fee = 0, total_sent = 0;
+    uint64_t total_fee = 0, total_sent = 0, change = 0;
     for (size_t n = 0; n < ptx_vector.size(); ++n)
     {
       total_fee += ptx_vector[n].fee;
       for (auto i: ptx_vector[n].selected_transfers)
         total_sent += m_wallet->get_transfer_details(i).amount();
       total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
+      change += ptx_vector[n].change_dts.amount;
     }
 
     std::ostringstream prompt;
@@ -5934,28 +5935,25 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
         subaddr_indices.insert(i);
       for (uint32_t i : subaddr_indices)
         prompt << boost::format(tr("Spending from address index %d\n")) % i;
-      if (subaddr_indices.size() > 1)
+      if(subaddr_indices.size() > 1)
         prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
     }
-    if (m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
+    if(m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
       return true;
-    if (ptx_vector.size() > 1) {
+    if(ptx_vector.size() > 1)
+    {
       prompt << boost::format(tr("Staking %s for %u blocks in %llu transactions for a total fee of %s.  Is this okay?")) %
-        print_money(total_sent) %
-        locked_blocks %
-        ((unsigned long long)ptx_vector.size()) %
-        print_money(total_fee);
+        print_money(total_sent) % locked_blocks % ((unsigned long long)ptx_vector.size()) % print_money(total_fee);
     }
-    else {
+    else
+    {
       prompt << boost::format(tr("Staking %s for %u blocks a total fee of %s.  Is this okay?")) %
-        print_money(total_sent) %
-        locked_blocks %
-        print_money(total_fee);
+        print_money(total_sent) % locked_blocks % print_money(total_fee);
     }
     std::string accepted = input_line(prompt.str(), true);
-    if (std::cin.eof())
+    if(std::cin.eof())
       return true;
-    if (!command_line::is_yes(accepted))
+    if(!command_line::is_yes(accepted))
     {
       fail_msg_writer() << tr("transaction cancelled.");
 
@@ -5963,10 +5961,10 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
     }
 
     // actually commit the transactions
-    if (m_wallet->multisig())
+    if(m_wallet->multisig())
     {
       bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_arqma_tx");
-      if (!r)
+      if(!r)
       {
         fail_msg_writer() << tr("Failed to write transaction(s) to file");
       }
@@ -5975,10 +5973,10 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
         success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_arqma_tx";
       }
     }
-    else if (m_wallet->watch_only())
+    else if(m_wallet->watch_only())
     {
       bool r = m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx");
-      if (!r)
+      if(!r)
       {
         fail_msg_writer() << tr("Failed to write transaction(s) to file");
       }
