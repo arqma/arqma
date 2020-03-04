@@ -37,7 +37,9 @@
 #include "p2p/net_node.h"
 
 #include "string_tools.h"
+
 using namespace epee;
+
 namespace
 {
   typedef nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> > t_p2p;

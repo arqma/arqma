@@ -540,6 +540,7 @@ namespace rpc
     return 0;
   }
 
+
   void DaemonHandler::handle(const GetBlockTemplate::Request& req, GetBlockTemplate::Response& res)
   {
 /*
@@ -550,6 +551,7 @@ namespace rpc
       return;
     }
 */
+
     if(req.reserve_size > 255)
     {
       res.status  = Message::STATUS_FAILED;
@@ -600,10 +602,7 @@ namespace rpc
       res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     res.status = Message::STATUS_OK;
     return;
-//    res.status = Message::STATUS_FAILED;
-//    res.error_details = "RPC method not yet implemented.";
   }
-
 
   bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
   {

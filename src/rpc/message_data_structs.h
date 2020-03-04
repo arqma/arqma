@@ -204,7 +204,7 @@ namespace rpc
     bool cumulative;
   };
 
-  struct BlockTemplateResponse
+  struct GetBlockTemplateInfo
   {
     std::string blocktemplate_blob;
     std::string blockhashing_blob;
