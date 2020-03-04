@@ -472,7 +472,6 @@ rapidjson::Value GetBlockTemplate::Request::toJson(rapidjson::Document& doc) con
 
   INSERT_INTO_JSON_OBJECT(val, doc, reserve_size, reserve_size);
   INSERT_INTO_JSON_OBJECT(val, doc, wallet_address, wallet_address);
-  INSERT_INTO_JSON_OBJECT(val, doc, prev_block, prev_block);
 
   return val;
 }
@@ -481,7 +480,6 @@ void GetBlockTemplate::Request::fromJson(rapidjson::Value& val)
 {
   GET_FROM_JSON_OBJECT(val, reserve_size, reserve_size);
   GET_FROM_JSON_OBJECT(val, wallet_address, wallet_address);
-  GET_FROM_JSON_OBJECT(val, prev_block, prev_block);
 }
 
 rapidjson::Value GetBlockTemplate::Response::toJson(rapidjson::Document& doc) const

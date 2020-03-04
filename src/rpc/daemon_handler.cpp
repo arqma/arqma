@@ -578,18 +578,8 @@ namespace rpc
     cryptonote::blobdata blob_reserve;
     blob_reserve.resize(req.reserve_size, 0);
     size_t reserved_offset;
-    crypto::hash prev_block;
-    if (!req.prev_block.empty())
-    {
-      if (!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
-      {
-        res.status  = Message::STATUS_FAILED;
-        res.error_details = "Invalid prev_block";
-        return;
-      }
-    }
     crypto::hash seed_hash, next_seed_hash;
-    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, res))
+    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, res))
       return;
     res.reserved_offset = reserved_offset;
     blobdata block_blob = t_serializable_object_to_blob(b);
