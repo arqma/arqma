@@ -304,7 +304,7 @@ namespace service_nodes
     if(iter != m_service_nodes_infos.end())
       return;
 
-    MGINFO("New service node registered: " << key);
+    MGINFO_GREEN("New service node registered: " << key);
 
     m_rollback_events.push_back(std::unique_ptr<rollback_event>(new rollback_new(block_height, key)));
     m_service_nodes_infos[key] = info;
@@ -352,7 +352,7 @@ namespace service_nodes
     iter->second.last_reward_block_height = block_height;
     iter->second.last_reward_transaction_index = index;
 
-    MGINFO("Contribution of " << transferred << " received for service node " << pubkey);
+    MGINFO("Contribution of " << cryptonote::print_money(transferred) << " received for service node " << pubkey);
 
     return;
   }
@@ -711,7 +711,7 @@ namespace service_nodes
   {
     if(args.size() % 2 == 0)
     {
-      MERROR(tr("Expected an odd number of arguments: [<address> <fraction> [<address> <fraction> [...]]] <initial contribution>"));
+      MERROR(tr("Expected an odd number of arguments: [<address> <contribution %> [<address> <contribution %> [...]]] <initial contribution> | where <contribution %> '1' is 100%"));
       return false;
     }
     if(args.size() < 1)
@@ -754,7 +754,7 @@ namespace service_nodes
         double portion_fraction = boost::lexical_cast<double>(args[i+1]);
         if(portion_fraction <= 0 || portion_fraction > 1)
         {
-          MERROR(tr("Invalid portion amount: ") << args[i+1] << tr(". ") << tr("Must be more than 0 and no greater than 1"));
+          MERROR(tr("Invalid contribution percentage: ") << args[i+1] << tr(". ") << tr("Must be more than 0 (0%) and no greater than 1 (100%)"));
           return false;
         }
         uint32_t num_portions = STAKING_PORTIONS * portion_fraction;
@@ -763,7 +763,7 @@ namespace service_nodes
       }
       catch (const std::exception &e)
       {
-        MERROR(tr("Invalid portion amount: ") << args[i+1] << tr(". ") << tr("Must be more than 0 and no greater than 1"));
+        MERROR(tr("Invalid contribution percentage: ") << args[i+1] << tr(". ") << tr("Must be more than 0 (0%) and no greater than 1 (100%)"));
         return false;
       }
     }
@@ -774,8 +774,8 @@ namespace service_nodes
     }
     if(total_portions > (uint64_t)STAKING_PORTIONS)
     {
-      MERROR(tr("Invalid share amounts, portions must sum to at most 1."));
-      MERROR(tr("If it looks correct,  this may be because of rounding. Try reducing one of the portionholders portions by a very tiny amount"));
+      MERROR(tr("Invalid share percentage values, sum must be equal to 1"));
+      MERROR(tr("If it looks correct,  this may be because of rounding. Try reducing one of the contributors share by a very tiny percent points"));
       return false;
     }
 

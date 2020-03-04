@@ -241,7 +241,7 @@ namespace
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
   const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
-  const char* USAGE_STAKE_ALL("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount>");
+  const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount>");
   const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fractions1> [<address2> <fractions2> [...]]] <expiration timestamp> <pubkey> <signature> <amount>");
 
   std::string input_line(const std::string& prompt, bool yesno = false)
@@ -2742,7 +2742,7 @@ simple_wallet::simple_wallet()
                            tr("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
   m_cmd_binder.set_handler("stake",
                            boost::bind(&simple_wallet::stake, this, _1),
-                           tr(USAGE_STAKE_ALL),
+                           tr(USAGE_STAKE),
                            tr("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
   m_cmd_binder.set_handler("sweep_unmixable",
                            boost::bind(&simple_wallet::sweep_unmixable, this, _1),
@@ -6077,22 +6077,22 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
   // stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey>
 
   SCOPED_WALLET_UNLOCK();
-  if (!try_connect_to_daemon())
+  if(!try_connect_to_daemon())
     return true;
 
   std::vector<std::string> local_args = args_;
 
   std::set<uint32_t> subaddr_indices;
-  if (local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
+  if(local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
   {
-    if (!parse_subaddress_indices(local_args[0], subaddr_indices))
+    if(!parse_subaddress_indices(local_args[0], subaddr_indices))
       return true;
     local_args.erase(local_args.begin());
   }
 
   size_t fake_outs_count = 0;
   uint32_t priority = 0;
-  if (local_args.size() > 0 && parse_priority(local_args[0], priority))
+  if(local_args.size() > 0 && parse_priority(local_args[0], priority))
     local_args.erase(local_args.begin());
 
   priority = m_wallet->adjust_priority(priority);
@@ -6104,27 +6104,27 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
 
   std::string err;
   uint64_t bc_height = get_daemon_blockchain_height(err);
-  if (!err.empty())
+  if(!err.empty())
   {
     fail_msg_writer() << tr("failed to get blockchain height: ") << err;
     return true;
   }
   unlock_block = bc_height + locked_blocks;
 
-  if (local_args.size() < 2)
+  if(local_args.size() < 2)
   {
     fail_msg_writer() << tr("Usage: stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount>");
     return true;
   }
 
   crypto::public_key service_node_key;
-  if (!epee::string_tools::hex_to_pod(local_args[0], service_node_key))
+  if(!epee::string_tools::hex_to_pod(local_args[0], service_node_key))
   {
     fail_msg_writer() << tr("failed to parse service node pubkey");
     return true;
   }
 
-  uint64_t amount;
+  uint64_t amount = 0;
   if (!cryptonote::parse_amount(amount, local_args[1]) || amount == 0)
   {
     fail_msg_writer() << tr("amount is wrong: ") << local_args[1] << ", " << tr("expected number from ") << print_money(1) << " to " << print_money(std::numeric_limits<uint64_t>::max());
@@ -6164,13 +6164,14 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
     }
 
     // give user total and fee, and prompt to confirm
-    uint64_t total_fee = 0, total_sent = 0;
+    uint64_t total_fee = 0, total_sent = 0, change = 0;
     for (size_t n = 0; n < ptx_vector.size(); ++n)
     {
       total_fee += ptx_vector[n].fee;
       for (auto i: ptx_vector[n].selected_transfers)
         total_sent += m_wallet->get_transfer_details(i).amount();
       total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
+      change += ptx_vector[n].change_dts.amount;
     }
 
     std::ostringstream prompt;
@@ -6182,28 +6183,24 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
         subaddr_indices.insert(i);
       for (uint32_t i : subaddr_indices)
         prompt << boost::format(tr("Spending from address index %d\n")) % i;
-      if (subaddr_indices.size() > 1)
+      if(subaddr_indices.size() > 1)
         prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
     }
-    if (m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
+    if(m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
       return true;
-    if (ptx_vector.size() > 1) {
+    if(ptx_vector.size() > 1) {
       prompt << boost::format(tr("Staking %s for %u blocks in %llu transactions for a total fee of %s.")) %
-        print_money(total_sent) %
-        locked_blocks %
-        ((unsigned long long)ptx_vector.size()) %
-        print_money(total_fee);
+        print_money(total_sent) % locked_blocks % ((unsigned long long)ptx_vector.size()) % print_money(total_fee);
     }
-    else {
+    else
+    {
       prompt << boost::format(tr("Staking %s for %u blocks a total fee of %s.")) %
-        print_money(total_sent) %
-        locked_blocks %
-        print_money(total_fee);
+        print_money(total_sent) % locked_blocks % print_money(total_fee);
     }
     std::string accepted = input_line(prompt.str(), true);
-    if (std::cin.eof())
+    if(std::cin.eof())
       return true;
-    if (!command_line::is_yes(accepted))
+    if(!command_line::is_yes(accepted))
     {
       fail_msg_writer() << tr("transaction cancelled.");
 
