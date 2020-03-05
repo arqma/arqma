@@ -78,7 +78,6 @@ namespace arqmaMQ
         items[1].fd = 0;
         items[1].events = ZMQ_POLLIN;
 
-        std::string quit("QUIT");
 
         while (true) 
         {
@@ -97,6 +96,13 @@ namespace arqmaMQ
                		listener.recv(&envelope1);
                		block_hash = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
                 	LOG_PRINT_L1("received from blockchain " <<  block_hash);
+                    for(auto &remote : remotes)
+                    {
+		    			std::string response = handler.handle(remote.second);
+                    	LOG_PRINT_L1("sending client " << remote.first << " " << response);
+                    	s_sendmore(listener, remote.first);
+                	    s_send(listener, response);
+                    }
 				}
 				else 
 				{
@@ -104,16 +110,19 @@ namespace arqmaMQ
                		listener.recv(&envelope1);
                		std::string request = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
                 	LOG_PRINT_L1("received from client " <<  request);
-            	    remotes.insert(std::pair<std::string, std::string>(std::move(remote_identifier), std::move(request)));
+                    if (request.compare(EVICT) == 0)
+                    {
+                        remotes.erase(remote_identifier);
+                    }
+                    else
+                    {
+                        std::string response = handler.handle(request);
+                        LOG_PRINT_L1("sending client " << remote_identifier << " " << response);
+                        s_sendmore(listener, remote_identifier);
+                        s_send(listener, response);
+            	        remotes.insert(std::pair<std::string, std::string>(std::move(remote_identifier), std::move(request)));
+                    }
 				}
-				//TODO: iterate list of <id, command>
-                for(auto &remote : remotes)
-                {
-					std::string response = handler.handle(remote.second); //handler.handle("{\"jsonrpc\": \"2.0\", \"id\" : \"1\", \"method\" : \"get_info\", \"params\": {}}");
-                	LOG_PRINT_L1("sending client " << remote.first << " " << response);
-                	s_sendmore(listener, remote.first);
-                	s_send(listener, response);
-                }
             }
 
 
@@ -124,7 +133,7 @@ namespace arqmaMQ
                 zmq::message_t envelope;
                 subscriber.recv(&envelope);
                 std::string stop = std::string(static_cast<char*>(envelope.data()), envelope.size());
-                if (stop == quit) 
+                if (stop == QUIT) 
                 {
                     LOG_PRINT_L1("closing thread");
                     break;

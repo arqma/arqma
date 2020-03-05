@@ -21,6 +21,8 @@ using namespace rpc;
 
 
 namespace arqmaMQ {
+    constexpr auto QUIT = "QUIT";
+    constexpr auto EVICT = "EVICT";
 
     class ArqmaNotifier: public INotifier {
         public:
