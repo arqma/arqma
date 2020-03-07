@@ -492,13 +492,19 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
       return false;
   }
  try {
-   producer.setsockopt(ZMQ_IDENTITY, "block", 5);
-   producer.connect("tcp://0.0.0.0:3000"); //"inproc://daemon");
-   MINFO("Blockchain zmq producer binding");
+    if (zmq_enabled)
+    {
+      producer.setsockopt(ZMQ_IDENTITY, "block", 5);
+      std::string bind_address = "tcp://";
+      bind_address.append(zmq_ip).append(":").append(zmq_port);
+      LOG_PRINT_L1("Blockchain::" << bind_address);
+      producer.connect(bind_address);
+      MINFO("Blockchain zmq producer binding");
+    }
  }
  catch( const std::exception &e)
  {
-   MERROR("Failed to construct arqma notifier");
+   MERROR(std::string("Failed to construct arqma notifier ") + e.what());
  }
   return true;
 }
@@ -584,8 +590,12 @@ bool Blockchain::deinit()
 
   try
   {
-    zmq_close(&producer);
-    zmq_term(&context);
+    if (zmq_enabled)
+    {
+      LOG_PRINT_L1("closing zmq.... ");
+      zmq_close(&producer);
+      zmq_term(&context);
+    }
   }
   catch (const std::exception& e)
   {
@@ -3997,15 +4007,17 @@ leave:
 
 
   try {
-    std::string hex = epee::string_tools::pod_to_hex(id);
-//    producer.send(create_message(std::move("block")), ZMQ_SNDMORE);
-    producer.send(create_message(std::move("")), ZMQ_SNDMORE);
-//	std::cout << "from the block " << hex << std::endl;
-  	producer.send(create_message(std::move(hex)), 0);
+    if (zmq_enabled)
+    {
+      std::string hex = epee::string_tools::pod_to_hex(id);
+      LOG_PRINT_L1("blockchain sending hash: " <<  hex);
+      producer.send(create_message(std::move("")), ZMQ_SNDMORE);
+  	  producer.send(create_message(std::move(hex)), 0);
+    }
   }
   catch( const std::exception &e)
   {
-    MERROR("Failed to construct arqma notifier");
+    MERROR(std::string("Failed to construct arqma block producer") + e.what());
   }
 
   std::shared_ptr<tools::Notify> block_notify = m_block_notify;

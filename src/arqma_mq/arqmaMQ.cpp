@@ -38,10 +38,7 @@ namespace arqmaMQ
 
 
     ArqmaNotifier::ArqmaNotifier(DaemonHandler& h): handler(h)
-    {
-        producer.bind("inproc://backend");
-        proxy_thread = std::thread{&ArqmaNotifier::proxy_loop, this};
-    }
+    {}
 
     ArqmaNotifier::~ArqmaNotifier()
     {
@@ -50,6 +47,63 @@ namespace arqmaMQ
         zmq_close(&producer);
         zmq_close(&subscriber);
         zmq_term(&context);
+    }
+
+    void ArqmaNotifier::run()
+    {
+        producer.bind("inproc://backend");
+        proxy_thread = std::thread{&ArqmaNotifier::proxy_loop, this};
+    }
+
+    bool ArqmaNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port)
+    {
+/*
+        if(!context)
+        {
+            MERROR("ZMQ Server is already shutdowned");
+            return false;
+        }
+*/
+/*
+        rep_socket.reset(zmq_socket(context.get(), ZMQ_REP));
+        if(!rep_socket)
+        {
+            ARQMA_LOG_ZMQ_ERROR("ZMQ Server socket create failed");
+            return false;
+        }
+
+        if(zmq_setsockopt(rep_socket.get(), ZMQ_MAXMSGSIZE, std::addressof(max_message_size), sizeof(max_message_size)) != 0)
+        {
+            ARQMA_LOG_ZMQ_ERROR("Failed to set maximum incoming message size");
+            return false;
+        }
+*/
+/*
+        static constexpr const int linger_value = std::chrono::milliseconds{linger_timeout}.count();
+        if (zmq_setsockopt(rep_socket.get(), ZMQ_LINGER, std::addressof(linger_value), sizeof(linger_value)) != 0)
+        {
+            ARQMA_LOG_ZMQ_ERROR("Failed to set linger timeout");
+            return false;
+        }
+*/
+
+        if(address.empty())
+            address = "*";
+        if(port.empty())
+            port = "*";
+
+        bind_address.append(address.data(), address.size());
+        bind_address += ":";
+        bind_address.append(port.data(), port.size());
+
+/*
+        if(zmq_bind(rep_socket.get(), bind_address.c_str()) < 0)
+        {
+            ARQMA_LOG_ZMQ_ERROR("ZMQ Server bind failed");
+            return false;
+        }
+*/
+        return true;
     }
 
     zmq::message_t ArqmaNotifier::create_message(std::string &&data)
@@ -68,7 +122,7 @@ namespace arqmaMQ
     void ArqmaNotifier::proxy_loop()
     {
         subscriber.connect("inproc://backend");
-        listener.bind("tcp://*:3000");
+        listener.bind(bind_address);
 
         zmq::pollitem_t items[2];
         items[0].socket = (void*)subscriber;

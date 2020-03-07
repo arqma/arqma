@@ -7,7 +7,7 @@
 #include <map>
 #include <iterator>
 #include "INotifier.h"
-
+#include <boost/utility/string_ref.hpp>
 
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 
@@ -33,6 +33,8 @@ namespace arqmaMQ {
             ArqmaNotifier(ArqmaNotifier&&) = delete;
             ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
             void notify(std::string &&data);
+            bool addTCPSocket(boost::string_ref address, boost::string_ref port);
+            void run();
         private:
             std::thread proxy_thread;
 			DaemonHandler& handler;
@@ -43,6 +45,7 @@ namespace arqmaMQ {
             zmq::message_t create_message(std::string &&data);
             void proxy_loop();
             std::map<std::string, std::string> remotes;
+            std::string bind_address = "tcp://";
     };
 }
 

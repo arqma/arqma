@@ -201,7 +201,7 @@ namespace config
    uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
    uint16_t const P2P_DEFAULT_PORT = 19993;
    uint16_t const RPC_DEFAULT_PORT = 19994;
-   uint16_t const ZMQ_RPC_DEFAULT_PORT = 19995;
+   uint16_t const ZMQ_DEFAULT_PORT = 19995;
    boost::uuids::uuid const NETWORK_ID = { {
        0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
      } }; // Bender's nightmare
@@ -215,7 +215,7 @@ namespace config
      uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x524a; // Wallet prefix: ats... // decimal prefix: 21066
      uint16_t const P2P_DEFAULT_PORT = 29993;
      uint16_t const RPC_DEFAULT_PORT = 29994;
-     uint16_t const ZMQ_RPC_DEFAULT_PORT = 29995;
+     uint16_t const ZMQ_DEFAULT_PORT = 29995;
      boost::uuids::uuid const NETWORK_ID = { {
          0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
        } }; // Bender's daydream
@@ -228,7 +228,7 @@ namespace config
      uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1d84ca; // Wallet prefix: ass... // decimal prefix: 1934538
      uint16_t const P2P_DEFAULT_PORT = 39993;
      uint16_t const RPC_DEFAULT_PORT = 39994;
-     uint16_t const ZMQ_RPC_DEFAULT_PORT = 39995;
+     uint16_t const ZMQ_DEFAULT_PORT = 39995;
      boost::uuids::uuid const NETWORK_ID = { {
          0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
        } }; // Bender's daydream
@@ -276,7 +276,7 @@ namespace cryptonote
       uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
       uint16_t const P2P_DEFAULT_PORT;
       uint16_t const RPC_DEFAULT_PORT;
-      uint16_t const ZMQ_RPC_DEFAULT_PORT;
+      uint16_t const ZMQ_DEFAULT_PORT;
       boost::uuids::uuid const NETWORK_ID;
       std::string const GENESIS_TX;
       uint32_t const GENESIS_NONCE;
@@ -289,7 +289,7 @@ namespace cryptonote
         ::config::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
         ::config::P2P_DEFAULT_PORT,
         ::config::RPC_DEFAULT_PORT,
-        ::config::ZMQ_RPC_DEFAULT_PORT,
+        ::config::ZMQ_DEFAULT_PORT,
         ::config::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE
@@ -300,7 +300,7 @@ namespace cryptonote
         ::config::testnet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
         ::config::testnet::P2P_DEFAULT_PORT,
         ::config::testnet::RPC_DEFAULT_PORT,
-        ::config::testnet::ZMQ_RPC_DEFAULT_PORT,
+        ::config::testnet::ZMQ_DEFAULT_PORT,
         ::config::testnet::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE
@@ -311,7 +311,7 @@ namespace cryptonote
         ::config::stagenet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
         ::config::stagenet::P2P_DEFAULT_PORT,
         ::config::stagenet::RPC_DEFAULT_PORT,
-        ::config::stagenet::ZMQ_RPC_DEFAULT_PORT,
+        ::config::stagenet::ZMQ_DEFAULT_PORT,
         ::config::stagenet::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE

@@ -56,7 +56,7 @@ using namespace arqmaMQ;
 #include "ringct/rctSigs.h"
 #include "common/notify.h"
 #include "version.h"
-
+#include "daemon/command_line_args.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
@@ -604,7 +604,16 @@ namespace cryptonote
       MERROR("Failed to parse block notify spec");
     }
 
-
+    try
+    {
+      m_blockchain_storage.set_zmq_options(command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip),
+                                           command_line::get_arg(vm, daemon_args::arg_zmq_bind_port),
+                                           command_line::get_arg(vm, daemon_args::arg_zmq_enabled));
+    }
+    catch (const std::exception &e)
+    {
+      MERROR("Failed to parse zmq options to blockchain");
+    }
 
     try
     {
