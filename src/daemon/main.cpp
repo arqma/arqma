@@ -143,6 +143,7 @@ int main(int argc, char const * argv[])
       command_line::add_arg(core_settings, daemon_args::arg_zmq_bind_ip);
       command_line::add_arg(core_settings, daemon_args::arg_zmq_bind_port);
       command_line::add_arg(core_settings, daemon_args::arg_zmq_enabled);
+      command_line::add_arg(core_settings, daemon_args::arg_zmq_max_clients);
 
       daemonizer::init_options(hidden_options, visible_options);
       daemonize::t_executor::init_options(core_settings);

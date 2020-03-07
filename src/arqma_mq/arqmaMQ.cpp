@@ -55,7 +55,7 @@ namespace arqmaMQ
         proxy_thread = std::thread{&ArqmaNotifier::proxy_loop, this};
     }
 
-    bool ArqmaNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port)
+    bool ArqmaNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t clients)
     {
 /*
         if(!context)
@@ -95,6 +95,7 @@ namespace arqmaMQ
         bind_address.append(address.data(), address.size());
         bind_address += ":";
         bind_address.append(port.data(), port.size());
+        max_clients = clients;
 
 /*
         if(zmq_bind(rep_socket.get(), bind_address.c_str()) < 0)

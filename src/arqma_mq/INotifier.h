@@ -12,7 +12,7 @@ namespace arqmaMQ {
     class INotifier {
         public:
             virtual void notify(std::string &&data) = 0;
-            virtual bool addTCPSocket(boost::string_ref address, boost::string_ref port) = 0;
+            virtual bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t maxclients) = 0;
             virtual void run() = 0;
     };
 }

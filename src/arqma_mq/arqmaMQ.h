@@ -33,7 +33,7 @@ namespace arqmaMQ {
             ArqmaNotifier(ArqmaNotifier&&) = delete;
             ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
             void notify(std::string &&data);
-            bool addTCPSocket(boost::string_ref address, boost::string_ref port);
+            bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t max_clients);
             void run();
         private:
             std::thread proxy_thread;
@@ -46,6 +46,7 @@ namespace arqmaMQ {
             void proxy_loop();
             std::map<std::string, std::string> remotes;
             std::string bind_address = "tcp://";
+            uint16_t max_clients = 2;
     };
 }
 

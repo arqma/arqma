@@ -103,9 +103,10 @@ t_daemon::t_daemon(
   )
   : mp_internals{new t_internals{vm}}, public_rpc_port(public_rpc_port)
 {
-  zmq_bind_port = command_line::get_arg(vm, daemon_args::arg_zmq_bind_port);
-  zmq_bind_address = command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip);
   zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled);
+  zmq_bind_address = command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip);
+  zmq_bind_port = command_line::get_arg(vm, daemon_args::arg_zmq_bind_port);
+  zmq_max_clients = command_line::get_arg(vm, daemon_args::arg_zmq_max_clients);
 }
 
 t_daemon::~t_daemon() = default;
@@ -176,7 +177,7 @@ bool t_daemon::run(bool interactive)
 //    {
       MINFO("Starting ZMQ server...");
 	    arqmaMQ::ArqmaNotifier arqmaNotifier{rpc_daemon_handler};
-        if (!arqmaNotifier.addTCPSocket(zmq_bind_address, zmq_bind_port))
+        if (!arqmaNotifier.addTCPSocket(zmq_bind_address, zmq_bind_port, zmq_max_clients))
         {
             LOG_ERROR(std::string("Failed to add TCP Socket (") + zmq_bind_address
                 + ":" + zmq_bind_port + ") to ZMQ Server");

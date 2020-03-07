@@ -48,6 +48,7 @@ private:
   std::string zmq_bind_address;
   std::string zmq_bind_port;
   bool zmq_enabled;
+  uint16_t zmq_max_clients;
 public:
   t_daemon(
       boost::program_options::variables_map const & vm, uint16_t public_rpc_port = 0

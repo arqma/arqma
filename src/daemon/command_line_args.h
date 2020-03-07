@@ -109,11 +109,16 @@ namespace daemon_args
   , false
   };
 
+  const command_line::arg_descriptor<uint16_t> arg_zmq_max_clients = {
+    "zmq-max_clients"
+  , "Maximum ZMQ Client Connections"
+  , 2
+  };
 
   const command_line::arg_descriptor<std::string> arg_zmq_bind_ip = {
     "zmq-bind-ip"
   , "IP for ZMQ server to listen on"
-  , "127.0.0.1"
+  , "0.0.0.0"
   };
 
   const command_line::arg_descriptor<std::string, false, true, 2> arg_zmq_bind_port = {
