@@ -123,8 +123,9 @@ namespace arqmaMQ
     void ArqmaNotifier::proxy_loop()
     {
         subscriber.connect("inproc://backend");
+        listener.setsockopt<int>(ZMQ_ROUTER_HANDOVER, 1);
+        listener.setsockopt<int>(ZMQ_ROUTER_MANDATORY, 1);
         listener.bind(bind_address);
-
         zmq::pollitem_t items[2];
         items[0].socket = (void*)subscriber;
         items[0].fd = 0;
@@ -153,10 +154,16 @@ namespace arqmaMQ
                 	LOG_PRINT_L1("received from blockchain " <<  block_hash);
                     for(auto &remote : remotes)
                     {
+                        std::cout << "sending " << remote.first << std::endl;
 		    			std::string response = handler.handle(remote.second);
                     	LOG_PRINT_L1("sending client " << remote.first << " " << response);
                     	s_sendmore(listener, remote.first);
-                	    s_send(listener, response);
+                        int rc = s_send(listener, response, ZMQ_DONTWAIT);
+                        if (rc == -1 && zmq_errno() == EAGAIN)
+                        {
+                            std::cout << "removing " << remote.first << std::endl;
+                            remotes.erase(remote.first);
+                        }
                     }
 				}
 				else 
@@ -174,8 +181,9 @@ namespace arqmaMQ
                         std::string response = handler.handle(request);
                         LOG_PRINT_L1("sending client " << remote_identifier << " " << response);
                         s_sendmore(listener, remote_identifier);
-                        s_send(listener, response);
-            	        remotes.insert(std::pair<std::string, std::string>(std::move(remote_identifier), std::move(request)));
+                        s_send(listener, response, ZMQ_DONTWAIT);
+                        remotes.add(std::move(remote_identifier), std::move(request));
+            	        //remotes.insert(std::pair<std::string, std::string>(std::move(remote_identifier), std::move(request)));
                     }
 				}
             }
