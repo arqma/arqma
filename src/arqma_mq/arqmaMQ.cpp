@@ -52,6 +52,7 @@ using namespace epee;
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "daemon.zmq"
 
+/*
 namespace cryptonote
 {
   void arqma_zmq_server::init_options(boost::program_options::options_description& desc)
@@ -76,7 +77,7 @@ namespace cryptonote
     m_net_server.set_threads_prefix("ZMQ");
   }
 } // namespace cryptonote
-
+*/
 namespace arqmaMQ 
 {
     extern "C" void message_buffer_destroy(void*, void* hint) {

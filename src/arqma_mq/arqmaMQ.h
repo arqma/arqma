@@ -110,6 +110,7 @@ namespace arqmaMQ {
             ClientMap<std::string, std::string> remotes;
             std::string bind_address = "tcp://";
             uint16_t max_clients = 2;
+            bool m_enabled = false;
     };
 }
 
