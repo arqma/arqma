@@ -857,6 +857,19 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
 
   template<class t_protocol_handler>
+  void connection<t_protocol_handler>::setZmqStation()
+  {
+    m_connection_type = e_connection_type_ZMQ;
+    MDEBUG("set m_connection_type = ZMQ ");
+  }
+
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::speed_limit_is_enabled() const
+  {
+    return m_connection_type != e_connection_type_ZMQ;
+  }
+
+  template<class t_protocol_handler>
   bool connection<t_protocol_handler>::speed_limit_is_enabled() const {
 		return m_connection_type != e_connection_type_RPC ;
 	}
@@ -912,6 +925,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   {
     server_type_map["NET"] = e_connection_type_NET;
     server_type_map["RPC"] = e_connection_type_RPC;
+    server_type_map["ZMQ"] = e_connection_type_ZMQ;
     server_type_map["P2P"] = e_connection_type_P2P;
   }
   //---------------------------------------------------------------------------------

@@ -192,7 +192,8 @@ namespace net_utils
     std::string m_host;
 
 	public:
-			void setRpcStation();
+	  void setRpcStation();
+      void setZmqStation();
   };
 
 

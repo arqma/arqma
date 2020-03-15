@@ -608,6 +608,7 @@ namespace cryptonote
     {
       m_blockchain_storage.set_zmq_options(command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip),
                                            command_line::get_arg(vm, daemon_args::arg_zmq_bind_port),
+                                           command_line::get_arg(vm, daemon_args::arg_zmq_max_clients),
                                            command_line::get_arg(vm, daemon_args::arg_zmq_enabled));
     }
     catch (const std::exception &e)

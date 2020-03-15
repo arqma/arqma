@@ -1,5 +1,81 @@
+// Copyright (c)2020, The Arqma Network
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification, are
+// permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this list of
+//    conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other
+//    materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors may be
+//    used to endorse or promote products derived from this software without specific
+//    prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
+// THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Parts of this file are copyright (c) 2014-2019 The Monero Project
+// Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
+
 #include "arqmaMQ.h"
 
+#include "arqmaMQ.h"
+
+#include <cstdint>
+#include <system_error>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/asio/ip/address.hpp>
+#include <boost/preprocessor/stringize.hpp>
+#include "include_base_utils.h"
+#include "string_tools.h"
+using namespace epee;
+
+#include "common/command_line.h"
+#include "common/util.h"
+#include "int-util.h"
+#include "p2p/net_node.h"
+#include "version.h"
+
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "daemon.zmq"
+
+namespace cryptonote
+{
+  void arqma_zmq_server::init_options(boost::program_options::options_description& desc)
+  {
+    command_line::add_arg(desc, arg_zmq_enable);
+    command_line::add_arg(desc, arg_zmq_bind_ip);
+    command_line::add_arg(desc, arg_zmq_bind_port);
+    command_line::add_arg(desc, arg_zmq_max_clients);
+  }
+  //-
+  arqma_zmq_server::arqma_zmq_server(
+      core& cr
+    , nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>& p2p
+    )
+    : m_core(cr)
+    , m_p2p(p2p)
+  {}
+  //-
+  bool arqma_zmq_server::init(const boost::program_options::variables_map& vm, const bool enabled)
+  {
+    m_enabled = enabled;
+    m_net_server.set_threads_prefix("ZMQ");
+  }
+} // namespace cryptonote
 
 namespace arqmaMQ 
 {
@@ -57,53 +133,18 @@ namespace arqmaMQ
 
     bool ArqmaNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t clients)
     {
-/*
-        if(!context)
-        {
-            MERROR("ZMQ Server is already shutdowned");
-            return false;
-        }
-*/
-/*
-        rep_socket.reset(zmq_socket(context.get(), ZMQ_REP));
-        if(!rep_socket)
-        {
-            ARQMA_LOG_ZMQ_ERROR("ZMQ Server socket create failed");
-            return false;
-        }
-
-        if(zmq_setsockopt(rep_socket.get(), ZMQ_MAXMSGSIZE, std::addressof(max_message_size), sizeof(max_message_size)) != 0)
-        {
-            ARQMA_LOG_ZMQ_ERROR("Failed to set maximum incoming message size");
-            return false;
-        }
-*/
-/*
-        static constexpr const int linger_value = std::chrono::milliseconds{linger_timeout}.count();
-        if (zmq_setsockopt(rep_socket.get(), ZMQ_LINGER, std::addressof(linger_value), sizeof(linger_value)) != 0)
-        {
-            ARQMA_LOG_ZMQ_ERROR("Failed to set linger timeout");
-            return false;
-        }
-*/
-
         if(address.empty())
             address = "*";
         if(port.empty())
             port = "*";
 
+        //std::string bind_address = "tcp://";
         bind_address.append(address.data(), address.size());
         bind_address += ":";
         bind_address.append(port.data(), port.size());
+
         max_clients = clients;
 
-/*
-        if(zmq_bind(rep_socket.get(), bind_address.c_str()) < 0)
-        {
-            ARQMA_LOG_ZMQ_ERROR("ZMQ Server bind failed");
-            return false;
-        }
-*/
         return true;
     }
 

@@ -105,20 +105,20 @@ namespace daemon_args
 
   const command_line::arg_descriptor<bool> arg_zmq_enabled = {
     "zmq-enabled"
-  , "Enable ZMQ server"
+  , "Enable Arqma ZMQ server"
   , false
   };
 
   const command_line::arg_descriptor<uint16_t> arg_zmq_max_clients = {
     "zmq-max_clients"
-  , "Maximum ZMQ Client Connections"
+  , "Maximum ZMQ Client Connections Allowed"
   , 2
   };
 
   const command_line::arg_descriptor<std::string> arg_zmq_bind_ip = {
     "zmq-bind-ip"
-  , "IP for ZMQ server to listen on"
-  , "0.0.0.0"
+  , "IP Address for Arqma ZMQ server to bind on"
+  , "127.0.0.1"
   };
 
   const command_line::arg_descriptor<std::string, false, true, 2> arg_zmq_bind_port = {

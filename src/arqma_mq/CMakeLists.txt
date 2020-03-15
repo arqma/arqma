@@ -1,4 +1,4 @@
-# Copyright (c) 2019, The Arqma Network
+# Copyright (c) 2020, The Arqma Network
 #
 # All rights reserved.
 #
@@ -25,24 +25,37 @@
 # INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Parts of this file are copyright (c) 2014-2019 The Monero Project
+# Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 set(arqma_mq_sources
   arqmaMQ.cpp)
 
-set(arqma_mq_headers
-  INotifier.h
-  arqmaMQ.h)
+set(arqma_mq_headers)
 
-set(arqma_mq_private_headers)
+set(arqma_mq_private_headers
+    arqmaMQ.h
+    INotifier.h)
 
 arqma_private_headers(arqma_mq
   ${arqma_mq_private_headers})
+
 arqma_add_library(arqma_mq
   ${arqma_mq_sources}
   ${arqma_mq_headers}
   ${arqma_mq_private_headers})
+
 target_link_libraries(arqma_mq
-  PUBLIC
-  PRIVATE
-    ${EXTRA_LIBRARIES}
-    ${ZMQ_LIB})
+  LINK_PRIVATE
+    common
+    epee
+    net
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${ZMQ_LIB}
+    ${EXTRA_LIBRARIES})
+
+add_dependencies(arqma_mq
+  version)
+
