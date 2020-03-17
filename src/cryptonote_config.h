@@ -75,7 +75,6 @@
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
-
 #define DIFFICULTY_TARGET_V3                            DIFFICULTY_TARGET_V2
 #define DIFFICULTY_TARGET_V2                            240  // seconds
 #define DIFFICULTY_TARGET_V1                            120  // seconds - before first fork
@@ -102,7 +101,6 @@
 #define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V16           11
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V16          270
 #define DIFFICULTY_BLOCKS_COUNT_V16                     (DIFFICULTY_WINDOW_V16 + 1)
-
 
 #define DIFFICULTY_BLOCKS_COUNT_V3                      (DIFFICULTY_WINDOW_V3 + 1)
 #define DIFFICULTY_BLOCKS_COUNT_V2                      (DIFFICULTY_WINDOW_V2 + 1) // added to make N=N
@@ -198,6 +196,10 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (86400 * 14) // (seconds_per_day times days)
 #define MAX_NUMBER_OF_CONTRIBUTORS                      4
 #define MIN_STAKE_SHARE                                 (STAKING_SHARE_PARTS / MAX_NUMBER_OF_CONTRIBUTORS)
+
+static_assert(STAKING_SHARE_PARTS % MAX_NUMBER_OF_CONTRIBUTORS == 0, "Use a multiple of four, so that it divides easily by max number of contributors.");
+static_assert(STAKING_SHARE_PARTS % 2 == 0, "Use a multiple of two, so that it divides easily by two contributors.");
+static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it divides easily by three contributors.");
 
 #define UPTIME_PROOF_BUFFER_IN_SECONDS                  (300)
 #define UPTIME_PROOF_FREQUENCY_IN_SECONDS               (3600)
