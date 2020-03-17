@@ -242,8 +242,8 @@ namespace
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
   const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
-  const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount>");
-  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <fractions1> [<address2> <fractions2> [...]]] <expiration timestamp> <pubkey> <signature> <amount>");
+  const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <address> <amount>");
+  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] <operator cut> <address1> <contribution %> [<address2> <contribution %> [...]] <expiration timestamp> <pubkey> <signature> <amount>");
 
   std::string input_line(const std::string& prompt, bool yesno = false)
   {
@@ -5821,11 +5821,11 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
   if(local_args.size() < 4)
   {
-    fail_msg_writer() << tr("Usage: register_service_node [index=<N1>[,<N2>,...]] [priority] [<address1> <contribution %> [<address2> <contribution %> [...]]] <amount> <expiration timestamp> <service node pubkey> <signature> | where <contribution %> '1' is 100%");
+    fail_msg_writer() << tr("Usage: register_service_node [index=<N1>[,<N2>,...]] [priority] <operator cut> <address1> <contribution %> [<address2> <contribution %> [...]] <amount> <expiration timestamp> <service node pubkey> <signature> | where <contribution %> '1' is 100%");
     fail_msg_writer() << tr("");
     fail_msg_writer() << tr("Prepare this command with the service node using:");
     fail_msg_writer() << tr("");
-    fail_msg_writer() << tr("./arqmad --prepare-registration <address> <contribution %> [<address2> <contribution %> [...]]] <initial contribution amount>");
+    fail_msg_writer() << tr("./arqmad --prepare-registration <operator cut> <address> <contribution %> [<address2> <contribution %> [...]] <initial contribution amount>");
     fail_msg_writer() << tr("");
     fail_msg_writer() << tr("This command must be run from the daemon that will be acting as a Service Node");
     return true;
@@ -5834,8 +5834,9 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
   std::vector<std::string> address_portions_args(local_args.begin(), local_args.begin() + local_args.size() - 3);
   std::vector<cryptonote::account_public_address> addresses;
   std::vector<uint32_t> portions;
+  uint32_t portions_for_operator;
   uint64_t amount;
-  if(!service_nodes::convert_registration_args(m_wallet->nettype(), address_portions_args, addresses, portions, amount))
+  if(!service_nodes::convert_registration_args(m_wallet->nettype(), address_portions_args, addresses, portions, portions_for_operator, amount))
   {
     fail_msg_writer() << tr("Could not convert registration args");
     return true;
@@ -5881,13 +5882,20 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
   add_service_node_pubkey_to_tx_extra(extra, service_node_key);
 
-  if(!add_service_node_register_to_tx_extra(extra, addresses, portions, expiration_timestamp, signature))
+  if(!add_service_node_register_to_tx_extra(extra, addresses, portions_for_operator, portions, expiration_timestamp, signature))
   {
     fail_msg_writer() << tr("failed to add serialize service node registration tx extra");
     return true;
   }
 
-  cryptonote::account_public_address address = m_wallet->get_address();
+  cryptonote::account_public_address address = addresses[0];
+
+  if(!m_wallet->contains_address(address))
+  {
+    fail_msg_writer() << tr("First reserved address for this Registration does not belong to this wallet.");
+    fail_msg_writer() << tr("Service Node Operator must specify an address owned by this wallet for Service Node Registration.");
+    return false;
+  }
 
   add_service_node_contributor_to_tx_extra(extra, address);
 
@@ -6044,7 +6052,7 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
 
   if(local_args.size() < 2)
   {
-    fail_msg_writer() << tr("Usage: stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount>");
+    fail_msg_writer() << tr("Usage: stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <address> <amount>");
     return true;
   }
 
@@ -6055,10 +6063,10 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
     return true;
   }
 
-  uint64_t amount = 0;
-  if (!cryptonote::parse_amount(amount, local_args[1]) || amount == 0)
+  uint64_t amount;
+  if (!cryptonote::parse_amount(amount, local_args[2]) || amount == 0)
   {
-    fail_msg_writer() << tr("amount is wrong: ") << local_args[1] << ", " << tr("expected number from ") << print_money(1) << " to " << print_money(std::numeric_limits<uint64_t>::max());
+    fail_msg_writer() << tr("amount is wrong: ") << local_args[2] << ", " << tr("expected number from ") << print_money(1) << " to " << print_money(std::numeric_limits<uint64_t>::max());
     return true;
   }
 
@@ -6066,7 +6074,26 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
 
   add_service_node_pubkey_to_tx_extra(extra, service_node_key);
 
-  cryptonote::account_public_address address = m_wallet->get_address();
+  cryptonote::address_parse_info info;
+  if(!cryptonote::get_account_address_from_str_or_url(info, m_wallet->nettype(), local_args[1], oa_prompter))
+  {
+    fail_msg_writer() << tr("failed to parse address");
+    return true;
+  }
+
+  if(info.has_payment_id)
+  {
+    fail_msg_writer() << tr("Do not use payment ids for staking!!");
+    return true;
+  }
+
+  cryptonote::account_public_address address = info.address;
+
+  if(!m_wallet->contains_address(address))
+  {
+    fail_msg_writer() << tr("The specified address does not belong to this wallet.");
+    return true;
+  }
 
   add_service_node_contributor_to_tx_extra(extra, address);
 
