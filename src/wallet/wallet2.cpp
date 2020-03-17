@@ -12609,5 +12609,17 @@ uint64_t wallet2::get_bytes_received() const
 {
   return m_http_client.get_bytes_received();
 }
+//----------------------------------------------------------------------------------------------------
+bool wallet2::contains_address(const cryptonote::account_public_address& address) const
+{
+  size_t accounts = get_num_subaddress_accounts() + m_subaddress_lookahead_major;
+  for(uint32_t i = 0; i < accounts; i++)
+  {
+    size_t subaddresses = get_num_subaddresses(i) + m_subaddress_lookahead_minor;
+    for(uint32_t j = 0; j < subaddresses; j++)
+      if(get_subaddress({i, j}) == address)
+        return free;
+  }
+}
 
 }
