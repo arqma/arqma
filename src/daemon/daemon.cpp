@@ -171,12 +171,16 @@ bool t_daemon::run(bool interactive)
     }
 
     cryptonote::rpc::DaemonHandler rpc_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
+    arqmaMQ::ArqmaNotifier arqmaNotifier{rpc_daemon_handler};
 
     if(command_line::get_arg(m_vm, daemon_args::arg_zmq_enabled))
     {
       auto zmq = command_line::get_arg(m_vm, daemon_args::arg_command);
-      if(zmq.size())
-      {
+//std::cout << "yes" << zmq.size() << std::endl;
+//      if(zmq.size())
+//      {
+//std::cout << "yes" << zmq.size() << std::endl;
+
         auto zmq_ip_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_ip);
         auto zmq_port_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_port);
         uint32_t zmq_ip;
@@ -193,10 +197,10 @@ bool t_daemon::run(bool interactive)
           std::cerr << "Invalid ZMQ Port given: " << zmq_port_str << std::endl;
           return false;
         }
+//std::cout << "yes" << std::endl;
 
         MINFO("Starting Arqma ZMQ server...");
 
-        arqmaMQ::ArqmaNotifier arqmaNotifier{rpc_daemon_handler};
 
         if(!arqmaNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
         {
@@ -207,7 +211,7 @@ bool t_daemon::run(bool interactive)
         arqmaNotifier.run();
 
         MINFO(std::string("ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
-      }
+//	  }
     }
 
     if (public_rpc_port > 0)
@@ -221,7 +225,8 @@ bool t_daemon::run(bool interactive)
     if (rpc_commands)
       rpc_commands->stop_handling();
 
- //   zmq_server.stop();
+	if(command_line::get_arg(m_vm, daemon_args::arg_zmq_enabled))
+	    arqmaNotifier.stop();
 
     for(auto& rpc : mp_internals->rpcs)
       rpc->stop();

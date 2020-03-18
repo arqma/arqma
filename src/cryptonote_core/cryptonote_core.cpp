@@ -604,17 +604,37 @@ namespace cryptonote
       MERROR("Failed to parse block notify spec");
     }
 
-    try
-    {
-      m_blockchain_storage.set_zmq_options(command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip),
-                                           command_line::get_arg(vm, daemon_args::arg_zmq_bind_port),
-                                           command_line::get_arg(vm, daemon_args::arg_zmq_max_clients),
-                                           command_line::get_arg(vm, daemon_args::arg_zmq_enabled));
-    }
-    catch (const std::exception &e)
-    {
-      MERROR("Failed to parse zmq options to blockchain");
-    }
+	if(auto zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled))
+	{
+      try
+      {
+		auto zmq_ip_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip);
+        auto zmq_port_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_port);
+        uint32_t zmq_ip;
+        uint16_t zmq_port;
+
+        uint16_t zmq_max_clients = command_line::get_arg(vm, daemon_args::arg_zmq_max_clients);
+        if(!epee::string_tools::get_ip_int32_from_string(zmq_ip, zmq_ip_str))
+        {
+          std::cerr << "Invalid ZMQ IP Address given: " << zmq_ip_str << std::endl;
+          return false;
+        }
+        if(!epee::string_tools::get_xtype_from_string(zmq_port, zmq_port_str))
+        {
+          std::cerr << "Invalid ZMQ Port given: " << zmq_port_str << std::endl;
+          return false;
+        }
+
+        m_blockchain_storage.set_zmq_options(zmq_ip_str,
+                                             zmq_port_str,
+                                             zmq_max_clients,
+                                             zmq_enabled);
+      }
+      catch (const std::exception &e)
+      {
+        MERROR("Failed to parse zmq options to blockchain");
+      }
+	}
 
     try
     {

@@ -95,9 +95,9 @@ namespace arqmaMQ {
             ArqmaNotifier& operator=(const ArqmaNotifier&) = delete;
             ArqmaNotifier(ArqmaNotifier&&) = delete;
             ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
-            void notify(std::string &&data);
             bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t max_clients);
             void run();
+			void stop();
         private:
             std::thread proxy_thread;
 			DaemonHandler& handler;

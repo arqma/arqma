@@ -118,13 +118,16 @@ namespace arqmaMQ
     {}
 
     ArqmaNotifier::~ArqmaNotifier()
-    {
-        producer.send(create_message(std::move("QUIT")), 0);
-        proxy_thread.join();
-        zmq_close(&producer);
-        zmq_close(&subscriber);
+    {}
+
+	void ArqmaNotifier::stop()
+	{
+		producer.send(create_message(std::move("QUIT")), 0);
+		proxy_thread.join();
+		zmq_close(&producer);
+		zmq_close(&subscriber);
         zmq_term(&context);
-    }
+	}
 
     void ArqmaNotifier::run()
     {
@@ -139,13 +142,11 @@ namespace arqmaMQ
         if(port.empty())
             port = "*";
 
-        //std::string bind_address = "tcp://";
         bind_address.append(address.data(), address.size());
         bind_address += ":";
         bind_address.append(port.data(), port.size());
 
         max_clients = clients;
-
         return true;
     }
 
@@ -154,13 +155,6 @@ namespace arqmaMQ
         auto *buffer = new std::string(std::move(data));
         return zmq::message_t{&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer};
     };
-
-    void ArqmaNotifier::notify(std::string &&data)
-    {
-        //std::cout << data << std::endl;
-        //producer.send(create_message(std::move("getblocktemplate")), ZMQ_SNDMORE);
-        //producer.send(create_message(std::move(data)), 0);
-    }
 
     void ArqmaNotifier::proxy_loop()
     {
@@ -196,11 +190,10 @@ namespace arqmaMQ
                 	LOG_PRINT_L1("received from blockchain " <<  block_hash);
                     for(auto &remote : remotes)
                     {
-                        std::cout << "sending " << remote.first << std::endl;
 		    			std::string response = handler.handle(remote.second);
                     	LOG_PRINT_L1("sending client " << remote.first << " " << response);
                     	s_sendmore(listener, remote.first);
-                        int rc = s_send(listener, response, ZMQ_DONTWAIT);
+                        int rc = s_send(listener, std::move(response), ZMQ_DONTWAIT);
                         if (rc == -1 && zmq_errno() == EAGAIN)
                         {
                             std::cout << "removing " << remote.first << std::endl;
@@ -234,7 +227,6 @@ namespace arqmaMQ
 
             if (items[0].revents & ZMQ_POLLIN)
             {
-
                 zmq::message_t envelope;
                 subscriber.recv(&envelope);
                 std::string stop = std::string(static_cast<char*>(envelope.data()), envelope.size());
