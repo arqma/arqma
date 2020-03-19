@@ -114,7 +114,7 @@ namespace arqmaMQ
     }
 
 
-    ArqmaNotifier::ArqmaNotifier(DaemonHandler& h): handler(h)
+    ArqmaNotifier::ArqmaNotifier(ZmqHandler& h): handler(h)
     {}
 
     ArqmaNotifier::~ArqmaNotifier()

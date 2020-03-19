@@ -149,6 +149,8 @@ class DaemonHandler : public RpcHandler
 
     bool get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res);
 
+	bool check_core_ready();
+
     cryptonote::core& m_core;
     t_p2p& m_p2p;
 };

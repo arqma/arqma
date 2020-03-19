@@ -48,7 +48,7 @@
 
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 
-#include "rpc/daemon_handler.h"
+#include "zmq_handler.h"
 #include "daemon/command_line_args.h"
 
 #include "rapidjson/stringbuffer.h"
@@ -89,7 +89,7 @@ namespace arqmaMQ {
 
     class ArqmaNotifier: public INotifier {
         public:
-            ArqmaNotifier(DaemonHandler& h);
+            ArqmaNotifier(ZmqHandler& h);
             ~ArqmaNotifier();
             ArqmaNotifier(const ArqmaNotifier&) = delete;
             ArqmaNotifier& operator=(const ArqmaNotifier&) = delete;
@@ -100,7 +100,7 @@ namespace arqmaMQ {
 			void stop();
         private:
             std::thread proxy_thread;
-			DaemonHandler& handler;
+			ZmqHandler& handler;
             zmq::context_t context;
             zmq::socket_t listener{context, ZMQ_ROUTER};
             zmq::socket_t producer{context, ZMQ_PAIR};

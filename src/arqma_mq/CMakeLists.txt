@@ -30,13 +30,15 @@
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 set(arqma_mq_sources
-  arqmaMQ.cpp)
+  arqmaMQ.cpp
+  zmq_handler.cpp)
 
 set(arqma_mq_headers)
 
 set(arqma_mq_private_headers
     arqmaMQ.h
-    INotifier.h)
+    INotifier.h
+	zmq_handler.h)
 
 arqma_private_headers(arqma_mq
   ${arqma_mq_private_headers})
@@ -51,6 +53,9 @@ target_link_libraries(arqma_mq
     common
     epee
     net
+	rpc
+	daemon_messages
+	cryptonote_core
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${ZMQ_LIB}

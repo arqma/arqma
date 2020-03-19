@@ -170,8 +170,9 @@ bool t_daemon::run(bool interactive)
       rpc_commands->start_handling(std::bind(&daemonize::t_daemon::stop_p2p, this));
     }
 
-    cryptonote::rpc::DaemonHandler rpc_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
-    arqmaMQ::ArqmaNotifier arqmaNotifier{rpc_daemon_handler};
+	arqmaMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
+
+    arqmaMQ::ArqmaNotifier arqmaNotifier{zmq_daemon_handler};
 
     if(command_line::get_arg(m_vm, daemon_args::arg_zmq_enabled))
     {
@@ -197,7 +198,6 @@ bool t_daemon::run(bool interactive)
           std::cerr << "Invalid ZMQ Port given: " << zmq_port_str << std::endl;
           return false;
         }
-//std::cout << "yes" << std::endl;
 
         MINFO("Starting Arqma ZMQ server...");
 
