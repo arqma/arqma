@@ -33,7 +33,6 @@
 #include <string>
 #include <iostream>
 
-
 namespace arqmaMQ 
 {
     extern "C" void message_buffer_destroy(void*, void* hint) {
@@ -68,4 +67,11 @@ namespace arqmaMQ
         bool rc = socket.send (message, ZMQ_SNDMORE);
         return (rc);
     }
+
+	inline static zmq::message_t
+	create_message(std::string &&data)
+	{
+		auto *buffer = new std::string(std::move(data));
+		return zmq::message_t(&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer);
+	}
 }

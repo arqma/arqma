@@ -53,7 +53,6 @@
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "utils.hpp"
 
 using namespace cryptonote;
 using namespace rpc;
@@ -68,17 +67,40 @@ namespace arqmaMQ {
     class ClientMap
     {
         public:
-        size_t max_size = 1;
+        size_t max_size = 0;
         std::map<K, V> clients;
-        void add(K key, V value) {
+        bool addRemote(K key, V value) {
             auto it = clients.find(key);
+			bool result = false;
             if ( !(it != clients.end()) && (clients.size() + 1) <= max_size ) {
                 clients.insert( it, std::make_pair(key,value) );
+				result = true;
             }
+			return result;
         }
+
+        bool addRemote(std::pair<K, V> remote) {
+            auto it = clients.find(remote.first);
+			bool result = false;
+            if ( !(it != clients.end()) && (clients.size() + 1) <= max_size ) {
+                clients.insert( it, remote );
+				result = true;
+            }
+			return result;
+        }
+
         void erase(K key) {
             clients.erase(key);
         }
+
+		void erase(typename std::map<K, V>::const_iterator iterator) {
+			clients.erase(iterator);
+		}
+
+		size_t size() {
+			return clients.size();
+		}
+
         typename std::map<K, V>::iterator begin() {return clients.begin();}
         typename std::map<K, V>::iterator end() {return clients.end();}
         typename std::map<K, V>::const_iterator begin() const {return clients.begin();}
@@ -106,11 +128,10 @@ namespace arqmaMQ {
             zmq::socket_t listener{context, ZMQ_ROUTER};
             zmq::socket_t producer{context, ZMQ_PAIR};
             zmq::socket_t subscriber{context, ZMQ_PAIR};
-            zmq::message_t create_message(std::string &&data);
             void proxy_loop();
             ClientMap<std::string, std::string> remotes;
             std::string bind_address = "tcp://";
-            uint16_t max_clients = 2;
+            uint16_t max_clients = 0;
             bool m_enabled = false;
     };
 }

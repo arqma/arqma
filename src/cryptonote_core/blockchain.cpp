@@ -57,6 +57,7 @@
 #include "common/varint.h"
 #include "common/pruning.h"
 
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "blockchain"
 
@@ -4035,11 +4036,13 @@ extern "C" void message_buffer_cleanup(void*, void* hint) {
    delete reinterpret_cast<std::string*>(hint);
 }
 
+
 zmq::message_t Blockchain::create_message(std::string &&data)
 {
   auto *buffer = new std::string(std::move(data));
   return zmq::message_t{&(*buffer)[0], buffer->size(), message_buffer_cleanup, buffer};
 }
+
 
 //------------------------------------------------------------------
 bool Blockchain::prune_blockchain(uint32_t pruning_seed)

@@ -30,6 +30,7 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #include "arqmaMQ.h"
+#include "utils.hpp"
 #include <cstdint>
 #include <system_error>
 
@@ -77,40 +78,6 @@ namespace cryptonote
 */
 namespace arqmaMQ 
 {
-    // extern "C" void message_buffer_destroy(void*, void* hint) {
-    //     delete reinterpret_cast<std::string*>(hint);
-    // }
-
-    // inline static int
-    // s_send(void *socket, const char *string, int flags = 0) {
-    //     int rc;
-    //     zmq_msg_t message;
-    //     zmq_msg_init_size(&message, strlen(string));
-    //     memcpy(zmq_msg_data(&message), string, strlen(string));
-    //     rc = zmq_msg_send(&message, socket, flags);
-    //     assert(-1 != rc);
-    //     zmq_msg_close(&message);
-    //     return (rc);
-    // }
-
-    // inline static bool
-    // s_send (zmq::socket_t & socket, const std::string & string, int flags = 0) {
-
-    //     zmq::message_t message(string.size());
-    //     memcpy (message.data(), string.data(), string.size());
-    //     bool rc = socket.send (message, flags);
-    //     return (rc);
-    // }
-
-    // inline static bool 
-    // s_sendmore (zmq::socket_t & socket, const std::string & string) {
-    //     zmq::message_t message(string.size());
-    //     memcpy (message.data(), string.data(), string.size());
-    //     bool rc = socket.send (message, ZMQ_SNDMORE);
-    //     return (rc);
-    // }
-
-
     ArqmaNotifier::ArqmaNotifier(ZmqHandler& h): handler(h)
     {}
 
@@ -119,7 +86,7 @@ namespace arqmaMQ
 
 	void ArqmaNotifier::stop()
 	{
-		producer.send(create_message(std::move("QUIT")), 0);
+		producer.send(arqmaMQ::create_message(std::move("QUIT")), 0);
 		proxy_thread.join();
 		zmq_close(&producer);
 		zmq_close(&subscriber);
@@ -144,15 +111,9 @@ namespace arqmaMQ
         bind_address.append(port.data(), port.size());
 
         max_clients = clients;
+		remotes.max_size = clients;
         return true;
     }
-
-    zmq::message_t ArqmaNotifier::create_message(std::string &&data)
-    {
-        auto *buffer = new std::string(std::move(data));
-        return zmq::message_t{&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer};
-    };
-
     void ArqmaNotifier::proxy_loop()
     {
         subscriber.connect("inproc://backend");
@@ -178,24 +139,31 @@ namespace arqmaMQ
        	        zmq::message_t envelope1;
            	    listener.recv(&envelope1);
            	 	std::string remote_identifier = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
-           	 	//TODO: record <id, command>
 				if (remote_identifier.compare("block") == 0)
 				{
                		listener.recv(&envelope1);
                		listener.recv(&envelope1);
                		block_hash = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
                 	LOG_PRINT_L1("received from blockchain " <<  block_hash);
-                    for(auto &remote : remotes)
+                    for (auto iterator = remotes.cbegin(); iterator != remotes.cend();)
                     {
-		    			std::string response = handler.handle(remote.second);
-                    	LOG_PRINT_L1("sending client " << remote.first << " " << response);
-                    	s_sendmore(listener, remote.first);
-                        int rc = s_send(listener, std::move(response), ZMQ_DONTWAIT);
-                        if (rc == -1 && zmq_errno() == EAGAIN)
-                        {
-                            std::cout << "removing " << remote.first << std::endl;
-                            remotes.erase(remote.first);
-                        }
+						try
+						{
+		    				std::string response = handler.handle(iterator->second);
+                    		LOG_PRINT_L1("sending client " << iterator->first << " " << response);
+                    		s_sendmore(listener, iterator->first);
+                        	s_send(listener, std::move(response), ZMQ_DONTWAIT);
+							++iterator;
+
+						}
+						catch(const zmq::error_t &error)
+						{
+							if (error.num() == EHOSTUNREACH)
+							{
+    	                        LOG_PRINT_L1("evicting client " << iterator->first);
+	                            remotes.erase(iterator++);
+							}
+						}
                     }
 				}
 				else 
@@ -206,16 +174,19 @@ namespace arqmaMQ
                 	LOG_PRINT_L1("received from client " <<  request);
                     if (request.compare(EVICT) == 0)
                     {
+                        LOG_PRINT_L1("evicting client " << remote_identifier);
                         remotes.erase(remote_identifier);
                     }
                     else
                     {
-                        std::string response = handler.handle(request);
-                        LOG_PRINT_L1("sending client " << remote_identifier << " " << response);
-                        s_sendmore(listener, remote_identifier);
-                        s_send(listener, response, ZMQ_DONTWAIT);
-                        remotes.add(std::move(remote_identifier), std::move(request));
-            	        //remotes.insert(std::pair<std::string, std::string>(std::move(remote_identifier), std::move(request)));
+						std::pair<std::string, std::string> remote(std::move(remote_identifier), std::move(request));
+                        if (remotes.addRemote(remote))
+						{
+	                        std::string response = handler.handle(remote.second);
+    	                    LOG_PRINT_L1("sending client " << remote.first << " " << response);
+							s_sendmore(listener, remote.first);
+    	                    s_send(listener, response, ZMQ_DONTWAIT);
+						}
                     }
 				}
             }
