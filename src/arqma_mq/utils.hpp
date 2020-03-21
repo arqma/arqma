@@ -29,22 +29,43 @@
 // Parts of this file are copyright (c) 2014-2019 The Monero Project
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#pragma once
-
+#include <zmq.hpp>
 #include <string>
-#include <boost/utility/string_ref.hpp>
-#include "cryptonote_basic/cryptonote_basic_impl.h"
-
-using namespace cryptonote;
+#include <iostream>
 
 
-namespace arqmaMQ {
+namespace arqmaMQ 
+{
+    extern "C" void message_buffer_destroy(void*, void* hint) {
+        delete reinterpret_cast<std::string*>(hint);
+    }
 
-    class INotifier {
-        public:
-            virtual bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t maxclients) = 0;
-            virtual void run() = 0;
-            virtual void stop() = 0;
-    };
+    inline static int
+    s_send(void *socket, const char *string, int flags = 0) {
+        int rc;
+        zmq_msg_t message;
+        zmq_msg_init_size(&message, strlen(string));
+        memcpy(zmq_msg_data(&message), string, strlen(string));
+        rc = zmq_msg_send(&message, socket, flags);
+        assert(-1 != rc);
+        zmq_msg_close(&message);
+        return (rc);
+    }
+
+    inline static bool
+    s_send (zmq::socket_t & socket, const std::string & string, int flags = 0) {
+
+        zmq::message_t message(string.size());
+        memcpy (message.data(), string.data(), string.size());
+        bool rc = socket.send (message, flags);
+        return (rc);
+    }
+
+    inline static bool 
+    s_sendmore (zmq::socket_t & socket, const std::string & string) {
+        zmq::message_t message(string.size());
+        memcpy (message.data(), string.data(), string.size());
+        bool rc = socket.send (message, ZMQ_SNDMORE);
+        return (rc);
+    }
 }
-

@@ -77,38 +77,38 @@ namespace cryptonote
 */
 namespace arqmaMQ 
 {
-    extern "C" void message_buffer_destroy(void*, void* hint) {
-        delete reinterpret_cast<std::string*>(hint);
-    }
+    // extern "C" void message_buffer_destroy(void*, void* hint) {
+    //     delete reinterpret_cast<std::string*>(hint);
+    // }
 
-    inline static int
-    s_send(void *socket, const char *string, int flags = 0) {
-        int rc;
-        zmq_msg_t message;
-        zmq_msg_init_size(&message, strlen(string));
-        memcpy(zmq_msg_data(&message), string, strlen(string));
-        rc = zmq_msg_send(&message, socket, flags);
-        assert(-1 != rc);
-        zmq_msg_close(&message);
-        return (rc);
-    }
+    // inline static int
+    // s_send(void *socket, const char *string, int flags = 0) {
+    //     int rc;
+    //     zmq_msg_t message;
+    //     zmq_msg_init_size(&message, strlen(string));
+    //     memcpy(zmq_msg_data(&message), string, strlen(string));
+    //     rc = zmq_msg_send(&message, socket, flags);
+    //     assert(-1 != rc);
+    //     zmq_msg_close(&message);
+    //     return (rc);
+    // }
 
-    inline static bool
-    s_send (zmq::socket_t & socket, const std::string & string, int flags = 0) {
+    // inline static bool
+    // s_send (zmq::socket_t & socket, const std::string & string, int flags = 0) {
 
-        zmq::message_t message(string.size());
-        memcpy (message.data(), string.data(), string.size());
-        bool rc = socket.send (message, flags);
-        return (rc);
-    }
+    //     zmq::message_t message(string.size());
+    //     memcpy (message.data(), string.data(), string.size());
+    //     bool rc = socket.send (message, flags);
+    //     return (rc);
+    // }
 
-    inline static bool 
-    s_sendmore (zmq::socket_t & socket, const std::string & string) {
-        zmq::message_t message(string.size());
-        memcpy (message.data(), string.data(), string.size());
-        bool rc = socket.send (message, ZMQ_SNDMORE);
-        return (rc);
-    }
+    // inline static bool 
+    // s_sendmore (zmq::socket_t & socket, const std::string & string) {
+    //     zmq::message_t message(string.size());
+    //     memcpy (message.data(), string.data(), string.size());
+    //     bool rc = socket.send (message, ZMQ_SNDMORE);
+    //     return (rc);
+    // }
 
 
     ArqmaNotifier::ArqmaNotifier(ZmqHandler& h): handler(h)

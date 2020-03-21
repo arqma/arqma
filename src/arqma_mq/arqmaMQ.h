@@ -53,6 +53,7 @@
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "utils.hpp"
 
 using namespace cryptonote;
 using namespace rpc;
