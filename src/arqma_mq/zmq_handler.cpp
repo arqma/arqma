@@ -539,11 +539,11 @@ namespace arqmaMQ
 
   bool ZmqHandler::check_core_ready()
   {
-	if(!m_p2p.get_payload_object().is_synchronized())
+	if (m_core.get_current_blockchain_height() >= m_core.get_target_blockchain_height())
 	{
-	  return false;
+	  return true;
 	}
-	return true;
+	return false;
   }
 
   void ZmqHandler::handle(const cryptonote::rpc::GetBlockTemplate::Request& req, cryptonote::rpc::GetBlockTemplate::Response& res)
