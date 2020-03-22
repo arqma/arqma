@@ -230,7 +230,7 @@ namespace nodetool
             {
               const epee::net_utils::network_address  &na = p.adr;
               const epee::net_utils::ipv4_network_address &ipv4 = na.as<const epee::net_utils::ipv4_network_address>();
-              local_peerlist.push_back(peerlist_entry_base<network_address_old>({{ipv4.ip(), ipv4.port()}, p.id, p.last_seen, p.pruning_seed, p.rpc_port, p.rpc_credits_per_hash}));
+              local_peerlist.push_back(peerlist_entry_base<network_address_old>({{ipv4.ip(), ipv4.port()}, p.id, p.last_seen, p.pruning_seed, p.rpc_port, p.zmq_port, p.rpc_credits_per_hash}));
             }
             else
               MDEBUG("Not including in legacy peer list: " << p.adr.str());
