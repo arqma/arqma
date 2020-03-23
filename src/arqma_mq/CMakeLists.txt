@@ -38,8 +38,7 @@ set(arqma_mq_headers)
 set(arqma_mq_private_headers
     arqmaMQ.h
     INotifier.h
-	zmq_handler.h
-	utils.hpp)
+	zmq_handler.h)
 
 arqma_private_headers(arqma_mq
   ${arqma_mq_private_headers})

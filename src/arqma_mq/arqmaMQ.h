@@ -133,6 +133,7 @@ namespace arqmaMQ {
             std::string bind_address = "tcp://";
             uint16_t max_clients = 0;
             bool m_enabled = false;
+			zmq::message_t create_message(std::string &&data);
     };
 }
 

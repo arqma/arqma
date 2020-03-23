@@ -30,7 +30,6 @@
 // Parts of this file are copyright (c) 2020-2021 Gary Rusher
 
 #include "arqmaMQ.h"
-#include "utils.hpp"
 #include <cstdint>
 #include <system_error>
 
@@ -76,8 +75,21 @@ namespace cryptonote
   }
 } // namespace cryptonote
 */
+
+
 namespace arqmaMQ 
 {
+
+	 extern "C" void message_buffer_destroy(void*, void* hint) {
+ 		delete reinterpret_cast<std::string*>(hint);
+	}
+
+	zmq::message_t ArqmaNotifier::create_message(std::string &&data)
+	{
+		auto *buffer = new std::string(std::move(data));
+		return zmq::message_t(&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer);
+	}
+
     ArqmaNotifier::ArqmaNotifier(ZmqHandler& h): handler(h)
     {}
 
@@ -86,7 +98,7 @@ namespace arqmaMQ
 
 	void ArqmaNotifier::stop()
 	{
-		producer.send(arqmaMQ::create_message(std::move("QUIT")), 0);
+		producer.send(create_message(std::move("QUIT")), 0);
 		proxy_thread.join();
 		zmq_close(&producer);
 		zmq_close(&subscriber);
@@ -151,8 +163,8 @@ namespace arqmaMQ
 						{
 		    				std::string response = handler.handle(iterator->second);
                     		LOG_PRINT_L1("sending client " << iterator->first << " " << response);
-                    		s_sendmore(listener, iterator->first);
-                        	s_send(listener, std::move(response), ZMQ_DONTWAIT);
+							listener.send(create_message(std::string(iterator->first)), ZMQ_SNDMORE);
+							listener.send(create_message(std::move(response)), ZMQ_DONTWAIT);
 							++iterator;
 
 						}
@@ -184,8 +196,8 @@ namespace arqmaMQ
 						{
 	                        std::string response = handler.handle(remote.second);
     	                    LOG_PRINT_L1("sending client " << remote.first << " " << response);
-							s_sendmore(listener, remote.first);
-    	                    s_send(listener, response, ZMQ_DONTWAIT);
+                            listener.send(create_message(std::string(remote.first)), ZMQ_SNDMORE);
+                            listener.send(create_message(std::move(response)), ZMQ_DONTWAIT);
 						}
                     }
 				}

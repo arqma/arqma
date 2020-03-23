@@ -102,12 +102,7 @@ t_daemon::t_daemon(
     boost::program_options::variables_map const & vm, uint16_t public_rpc_port
   )
   : mp_internals{new t_internals{vm}}, public_rpc_port(public_rpc_port), m_vm(vm)
-{
-//  zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled);
-//  zmq_bind_address = command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip);
-//  zmq_bind_port = command_line::get_arg(vm, daemon_args::arg_zmq_bind_port);
-//  zmq_max_clients = command_line::get_arg(vm, daemon_args::arg_zmq_max_clients);
-}
+{}
 
 t_daemon::~t_daemon() = default;
 
@@ -210,7 +205,7 @@ bool t_daemon::run(bool interactive)
 
         arqmaNotifier.run();
 
-        MINFO(std::string("ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
+        MGINFO_GREEN(std::string("ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
 //	  }
     }
 
@@ -226,7 +221,10 @@ bool t_daemon::run(bool interactive)
       rpc_commands->stop_handling();
 
 	if(command_line::get_arg(m_vm, daemon_args::arg_zmq_enabled))
+	{
+		MGINFO_GREEN(std::string("ZMQ server stopping"));
 	    arqmaNotifier.stop();
+	}
 
     for(auto& rpc : mp_internals->rpcs)
       rpc->stop();
