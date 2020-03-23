@@ -169,45 +169,37 @@ bool t_daemon::run(bool interactive)
 
     arqmaMQ::ArqmaNotifier arqmaNotifier{zmq_daemon_handler};
 
-    if(command_line::get_arg(m_vm, daemon_args::arg_zmq_enabled))
+    auto zmq_enabled  = command_line::get_arg(m_vm, daemon_args::arg_zmq_enabled);
+    if(zmq_enabled)
     {
-      auto zmq = command_line::get_arg(m_vm, daemon_args::arg_command);
-//std::cout << "yes" << zmq.size() << std::endl;
-//      if(zmq.size())
-//      {
-//std::cout << "yes" << zmq.size() << std::endl;
+      auto zmq_ip_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_ip);
+      auto zmq_port_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_port);
+      uint32_t zmq_ip;
+      uint16_t zmq_port;
+      uint16_t zmq_max_clients = command_line::get_arg(m_vm, daemon_args::arg_zmq_max_clients);
+      if(!epee::string_tools::get_ip_int32_from_string(zmq_ip, zmq_ip_str))
+      {
+        std::cerr << "Invalid ZMQ IP Address given: " << zmq_ip_str << std::endl;
+        return false;
+      }
+      if(!epee::string_tools::get_xtype_from_string(zmq_port, zmq_port_str))
+      {
+        std::cerr << "Invalid ZMQ Port given: " << zmq_port_str << std::endl;
+        return false;
+      }
 
-        auto zmq_ip_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_ip);
-        auto zmq_port_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_port);
-        uint32_t zmq_ip;
-        uint16_t zmq_port;
+      MINFO("Starting Arqma ZMQ server...");
 
-        uint16_t zmq_max_clients = command_line::get_arg(m_vm, daemon_args::arg_zmq_max_clients);
-        if(!epee::string_tools::get_ip_int32_from_string(zmq_ip, zmq_ip_str))
-        {
-          std::cerr << "Invalid ZMQ IP Address given: " << zmq_ip_str << std::endl;
-          return false;
-        }
-        if(!epee::string_tools::get_xtype_from_string(zmq_port, zmq_port_str))
-        {
-          std::cerr << "Invalid ZMQ Port given: " << zmq_port_str << std::endl;
-          return false;
-        }
+      if(!arqmaNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
+      {
+        LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to Arqma ZMQ Server");
+        return false;
+      }
 
-        MINFO("Starting Arqma ZMQ server...");
+      arqmaNotifier.run();
 
-
-        if(!arqmaNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
-        {
-          LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to Arqma ZMQ Server");
-          return false;
-        }
-
-        arqmaNotifier.run();
-
-        MGINFO_GREEN(std::string("ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
-//	  }
-    }
+      MGINFO_GREEN(std::string("ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
+	}
 
     if (public_rpc_port > 0)
     {
