@@ -1,18 +1,18 @@
 PACKAGE=qt
-$(package)_version=5.9.0
-$(package)_download_path=https://download.qt.io/archive/qt/5.9/5.9.0/submodules/
-$(package)_suffix=opensource-src-$($(package)_version).tar.xz
+$(package)_version=5.7.1
+$(package)_download_path=http://linorg.usp.br/Qt/archive/qt/5.7/5.7.1/submodules
+$(package)_suffix=opensource-src-$($(package)_version).tar.gz
 $(package)_file_name=qtbase-$($(package)_suffix)
-$(package)_sha256_hash=267eb2af1a203c087f2113f43b08014d0e2d2cb269295b8602d869a2fad5296c
+$(package)_sha256_hash=95f83e532d23b3ddbde7973f380ecae1bac13230340557276f75f2e37984e410
 $(package)_build_subdir=qtbase
 $(package)_qt_libs=corelib
 $(package)_patches=pidlist_absolute.patch fix_qt_pkgconfig.patch qfixed-coretext.patch
 
 $(package)_qttranslations_file_name=qttranslations-$($(package)_suffix)
-$(package)_qttranslations_sha256_hash=5cc981d823a989ddc22b4c278b5b8391fd38656d70e6fa9c8d84fe23d1dc4f77
+$(package)_qttranslations_sha256_hash=3a15aebd523c6d89fb97b2d3df866c94149653a26d27a00aac9b6d3020bc5a1d
 
 $(package)_qttools_file_name=qttools-$($(package)_suffix)
-$(package)_qttools_sha256_hash=64fe968e35f9d9f6617b48027957761cf76c20d43721ee6e2855a965afa285ee
+$(package)_qttools_sha256_hash=22d67de915cb8cd93e16fdd38fa006224ad9170bd217c2be1e53045a8dd02f0f
 
 $(package)_extra_sources  = $($(package)_qttranslations_file_name)
 $(package)_extra_sources += $($(package)_qttools_file_name)
@@ -20,7 +20,7 @@ $(package)_extra_sources += $($(package)_qttools_file_name)
 define $(package)_set_vars
 $(package)_config_opts_release = -release
 $(package)_config_opts_debug = -debug
-$(package)_config_opts += -bindir $(build_prefix)/bin
+$(package)_config_opts += -prefix $(host_prefix) -bindir $(build_prefix)/bin
 $(package)_config_opts += -c++std c++11
 $(package)_config_opts += -confirm-license
 $(package)_config_opts += -dbus-runtime
