@@ -5,7 +5,6 @@ darwin_native_packages = native_biplist native_ds_store native_mac_alias
 darwin_packages = sodium_darwin
 
 linux_packages = eudev
-qt_packages = qt
 
 ifeq ($(build_tests),ON)
 packages += gtest
@@ -24,4 +23,3 @@ endif
 ifneq ($(build_os),darwin)
 darwin_native_packages += native_cctools native_cdrkit native_libdmg-hfsplus
 endif
-
