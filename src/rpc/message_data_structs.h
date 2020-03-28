@@ -204,6 +204,20 @@ namespace rpc
     bool cumulative;
   };
 
+  struct GetBlockTemplateInfo
+  {
+    std::string blocktemplate_blob;
+    std::string blockhashing_blob;
+    uint64_t difficulty;
+    uint64_t expected_reward;
+    uint64_t height;
+    std::string prev_hash;
+    uint64_t reserved_offset;
+    std::string status;
+    std::string seed_hash;
+    std::string next_seed_hash;
+  };
+
 }  // namespace rpc
 
 }  // namespace cryptonote

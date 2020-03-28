@@ -78,6 +78,7 @@ namespace nodetool
     int64_t last_seen;
     uint32_t pruning_seed;
     uint16_t rpc_port;
+    uint16_t zmq_port;
     uint32_t rpc_credits_per_hash;
 
     BEGIN_KV_SERIALIZE_MAP()
@@ -87,6 +88,7 @@ namespace nodetool
         KV_SERIALIZE_OPT(last_seen, (int64_t)0)
       KV_SERIALIZE_OPT(pruning_seed, (uint32_t)0)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)0)
+      KV_SERIALIZE_OPT(zmq_port, (uint16_t)0)
       KV_SERIALIZE_OPT(rpc_credits_per_hash, (uint32_t)0)
     END_KV_SERIALIZE_MAP()
   };
@@ -170,6 +172,7 @@ namespace nodetool
     uint64_t local_time;
     uint32_t my_port;
     uint16_t rpc_port;
+    uint16_t zmq_port;
     uint32_t rpc_credits_per_hash;
     peerid_type peer_id;
 
@@ -179,6 +182,7 @@ namespace nodetool
       KV_SERIALIZE(local_time)
       KV_SERIALIZE(my_port)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)(0))
+      KV_SERIALIZE_OPT(zmq_port, (uint16_t)(0))
       KV_SERIALIZE_OPT(rpc_credits_per_hash, (uint32_t)0)
     END_KV_SERIALIZE_MAP()
   };
@@ -226,7 +230,7 @@ namespace nodetool
             {
               const epee::net_utils::network_address  &na = p.adr;
               const epee::net_utils::ipv4_network_address &ipv4 = na.as<const epee::net_utils::ipv4_network_address>();
-              local_peerlist.push_back(peerlist_entry_base<network_address_old>({{ipv4.ip(), ipv4.port()}, p.id, p.last_seen, p.pruning_seed, p.rpc_port, p.rpc_credits_per_hash}));
+              local_peerlist.push_back(peerlist_entry_base<network_address_old>({{ipv4.ip(), ipv4.port()}, p.id, p.last_seen, p.pruning_seed, p.rpc_port, p.zmq_port, p.rpc_credits_per_hash}));
             }
             else
               MDEBUG("Not including in legacy peer list: " << p.adr.str());
@@ -241,7 +245,7 @@ namespace nodetool
             std::vector<peerlist_entry_base<network_address_old>> local_peerlist;
             epee::serialization::selector<is_store>::serialize_stl_container_pod_val_as_blob(local_peerlist, stg, hparent_section, "local_peerlist");
             for (const auto &p: local_peerlist)
-              ((response&)this_ref).local_peerlist_new.push_back(peerlist_entry({epee::net_utils::ipv4_network_address(p.adr.ip, p.adr.port), p.id, p.last_seen, p.pruning_seed, p.rpc_port, p.rpc_credits_per_hash}));
+              ((response&)this_ref).local_peerlist_new.push_back(peerlist_entry({epee::net_utils::ipv4_network_address(p.adr.ip, p.adr.port), p.id, p.last_seen, p.pruning_seed, p.rpc_port, p.zmq_port, p.rpc_credits_per_hash}));
           }
         }
       END_KV_SERIALIZE_MAP()

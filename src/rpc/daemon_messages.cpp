@@ -50,6 +50,7 @@ const char* const MiningStatus::name = "mining_status";
 const char* const GetInfo::name = "get_info";
 const char* const SaveBC::name = "save_bc";
 const char* const GetBlockHash::name = "get_block_hash";
+const char* const GetBlockTemplate::name = "get_block_template";
 const char* const GetLastBlockHeader::name = "get_last_block_header";
 const char* const GetBlockHeaderByHash::name = "get_block_header_by_hash";
 const char* const GetBlockHeaderByHeight::name = "get_block_header_by_height";
@@ -465,6 +466,52 @@ void GetBlockHash::Response::fromJson(rapidjson::Value& val)
   GET_FROM_JSON_OBJECT(val, hash, hash);
 }
 
+rapidjson::Value GetBlockTemplate::Request::toJson(rapidjson::Document& doc) const
+{
+  auto val = Message::toJson(doc);
+
+  INSERT_INTO_JSON_OBJECT(val, doc, reserve_size, reserve_size);
+  INSERT_INTO_JSON_OBJECT(val, doc, wallet_address, wallet_address);
+
+  return val;
+}
+
+void GetBlockTemplate::Request::fromJson(rapidjson::Value& val)
+{
+  GET_FROM_JSON_OBJECT(val, reserve_size, reserve_size);
+  GET_FROM_JSON_OBJECT(val, wallet_address, wallet_address);
+}
+
+rapidjson::Value GetBlockTemplate::Response::toJson(rapidjson::Document& doc) const
+{
+  auto val = Message::toJson(doc);
+
+  INSERT_INTO_JSON_OBJECT(val, doc, blocktemplate_blob, blocktemplate_blob);
+  INSERT_INTO_JSON_OBJECT(val, doc, blockhashing_blob, blockhashing_blob);
+  INSERT_INTO_JSON_OBJECT(val, doc, difficulty, difficulty);
+  INSERT_INTO_JSON_OBJECT(val, doc, expected_reward, expected_reward);
+  INSERT_INTO_JSON_OBJECT(val, doc, height, height);
+  INSERT_INTO_JSON_OBJECT(val, doc, prev_hash, prev_hash);
+  INSERT_INTO_JSON_OBJECT(val, doc, reserved_offset, reserved_offset);
+  INSERT_INTO_JSON_OBJECT(val, doc, status, status);
+  INSERT_INTO_JSON_OBJECT(val, doc, seed_hash, seed_hash);
+  INSERT_INTO_JSON_OBJECT(val, doc, next_seed_hash, next_seed_hash);
+  return val;
+}
+
+void GetBlockTemplate::Response::fromJson(rapidjson::Value& val)
+{
+  GET_FROM_JSON_OBJECT(val, blocktemplate_blob, blocktemplate_blob);
+  GET_FROM_JSON_OBJECT(val, blockhashing_blob, blockhashing_blob);
+  GET_FROM_JSON_OBJECT(val, difficulty, difficulty);
+  GET_FROM_JSON_OBJECT(val, expected_reward, expected_reward);
+  GET_FROM_JSON_OBJECT(val, height, height);
+  GET_FROM_JSON_OBJECT(val, prev_hash, prev_hash);
+  GET_FROM_JSON_OBJECT(val, reserved_offset, reserved_offset);
+  GET_FROM_JSON_OBJECT(val, status, status);
+  GET_FROM_JSON_OBJECT(val, seed_hash, seed_hash);
+  GET_FROM_JSON_OBJECT(val, next_seed_hash, next_seed_hash);
+}
 
 rapidjson::Value GetLastBlockHeader::Request::toJson(rapidjson::Document& doc) const
 {

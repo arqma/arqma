@@ -328,7 +328,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
       double delay = 0; // will be calculated - how much we should sleep to obey speed limit etc
 
-      if(speed_limit_is_enabled())
+      if(rpc_speed_limit_is_enabled())
       {
         do // keep sleeping if we should sleep
         {
@@ -645,7 +645,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
         auto size_now = m_send_que.front().size();
         MDEBUG("do_send_chunk() NOW SENSD: packet=" << size_now <<" B");
-        if(speed_limit_is_enabled())
+        if(rpc_speed_limit_is_enabled())
         do_send_handler_write(ptr, size_now); // (((H)))
 
         CHECK_AND_ASSERT_MES(size_now == m_send_que.front().size(), false, "Unexpected queue size");
@@ -806,7 +806,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     logger_handle_net_write(cb);
 
     // The single sleeping that is needed for correctly handling "out" speed throttling
-    if(speed_limit_is_enabled())
+    if(rpc_speed_limit_is_enabled())
     {
       sleep_before_packet(cb, 1, 1);
     }
@@ -833,7 +833,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     reset_timer(get_default_timeout(), false);
     auto size_now = m_send_que.front().size();
     MDEBUG("handle_write() NOW SENDS: packet=" << size_now << " B" << ", from  queue size=" << m_send_que.size());
-    if (speed_limit_is_enabled())
+    if (rpc_speed_limit_is_enabled())
       do_send_handler_write_from_queue(e, m_send_que.front().size(), m_send_que.size()); // (((H)))
     CHECK_AND_ASSERT_MES(size_now == m_send_que.front().size(), void(), "Unexpected queue size");
     async_write(boost::asio::buffer(m_send_que.front().data(), size_now), strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), _1, _2)));
@@ -857,7 +857,20 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
 
   template<class t_protocol_handler>
-  bool connection<t_protocol_handler>::speed_limit_is_enabled() const {
+  void connection<t_protocol_handler>::setZmqStation()
+  {
+    m_connection_type = e_connection_type_ZMQ;
+    MDEBUG("set m_connection_type = ZMQ ");
+  }
+
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::zmq_speed_limit_is_enabled() const
+  {
+    return m_connection_type != e_connection_type_ZMQ;
+  }
+
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::rpc_speed_limit_is_enabled() const {
 		return m_connection_type != e_connection_type_RPC ;
 	}
 
@@ -912,6 +925,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   {
     server_type_map["NET"] = e_connection_type_NET;
     server_type_map["RPC"] = e_connection_type_RPC;
+    server_type_map["ZMQ"] = e_connection_type_ZMQ;
     server_type_map["P2P"] = e_connection_type_P2P;
   }
   //---------------------------------------------------------------------------------

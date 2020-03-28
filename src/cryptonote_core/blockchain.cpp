@@ -57,12 +57,14 @@
 #include "common/varint.h"
 #include "common/pruning.h"
 
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "blockchain"
 
 #define FIND_BLOCKCHAIN_SUPPLEMENT_MAX_SIZE (100*1024*1024) // 100 MB
 
 using namespace crypto;
+
 
 //#include "serialization/json_archive.h"
 
@@ -342,6 +344,8 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     return false;
   }
 
+
+
   m_db = db;
 
   m_nettype = test_options != NULL ? FAKECHAIN : nettype;
@@ -488,6 +492,24 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     if(!update_next_cumulative_weight_limit())
       return false;
   }
+
+  if (zmq_enabled)
+  {
+    try
+    {
+      producer.setsockopt(ZMQ_IDENTITY, "block", 5);
+      std::string bind_address = "tcp://";
+      bind_address.append(zmq_ip).append(":").append(zmq_port);
+      LOG_PRINT_L1("Blockchain::" << bind_address);
+      producer.connect(bind_address);
+      MINFO("Blockchain zmq producer binding");
+    }
+    catch( const std::exception &e)
+    {
+      MERROR(std::string("Failed to construct arqma notifier ") + e.what());
+    }
+ }
+
   return true;
 }
 //------------------------------------------------------------------
@@ -542,6 +564,7 @@ bool Blockchain::deinit()
   m_async_pool.join_all();
   m_async_service.stop();
 
+
   // as this should be called if handling a SIGSEGV, need to check
   // if m_db is a NULL pointer (and thus may have caused the illegal
   // memory operation), otherwise we may cause a loop.
@@ -568,6 +591,20 @@ bool Blockchain::deinit()
   m_hardfork = NULL;
   delete m_db;
   m_db = NULL;
+
+  if (zmq_enabled)
+  {
+    try
+    {
+      LOG_PRINT_L1("closing zmq.... ");
+      zmq_close(&producer);
+      zmq_term(&context);
+    }
+    catch (const std::exception e)
+    {
+      LOG_ERROR(std::string("Error closing zmq: ") + e.what());
+    }
+  }
   return true;
 }
 //------------------------------------------------------------------
@@ -3972,12 +4009,41 @@ leave:
   get_difficulty_for_next_block(); // just to cache it
   invalidate_block_template_cache();
 
+
+  if (zmq_enabled)
+  {
+    try
+    {
+      std::string hex = epee::string_tools::pod_to_hex(id);
+      LOG_PRINT_L1("blockchain sending hash: " <<  hex);
+      producer.send(create_message(std::move("")), ZMQ_SNDMORE);
+  	  producer.send(create_message(std::move(hex)), 0);
+    }
+    catch( const std::exception &e)
+    {
+      MERROR(std::string("Failed to construct arqma block producer") + e.what());
+    }
+  }
+
   std::shared_ptr<tools::Notify> block_notify = m_block_notify;
   if (block_notify)
     block_notify->notify("%s", epee::string_tools::pod_to_hex(id).c_str(), NULL);
 
   return true;
 }
+
+extern "C" void message_buffer_cleanup(void*, void* hint) {
+   delete reinterpret_cast<std::string*>(hint);
+}
+
+
+zmq::message_t Blockchain::create_message(std::string &&data)
+{
+  auto *buffer = new std::string(std::move(data));
+  return zmq::message_t{&(*buffer)[0], buffer->size(), message_buffer_cleanup, buffer};
+}
+
+
 //------------------------------------------------------------------
 bool Blockchain::prune_blockchain(uint32_t pruning_seed)
 {
