@@ -236,8 +236,20 @@ END_RPC_MESSAGE_CLASS;
 
 BEGIN_RPC_MESSAGE_CLASS(GetBlockTemplate);
   BEGIN_RPC_MESSAGE_REQUEST;
+    RPC_MESSAGE_MEMBER(uint64_t, reserve_size);
+    RPC_MESSAGE_MEMBER(std::string, wallet_address);
   END_RPC_MESSAGE_REQUEST;
   BEGIN_RPC_MESSAGE_RESPONSE;
+    RPC_MESSAGE_MEMBER(std::string, blocktemplate_blob);
+    RPC_MESSAGE_MEMBER(std::string, blockhashing_blob);
+    RPC_MESSAGE_MEMBER(uint64_t, difficulty);
+    RPC_MESSAGE_MEMBER(uint64_t, expected_reward);
+    RPC_MESSAGE_MEMBER(uint64_t, height);
+    RPC_MESSAGE_MEMBER(std::string, prev_hash);
+    RPC_MESSAGE_MEMBER(uint64_t, reserved_offset);
+    RPC_MESSAGE_MEMBER(std::string, status);
+    RPC_MESSAGE_MEMBER(std::string, seed_hash);
+    RPC_MESSAGE_MEMBER(std::string, next_seed_hash);
   END_RPC_MESSAGE_RESPONSE;
 END_RPC_MESSAGE_CLASS;
 

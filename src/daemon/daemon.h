@@ -44,9 +44,12 @@ private:
   void stop_p2p();
 private:
   std::unique_ptr<t_internals> mp_internals;
+  boost::program_options::variables_map m_vm;
   uint16_t public_rpc_port;
-  std::string zmq_rpc_bind_address;
-  std::string zmq_rpc_bind_port;
+  std::string zmq_bind_address;
+  std::string zmq_bind_port;
+  bool zmq_enabled;
+  uint16_t zmq_max_clients;
 public:
   t_daemon(
       boost::program_options::variables_map const & vm, uint16_t public_rpc_port = 0

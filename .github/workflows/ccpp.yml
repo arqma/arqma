@@ -11,6 +11,10 @@ jobs:
         submodules: recursive
     - name: update brew and install dependencies
       run: brew update && brew install boost hidapi zmq libpgm unbound libsodium miniupnpc ldns expat libunwind-headers protobuf
+    - name: fetch zeromq headers
+      run: git clone https://github.com/zeromq/cppzmq
+    - name: move zmq header
+      run: sudo cp cppzmq/zmq.hpp /usr/local/include
     - name: build
       run: make -j3
 

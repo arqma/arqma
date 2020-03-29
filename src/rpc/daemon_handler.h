@@ -36,6 +36,10 @@
 #include "cryptonote_protocol/cryptonote_protocol_handler.h"
 #include "p2p/net_node.h"
 
+#include "string_tools.h"
+
+using namespace epee;
+
 namespace
 {
   typedef nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> > t_p2p;
@@ -140,6 +144,12 @@ class DaemonHandler : public RpcHandler
     bool getBlockHeaderByHash(const crypto::hash& hash_in, cryptonote::rpc::BlockHeaderResponse& response);
 
     void handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res);
+
+    network_type nettype() const { return m_core.get_nettype(); }
+
+    bool get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res);
+
+	bool check_core_ready();
 
     cryptonote::core& m_core;
     t_p2p& m_p2p;

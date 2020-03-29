@@ -44,6 +44,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+
+#include <zmq.hpp>
+
 #include "span.h"
 #include "syncobj.h"
 #include "string_tools.h"
@@ -736,13 +739,19 @@ namespace cryptonote
     void set_user_options(uint64_t maxthreads, bool sync_on_blocks, uint64_t sync_threshold,
         blockchain_db_sync_mode sync_mode, bool fast_sync);
 
+    void set_zmq_options(const std::string& ip, const std::string port, uint16_t clients, bool enabled) 
+    {
+        zmq_ip = ip; 
+        zmq_port = port; 
+        zmq_max_clients = clients;
+        zmq_enabled = enabled;
+    }
     /**
      * @brief sets a block notify object to call for every new block
      *
      * @param notify the notify object to cal at every new block
      */
     void set_block_notify(const std::shared_ptr<tools::Notify> &notify) { m_block_notify = notify; }
-
     /**
      * @brief sets a reorg notify object to call for every reorg
      *
@@ -1076,11 +1085,20 @@ namespace cryptonote
     uint64_t m_btc_pool_cookie;
     uint64_t m_btc_expected_reward;
     bool m_btc_valid;
-    
+
     bool m_batch_success;
+
+    std::string zmq_ip; 
+    std::string zmq_port;
+    uint16_t zmq_max_clients;
+    bool zmq_enabled = false;
 
     std::shared_ptr<tools::Notify> m_block_notify;
     std::shared_ptr<tools::Notify> m_reorg_notify;
+
+	zmq::context_t context;
+    zmq::socket_t producer{context, ZMQ_DEALER};
+    zmq::message_t create_message(std::string &&data);
 
     // for prepare_handle_incoming_blocks
     uint64_t m_prepare_height;
