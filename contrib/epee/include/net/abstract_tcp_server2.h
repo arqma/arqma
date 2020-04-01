@@ -126,7 +126,8 @@ namespace net_utils
 
     void save_dbg_log();
 
-	  bool speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on RPC connections)
+	bool rpc_speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on RPC connections)
+	bool zmq_speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on ZMQ connections)
 
     bool cancel();
 
@@ -192,7 +193,8 @@ namespace net_utils
     std::string m_host;
 
 	public:
-			void setRpcStation();
+	  void setRpcStation();
+      void setZmqStation();
   };
 
 

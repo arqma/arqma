@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2020, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -45,6 +45,7 @@
 #include "rpc/core_rpc_server.h"
 #include "rpc/rpc_args.h"
 #include "daemon/command_line_args.h"
+#include "arqma_mq/arqmaMQ.h"
 #include "blockchain_db/db_types.h"
 #include "version.h"
 
@@ -132,6 +133,7 @@ int main(int argc, char const * argv[])
       command_line::add_arg(visible_options, command_line::arg_version);
       command_line::add_arg(visible_options, daemon_args::arg_os_version);
       command_line::add_arg(visible_options, daemon_args::arg_config_file);
+      command_line::add_arg(core_settings, daemon_args::arg_zmq_enabled);
 
       // Settings
       command_line::add_arg(core_settings, daemon_args::arg_log_file);
@@ -140,8 +142,9 @@ int main(int argc, char const * argv[])
       command_line::add_arg(core_settings, daemon_args::arg_max_log_files);
       command_line::add_arg(core_settings, daemon_args::arg_max_concurrency);
       command_line::add_arg(core_settings, daemon_args::arg_public_node);
-      command_line::add_arg(core_settings, daemon_args::arg_zmq_rpc_bind_ip);
-      command_line::add_arg(core_settings, daemon_args::arg_zmq_rpc_bind_port);
+      command_line::add_arg(core_settings, daemon_args::arg_zmq_bind_ip);
+      command_line::add_arg(core_settings, daemon_args::arg_zmq_bind_port);
+      command_line::add_arg(core_settings, daemon_args::arg_zmq_max_clients);
 
       daemonizer::init_options(hidden_options, visible_options);
       daemonize::t_executor::init_options(core_settings);
