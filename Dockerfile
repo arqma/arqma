@@ -58,7 +58,7 @@ ENV BOOST_ROOT /usr/local/boost_${BOOST_VERSION}
 ARG OPENSSL_VERSION=1.0.2r
 ARG OPENSSL_HASH=ae51d08bba8a83958e894946f15303ff894d75c2b8bbd44a852b64e3fe11d0d6
 RUN set -ex \
-    && curl -s -O https://ftp.openssl.org/source/old/1.0.2-${OPENSSL_VERSION}.tar.gz \
+    && curl -s -O https://ftp.openssl.org/source/old/1.0.2/openssl-${OPENSSL_VERSION}.tar.gz \
     && echo "${OPENSSL_HASH}  openssl-${OPENSSL_VERSION}.tar.gz" | sha256sum -c \
     && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
