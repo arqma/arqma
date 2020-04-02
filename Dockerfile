@@ -55,18 +55,16 @@ RUN set -ex \
 ENV BOOST_ROOT /usr/local/boost_${BOOST_VERSION}
 
 # OpenSSL
-ARG OPENSSL_VERSION=1.0.2r
-ARG OPENSSL_HASH=ae51d08bba8a83958e894946f15303ff894d75c2b8bbd44a852b64e3fe11d0d6
+ARG OPENSSL_VERSION=1.1.1f
+ARG OPENSSL_HASH=186c6bfe6ecfba7a5b48c47f8a1673d0f3b0e5ba2e25602dd23b629975da3f35
 RUN set -ex \
-    && curl -s -O https://ftp.openssl.org/source/old/1.0.2/openssl-${OPENSSL_VERSION}.tar.gz \
+    && curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && echo "${OPENSSL_HASH}  openssl-${OPENSSL_VERSION}.tar.gz" | sha256sum -c \
-    && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
+    && tar xf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure linux-x86_64 no-shared --static "$CFLAGS" \
-    && make build_generated \
-    && make libcrypto.a \
-    && make install
-ENV OPENSSL_ROOT_DIR=/usr/local/openssl-${OPENSSL_VERSION}
+    && ./Configure --prefix=/usr linux-x86_64 no-shared --static \
+    && make -j$(nproc) \
+    && make install_sw -j$(nproc)
 
 # ZMQ
 ARG ZMQ_VERSION=v4.3.2
