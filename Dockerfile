@@ -55,22 +55,20 @@ RUN set -ex \
 ENV BOOST_ROOT /usr/local/boost_${BOOST_VERSION}
 
 # OpenSSL
-ARG OPENSSL_VERSION=1.1.1b
-ARG OPENSSL_HASH=5c557b023230413dfb0756f3137a13e6d726838ccd1430888ad15bfb2b43ea4b
+ARG OPENSSL_VERSION=1.1.1f
+ARG OPENSSL_HASH=186c6bfe6ecfba7a5b48c47f8a1673d0f3b0e5ba2e25602dd23b629975da3f35
 RUN set -ex \
     && curl -s -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && echo "${OPENSSL_HASH}  openssl-${OPENSSL_VERSION}.tar.gz" | sha256sum -c \
-    && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
+    && tar xf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure linux-x86_64 no-shared --static "$CFLAGS" \
-    && make build_generated \
-    && make libcrypto.a \
-    && make install
-ENV OPENSSL_ROOT_DIR=/usr/local/openssl-${OPENSSL_VERSION}
+    && ./Configure --prefix=/usr linux-x86_64 no-shared --static \
+    && make -j$(nproc) \
+    && make install_sw -j$(nproc)
 
 # ZMQ
-ARG ZMQ_VERSION=v4.3.1
-ARG ZMQ_HASH=2cb1240db64ce1ea299e00474c646a2453a8435b
+ARG ZMQ_VERSION=v4.3.2
+ARG ZMQ_HASH=a84ffa12b2eb3569ced199660bac5ad128bff1f0
 RUN set -ex \
     && git clone https://github.com/zeromq/libzmq.git -b ${ZMQ_VERSION} \
     && cd libzmq \
@@ -82,8 +80,8 @@ RUN set -ex \
     && ldconfig
 
 # zmq.hpp
-ARG CPPZMQ_VERSION=v4.3.0
-ARG CPPZMQ_HASH=213da0b04ae3b4d846c9abc46bab87f86bfb9cf4
+ARG CPPZMQ_VERSION=v4.4.1
+ARG CPPZMQ_HASH=f5b36e563598d48fcc0d82e589d3596afef945ae
 RUN set -ex \
     && git clone https://github.com/zeromq/cppzmq.git -b ${CPPZMQ_VERSION} \
     && cd cppzmq \
@@ -103,8 +101,8 @@ RUN set -ex \
     && make install
 
 # Sodium
-ARG SODIUM_VERSION=1.0.17
-ARG SODIUM_HASH=b732443c442239c2e0184820e9b23cca0de0828c
+ARG SODIUM_VERSION=1.0.18
+ARG SODIUM_HASH=4f5e89fa84ce1d178a6765b8b46f2b6f91216677
 RUN set -ex \
     && git clone https://github.com/jedisct1/libsodium.git -b ${SODIUM_VERSION} \
     && cd libsodium \
@@ -168,15 +166,11 @@ RUN set -ex \
 WORKDIR /src
 COPY . .
 
-ENV USE_SINGLE_BUILDDIR=1
-ARG NPROC
 RUN set -ex && \
-    git submodule init && git submodule update && \
-    rm -rf build && \
-    if [ -z "$NPROC" ] ; \
-    then make -j$(nproc) release-static ; \
-    else make -j$NPROC release-static ; \
-    fi
+    git submodule update --init --recursive && \
+    rm -rf build/release && mkdir -p build/release && cd build/release && \
+    cmake -DSTATIC=ON -DARCH=x86-64 -DCMAKE_BUILD_TYPE=Release ../.. && \
+    make -j$(nproc) VERBOSE=1
 
 # runtime stage
 FROM ubuntu:16.04
