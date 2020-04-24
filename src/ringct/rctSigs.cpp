@@ -1111,7 +1111,7 @@ namespace rct {
 
           return true;
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
           LOG_PRINT_L1("Error in verRct: " << e.what());
           return false;
@@ -1213,7 +1213,7 @@ namespace rct {
         return true;
       }
       // we can get deep throws from ge_frombytes_vartime if input isn't valid
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         LOG_PRINT_L1("Error in verRctSemanticsSimple_old: " << e.what());
         return false;
@@ -1323,7 +1323,7 @@ namespace rct {
         return true;
       }
       // we can get deep throws from ge_frombytes_vartime if input isn't valid
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         LOG_PRINT_L1("Error in verRctSemanticsSimple: " << e.what());
         return false;
@@ -1384,7 +1384,7 @@ namespace rct {
         return true;
       }
       // we can get deep throws from ge_frombytes_vartime if input isn't valid
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         LOG_PRINT_L1("Error in verRctNonSemanticsSimple: " << e.what());
         return false;

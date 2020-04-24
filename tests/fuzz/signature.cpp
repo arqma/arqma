@@ -66,7 +66,7 @@ int SignatureFuzzer::init()
       return 1;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Error on SignatureFuzzer::init: " << e.what() << std::endl;
     return 1;

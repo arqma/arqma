@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -27,8 +27,6 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(CMAKE_CXX_STANDARD 11)
-
 set(crypto_sources
   aesb.c
   blake256.c
@@ -51,7 +49,7 @@ set(crypto_sources
   rx-slow-hash.c
   tree-hash.c)
 
-include_directories(${RANDOMX_INCLUDE})
+include_directories(${RANDOMARQ_INCLUDE})
 
 set(crypto_headers)
 
@@ -85,7 +83,7 @@ target_link_libraries(cncrypto
     epee
     randomx
     ${Boost_SYSTEM_LIBRARY}
-    ${SODIUM_LIBRARY}
+    sodium
   PRIVATE
     ${EXTRA_LIBRARIES})
 

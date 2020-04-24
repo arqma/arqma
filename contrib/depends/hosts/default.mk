@@ -9,9 +9,15 @@ default_host_OTOOL = $(host_toolchain)otool
 default_host_NM = $(host_toolchain)nm
 
 define add_host_tool_func
+ifneq ($(filter $(origin $1),undefined default),)
 $(host_os)_$1?=$$(default_host_$1)
 $(host_arch)_$(host_os)_$1?=$$($(host_os)_$1)
 $(host_arch)_$(host_os)_$(release_type)_$1?=$$($(host_os)_$1)
+else
+$(host_os)_$1=$(or $($1),$($(host_os)_$1),$(default_host_$1))
+$(host_arch)_$(host_os)_$1=$(or $($1),$($(host_arch)_$(host_os)_$1),$$($(host_os)_$1))
+$(host_arch)_$(host_os)_$(release_type)_$1=$(or $($1),$($(host_arch)_$(host_os)_$(release_type)_$1),$$($(host_os)_$1))
+endif
 host_$1=$$($(host_arch)_$(host_os)_$1)
 endef
 
@@ -23,4 +29,4 @@ host_$(release_type)_$1 = $$($(host_arch)_$(host_os)_$(release_type)_$1)
 endef
 
 $(foreach tool,CC CXX AR RANLIB STRIP NM LIBTOOL OTOOL INSTALL_NAME_TOOL,$(eval $(call add_host_tool_func,$(tool))))
-$(foreach flags,CFLAGS CXXFLAGS CPPFLAGS LDFLAGS, $(eval $(call add_host_flags_func,$(flags))))
+$(foreach flags,CFLAGS CXXFLAGS ARFLAGS CPPFLAGS LDFLAGS, $(eval $(call add_host_flags_func,$(flags))))

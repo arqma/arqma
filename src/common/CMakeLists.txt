@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -28,6 +28,7 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+include_directories(${LIBUNBOUND_INCLUDE})
 
 set(common_sources
   base58.cpp
@@ -97,8 +98,9 @@ arqma_add_library(common
 target_link_libraries(common
   PUBLIC
     cncrypto
-    ${UNBOUND_LIBRARY}
+    libunbound
     ${LIBUNWIND_LIBRARIES}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
@@ -108,6 +110,3 @@ target_link_libraries(common
   PRIVATE
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})
-
-#arqma_install_headers(common
-#  ${common_headers})

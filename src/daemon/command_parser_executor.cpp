@@ -547,7 +547,7 @@ bool t_command_parser_executor::ban(const std::vector<std::string>& args)
     {
       seconds = std::stoi(args[1]);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       return false;
     }

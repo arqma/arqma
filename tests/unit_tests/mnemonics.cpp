@@ -148,7 +148,7 @@ TEST(mnemonics, consistency)
     std::vector<std::string> language_list;
     crypto::ElectrumWords::get_language_list(language_list);
   }
-  catch(const std::exception &e)
+  catch(const std::exception& e)
   {
     std::cout << "Error initializing mnemonics: " << e.what() << std::endl;
     ASSERT_TRUE(false);
@@ -178,7 +178,7 @@ TEST(mnemonics, all_languages)
     try {
       test_language(*(*it));
     }
-    catch (const std::exception &e) {
+    catch (const std::exception& e) {
       std::cout << "Error testing " << (*it)->get_language_name() << " language: " << e.what() << std::endl;
       ASSERT_TRUE(false);
     }

@@ -373,7 +373,7 @@ int main(int argc, char* argv[])
         boost::archive::portable_binary_iarchive a(state_data_in);
         a >> state;
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         MERROR("Failed to load state data from " << state_file_path << ", restarting from scratch");
         state = ancestry_state_t();
@@ -588,7 +588,7 @@ int main(int argc, char* argv[])
         boost::archive::portable_binary_oarchive a(state_data_out);
         a << state;
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         MERROR("Failed to save state data to " << state_file_path);
       }

@@ -59,7 +59,7 @@ int ParseURLFuzzer::run(const std::string &filename)
     epee::net_utils::http::url_content url;
     epee::net_utils::parse_url(s, url);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Failed to load from binary: " << e.what() << std::endl;
     return 1;

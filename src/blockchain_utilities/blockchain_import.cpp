@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <fstream>
 
+#include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <unistd.h>

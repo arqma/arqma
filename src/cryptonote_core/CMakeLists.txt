@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -60,7 +60,7 @@ target_link_libraries(cryptonote_core
     ringct
     device
     arqma_mq
-	daemonizer
+    daemonizer
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SERIALIZATION_LIBRARY}
@@ -68,5 +68,4 @@ target_link_libraries(cryptonote_core
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
   PRIVATE
-    ${ZMQ_LIB}
     ${EXTRA_LIBRARIES})

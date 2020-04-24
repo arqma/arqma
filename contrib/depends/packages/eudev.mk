@@ -9,7 +9,7 @@ define $(package)_set_vars
 endef
 
 define $(package)_config_cmds
-  $($(package)_autoconf)
+  $($(package)_autoconf) AR_FLAGS=$($(package)_arflags)
 endef
 
 define $(package)_build_cmd
@@ -22,8 +22,4 @@ endef
 
 define $(package)_stage_cmds
   $(MAKE) DESTDIR=$($(package)_staging_dir) install
-endef
-
-define $(package)_postprocess_cmds
-  rm lib/*.la
 endef

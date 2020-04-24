@@ -296,7 +296,7 @@ namespace cryptonote
         boost::archive::portable_binary_iarchive a(data);
         a >> *this;
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         MERROR("Failed to load RPC payments file: " << e.what());
         m_client_info.clear();

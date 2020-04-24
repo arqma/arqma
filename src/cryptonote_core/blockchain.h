@@ -45,7 +45,7 @@
 #include <unordered_set>
 
 
-#include <zmq.hpp>
+#include "arqma_mq/zmq_addon.hpp"
 
 #include "span.h"
 #include "syncobj.h"

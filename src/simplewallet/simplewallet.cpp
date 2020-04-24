@@ -911,7 +911,7 @@ bool simple_wallet::print_fee_info(const std::vector<std::string> &args/* = std:
     uint64_t base_size = typical_size * size_granularity;
     blocks = m_wallet->estimate_backlog(base_size, base_size + size_granularity - 1, fees);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Error: failed to estimate backlog array size: ") << e.what();
     return true;
@@ -1036,7 +1036,7 @@ bool simple_wallet::make_multisig(const std::vector<std::string> &args)
       return true;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Error creating multisig: ") << e.what();
     return true;
@@ -1097,7 +1097,7 @@ bool simple_wallet::finalize_multisig(const std::vector<std::string> &args)
       return true;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to finalize multisig: ") << e.what();
     return true;
@@ -1154,7 +1154,7 @@ bool simple_wallet::exchange_multisig_keys(const std::vector<std::string> &args)
         success_msg_writer() << tr("Multisig address: ") << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       fail_msg_writer() << tr("Failed to perform multisig keys exchange: ") << e.what();
       return true;
@@ -1203,7 +1203,7 @@ bool simple_wallet::export_multisig(const std::vector<std::string> &args)
       return true;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     LOG_ERROR("Error exporting multisig info: " << e.what());
     fail_msg_writer() << tr("Error exporting multisig info: ") << e.what();
@@ -1265,7 +1265,7 @@ bool simple_wallet::import_multisig(const std::vector<std::string> &args)
     std::cout << "\r                                                                \r";
     success_msg_writer() << tr("Multisig info imported");
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to import multisig info: ") << e.what();
     return true;
@@ -1276,7 +1276,7 @@ bool simple_wallet::import_multisig(const std::vector<std::string> &args)
     {
       m_wallet->rescan_spent();
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       message_writer() << tr("Failed to update spent status after importing multisig info: ") << e.what();
     }
@@ -1337,7 +1337,7 @@ bool simple_wallet::sign_multisig(const std::vector<std::string> &args)
     fail_msg_writer() << tr("Multisig error: ") << e.what();
     return true;
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to sign multisig transaction: ") << e.what();
     return true;
@@ -1422,7 +1422,7 @@ bool simple_wallet::submit_multisig(const std::vector<std::string> &args)
           << tr("You can check its status by using the `show_transfers` command.");
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
   }
@@ -1555,7 +1555,7 @@ bool simple_wallet::print_ring(const std::vector<std::string> &args)
       success_msg_writer() << epee::string_tools::pod_to_hex(ring.first) <<  " absolute " << str.str();
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to get key image ring: ") << e.what();
   }
@@ -1897,7 +1897,7 @@ bool simple_wallet::blackball(const std::vector<std::string> &args)
       return true;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to mark output spent: ") << e.what();
   }
@@ -1924,7 +1924,7 @@ bool simple_wallet::unblackball(const std::vector<std::string> &args)
   {
     m_wallet->unblackball_output(output);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to mark output unspent: ") << e.what();
   }
@@ -1954,7 +1954,7 @@ bool simple_wallet::blackballed(const std::vector<std::string> &args)
     else
       message_writer() << tr("not spent: ") << output.first << "/" << output.second;
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to whether output is spent: ") << e.what();
   }
@@ -1969,7 +1969,7 @@ bool simple_wallet::save_known_rings(const std::vector<std::string> &args)
     LOCK_IDLE_SCOPE();
     m_wallet->find_and_save_rings();
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to save known rings: ") << e.what();
   }
@@ -2015,7 +2015,7 @@ bool simple_wallet::public_nodes(const std::vector<std::string> &args)
       m_claimed_cph[host] = node.rpc_credits_per_hash;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Error retrieving public node list: ") << e.what();
   }
@@ -3701,7 +3701,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         password = rc.second.password();
         m_wallet_file = m_wallet->path();
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         fail_msg_writer() << e.what();
         return false;
@@ -3973,7 +3973,7 @@ std::string simple_wallet::get_mnemonic_language()
         fail_msg_writer() << tr("invalid language choice entered. Please try again.\n");
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       fail_msg_writer() << tr("invalid language choice entered. Please try again.\n");
     }
@@ -4398,7 +4398,7 @@ bool simple_wallet::save_watch_only(const std::vector<std::string> &args/* = std
     m_wallet->write_watch_only_wallet(m_wallet_file, pwd_container->password(), new_keys_filename);
     success_msg_writer() << tr("Watch only wallet saved as: ") << new_keys_filename;
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to save watch only wallet: ") << e.what();
     return true;
@@ -4512,7 +4512,7 @@ bool simple_wallet::check_daemon_rpc_prices(const std::string &daemon_url, uint3
       fail_msg_writer() << tr("Error checking daemon RPC access prices");
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     // can't check
     fail_msg_writer() << tr("Error checking daemon RPC access prices: ") << e.what();
@@ -4576,7 +4576,7 @@ bool simple_wallet::set_daemon(const std::vector<std::string>& args)
           m_wallet->set_trusted_daemon(true);
         }
       }
-      catch (const std::exception &e) { }
+      catch (const std::exception& e) { }
     }
 
     if (!try_connect_to_daemon())
@@ -5402,7 +5402,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     {
       locked_blocks = boost::lexical_cast<uint64_t>(local_args.back());
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       fail_msg_writer() << tr("bad locked_blocks parameter:") << " " << local_args.back();
       return true;
@@ -5587,7 +5587,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
             prompt << (boost::format(tr("There is currently a %u block backlog at that fee level. Is this okay?")) % nblocks[0].first).str();
         }
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         prompt << tr("Failed to check for backlog: ") << e.what() << ENDL << tr("Is this okay anyway?");
       }
@@ -5731,7 +5731,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
       commit_or_save(ptx_vector, m_do_not_relay);
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
   }
@@ -5854,7 +5854,7 @@ bool simple_wallet::sweep_unmixable(const std::vector<std::string> &args_)
       } catch (...) {}
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
   }
@@ -5949,7 +5949,7 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
     {
       locked_blocks = boost::lexical_cast<uint64_t>(local_args[1]);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       fail_msg_writer() << tr("bad locked_blocks parameter");
       return true;
@@ -6641,7 +6641,7 @@ bool simple_wallet::sign_transfer(const std::vector<std::string> &args_)
       return true;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to sign transaction: ") << e.what();
     return true;
@@ -6796,7 +6796,7 @@ bool simple_wallet::set_tx_key(const std::vector<std::string> &args_)
     m_wallet->set_tx_key(txid, tx_key, additional_tx_keys);
     success_msg_writer() << tr("Tx key successfully stored.");
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to store tx key: ") << e.what();
   }
@@ -6841,7 +6841,7 @@ bool simple_wallet::get_tx_proof(const std::vector<std::string> &args)
     else
       fail_msg_writer() << tr("failed to save signature file");
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("error: ") << e.what();
   }
@@ -6929,7 +6929,7 @@ bool simple_wallet::check_tx_key(const std::vector<std::string> &args_)
       fail_msg_writer() << get_account_address_as_str(m_wallet->nettype(), info.is_subaddress, info.address) << " " << tr("received nothing in txid") << " " << txid;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("error: ") << e.what();
   }
@@ -7007,7 +7007,7 @@ bool simple_wallet::check_tx_proof(const std::vector<std::string> &args)
       fail_msg_writer() << tr("Bad signature");
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("error: ") << e.what();
   }
@@ -7056,7 +7056,7 @@ bool simple_wallet::get_spend_proof(const std::vector<std::string> &args)
     else
       fail_msg_writer() << tr("failed to save signature file");
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << e.what();
   }
@@ -7151,7 +7151,7 @@ bool simple_wallet::get_reserve_proof(const std::vector<std::string> &args)
     else
       fail_msg_writer() << tr("failed to save signature file");
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << e.what();
   }
@@ -8645,7 +8645,7 @@ bool simple_wallet::export_key_images(const std::vector<std::string> &args)
       return true;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     LOG_ERROR("Error exporting key images: " << e.what());
     fail_msg_writer() << "Error exporting key images: " << e.what();
@@ -8683,7 +8683,7 @@ bool simple_wallet::import_key_images(const std::vector<std::string> &args)
     uint64_t height = m_wallet->import_key_images(filename, spent, unspent);
     success_msg_writer() << "Signed key images imported to height " << height << ", " << print_money(spent) << " spent, " << print_money(unspent) << " unspent";
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << "Failed to import key images: " << e.what();
     return true;
@@ -8708,7 +8708,7 @@ bool simple_wallet::hw_reconnect(const std::vector<std::string> &args)
       fail_msg_writer() << tr("Failed to reconnect device");
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << tr("Failed to reconnect device: ") << tr(e.what());
     return true;
@@ -8745,7 +8745,7 @@ bool simple_wallet::export_outputs(const std::vector<std::string> &args)
       return true;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     LOG_ERROR("Error exporting outputs: " << e.what());
     fail_msg_writer() << "Error exporting outputs: " << e.what();
@@ -8784,7 +8784,7 @@ bool simple_wallet::import_outputs(const std::vector<std::string> &args)
     size_t n_outputs = m_wallet->import_outputs_from_str(data);
     success_msg_writer() << boost::lexical_cast<std::string>(n_outputs) << " outputs imported";
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     fail_msg_writer() << "Failed to import outputs " << filename << ": " << e.what();
     return true;

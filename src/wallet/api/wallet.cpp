@@ -450,7 +450,7 @@ bool WalletImpl::create(const std::string &path, const std::string &password, co
         recovery_val = m_wallet->generate(path, password, secret_key, false, false);
         m_password = password;
         clearStatus();
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         LOG_ERROR("Error creating wallet: " << e.what());
         setStatusCritical(e.what());
         return false;
@@ -515,7 +515,7 @@ bool WalletImpl::createWatchOnly(const std::string &path, const std::string &pas
         uint64_t unspent = 0;
         view_wallet->import_key_images(key_images.second, key_images.first, spent, unspent, false);
         clearStatus();
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         LOG_ERROR("Error creating view only wallet: " << e.what());
         setStatusError(e.what());
         return false;
@@ -659,7 +659,7 @@ bool WalletImpl::open(const std::string &path, const std::string &password)
         m_wallet->load(path, password);
 
         m_password = password;
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         LOG_ERROR("Error opening wallet: " << e.what());
         setStatusCritical(e.what());
     }
@@ -697,7 +697,7 @@ bool WalletImpl::recover(const std::string &path, const std::string &password, c
         m_wallet->set_seed_language(old_language);
         m_wallet->generate(path, password, recovery_key, true, false);
 
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         setStatusCritical(e.what());
     }
     return status() == Status_Ok;
@@ -723,7 +723,7 @@ bool WalletImpl::close(bool store)
         LOG_PRINT_L1("wallet::stop done");
         result = true;
         clearStatus();
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         setStatusCritical(e.what());
         LOG_ERROR("Error closing wallet: " << e.what());
     }
@@ -772,7 +772,7 @@ bool WalletImpl::setPassword(const std::string &password)
     try {
         m_wallet->change_password(m_wallet->get_wallet_file(), m_password, password);
         m_password = password;
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         setStatusError(e.what());
     }
     return status() == Status_Ok;
@@ -836,7 +836,7 @@ bool WalletImpl::store(const std::string &path)
         } else {
             m_wallet->store_to(path, m_password);
         }
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         LOG_ERROR("Error saving wallet: " << e.what());
         setStatusError(e.what());
         return false;
@@ -885,7 +885,7 @@ bool WalletImpl::lightWalletImportWalletRequest(std::string &payment_id, uint64_
     payment_address = response.payment_address;
     status = response.status;
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     LOG_ERROR("Error sending import wallet request: " << e.what());
     setStatusError(e.what());
@@ -1093,7 +1093,7 @@ bool WalletImpl::exportKeyImages(const string &filename)
       return false;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     LOG_ERROR("Error exporting key images: " << e.what());
     setStatusError(e.what());
@@ -1115,7 +1115,7 @@ bool WalletImpl::importKeyImages(const string &filename)
     LOG_PRINT_L2("Signed key images imported to height " << height << ", "
         << print_money(spent) << " spent, " << print_money(unspent) << " unspent");
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     LOG_ERROR("Error exporting key images: " << e.what());
     setStatusError(string(tr("Failed to import key images: ")) + e.what());
@@ -1147,7 +1147,7 @@ std::string WalletImpl::getSubaddressLabel(uint32_t accountIndex, uint32_t addre
     {
         return m_wallet->get_subaddress_label({accountIndex, addressIndex});
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         LOG_ERROR("Error getting subaddress label: " << e.what());
         setStatusError(string(tr("Failed to get subaddress label: ")) + e.what());
@@ -1160,7 +1160,7 @@ void WalletImpl::setSubaddressLabel(uint32_t accountIndex, uint32_t addressIndex
     {
         return m_wallet->set_subaddress_label({accountIndex, addressIndex}, label);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         LOG_ERROR("Error setting subaddress label: " << e.what());
         setStatusError(string(tr("Failed to set subaddress label: ")) + e.what());
@@ -1707,7 +1707,7 @@ bool WalletImpl::checkTxKey(const std::string &txid_str, std::string tx_key_str,
         clearStatus();
         return true;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         setStatusError(e.what());
         return false;
@@ -1735,7 +1735,7 @@ std::string WalletImpl::getTxProof(const std::string &txid_str, const std::strin
         clearStatus();
         return m_wallet->get_tx_proof(txid, info.address, info.is_subaddress, message);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         setStatusError(e.what());
         return "";
@@ -1764,7 +1764,7 @@ bool WalletImpl::checkTxProof(const std::string &txid_str, const std::string &ad
         clearStatus();
         return true;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         setStatusError(e.what());
         return false;
@@ -1784,7 +1784,7 @@ std::string WalletImpl::getSpendProof(const std::string &txid_str, const std::st
         clearStatus();
         return m_wallet->get_spend_proof(txid, message);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         setStatusError(e.what());
         return "";
@@ -1806,7 +1806,7 @@ bool WalletImpl::checkSpendProof(const std::string &txid_str, const std::string 
         good = m_wallet->check_spend_proof(txid, message, signature);
         return true;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         setStatusError(e.what());
         return false;
@@ -1824,7 +1824,7 @@ std::string WalletImpl::getReserveProof(bool all, uint32_t account_index, uint64
         }
         return m_wallet->get_reserve_proof(account_minreserve, message);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         setStatusError(e.what());
         return "";
@@ -1851,7 +1851,7 @@ bool WalletImpl::checkReserveProof(const std::string &address, const std::string
         good = m_wallet->check_reserve_proof(info.address, message, signature, total, spent);
         return true;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         setStatusError(e.what());
         return false;
@@ -2035,7 +2035,7 @@ void WalletImpl::doRefresh()
         } else {
            LOG_PRINT_L3(__FUNCTION__ << ": skipping refresh - daemon is not synced");
         }
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         setStatusError(e.what());
         break;
         }while(!rescan && (rescan=m_refreshShouldRescan.exchange(false))); // repeat if not rescanned and rescan was requested
@@ -2132,7 +2132,7 @@ bool WalletImpl::rescanSpent()
   }
   try {
       m_wallet->rescan_spent();
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
       LOG_ERROR(__FUNCTION__ << " error: " << e.what());
       setStatusError(e.what());
       return false;

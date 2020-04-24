@@ -10,8 +10,3 @@ define $(package)_stage_cmds
   cp zmq.hpp $($(package)_staging_prefix_dir)/include
 endef
 
-define $(package)_postprocess_cmds
-  rm -rf bin share
-endef
-
-

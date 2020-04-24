@@ -61,7 +61,7 @@ int PortableStorageFuzzer::run(const std::string &filename)
     epee::serialization::portable_storage ps;
     ps.load_from_json(s);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Failed to load from binary: " << e.what() << std::endl;
     return 1;

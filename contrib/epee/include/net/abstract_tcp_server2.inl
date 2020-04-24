@@ -32,7 +32,7 @@
 
 
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/chrono.hpp>
@@ -53,6 +53,8 @@
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
+
+using namespace boost::placeholders;
 
 #define DEFAULT_TIMEOUT_MS_LOCAL 1800000 // 30 minutes
 #define DEFAULT_TIMEOUT_MS_REMOTE 300000 // 5 minutes
@@ -954,7 +956,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 
     return true;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       MFATAL("Error starting server: " << e.what());
       return false;
@@ -1180,7 +1182,7 @@ POP_WARNINGS
       MERROR("Error in boosted_tcp_server<t_protocol_handler>::handle_accept: " << e);
     }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       MERROR("Exception in boosted_tcp_server<t_protocol_handler>::handle_accept: " << e.what());
     }

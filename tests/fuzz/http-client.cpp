@@ -83,7 +83,7 @@ int HTTPClientFuzzer::run(const std::string &filename)
   {
     client.test(s, std::chrono::milliseconds(1000));
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Failed to test http client: " << e.what() << std::endl;
     return 1;

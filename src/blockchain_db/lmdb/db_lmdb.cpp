@@ -1623,7 +1623,7 @@ bool BlockchainLMDB::remove_data_file(const std::string& folder) const
   {
     boost::filesystem::remove(filename);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     MERROR("Failed to remove " << filename << ": " << e.what());
     return false;
@@ -3559,7 +3559,7 @@ void BlockchainLMDB::batch_stop()
     time_commit1 += time1;
     cleanup_batch();
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     cleanup_batch();
     throw;

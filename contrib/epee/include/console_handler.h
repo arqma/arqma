@@ -40,10 +40,13 @@
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/bind/bind.hpp>
 
 #ifdef HAVE_READLINE
   #include "readline_buffer.h"
 #endif
+
+using namespace boost::placeholders;
 
 namespace epee
 {
@@ -387,7 +390,7 @@ eof:
             std::cout << usage;
           }
         }
-        catch (const std::exception &ex)
+        catch (const std::exception& ex)
         {
           LOG_ERROR("Exception at [console_handler], what=" << ex.what());
         }

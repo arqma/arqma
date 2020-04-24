@@ -32,7 +32,7 @@
 // IP blocking adapted from Boolberry
 
 #include <algorithm>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/optional/optional.hpp>
@@ -71,6 +71,8 @@
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
 
 #define MIN_WANTED_SEED_NODES 8
+
+using namespace boost::placeholders;
 
 namespace nodetool
 {
@@ -461,14 +463,14 @@ namespace nodetool
     if (nettype == cryptonote::TESTNET)
     {
       full_addrs.insert("139.99.106.122:29993");
-      full_addrs.insert("207.244.120.53:29993");
-      full_addrs.insert("77.103.229.42:29993");
+      full_addrs.insert("77.93.206.172:29993");
+      full_addrs.insert("86.24.233.79:29993");
     }
     else if (nettype == cryptonote::STAGENET)
     {
       full_addrs.insert("207.244.120.53:39993");
       full_addrs.insert("51.158.65.16:39993");
-      full_addrs.insert("77.103.229.42:39993");
+      full_addrs.insert("86.24.233.79:39993");
       full_addrs.insert("139.99.106.122:39993");
       full_addrs.insert("144.217.242.16:39993");
     }
@@ -480,8 +482,8 @@ namespace nodetool
       full_addrs.insert("144.217.242.16:19993");
       full_addrs.insert("207.244.120.39:19993");
       full_addrs.insert("92.222.70.207:19993");
-      full_addrs.insert("77.103.229.42:19993");
-      full_addrs.insert("207.244.120.53:19993");
+      full_addrs.insert("86.24.233.79:19993");
+      full_addrs.insert("77.93.206.170:19993");
       full_addrs.insert("51.15.50.83:19993");
       full_addrs.insert("51.158.65.16:19993");
       full_addrs.insert("51.15.253.177:19993");

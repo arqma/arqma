@@ -67,7 +67,7 @@ static void make_wallet(unsigned int idx, tools::wallet2 &wallet)
     wallet.generate("", "", spendkey, true, false);
     ASSERT_TRUE(test_addresses[idx].address == wallet.get_account().get_public_address_str(cryptonote::TESTNET));
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     MFATAL("Error creating test wallet: " << e.what());
     ASSERT_TRUE(0);

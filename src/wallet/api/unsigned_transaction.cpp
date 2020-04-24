@@ -88,7 +88,7 @@ bool UnsignedTransactionImpl::sign(const std::string &signedFileName)
       return false;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     m_errorString = string(tr("Failed to sign transaction")) + e.what();
     m_status = Status_Error;

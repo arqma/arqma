@@ -30,7 +30,7 @@ env:
 # ARM v8
     - HOST=aarch64-linux-gnu PACKAGES="python3 gperf g++-aarch64-linux-gnu"
 # Windows 64-bit
-    - HOST=x86_64-w64-mingw32 DEP_OPTS="NO_QT=1" PACKAGES="cmake python3 g++-mingw-w64-x86-64 qttools5-dev-tools"
+    - HOST=x86_64-w64-mingw32 PACKAGES="cmake python3 g++-mingw-w64-x86-64"
 # x86_64 Linux
     - HOST=x86_64-unknown-linux-gnu PACKAGES="gperf cmake python3-zmq libdbus-1-dev libharfbuzz-dev"
 # Cross-Mac
