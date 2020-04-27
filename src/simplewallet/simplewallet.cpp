@@ -1782,7 +1782,7 @@ bool simple_wallet::rpc_payment_info(const std::vector<std::string> &args)
       if (expected)
         message_writer() << tr("Credit discrepancy this session: ") << discrepancy << " (" << 100.0f * discrepancy / expected << "%)";
       float cph = credits_per_hash_found / (float)diff;
-      message_writer() << tr("Difficulty: ") << diff << ", " << credits_per_hash_found << " " << tr("credits per hash found, ") << cph << " " << tr("credits/hash");;
+      message_writer() << tr("Difficulty: ") << diff << ", " << credits_per_hash_found << " " << tr("credits per hash found, ") << cph << " " << tr("credits/hash");
       const boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
       bool mining = (now - m_last_rpc_payment_mining_time).total_microseconds() < 1000000;
       if (mining)
@@ -2001,7 +2001,7 @@ bool simple_wallet::public_nodes(const std::vector<std::string> &args)
         return node0.rpc_credits_per_hash < node1.rpc_credits_per_hash;
       return false;
     });
-    
+
     const uint64_t now = time(NULL);
     message_writer() << boost::format("%32s %12s %16s") % tr("address") % tr("credits/hash") % tr("last_seen");
     for (const auto &node: nodes)
@@ -4721,14 +4721,14 @@ bool simple_wallet::refresh_main(uint64_t start_height, enum ResetType reset, bo
     return true;
 
   LOCK_IDLE_SCOPE();
-  
+
   crypto::hash transfer_hash_pre{};
   uint64_t height_pre = 0, height_post;
   if(reset != ResetNone)
   {
     if(reset == ResetSoftKeepKI)
       height_pre = m_wallet->hash_m_transfers(-1, transfer_hash_pre);
-    
+
     m_wallet->rescan_blockchain(reset == ResetHard, false, reset == ResetSoftKeepKI);
   }
 
@@ -4746,18 +4746,18 @@ bool simple_wallet::refresh_main(uint64_t start_height, enum ResetType reset, bo
     m_in_manual_refresh.store(true, std::memory_order_relaxed);
     epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){m_in_manual_refresh.store(false, std::memory_order_relaxed);});
     m_wallet->refresh(m_wallet->is_trusted_daemon(), start_height, fetched_blocks);
-    
+
     if(reset == ResetSoftKeepKI)
     {
       m_wallet->finish_rescan_bc_keep_key_images(height_pre, transfer_hash_pre);
-      
+
       height_post = m_wallet->get_num_transfer_details();
       if (height_pre != height_post)
       {
         message_writer() << tr("New transfer received since rescan was started. Key images are incomplete.");
       }
     }
-    
+
     ok = true;
     // Clear line "Height xxx of xxx"
     std::cout << "\r                                                                \r";
@@ -5351,7 +5351,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
     return true;
   }
-  
+
   const size_t min_args = (transfer_type == TransferLocked) ? 2 : 1;
   if(local_args.size() < min_args)
   {
@@ -5935,7 +5935,7 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
     fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
     return true;
   }
-  
+
   uint64_t unlock_block = 0;
   if (locked) {
     uint64_t locked_blocks = 0;
@@ -7316,7 +7316,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
     }
     local_args.erase(local_args.begin());
   }
-  
+
   const uint64_t last_block_height = m_wallet->get_blockchain_current_height();
 
   if(in || coinbase) {
@@ -7777,7 +7777,7 @@ bool simple_wallet::rescan_blockchain(const std::vector<std::string> &args_)
 {
   uint64_t start_height = 0;
   ResetType reset_type = ResetSoft;
-  
+
   if(!args_.empty())
   {
     if(args_[0] == "hard")
@@ -7797,7 +7797,7 @@ bool simple_wallet::rescan_blockchain(const std::vector<std::string> &args_)
       PRINT_USAGE(USAGE_RESCAN_BC);
       return true;
     }
-    
+
     if(args_.size() > 1)
     {
       try
@@ -7810,7 +7810,7 @@ bool simple_wallet::rescan_blockchain(const std::vector<std::string> &args_)
       }
     }
   }
-  
+
   if(reset_type == ResetHard)
   {
     message_writer() << tr("Warning: this will lose any information which can not be recovered from the blockchain.");
@@ -7822,7 +7822,7 @@ bool simple_wallet::rescan_blockchain(const std::vector<std::string> &args_)
         return true;
     }
   }
-  
+
   const uint64_t wallet_from_height = m_wallet->get_refresh_from_block_height();
   if (start_height > wallet_from_height)
   {
