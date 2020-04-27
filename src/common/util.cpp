@@ -153,7 +153,7 @@ namespace tools
     if (!GetTokenInformation(process.get(), TokenOwner, sid.get(), sid_size, std::addressof(sid_size)))
       return {};
 
-    const PSID psid = reinterpret_cast<const PTOKEN_OWNER>(sid.get())->Owner;
+    const PSID psid = reinterpret_cast<PTOKEN_OWNER>(sid.get())->Owner;
     const DWORD daclSize =
       sizeof(ACL) + sizeof(ACCESS_ALLOWED_ACE) + GetLengthSid(psid) - sizeof(DWORD);
 
@@ -328,14 +328,22 @@ namespace tools
     if(!bOsVersionInfoEx) return pszOS;
 
     // Call GetNativeSystemInfo if supported or GetSystemInfo otherwise.
+#if defined(BOOST_GCC) && BOOST_GCC >= 80000
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
+        pGNSI = (PGNSI) GetProcAddress(
+          GetModuleHandle(TEXT("kernel32.dll")),
+          "GetNativeSystemInfo");
+#if defined(BOOST_GCC) && BOOST_GCC >= 80000
+#pragma GCC diagnostic pop
+#endif
+        if(NULL != pGNSI)
+          pGNSI(&si);
+        else GetSystemInfo(&si);
 
-    pGNSI = (PGNSI) GetProcAddress(
-      GetModuleHandle(TEXT("kernel32.dll")),
-      "GetNativeSystemInfo");
-    if(NULL != pGNSI)
-      pGNSI(&si);
-    else GetSystemInfo(&si);
-
+        if ( VER_PLATFORM_WIN32_NT==osvi.dwPlatformId &&
+          osvi.dwMajorVersion > 4 )
     if ( VER_PLATFORM_WIN32_NT==osvi.dwPlatformId &&
       osvi.dwMajorVersion > 4 )
     {
@@ -382,11 +390,16 @@ namespace tools
           else StringCchCat(pszOS, BUFSIZE, TEXT("Windows Server 2012 R2 " ));
         }
 
-
+#if defined(BOOST_GCC) && BOOST_GCC >= 80000
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
         pGPI = (PGPI) GetProcAddress(
           GetModuleHandle(TEXT("kernel32.dll")),
           "GetProductInfo");
-
+#if defined(BOOST_GCC) && BOOST_GCC >= 80000
+#pragma GCC diagnostic pop
+#endif
         pGPI( osvi.dwMajorVersion, osvi.dwMinorVersion, 0, 0, &dwType);
 
         switch( dwType )
