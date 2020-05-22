@@ -461,12 +461,12 @@ namespace nodetool
     if (nettype == cryptonote::TESTNET)
     {
       full_addrs.insert("139.99.106.122:29993");
-      full_addrs.insert("77.93.206.172:29993");
+      full_addrs.insert("207.244.120.53:29993");
       full_addrs.insert("77.103.229.42:29993");
     }
     else if (nettype == cryptonote::STAGENET)
     {
-      full_addrs.insert("77.93.206.172:39993");
+      full_addrs.insert("207.244.120.53:39993");
       full_addrs.insert("51.158.65.16:39993");
       full_addrs.insert("77.103.229.42:39993");
       full_addrs.insert("139.99.106.122:39993");
@@ -481,7 +481,7 @@ namespace nodetool
       full_addrs.insert("207.244.120.39:19993");
       full_addrs.insert("92.222.70.207:19993");
       full_addrs.insert("77.103.229.42:19993");
-      full_addrs.insert("77.93.206.170:19993");
+      full_addrs.insert("207.244.120.53:19993");
       full_addrs.insert("51.15.50.83:19993");
       full_addrs.insert("51.158.65.16:19993");
       full_addrs.insert("51.15.253.177:19993");
@@ -1646,7 +1646,7 @@ namespace nodetool
         --i;
         continue;
       }
-      
+
 #ifdef CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
       be.pruning_seed = tools::make_pruning_seed(1 + (be.adr.as<epee::net_utils::ipv4_network_address>().ip()) % (1ul << CRYPTONOTE_PRUNING_LOG_STRIPES), CRYPTONOTE_PRUNING_LOG_STRIPES);
 #endif
@@ -2230,7 +2230,7 @@ namespace nodetool
         public_zone->second.m_net_server.get_config_object().del_out_connections(current - count);
     }
   }
-  
+
   template<class t_payload_net_handler>
   uint32_t node_server<t_payload_net_handler>::get_max_out_public_peers() const
   {
@@ -2252,7 +2252,7 @@ namespace nodetool
         public_zone->second.m_net_server.get_config_object().del_in_connections(current - count);
     }
   }
-  
+
   template<class t_payload_net_handler>
   uint32_t node_server<t_payload_net_handler>::get_max_in_public_peers() const
   {
