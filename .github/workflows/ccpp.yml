@@ -20,14 +20,16 @@ jobs:
         path: 'build/**/**/arqma*'
 
   build-windows:
-    runs-on: windows-2016
+    runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
       with:
         submodules: recursive
-    - uses: numworks/setup-msys2@v1
+    - uses: eine/setup-msys2@v0
+      with:
+        update: true
     - name: install ArQmA dependencies
-      run: msys2do pacman -S --noconfirm autoconf automake-wrapper mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-protobuf-c mingw-w64-x86_64-libusb mingw-w64-x86_64-libtool mingw-w64-x86_64-gettext git
+      run: msys2do pacman -S --noconfirm autoconf mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-protobuf-c mingw-w64-x86_64-libusb mingw-w64-x86_64-libtool git
     - name: build
       run: msys2do make release-static-win
     - name: Upload windows artifacts
