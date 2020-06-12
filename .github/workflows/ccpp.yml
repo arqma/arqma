@@ -12,7 +12,7 @@ jobs:
     - name: update brew and install dependencies
       run: brew update && brew install boost hidapi zmq libpgm miniupnpc ldns expat libunwind-headers protobuf
     - name: build
-      run: make release
+      run: make -j3
     - name: Upload mac artifacts
       uses: actions/upload-artifact@master
       with:
