@@ -847,7 +847,6 @@ endif()
 
 set(OLD_LIB_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 set(Boost_NO_BOOST_CMAKE ON)
-#set(Boost_REALPATH ON)
 if(STATIC)
   if(MINGW)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
@@ -856,42 +855,26 @@ if(STATIC)
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_STATIC_RUNTIME ON)
 endif()
-
-if(MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(Boost_ARCHITECTURE "-x64")
-else()
-  set(Boost_ARCHITECTURE "-x32")
-endif()
-
-set(Boost_USE_MULTITHREADED ON)
-
-if(WIN32 OR MINGW OR MSVC)
-  set(BOOST_LIBRARIES system filesystem thread date_time chrono regex serialization program_options locale)
-else()
-  set(BOOST_LIBRARIES system filesystem thread date_time chrono regex serialization program_options)
-endif()
-
-find_package(Boost 1.62 QUIET REQUIRED COMPONENTS ${BOOST_LIBRARIES})
+find_package(Boost 1.58 QUIET REQUIRED COMPONENTS system filesystem thread date_time chrono regex serialization program_options locale)
 
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_LIB_SUFFIXES})
 if(NOT Boost_FOUND)
-  message(FATAL_ERROR "Could not find Boost libraries, please make sure you have installed Boost or libboost-all-dev. Minimum version 1.62 is required")
+  die("Could not find Boost libraries, please make sure you have installed Boost or libboost-all-dev (>=1.58) or the equivalent")
 elseif(Boost_FOUND)
-  message(STATUS "Found Boost Version: ${Boost_VERSION_STRING}")
-  message(STATUS "Boost Includes Dir is: ${Boost_INCLUDE_DIRS}")
-  message(STATUS "Boost Libraries Dir is: ${Boost_LIBRARY_DIRS}")
-  if(Boost_VERSION_STRING VERSION_LESS 1.62.0 AND NOT (OPENSSL_VERSION VERSION_LESS 1.1))
+  message(STATUS "Found Boost Version: ${Boost_VERSION}")
+  if (Boost_VERSION VERSION_LESS 10 AND Boost_VERSION VERSION_LESS 1.62.0 AND NOT (OPENSSL_VERSION VERSION_LESS 1.1))
     set(BOOST_BEFORE_1_62 true)
   endif()
-  if(Boost_VERSION VERSION_LESS 106200 AND NOT (OPENSSL_VERSION VERSION_LESS 1.1))
+  if (NOT Boost_VERSION VERSION_LESS 10 AND Boost_VERSION VERSION_LESS 106200 AND NOT (OPENSSL_VERSION VERSION_LESS 1.1))
     set(BOOST_BEFORE_1_62 true)
   endif()
-  if(BOOST_BEFORE_1_62)
-    message(FATAL_ERROR "Boost ${Boost_VERSION_STRING} (older than 1.62) is too old to link with OpenSSL ${OPENSSL_VERSION} (1.1 or newer) found at ${OPENSSL_INCLUDE_DIR} and ${OPENSSL_LIBRARIES}. "
-                        "Update Boost or install OpenSSL 1.0 and set path to it when running cmake: "
-                        "cmake -DOPENSSL_ROOT_DIR='/usr/include/openssl-1.0'")
+  if (BOOST_BEFORE_1_62)
+      message(FATAL_ERROR "Boost ${Boost_VERSION} (older than 1.62) is too old to link with OpenSSL ${OPENSSL_VERSION} (1.1 or newer) found at ${OPENSSL_INCLUDE_DIR} and ${OPENSSL_LIBRARIES}. "
+                          "Update Boost or install OpenSSL 1.0 and set path to it when running cmake: "
+                          "cmake -DOPENSSL_ROOT_DIR='/usr/include/openssl-1.0'")
   endif()
 endif()
+
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 if(MINGW)
