@@ -27,10 +27,10 @@ else()
     set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --host=Darwin)
   endif()
 
-  set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking)
+  set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
 
   if(NOT (APPLE OR WIN32 OR MSVC OR MINGW))
-    set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --with-pic --enable-libunwind --enable-radix-tree)
+    set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --with-pic)
   endif()
 
   ExternalProject_Add(libzmq_external

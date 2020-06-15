@@ -31,27 +31,25 @@ cmake_minimum_required(VERSION 3.5)
 
 project(easylogging CXX)
 
-add_library(easylogging
-  easylogging++.cc)
-
-set_property(TARGET easylogging PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET easylogging PROPERTY CXX_STANDARD 11)
-set_property(TARGET easylogging PROPERTY CXX_STANDARD_REQUIRED ON)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 find_package(Threads)
 find_package(Backtrace)
 
-target_include_directories(easylogging PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+add_library(easylogging
+  easylogging++.cc)
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(easylogging
   PRIVATE
-    Threads::Threads
+    ${CMAKE_THREAD_LIBS_INIT}
     ${Backtrace_LIBRARIES})
 
 # GUI/libwallet install target
 if (BUILD_GUI_DEPS)
     if(IOS)
         set(lib_folder lib-${ARCH})
-        target_compile_options(easylogging PUBLIC -fno-stack-check)
     else()
         set(lib_folder lib)
     endif()

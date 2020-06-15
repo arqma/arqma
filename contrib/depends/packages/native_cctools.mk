@@ -34,12 +34,9 @@ define $(package)_extract_cmds
   mkdir -p toolchain/bin toolchain/lib/clang/$($(package)_clang_version)/include && \
   mkdir -p libtapi && \
   tar --no-same-owner --strip-components=1 -C libtapi -xf $($(package)_source_dir)/$($(package)_libtapi_file_name) && \
-  tar --strip-components=1 -C toolchain -xf $($(package)_source_dir)/$($(package)_clang_file_name) && \
+  tar --no-same-owner --strip-components=1 -C toolchain -xf $($(package)_source_dir)/$($(package)_clang_file_name) && \
   rm -f toolchain/lib/libc++abi.so* && \
-  echo "#!/bin/sh" > toolchain/bin/$(host)-dsymutil && \
-  echo "exit 0" >> toolchain/bin/$(host)-dsymutil && \
-  chmod +x toolchain/bin/$(host)-dsymutil && \
-  tar --strip-components=1 -xf $($(package)_source)
+  tar --no-same-owner --strip-components=1 -xf $($(package)_source)
 endef
 
 define $(package)_set_vars
@@ -79,7 +76,4 @@ define $(package)_stage_cmds
   cp bin/llvm-dsymutil $($(package)_staging_prefix_dir)/bin/$(host)-dsymutil && \
   if `test -d include/c++/`; then cp -rf include/c++/ $($(package)_staging_prefix_dir)/include/; fi && \
   if `test -d lib/c++/`; then cp -rf lib/c++/ $($(package)_staging_prefix_dir)/lib/; fi
-endef
-
-define $(package)_postprocess_cmds
 endef
