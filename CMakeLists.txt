@@ -383,12 +383,12 @@ else()
   message(STATUS "Stack trace on exception disabled")
 endif()
 
-if(UNIX AND NOT APPLE)
-  set(THREADS_PREFER_PTHREAD_FLAG ON)
-  find_package(Threads)
-  add_c_flag_if_supported(-pthread CMAKE_C_FLAGS)
-  add_cxx_flag_if_supported(-pthread CMAKE_CXX_FLAGS)
-endif()
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads)
+add_c_flag_if_supported(-pthread CMAKE_C_FLAGS)
+add_cxx_flag_if_supported(-pthread CMAKE_CXX_FLAGS)
+
 
 if(CMAKE_SYSTEM_NAME MATCHES "(SunOS|Solaris)")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthreads")
