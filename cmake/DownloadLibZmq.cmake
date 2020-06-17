@@ -66,7 +66,7 @@ else()
   set_property(TARGET lib-zmq PROPERTY IMPORTED_LOCATION ${LIBZMQ_PREFIX}/lib/libzmq.a)
   target_include_directories(lib-zmq INTERFACE ${LIBZMQ_PREFIX}/include)
 
-  set(ZMQ_INCLUDE_DIRS ${LIBZMQ_PREFIX}/include)
+  set(ZMQ_INCLUDE_DIRS ${LIBZMQ_PREFIX}/include CACHE STRING "ZMQ Include path")
 
   link_dep_libs(lib-zmq INTERFACE "${ZMQ_LIBRARY_DIRS}" ${LIBZMQ_PREFIX}/lib/libzmq.a)
   target_include_directories(lib-zmq INTERFACE ${ZMQ_INCLUDE_DIRS})
