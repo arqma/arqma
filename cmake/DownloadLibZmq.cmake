@@ -28,7 +28,7 @@ else()
   set(ZeroMQ_CONFIGURE ./configure --prefix=${LIBZMQ_PREFIX})
 
   if(APPLE OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
-    set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --host=Darwin)
+    set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --host=x86_64-apple-darwin)
   endif()
 
   set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
