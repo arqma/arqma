@@ -445,8 +445,6 @@ endif()
 
 cmake_policy(SET CMP0093 NEW)
 
-add_library(libunbound INTERFACE)
-
 # Allow -D DOWNLOAD_SODIUM=FORCE to download without even checking for a local libsodium
 option(DOWNLOAD_SODIUM "Allow libsodium to be downloaded and built locally if not found on the system" OFF)
 if(NOT DOWNLOAD_SODIUM STREQUAL "FORCE")
@@ -470,6 +468,9 @@ export(TARGETS sodium NAMESPACE sodium:: FILE sodium-exports.cmake)
 install(TARGETS sodium EXPORT sodiumConfig DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 add_subdirectory(external)
+
+include_directories(${UNBOUND_INCLUDE})
+link_directories(${UNBOUND_LIBRARY_DIRS})
 
 include_directories(${EASYLOGGING_INCLUDE})
 link_directories(${EASYLOGGING_LIBRARY_DIRS})
