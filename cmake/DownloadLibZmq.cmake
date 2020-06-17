@@ -3,6 +3,9 @@ set(ZeroMQ_VERSION 4.3.2)
 set(LIBZMQ_URL https://github.com/zeromq/libzmq/releases/download/v${ZeroMQ_VERSION}/zeromq-${ZeroMQ_VERSION}.tar.gz)
 set(LIBZMQ_HASH SHA512=b6251641e884181db9e6b0b705cced7ea4038d404bdae812ff47bdd0eed12510b6af6846b85cb96898e253ccbac71eca7fe588673300ddb9c3109c973250c8e4)
 
+set(LIBZMQ_GIT https://github.com/zeromq/libzmq.git)
+set(LIBZMQ_COMMIT b3123a2fd1e77cbdceb5ee7a70e796063b5ee5b9)
+
 if(LIBZMQ_TARBALL_URL)
     # make a build time override of the tarball url so we can fetch it if the original link goes away
     set(LIBZMQ_URL ${LIBZMQ_TARBALL_URL})
@@ -33,7 +36,19 @@ else()
     set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --with-pic)
   endif()
 
-  ExternalProject_Add(libzmq_external
+  if(WIN32 OR MSVC OR WIN32)
+    ExternalProject_Add(libzmq_external
+      BUILD_IN_SOURCE ON
+      PREFIX ${LIBZMQ_PREFIX}
+      GIT_REPOSITORY ${LIBZMQ_GIT}
+      execute_process(COMMAND git chceckout ${LIBZMQ_COMMIT})
+      CONFIGURE_COMMAND ${ZeroMQ_AUTOCONF} && ${ZeroMQ_CONFIGURE}
+      BUILD_COMMAND make -j${PROCESSOR_COUNT}
+      INSTALL_COMMAND ${MAKE}
+      BUILD_BYPRODUCTS ${LIBZMQ_PREFIX}/lib/libzmq.a ${LIBZMQ_PREFIX}/include
+    )
+  else()
+    ExternalProject_Add(libzmq_external
       BUILD_IN_SOURCE ON
       PREFIX ${LIBZMQ_PREFIX}
       URL ${LIBZMQ_URL}
@@ -42,7 +57,8 @@ else()
       BUILD_COMMAND make -j${PROCESSOR_COUNT}
       INSTALL_COMMAND ${MAKE}
       BUILD_BYPRODUCTS ${LIBZMQ_PREFIX}/lib/libzmq.a ${LIBZMQ_PREFIX}/include
-      )
+    )
+  endif()
 
   add_library(lib-zmq STATIC IMPORTED GLOBAL)
   add_dependencies(libzmq libzmq_external)
