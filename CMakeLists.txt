@@ -484,6 +484,7 @@ include(DownloadLibZmq)
 target_link_libraries(libzmq INTERFACE lib-zmq)
 
 install(TARGETS libzmq EXPORT ZeroMQConfig DESTINATION ${CMAKE_INSTALL_LIBDIR})
+include_directories(${ZMQ_INCLUDE_DIRS})
 
 if(HIDAPI_FOUND)
   message(STATUS "Using HIDAPI include dir at ${HIDAPI_INCLUDE_DIR}")
