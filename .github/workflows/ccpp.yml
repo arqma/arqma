@@ -86,6 +86,29 @@ jobs:
         name: linux-static
         path: 'build/x86_64-linux-gnu/release/bin/arqma*'
 
+  build-ubuntu-depends-windows:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: set apt conf
+      run: |
+        echo "Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
+        echo "Acquire::http::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
+        echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
+    - name: update apt
+      run: sudo apt update
+    - name: install ArQmA dependencies
+      run: sudo apt -y install build-essential cmake libboost-all-dev miniupnpc libunbound-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libzmq3-dev libsodium-dev libhidapi-dev libnorm-dev libusb-1.0-0-dev libpgm-dev libprotobuf-dev protobuf-compiler gperf libreadline-dev python3 g++-mingw-w64-x86-64 wine1.6 bc
+    - name: build
+      run: make depends target=x86_64-w64-mingw32 -j2
+    - name: Upload Windows-depends artifacts
+      uses: actions/upload-artifact@master
+      with:
+        name: windows-depends
+        path: 'build/x86_64-mingw32/release/bin/arqma*'
+        
   build-ubuntu-dpends-compat:
     runs-on: ubuntu-latest
     steps:
