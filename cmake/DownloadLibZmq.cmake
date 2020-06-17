@@ -23,6 +23,7 @@ else()
   include(ExternalProject)
   include(ProcessorCount)
 
+  set(WIN32_FIX git checkout ${LIBZMQ_COMMIT})
   set(ZeroMQ_AUTOCONF ./autogen.sh)
   set(ZeroMQ_CONFIGURE ./configure --prefix=${LIBZMQ_PREFIX})
 
@@ -36,13 +37,12 @@ else()
     set(ZeroMQ_CONFIGURE ${ZeroMQ_CONFIGURE} --with-pic)
   endif()
 
-  if(WIN32 OR MSVC OR WIN32)
+  if(WIN32 OR MSVC OR MINGW)
     ExternalProject_Add(libzmq_external
       BUILD_IN_SOURCE ON
       PREFIX ${LIBZMQ_PREFIX}
       GIT_REPOSITORY ${LIBZMQ_GIT}
-      execute_process(COMMAND git chceckout ${LIBZMQ_COMMIT})
-      CONFIGURE_COMMAND ${ZeroMQ_AUTOCONF} && ${ZeroMQ_CONFIGURE}
+      CONFIGURE_COMMAND ${WIN32_FIX} && ${ZeroMQ_AUTOCONF} && ${ZeroMQ_CONFIGURE}
       BUILD_COMMAND make -j${PROCESSOR_COUNT}
       INSTALL_COMMAND ${MAKE}
       BUILD_BYPRODUCTS ${LIBZMQ_PREFIX}/lib/libzmq.a ${LIBZMQ_PREFIX}/include
