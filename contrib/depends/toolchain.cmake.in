@@ -39,8 +39,6 @@ SET(SODIUM_LIBRARY_DIRS @prefix@/lib)
 
 SET(Boost_IGNORE_SYSTEM_PATH ON)
 SET(Boost_ROOT @prefix@)
-#SET(Boost_INCLUDEDIR @prefix@/include)
-#SET(Boost_LIBRARYDIR @prefix@/lib)
 SET(Boost_INCLUDE_DIRS @prefix@/include)
 SET(Boost_LIBRARY_DIRS @prefix@/lib)
 SET(Boost_IGNORE_SYSTEM_PATHS_DEFAULT OFF)
