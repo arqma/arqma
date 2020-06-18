@@ -12,7 +12,7 @@ jobs:
     - name: update brew and install dependencies
       run: brew update && brew install autoconf autogen automake binutils coreutils libsodium openssl pkg-config boost hidapi ldns expat libunwind-headers readline
     - name: build
-      run: make -j3
+      run: make release
     - name: Upload mac artifacts
       uses: actions/upload-artifact@master
       with:
