@@ -5,7 +5,10 @@ native_packages :=
 hardware_packages := hidapi libusb
 hardware_native_packages :=
 
-darwin_native_packages = native_biplist native_ds_store native_mac_alias $(hardware_native_packages)
+multiprocess_packages = libmultiprocess capnp
+multiprocess_native_packages = native_libmultiprocess native_capnp
+
+darwin_native_packages = native_biplist native_ds_store native_mac_alias native_cmake $(hardware_native_packages)
 darwin_packages = sodium_darwin ncurses readline $(hardware_packages)
 
 linux_packages = unwind eudev ncurses readline sodium $(hardware_packages)

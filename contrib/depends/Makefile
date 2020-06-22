@@ -4,6 +4,7 @@ SOURCES_PATH ?= $(BASEDIR)/sources
 BASE_CACHE ?= $(BASEDIR)/built
 SDK_PATH ?= $(BASEDIR)/SDKs
 FALLBACK_DOWNLOAD_PATH ?= https://bitcoincore.org/depends-sources
+MULTIPROCESS ?=
 
 BUILD = $(shell ./config.guess)
 HOST ?= $(BUILD)
@@ -150,6 +151,7 @@ $(host_prefix)/share/config.site : config.site.in $(host_prefix)/.stamp_$(final_
             -e 's|@CPPFLAGS@|$(strip $(host_CPPFLAGS) $(host_$(release_type)_CPPFLAGS))|' \
             -e 's|@LDFLAGS@|$(strip $(host_LDFLAGS) $(host_$(release_type)_LDFLAGS))|' \
             -e 's|@allow_host_packages@|$(ALLOW_HOST_PACKAGES)|' \
+            -e 's|@multiprocess@|$(MULTIPROCESS)|' \
             -e 's|@debug@|$(DEBUG)|' \
             $< > $@
 	$(AT)touch $@
