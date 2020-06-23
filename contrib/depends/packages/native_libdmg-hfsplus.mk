@@ -1,8 +1,8 @@
 package=native_libdmg-hfsplus
-$(package)_version=7ac55ec64c96f7800d9818ce64c79670e7f02b67
-$(package)_download_path=https://github.com/planetbeing/libdmg-hfsplus/archive
-$(package)_file_name=libdmg-hfsplus-v$($(package)_version).tar.gz
-$(package)_sha256_hash=56fbdc48ec110966342f0ecddd6f8f89202f4143ed2a3336e42bbf88f940850c
+$(package)_version=tarball
+$(package)_download_path=https://github.com/planetbeing/libdmg-hfsplus/tarball/master/
+$(package)_file_name=libdmg-hfsplus.tar.gz
+$(package)_sha256_hash=6f75eedb5d81b5c0cc38111ae4386e8aba9e4bf6efcd70a1bb918f04ec1345a5
 $(package)_build_subdir=build
 $(package)_patches=remove-libcrypto-dependency.patch
 

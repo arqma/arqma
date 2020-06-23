@@ -11,7 +11,7 @@ HOST ?= $(BUILD)
 PATCHES_PATH = $(BASEDIR)/patches
 BASEDIR = $(CURDIR)
 HASH_LENGTH:=11
-DOWNLOAD_CONNECT_TIMEOUT:=10
+DOWNLOAD_CONNECT_TIMEOUT:=30
 DOWNLOAD_RETRIES:=3
 HOST_ID_SALT ?= salt
 BUILD_ID_SALT ?= salt
@@ -66,15 +66,7 @@ $(host_arch)_$(host_os)_prefix=$(BASEDIR)/$(host)
 $(host_arch)_$(host_os)_host=$(host)
 host_prefix=$($(host_arch)_$(host_os)_prefix)
 build_prefix=$(host_prefix)/native
-ifeq ($(host_os),mingw32)
-host_cmake=Windows
-endif
-ifeq ($(host_os),linux)
-host_cmake=Linux
-endif
-ifeq ($(host_os),darwin)
-host_cmake=Darwin
-endif
+build_host=$(build)
 
 AT_$(V):=
 AT_:=@
@@ -102,9 +94,15 @@ $(host_arch)_$(host_os)_id_string+=$(shell $(host_CXX) --version 2>/dev/null)
 $(host_arch)_$(host_os)_id_string+=$(shell $(host_RANLIB) --version 2>/dev/null)
 $(host_arch)_$(host_os)_id_string+=$(shell $(host_STRIP) --version 2>/dev/null)
 
+multiprocess_packages_$(MULTIPROCESS) = $(multiprocess_packages)
 
 packages += $($(host_arch)_$(host_os)_packages) $($(host_os)_packages)
 native_packages += $($(host_arch)_$(host_os)_native_packages) $($(host_os)_native_packages)
+
+ifeq ($(multiprocess_packages_),)
+packages += $(multiprocess_packages)
+native_packages += $(multiprocess_native_packages)
+endif
 
 all_packages = $(packages) $(native_packages)
 
@@ -124,8 +122,8 @@ build-only-$(1)_$(3): CMAKE_SHARED_BOOL = $(if $(findstring shared,$(3)),ON,OFF)
 
 
 toolchain_path=$($($(host_arch)_$(host_os)_native_toolchain)_prefixbin)
-final_build_id_long+=$(shell $(build_SHA256SUM) toolchain.cmake.in)
 final_build_id_long+=$(shell $(build_SHA256SUM) config.site.in)
+final_build_id_long+=$(shell $(build_SHA256SUM) toolchain.cmake.in)
 final_build_id+=$(shell echo -n "$(final_build_id_long)" | $(build_SHA256SUM) | cut -c-$(HASH_LENGTH))
 $(host_prefix)/.stamp_$(final_build_id): $(native_packages) $(packages)
 	$(AT)rm -rf $(@D)
