@@ -6,7 +6,7 @@ $(package)_sha256_hash=b50d64c214a65b1a79afe3a964c691931a4233e2ba605d793eb85d0ac
 $(package)_patches=cdrkit-deterministic.patch cdrkit-wodim.patch
 
 define $(package)_preprocess_cmds
-  patch -p1 < $($(package)_patch_dir)/cdrkit-deterministic.patch &&\
+  patch -p1 < $($(package)_patch_dir)/cdrkit-deterministic.patch && \
   patch -p1 < $($(package)_patch_dir)/cdrkit-wodim.patch
 endef
 

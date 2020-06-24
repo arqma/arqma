@@ -58,7 +58,7 @@ namespace net_utils
 		enum http_content_type
 		{
 			http_content_type_text_html,
-			http_content_type_image_gif, 
+			http_content_type_image_gif,
 			http_content_type_other,
 			http_content_type_not_set
 		};

@@ -48,6 +48,13 @@ message(STATUS "CMake version ${CMAKE_VERSION}")
 
 project(arqma)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
 function (add_c_flag_if_supported flag var)
   string(REPLACE "-" "_" supported ${flag}_c)
   check_c_compiler_flag(${flag} ${supported})
@@ -107,7 +114,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
   message(STATUS "Setting default build type: ${CMAKE_BUILD_TYPE}")
 endif()
-string(TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_LOWER)
 
 # ARCH defines the target architecture, either by an explicit identifier or
 # one of the following two keywords. By default, ARCH a value of 'native':
@@ -166,15 +172,6 @@ if(ARCH_ID STREQUAL "s390x")
   set(S390X 1)
 endif()
 
-if(WIN32 OR ARM OR PPC64LE OR PPC64 OR PPC)
-  set(OPT_FLAGS_RELEASE "-O2")
-else()
-  set(OPT_FLAGS_RELEASE "-Ofast")
-endif()
-
-set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG ${OPT_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG ${OPT_FLAGS_RELEASE}")
-
 # BUILD_TAG is used to select the build type to check for a new version
 if(BUILD_TAG)
   message(STATUS "Building build tag ${BUILD_TAG}")
@@ -212,30 +209,7 @@ set(Blocks "blocks")
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_SOURCE_DIR}/cmake")
 
-if (NOT DEFINED ENV{DEVELOPER_LOCAL_TOOLS})
-  message(STATUS "Could not find DEVELOPER_LOCAL_TOOLS in env (not required)")
-  set(BOOST_IGNORE_SYSTEM_PATHS_DEFAULT OFF)
-elseif ("$ENV{DEVELOPER_LOCAL_TOOLS}" EQUAL 1)
-  message(STATUS "Found: env DEVELOPER_LOCAL_TOOLS = 1")
-  set(BOOST_IGNORE_SYSTEM_PATHS_DEFAULT ON)
-else()
-  message(STATUS "Found: env DEVELOPER_LOCAL_TOOLS = 0")
-  set(BOOST_IGNORE_SYSTEM_PATHS_DEFAULT OFF)
-endif()
-
-message(STATUS "BOOST_IGNORE_SYSTEM_PATHS defaults to ${BOOST_IGNORE_SYSTEM_PATHS_DEFAULT}")
-option(BOOST_IGNORE_SYSTEM_PATHS "Ignore boost system paths for local boost installation" ${BOOST_IGNORE_SYSTEM_PATHS_DEFAULT})
-
-if (NOT DEFINED ENV{DEVELOPER_LIBUNBOUND_OLD})
-  message(STATUS "Could not find DEVELOPER_LIBUNBOUND_OLD in env (not required)")
-elseif ("$ENV{DEVELOPER_LIBUNBOUND_OLD}" EQUAL 1)
-  message(STATUS "Found: env DEVELOPER_LIBUNBOUND_OLD = 1, will use the work around")
-  add_definitions(-DDEVELOPER_LIBUNBOUND_OLD)
-elseif ("$ENV{DEVELOPER_LIBUNBOUND_OLD}" EQUAL 0)
-  message(STATUS "Found: env DEVELOPER_LIBUNBOUND_OLD = 0")
-else()
-  message(STATUS "Found: env DEVELOPER_LIBUNBOUND_OLD with bad value. Will NOT use the work around")
-endif()
+option(BOOST_IGNORE_SYSTEM_PATHS "Ignore boost system paths for local boost installation" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 enable_testing()
@@ -398,7 +372,7 @@ endif ()
 
 
 if(APPLE AND NOT IOS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=x86-64 -fvisibility=default -std=c++14")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=x86-64 -fvisibility=default")
   if(NOT OpenSSL_DIR)
       EXECUTE_PROCESS(COMMAND brew --prefix openssl
         OUTPUT_VARIABLE OPENSSL_ROOT_DIR
@@ -596,23 +570,6 @@ else()
   endif()
   set(C_WARNINGS "-Waggregate-return -Wnested-externs -Wold-style-definition -Wstrict-prototypes")
   set(CXX_WARNINGS "-Wno-reorder -Wno-missing-field-initializers")
-  try_compile(STATIC_ASSERT_RES "${CMAKE_CURRENT_BINARY_DIR}/static-assert" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/test-static-assert.c" COMPILE_DEFINITIONS "-std=c11")
-  ## Workaround for Mingw64 gcc/g++ above 7.3 bug found: Compiler rejects code due to template specialization of auto parameter value.
-  ## https://gcc.gnu.org/legacy-ml/gcc-bugs/2019-09/msg01284.html
-  if(STATIC_ASSERT_RES OR MINGW)
-    set(STATIC_ASSERT_FLAG "")
-  else()
-    set(STATIC_ASSERT_FLAG "-Dstatic_assert=_Static_assert")
-  endif()
-
-  try_compile(STATIC_ASSERT_CPP_RES "${CMAKE_CURRENT_BINARY_DIR}/static-assert" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/test-static-assert.cpp" COMPILE_DEFINITIONS "-std=c++14")
-  ## Workaround for Mingw64 gcc/g++ above 7.3 bug found: Compiler rejects code due to template specialization of auto parameter value.
-  ## https://gcc.gnu.org/legacy-ml/gcc-bugs/2019-09/msg01284.html
-  if(STATIC_ASSERT_CPP_RES OR MINGW)
-    set(STATIC_ASSERT_CPP_FLAG "")
-  else()
-    set(STATIC_ASSERT_CPP_FLAG "-Dstatic_assert=_Static_assert")
-  endif()
 
   option(COVERAGE "Enable profiling for test coverage report" 0)
 
@@ -695,8 +652,8 @@ else()
   message(STATUS "Using C++ security hardening flags: ${CXX_SECURITY_FLAGS}")
   message(STATUS "Using linker security hardening flags: ${LD_SECURITY_FLAGS}")
 
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_FLAG} ${WARNINGS} ${C_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${C_SECURITY_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_CPP_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_FLAG} ${WARNINGS} ${C_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${C_SECURITY_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_CPP_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${LD_BACKCOMPAT_FLAGS}")
 
   # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that
@@ -798,13 +755,6 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -DGTEST_HAS_TR1_TUPLE=0")
   endif()
 
-  set(DEBUG_FLAGS "-g3")
-  if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT (CMAKE_C_COMPILER_VERSION VERSION_LESS 4.8))
-    set(DEBUG_FLAGS "${DEBUG_FLAGS} -Og ")
-  else()
-    set(DEBUG_FLAGS "${DEBUG_FLAGS} -O0 ")
-  endif()
-
   # At least some CLANGs default to not enough for Arqma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth=900")
 
@@ -837,11 +787,6 @@ else()
       endif()
     endif()
   endif()
-
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_FLAGS}")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
-  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${RELEASE_FLAGS}")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")
 
   if(STATIC)
     # STATIC already configures most deps to be linked in statically,

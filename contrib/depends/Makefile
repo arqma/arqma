@@ -66,7 +66,15 @@ $(host_arch)_$(host_os)_prefix=$(BASEDIR)/$(host)
 $(host_arch)_$(host_os)_host=$(host)
 host_prefix=$($(host_arch)_$(host_os)_prefix)
 build_prefix=$(host_prefix)/native
-build_host=$(build)
+ifeq ($(host_os),mingw32)
+host_cmake=Windows
+endif
+ifeq ($(host_os),linux)
+host_cmake=Linux
+endif
+ifeq ($(host_os),darwin)
+host_cmake=Darwin
+endif
 
 AT_$(V):=
 AT_:=@
@@ -122,8 +130,8 @@ build-only-$(1)_$(3): CMAKE_SHARED_BOOL = $(if $(findstring shared,$(3)),ON,OFF)
 
 
 toolchain_path=$($($(host_arch)_$(host_os)_native_toolchain)_prefixbin)
-final_build_id_long+=$(shell $(build_SHA256SUM) config.site.in)
 final_build_id_long+=$(shell $(build_SHA256SUM) toolchain.cmake.in)
+final_build_id_long+=$(shell $(build_SHA256SUM) config.site.in)
 final_build_id+=$(shell echo -n "$(final_build_id_long)" | $(build_SHA256SUM) | cut -c-$(HASH_LENGTH))
 $(host_prefix)/.stamp_$(final_build_id): $(native_packages) $(packages)
 	$(AT)rm -rf $(@D)
@@ -210,7 +218,7 @@ install: check-packages $(host_prefix)/share/toolchain.cmake
 download-one: check-sources $(all_sources)
 
 download-osx:
-	@$(MAKE) -s HOST=x86_64-apple-darwin16 download-one
+	@$(MAKE) -s HOST=x86_64-apple-darwin download-one
 download-linux:
 	@$(MAKE) -s HOST=x86_64-unknown-linux-gnu download-one
 download-win:
