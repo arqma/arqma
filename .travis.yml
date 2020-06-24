@@ -43,18 +43,3 @@ jobs:
   fast_finish: true
   allow_failures:
       - name: "Windows cross-compile"
-
-before_script:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export PATH="/usr/local/opt/ccache/libexec:$PATH" PKG_CONFIG_PATH="/usr/local/opt/openssl@1.1/lib/pkgconfig"; fi
-  - if [ "${TRAVIS_COMPILER}" = "clang" ] && ! [ -e /usr/lib/ccache/clang ]; then sudo ln -s ../../bin/ccache /usr/lib/ccache/clang; sudo ln -s ../../bin/ccache /usr/lib/ccache/clang++; fi
-  - echo $TRAVIS_COMMIT_RANGE
-  - git log --format=fuller -1
-script:
-  - mkdir build && cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release
-    set -e
-    if [ -z "$TRAVIS_CPU_ARCH" ] || [ "$TRAVIS_CPU_ARCH" == "amd64" ]; then
-      make -j2
-    fi
-before_cache:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
