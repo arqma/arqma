@@ -4,7 +4,7 @@
 [submodule "external/unbound"]
 	path = external/unbound
 	url = https://github.com/arqma/unbound
-	branch = monero
+	branch = arqma
 [submodule "external/miniupnp"]
 	path = external/miniupnp
 	url = https://github.com/arqma/miniupnp
