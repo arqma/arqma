@@ -21,7 +21,9 @@ approach (tested on Debian Buster) is outlined below:
 ```bash
 # Tool needed for extracting Xcode.app
 apt install cpio
+```
 
+```bash
 # Unpack Xcode_11.3.1.xip and place the resulting Xcode.app in your current
 # working directory
 python3 extract_xcode.py -f Xcode_11.3.1.xip | cpio -d -i
