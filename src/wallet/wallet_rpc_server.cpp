@@ -1007,7 +1007,7 @@ namespace tools
 
       res.signed_txset = epee::string_tools::buff_to_hex_nodelimer(ciphertext);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_SIGN_UNSIGNED;
       er.message = std::string("Failed to sign unsigned tx: ") + e.what();
@@ -1082,7 +1082,7 @@ namespace tools
         }
         tx_constructions = exported_txs.txes;
       }
-      catch(const std::exception &e)
+      catch(const std::exception& e)
       {
         er.code = WALLET_RPC_ERROR_CODE_BAD_UNSIGNED_TX_DATA;
         er.message = "failed to parse unsigned transfers: " + std::string(e.what());
@@ -1113,7 +1113,7 @@ namespace tools
           tx_constructions.push_back(exported_txs.m_ptx[n].construction_data);
         }
       }
-      catch(const std::exception &e)
+      catch(const std::exception& e)
       {
         er.code = WALLET_RPC_ERROR_CODE_BAD_MULTISIG_TX_DATA;
         er.message = "failed to parse multisig transfers: " + std::string(e.what());
@@ -1230,7 +1230,7 @@ namespace tools
         desc.extra = epee::to_hex::string({cd.extra.data(), cd.extra.size()});
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_UNSIGNED_TX_DATA;
       er.message = "failed to parse unsigned transfers";
@@ -1275,7 +1275,7 @@ namespace tools
         return false;
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_SIGNED_TX_DATA;
       er.message = std::string("Failed to parse signed tx: ") + e.what();
@@ -1290,7 +1290,7 @@ namespace tools
         res.tx_hash_list.push_back(epee::string_tools::pod_to_hex(cryptonote::get_transaction_hash(ptx.tx)));
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_SIGNED_SUBMISSION;
       er.message = std::string("Failed to submit signed tx: ") + e.what();
@@ -1500,7 +1500,7 @@ namespace tools
     {
       m_wallet->commit_tx(ptx);
     }
-    catch(const std::exception &e)
+    catch(const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_GENERIC_TRANSFER_ERROR;
       er.message = "Failed to commit tx.";
@@ -2151,7 +2151,7 @@ namespace tools
     {
       m_wallet->check_tx_key(txid, tx_key, additional_tx_keys, info.address, res.received, res.in_pool, res.confirmations);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -2184,7 +2184,7 @@ namespace tools
     {
       res.signature = m_wallet->get_tx_proof(txid, info.address, info.is_subaddress, req.message);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -2217,7 +2217,7 @@ namespace tools
     {
       res.good = m_wallet->check_tx_proof(txid, info.address, info.is_subaddress, req.message, req.signature, res.received, res.in_pool, res.confirmations);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -2242,7 +2242,7 @@ namespace tools
     {
       res.signature = m_wallet->get_spend_proof(txid, req.message);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -2267,7 +2267,7 @@ namespace tools
     {
       res.good = m_wallet->check_spend_proof(txid, req.message, req.signature);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -2296,7 +2296,7 @@ namespace tools
     {
       res.signature = m_wallet->get_reserve_proof(account_minreserve, req.message);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -2327,7 +2327,7 @@ namespace tools
     {
       res.good = m_wallet->check_reserve_proof(info.address, req.message, req.signature, res.total, res.spent);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -2520,7 +2520,7 @@ namespace tools
     {
       res.outputs_data_hex = epee::string_tools::buff_to_hex_nodelimer(m_wallet->export_outputs_to_str());
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
       return false;
@@ -2557,7 +2557,7 @@ namespace tools
     {
       res.num_imported = m_wallet->import_outputs_from_str(blob);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
       return false;
@@ -3269,7 +3269,7 @@ namespace tools
         boost::system::error_code ignored_ec;
         THROW_WALLET_EXCEPTION_IF(boost::filesystem::exists(wallet_file, ignored_ec), error::file_exists, wallet_file);
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
         er.message = "Wallet already exists.";
@@ -3326,7 +3326,7 @@ namespace tools
         if (!wallet_file.empty())
           m_wallet->store();
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
         return false;
@@ -3355,7 +3355,7 @@ namespace tools
       }
       MINFO("Wallet has been generated.\n");
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
       return false;
@@ -3374,7 +3374,7 @@ namespace tools
       wal->set_refresh_from_block_height(req.restore_height);
       wal->rewrite(wallet_file, password);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
       return false;
@@ -3428,7 +3428,7 @@ namespace tools
         boost::system::error_code ignored_ec;
         THROW_WALLET_EXCEPTION_IF(boost::filesystem::exists(wallet_file, ignored_ec), error::file_exists, wallet_file);
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
         er.message = "Wallet already exists.";
@@ -3453,7 +3453,7 @@ namespace tools
       {
         m_wallet->store();
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
         return false;
@@ -3533,7 +3533,7 @@ namespace tools
       recovery_val = wal->generate(wallet_file, std::move(rc.second).password(), recovery_key, true, false, false);
       MINFO("Wallet has been restored.\n");
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
       return false;
@@ -3562,7 +3562,7 @@ namespace tools
       wal->set_refresh_from_block_height(req.restore_height);
       wal->rewrite(wallet_file, password);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
       return false;
@@ -3636,7 +3636,7 @@ namespace tools
       res.multisig_info = m_wallet->make_multisig(req.password, req.multisig_info, req.threshold);
       res.address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -3674,7 +3674,7 @@ namespace tools
     {
       info = m_wallet->export_multisig();
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = e.what();
@@ -3733,7 +3733,7 @@ namespace tools
     {
       res.n_outputs = m_wallet->import_multisig(info);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = "Error calling import_multisig";
@@ -3746,7 +3746,7 @@ namespace tools
       {
         m_wallet->rescan_spent();
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         er.message = std::string("Success, but failed to update spent status after import multisig info: ") + e.what();
       }
@@ -3799,7 +3799,7 @@ namespace tools
         return false;
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = std::string("Error calling finalize_multisig: ") + e.what();
@@ -3850,7 +3850,7 @@ namespace tools
         res.address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = std::string("Error calling exchange_multisig_info: ") + e.what();
@@ -3911,7 +3911,7 @@ namespace tools
         return false;
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_MULTISIG_SIGNATURE;
       er.message = std::string("Failed to sign multisig tx: ") + e.what();
@@ -3984,7 +3984,7 @@ namespace tools
         res.tx_hash_list.push_back(epee::string_tools::pod_to_hex(cryptonote::get_transaction_hash(ptx.tx)));
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       er.code = WALLET_RPC_ERROR_CODE_MULTISIG_SUBMISSION;
       er.message = std::string("Failed to submit multisig tx: ") + e.what();
@@ -4213,7 +4213,7 @@ public:
           auto rc = tools::wallet2::make_from_json(vm, true, from_json, password_prompt);
           wal = std::move(rc.first);
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
           MERROR("Error creating wallet: " << e.what());
           return false;
@@ -4270,7 +4270,7 @@ public:
     {
       wrpc->run();
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       LOG_ERROR(tools::wallet_rpc_server::tr("Failed to run wallet: ") << e.what());
       return false;

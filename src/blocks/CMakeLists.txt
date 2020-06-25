@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -46,4 +46,4 @@ foreach(BLOB_NAME checkpoints testnet_blocks stagenet_blocks)
   )
 endforeach()
 
-add_library(blocks STATIC blocks.cpp ${GENERATED_SOURCES})
+add_library(blocks blocks.cpp ${GENERATED_SOURCES})

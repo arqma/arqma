@@ -825,7 +825,7 @@ namespace arqmaMQ
     {
       histogram = m_core.get_blockchain_storage().get_output_histogram(req.amounts, req.unlocked, req.recent_cutoff);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = e.what();

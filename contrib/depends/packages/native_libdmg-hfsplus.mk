@@ -1,16 +1,18 @@
 package=native_libdmg-hfsplus
-$(package)_version=0.1
-$(package)_download_path=https://github.com/theuni/libdmg-hfsplus/archive
-$(package)_file_name=libdmg-hfsplus-v$($(package)_version).tar.gz
-$(package)_sha256_hash=6569a02eb31c2827080d7d59001869ea14484c281efab0ae7f2b86af5c3120b3
+$(package)_version=tarball
+$(package)_download_path=https://github.com/planetbeing/libdmg-hfsplus/tarball/master/
+$(package)_file_name=libdmg-hfsplus.tar.gz
+$(package)_sha256_hash=6f75eedb5d81b5c0cc38111ae4386e8aba9e4bf6efcd70a1bb918f04ec1345a5
 $(package)_build_subdir=build
+$(package)_patches=remove-libcrypto-dependency.patch
 
 define $(package)_preprocess_cmds
+  patch -p1 < $($(package)_patch_dir)/remove-libcrypto-dependency.patch && \
   mkdir build
 endef
 
 define $(package)_config_cmds
-  cmake -DCMAKE_INSTALL_PREFIX:PATH=$(build_prefix)/bin ..
+  cmake -DCMAKE_INSTALL_PREFIX:PATH=$(build_prefix) -DCMAKE_C_FLAGS="-Wl,--build-id=none" ..
 endef
 
 define $(package)_build_cmds

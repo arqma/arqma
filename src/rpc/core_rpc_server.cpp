@@ -2263,7 +2263,7 @@ namespace cryptonote
     {
       histogram = m_core.get_blockchain_storage().get_output_histogram(req.amounts, req.unlocked, req.recent_cutoff, req.min_count);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       res.status = "Failed to get output histogram";
       return true;
@@ -2344,7 +2344,7 @@ namespace cryptonote
         }
         cryptonote::block main_chain_parent_block;
         try { main_chain_parent_block = m_core.get_blockchain_storage().get_db().get_block_from_height(i.first.height - i.second.size()); }
-        catch (const std::exception &e) { res.status = "Error finding alternate chain attachment point"; return true; }
+        catch (const std::exception& e) { res.status = "Error finding alternate chain attachment point"; return true; }
         res.chains.back().main_chain_parent_block = epee::string_tools::pod_to_hex(get_block_hash(main_chain_parent_block));
       }
       res.status = CORE_RPC_STATUS_OK;
@@ -2678,7 +2678,7 @@ namespace cryptonote
         res.distributions.push_back({std::move(*data), amount, "", req.binary, req.compress});
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Failed to get output distribution";
@@ -2725,7 +2725,7 @@ namespace cryptonote
         res.distributions.push_back({std::move(*data), amount, "", req.binary, req.compress});
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       res.status = "Failed to get output distribution";
       return false;
@@ -2750,7 +2750,7 @@ namespace cryptonote
       res.pruning_seed = m_core.get_blockchain_pruning_seed();
       res.pruned = res.pruning_seed != 0;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Failed to prune blockchain";

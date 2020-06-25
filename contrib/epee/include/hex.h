@@ -72,7 +72,17 @@ namespace epee
 
   struct from_hex
   {
-      //! \return An std::vector of unsigned integers from the `src`
-      static std::vector<uint8_t> vector(boost::string_ref src);
+    static bool to_string(std::string& out, boost::string_ref src);
+
+    static bool to_buffer(span<std::uint8_t> out, boost::string_ref src) noexcept;
+
+  private:
+    static bool to_buffer_unchecked(std::uint8_t* out, boost::string_ref src) noexcept;
+  };
+
+  //! Convert hex in current C locale encoding to binary
+  struct from_hex_locale
+  {
+      static std::vector<uint8_t> to_vector(boost::string_ref src);
   };
 }

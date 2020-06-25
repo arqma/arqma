@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -113,6 +113,7 @@ target_link_libraries(rpc_base
 
 target_link_libraries(rpc
   PUBLIC
+    arqma_mq
     rpc_base
     rpc_sig
     common
@@ -126,7 +127,8 @@ target_link_libraries(rpc
     ${EXTRA_LIBRARIES})
 
 target_link_libraries(daemon_messages
-  LINK_PRIVATE
+  PRIVATE
+    arqma_mq
     cryptonote_core
     cryptonote_protocol
     version
@@ -134,7 +136,8 @@ target_link_libraries(daemon_messages
     ${EXTRA_LIBRARIES})
 
 target_link_libraries(daemon_rpc_server
-  LINK_PRIVATE
+  PRIVATE
+    libzmq
     rpc
     cryptonote_core
     cryptonote_protocol
@@ -145,7 +148,7 @@ target_link_libraries(daemon_rpc_server
     ${Boost_REGEX_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
-    ${ZMQ_LIB}
     ${EXTRA_LIBRARIES})
-target_include_directories(daemon_rpc_server PUBLIC ${ZMQ_INCLUDE_PATH})
-target_include_directories(obj_daemon_rpc_server PUBLIC ${ZMQ_INCLUDE_PATH})
+
+target_include_directories(daemon_rpc_server PUBLIC ${ZMQ_INCLUDE_DIRS})
+target_include_directories(obj_daemon_rpc_server PUBLIC ${ZMQ_INCLUDE_DIRS})

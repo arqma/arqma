@@ -30,99 +30,81 @@
 set(blockchain_import_sources
   blockchain_import.cpp
   bootstrap_file.cpp
-  blocksdat_file.cpp
-  )
+  blocksdat_file.cpp)
 
 set(blockchain_import_private_headers
   bootstrap_file.h
   blocksdat_file.h
-  bootstrap_serialization.h
-  )
+  bootstrap_serialization.h)
 
 arqma_private_headers(blockchain_import
-	  ${blockchain_import_private_headers})
+  ${blockchain_import_private_headers})
 
 set(blockchain_export_sources
   blockchain_export.cpp
   bootstrap_file.cpp
-  blocksdat_file.cpp
-  )
+  blocksdat_file.cpp)
 
 set(blockchain_export_private_headers
   bootstrap_file.h
   blocksdat_file.h
-  bootstrap_serialization.h
-  )
+  bootstrap_serialization.h)
 
 arqma_private_headers(blockchain_export
-	  ${blockchain_export_private_headers})
+  ${blockchain_export_private_headers})
 
 
 set(blockchain_blackball_sources
-  blockchain_blackball.cpp
-  )
+  blockchain_blackball.cpp)
 
 set(blockchain_blackball_private_headers
   bootstrap_file.h
   blocksdat_file.h
-  bootstrap_serialization.h
-  )
+  bootstrap_serialization.h)
 
 arqma_private_headers(blockchain_blackball
-	  ${blockchain_blackball_private_headers})
+  ${blockchain_blackball_private_headers})
 
 set(blockchain_usage_sources
-  blockchain_usage.cpp
-  )
+  blockchain_usage.cpp)
 
 set(blockchain_usage_private_headers)
 
 arqma_private_headers(blockchain_usage
-	  ${blockchain_usage_private_headers})
+  ${blockchain_usage_private_headers})
 
 
 set(blockchain_prune_known_spent_data_sources
-  blockchain_prune_known_spent_data.cpp
-  )
+  blockchain_prune_known_spent_data.cpp)
 
 set(blockchain_prune_known_spent_data_private_headers)
 
 arqma_private_headers(blockchain_prune_known_spent_data
-         ${blockchain_prune_known_spent_data_private_headers})
-
+  ${blockchain_prune_known_spent_data_private_headers})
 
 set(blockchain_prune_sources
-  blockchain_prune.cpp
-  )
+  blockchain_prune.cpp)
 
 set(blockchain_prune_private_headers)
 
 arqma_private_headers(blockchain_prune
-         ${blockchain_prune_private_headers})
-
-
-
+  ${blockchain_prune_private_headers})
 
 set(blockchain_ancestry_sources
-  blockchain_ancestry.cpp
-  )
+  blockchain_ancestry.cpp)
 
 set(blockchain_ancestry_private_headers)
 
 arqma_private_headers(blockchain_ancestry
-	  ${blockchain_ancestry_private_headers})
-
-
+${blockchain_ancestry_private_headers})
 
 set(blockchain_depth_sources
-  blockchain_depth.cpp
-  )
+  blockchain_depth.cpp)
 
 set(blockchain_depth_private_headers)
 
 arqma_private_headers(blockchain_depth
-	  ${blockchain_depth_private_headers})
-
+  ${blockchain_depth_private_headers})
 
 
 arqma_add_executable(blockchain_import

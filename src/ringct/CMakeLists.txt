@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2016-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2016-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -55,14 +55,12 @@ target_link_libraries(ringct_basic
     ${EXTRA_LIBRARIES})
 
 set(ringct_sources
-  rctSigs.cpp
-)
+  rctSigs.cpp)
 
 set(ringct_headers)
 
 set(ringct_private_headers
-  rctSigs.h
-)
+  rctSigs.h)
 
 arqma_private_headers(ringct
   ${crypto_private_headers})

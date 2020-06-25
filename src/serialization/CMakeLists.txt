@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2016-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2016-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -42,7 +42,7 @@ arqma_add_library(serialization
   ${serialization_headers}
   ${serialization_private_headers})
 target_link_libraries(serialization
-  LINK_PRIVATE
+  PRIVATE
     cryptonote_core
     cryptonote_protocol
     ${Boost_CHRONO_LIBRARY}

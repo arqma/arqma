@@ -392,7 +392,7 @@ static bool range_proof_test(bool expected_valid,
           valid = verRct(s);
         }
     }
-    catch (const std::exception &e) {
+    catch (const std::exception& e) {
         valid = false;
     }
 

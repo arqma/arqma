@@ -31,8 +31,12 @@
 #include "span.h"
 #include "net/levin_base.h"
 
+#include <boost/bind/bind.hpp>
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
+
+using namespace boost::placeholders;
 
 namespace epee
 {

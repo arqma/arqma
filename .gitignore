@@ -3,6 +3,7 @@
 /build
 /tags
 log/
+/contrib/depends/SDKs
 
 # vim swap files
 *.swp

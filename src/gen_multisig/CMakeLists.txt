@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2017-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2017-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -51,5 +51,5 @@ add_dependencies(gen_multisig
   version)
 set_property(TARGET gen_multisig
   PROPERTY
-    OUTPUT_NAME "arqma-gen-trusted-multisig")
+    OUTPUT_NAME "utils/generate-trusted-multisig-wallets")
 install(TARGETS gen_multisig DESTINATION bin)

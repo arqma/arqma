@@ -153,7 +153,7 @@ static bool generate_multisig(uint32_t threshold, uint32_t total, const std::str
     std::string address = wallets[0]->get_account().get_public_address_str(wallets[0]->nettype());
     tools::success_msg_writer() << genms::tr("Generated multisig wallets for address ") << address << std::endl << ss.str();
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     tools::fail_msg_writer() << genms::tr("Error creating multisig wallets: ") << e.what();
     return false;

@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -28,8 +28,7 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 set(cn_deserialize_sources
-  cn_deserialize.cpp
-  )
+  cn_deserialize.cpp)
 
 arqma_add_executable(cn_deserialize
   ${cn_deserialize_sources}
@@ -47,12 +46,10 @@ target_link_libraries(cn_deserialize
 
 set_property(TARGET cn_deserialize
 	PROPERTY
-	OUTPUT_NAME "arqma-utils-deserialize")
-
+	OUTPUT_NAME "arqma-debug-utils-deserialize")
 
 set(object_sizes_sources
-  object_sizes.cpp
-  )
+  object_sizes.cpp)
 
 arqma_add_executable(object_sizes
   ${object_sizes_sources}
@@ -68,4 +65,4 @@ target_link_libraries(object_sizes
 
 set_property(TARGET object_sizes
 	PROPERTY
-	OUTPUT_NAME "arqma-utils-object-sizes")
+	OUTPUT_NAME "arqma-debug-utils-object-sizes")

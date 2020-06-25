@@ -35,6 +35,8 @@
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "include_base_utils.h"
+//#include "arqma_mq/zmq.hpp"
+//#include <zmq.h>
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "tx_pool.h"
 #include "blockchain.h"
@@ -56,7 +58,6 @@
 #include "common/notify.h"
 #include "common/varint.h"
 #include "common/pruning.h"
-
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "blockchain"
@@ -504,7 +505,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
       producer.connect(bind_address);
       MINFO("Blockchain zmq producer binding");
     }
-    catch( const std::exception &e)
+    catch( const std::exception& e)
     {
       MERROR(std::string("Failed to construct arqma notifier ") + e.what());
     }
@@ -600,7 +601,7 @@ bool Blockchain::deinit()
       zmq_close(&producer);
       zmq_term(&context);
     }
-    catch (const std::exception e)
+    catch (const std::exception& e)
     {
       LOG_ERROR(std::string("Error closing zmq: ") + e.what());
     }
@@ -1147,7 +1148,7 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<block_extended_info>
   for(auto alt_ch_iter = alt_chain.begin(); alt_ch_iter != alt_chain.end(); alt_ch_iter++)
   {
     const auto &bei = *alt_ch_iter;
-    block_verification_context bvc = boost::value_initialized<block_verification_context>();
+    block_verification_context bvc = {};
 
     // add block to main chain
     bool r = handle_block_to_main_chain(bei.bl, bvc);
@@ -1450,7 +1451,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
 
     //we have new block in alternative chain
     std::list<block_extended_info> alt_chain;
-    block_verification_context bvc = boost::value_initialized<block_verification_context>();
+    block_verification_context bvc = {};
     std::vector<uint64_t> timestamps;
     if (!build_alt_chain(*from_block, alt_chain, timestamps, bvc))
       return false;
@@ -2111,7 +2112,7 @@ bool Blockchain::get_outs(const COMMAND_RPC_GET_OUTPUTS_BIN::request& req, COMMA
 	  }
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     return false;
   }
@@ -4019,7 +4020,7 @@ leave:
       producer.send(create_message(std::move("")), ZMQ_SNDMORE);
   	  producer.send(create_message(std::move(hex)), 0);
     }
-    catch( const std::exception &e)
+    catch( const std::exception& e)
     {
       MERROR(std::string("Failed to construct arqma block producer") + e.what());
     }
@@ -4312,7 +4313,7 @@ bool Blockchain::cleanup_handle_incoming_blocks(bool force_sync)
       m_db->batch_abort();
     success = true;
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     MERROR("Exception in cleanup_handle_incoming_blocks: " << e.what());
   }
