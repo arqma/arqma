@@ -21,7 +21,7 @@ created. To use it for Arqma:
 Common `host-platform-triplets` for cross compilation are:
 
 - `x86_64-w64-mingw32` for Win64
-- `x86_64-apple-darwin14` for MacOSX
+- `x86_64-apple-darwin19.2.0` for MacOSX
 - `arm-linux-gnueabihf` for Linux ARM 32 bit
 - `aarch64-linux-gnu` for Linux ARM 64 bit
 
@@ -47,10 +47,12 @@ Additional targets:
 
 #Darwin (macos) builds:
 
-To build with the x86_64-apple-darwin11 you require the mac os developer tools in MacOSX10.11.sdk.
+To build with the x86_64-apple-darwin19.2.0 you require the mac os developer tools in MacOSX10.15.1.sdk.
 Download it from apple, or search for it on github. Create a new directoty called SDKs in this
-directory and place the entire MacOSX10.11.sdk folder in it. The depends build will then pick it up automatically
+directory and place the entire MacOSX10.15.1.sdk folder in it. The depends build will then pick it up automatically
 (without requiring SDK_PATH).
+
+More info can be found on [macdeploy/README.md](macdeploy/README.md).
 
 #Mingw builds
 
