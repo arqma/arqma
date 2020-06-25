@@ -36,27 +36,41 @@
 # ...except for FreeBSD, because FreeBSD is a special case that doesn't play well with
 # others.
 
-find_package(Miniupnpc REQUIRED)
+find_package(PkgConfig REQUIRED)
 
-message(STATUS "Using in-tree miniupnpc")
-add_subdirectory(miniupnp/miniupnpc)
-set_property(TARGET libminiupnpc-static PROPERTY FOLDER "external")
-if(MSVC)
-  set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -wd4244 -wd4267")
-elseif(NOT MSVC)
-  set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-undef -Wno-unused-result -Wno-unused-value")
+if(NOT STATIC)
+   pkg_check_modules(MINIUPNPC miniupnpc>=2.1)
+   pkg_check_modules(UNBOUND libunbound)
 endif()
 
-set(UPNP_LIBRARIES "libminiupnpc-static" PARENT_SCOPE)
+if(MINIUPNPC_FOUND)
+  message(STATUS "Found miniupnpc")
+  link_dep_libs(miniupnpc INTERFACE "${MINIUPNPC_LIBRARY_DIRS}" ${MINIUPNPC_LIBRARIES})
+  target_include_directories(miniupnpc INTERFACE ${MINIUPNPC_INCLUDE_DIRS})
+else()
+  message(STATUS "Using in-tree miniupnpc")
+  add_subdirectory(miniupnp/miniupnpc)
+  set_property(TARGET libminiupnpc-static PROPERTY FOLDER "external")
+  if(MSVC)
+    set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -wd4244 -wd4267")
+  elseif(NOT MSVC)
+    set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-undef -Wno-unused-result -Wno-unused-value")
+  endif()
+  if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+    set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -D_NETBSD_SOURCE")
+  endif()
 
-find_package(Unbound)
+  set(MINIUPNPC_LIB "libminiupnpc-static" PARENT_SCOPE)
 
-if(NOT UNBOUND_INCLUDE_DIR OR STATIC)
+endif()
+
+if(NOT UNBOUND_FOUND)
   # NOTE: If STATIC is true, CMAKE_FIND_LIBRARY_SUFFIXES has been reordered.
   # unbound has config tests which used OpenSSL libraries, so -ldl may need to
   # be set in this case.
   # The unbound CMakeLists.txt can set it, since it's also needed for the
   # static OpenSSL libraries set up there after with target_link_libraries.
+  message(STATUS "Using in-tree unbound")
   add_subdirectory(unbound)
 
   set(UNBOUND_STATIC true PARENT_SCOPE)
@@ -72,10 +86,10 @@ else()
     set(UNBOUND_LIBRARY ${UNBOUND_LIBRARIES} PARENT_SCOPE)
     set(UNBOUND_LIBRARY_DIRS "" PARENT_SCOPE)
   else()
-    die("Found libunbound includes, but could not find libunbound library. Please make sure you have installed libunbound or libunbound-dev or the equivalent")
+    message(FATAL_ERROR "Found libunbound includes, but could not find libunbound library. Please make sure you have installed libunbound or libunbound-dev or the equivalent")
   endif()
 endif()
 
-add_subdirectory(db_drivers)
+add_subdirectory(liblmdb)
 add_subdirectory(easylogging++)
-add_subdirectory(randomarq)
+add_subdirectory(randomarq EXCLUDE_FROM_ALL)

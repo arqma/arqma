@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2017, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -30,31 +30,27 @@
 set(device_sources
   device.cpp
   device_default.cpp
-  log.cpp
-  )
+  log.cpp)
 
-  if(HIDAPI_FOUND)
+if(HIDAPI_FOUND)
   set(device_sources
     ${device_sources}
     device_ledger.cpp
-    device_io_hid.cpp
-    )
-  endif()
+    device_io_hid.cpp)
+endif()
 
 set(device_headers
   device.hpp
   device_io.hpp
   device_default.hpp
-  log.hpp
- )
+  log.hpp)
 
- if(HIDAPI_FOUND)
-   set(device_headers
-   ${device_headers}
-   device_ledger.hpp
-   device_io_hid.hpp
-   )
- endif()
+if(HIDAPI_FOUND)
+  set(device_headers
+    ${device_headers}
+    device_ledger.hpp
+    device_io_hid.hpp)
+endif()
 
 set(device_private_headers)
 

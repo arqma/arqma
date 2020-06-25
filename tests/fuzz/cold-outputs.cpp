@@ -58,7 +58,7 @@ int ColdOutputsFuzzer::init()
     wallet.set_subaddress_lookahead(1, 1);
     wallet.generate("", "", spendkey, true, false);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Error on ColdOutputsFuzzer::init: " << e.what() << std::endl;
     return 1;
@@ -86,7 +86,7 @@ int ColdOutputsFuzzer::run(const std::string &filename)
     size_t n_outputs = wallet.import_outputs(outputs);
     std::cout << boost::lexical_cast<std::string>(n_outputs) << " outputs imported" << std::endl;
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Failed to import outputs: " << e.what() << std::endl;
     return 1;

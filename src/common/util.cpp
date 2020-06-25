@@ -246,7 +246,7 @@ namespace tools
     {
       filename_wide = string_tools::utf8_to_utf16(filename);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       MERROR("Failed to convert path \"" << filename << "\" to UTF-16: " << e.what());
       return;
@@ -588,7 +588,7 @@ std::string get_nix_version_display_string()
       {
         return string_tools::utf16_to_utf8(psz_path);
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         MERROR("utf16_to_utf8 failed: " << e.what());
         return "";

@@ -119,7 +119,7 @@ bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::functio
     if (!startfunc(diff, credits_per_hash_found))
       return true;
   }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 
   static std::atomic<uint32_t> nonce(0);
   while (contfunc(n_hashes))
@@ -130,7 +130,7 @@ bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::functio
       if (!need_payment)
         return true;
     }
-    catch (const std::exception &e) { return false; }
+    catch (const std::exception& e) { return false; }
     if (hashing_blob.empty())
     {
       MERROR("Bad hashing blob from daemon");
@@ -182,7 +182,7 @@ bool wallet2::search_for_rpc_payment(uint64_t credits_target, const std::functio
         if (errorfunc)
           errorfunc("Found nonce, but daemon errored out with error " + std::to_string(e.code()) + ": " + e.status() + ", continuing");
       }
-      catch (const std::exception &e)
+      catch (const std::exception& e)
       {
         MWARNING("Found a local_nonce at diff " << diff << ", but failed to send it to the daemon");
         if (errorfunc)

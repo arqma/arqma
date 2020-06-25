@@ -102,7 +102,9 @@ t_daemon::t_daemon(
     boost::program_options::variables_map const & vm, uint16_t public_rpc_port
   )
   : mp_internals{new t_internals{vm}}, public_rpc_port(public_rpc_port), m_vm(vm)
-{}
+{
+  zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled);
+}
 
 t_daemon::~t_daemon() = default;
 
@@ -165,11 +167,9 @@ bool t_daemon::run(bool interactive)
       rpc_commands->start_handling(std::bind(&daemonize::t_daemon::stop_p2p, this));
     }
 
-	arqmaMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
-
+    arqmaMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
     arqmaMQ::ArqmaNotifier arqmaNotifier{zmq_daemon_handler};
 
-    auto zmq_enabled  = command_line::get_arg(m_vm, daemon_args::arg_zmq_enabled);
     if(zmq_enabled)
     {
       auto zmq_ip_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_ip);
@@ -198,8 +198,10 @@ bool t_daemon::run(bool interactive)
 
       arqmaNotifier.run();
 
-      MGINFO_GREEN(std::string("ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
-	}
+      MGINFO_GREEN(std::string("Arqma ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
+    }
+    else
+      MGINFO_GREEN(std::string("Arqma ZMQ Server Disabled"));
 
     if (public_rpc_port > 0)
     {
@@ -209,14 +211,15 @@ bool t_daemon::run(bool interactive)
 
     mp_internals->p2p.run(); // blocks until p2p goes down
 
-    if (rpc_commands)
+    if(rpc_commands)
       rpc_commands->stop_handling();
 
-	if(command_line::get_arg(m_vm, daemon_args::arg_zmq_enabled))
-	{
-		MGINFO_GREEN(std::string("ZMQ server stopping"));
-	    arqmaNotifier.stop();
-	}
+    if(zmq_enabled)
+    {
+      MGINFO_GREEN(std::string("Stopping Arqma ZMQ Server."));
+      arqmaNotifier.stop();
+    }
+
 
     for(auto& rpc : mp_internals->rpcs)
       rpc->stop();

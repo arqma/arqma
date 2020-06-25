@@ -49,7 +49,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include <zmq.hpp>
+#include "zmq_addon.hpp"
 #include <map>
 #include <iterator>
 #include "INotifier.h"
@@ -57,7 +57,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/ip/address.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include "common/command_line.h"
 
 #include "cryptonote_basic/cryptonote_basic_impl.h"
@@ -70,6 +70,7 @@
 
 using namespace cryptonote;
 using namespace rpc;
+using namespace boost::placeholders;
 
 
 namespace arqmaMQ {
@@ -150,4 +151,3 @@ namespace arqmaMQ {
 			zmq::message_t create_message(std::string &&data);
     };
 }
-

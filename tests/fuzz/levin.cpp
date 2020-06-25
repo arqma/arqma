@@ -332,7 +332,7 @@ int LevinFuzzer::run(const std::string &filename)
     //m_commands_handler.return_code(expected_return_code);
     conn->m_protocol_handler.handle_recv(s.data(), s.size());
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Failed to test http client: " << e.what() << std::endl;
     return 1;

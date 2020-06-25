@@ -151,7 +151,7 @@ namespace tools
               return false;
             return f.good();
           }
-          catch (const std::exception &e)
+          catch (const std::exception& e)
           {
             MERROR("Error writing data: " << e.what());
             return false;
@@ -246,7 +246,7 @@ namespace tools
       control->result_cb(control->path, control->uri, control->success);
       return;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       MERROR("Exception in download thread: " << e.what());
       // fall through and call result_cb not from the catch block to avoid another exception

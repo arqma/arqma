@@ -1,4 +1,4 @@
-# Copyright (c) 2019, The Arqma Network
+# Copyright (c) 2019-2020, The Arqma Network
 #
 # All rights reserved.
 #
@@ -41,9 +41,5 @@ arqma_add_library(rpc_sig
   ${rpc_sig_headers}
   ${rpc_sig_private_headers})
 target_link_libraries(rpc_sig
-  PUBLIC
   PRIVATE
     ${EXTRA_LIBRARIES})
-
-
-

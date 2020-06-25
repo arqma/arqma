@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2019, The Arqma Network
-# Copyright (c) 2014-2018, The Monero Project
+# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
 #
@@ -30,29 +30,24 @@
 if(MSVC OR MINGW)
   set(daemonizer_sources
     windows_service.cpp
-    windows_daemonizer.inl
-  )
+    windows_daemonizer.inl)
 else()
   set(daemonizer_sources
     posix_fork.cpp
-    posix_daemonizer.inl
-  )
+    posix_daemonizer.inl)
 endif()
 
-set(daemonizer_headers
-)
+set(daemonizer_headers)
 
 if(MSVC OR MINGW)
   set(daemonizer_private_headers
     daemonizer.h
     windows_service.h
-    windows_service_runner.h
-  )
+    windows_service_runner.h)
 else()
   set(daemonizer_private_headers
     daemonizer.h
-    posix_fork.h
-  )
+    posix_fork.h)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

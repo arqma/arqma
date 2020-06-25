@@ -59,7 +59,7 @@ int ColdTransactionFuzzer::init()
     wallet.set_subaddress_lookahead(1, 1);
     wallet.generate("", "", spendkey, true, false);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Error on ColdTransactionFuzzer::init: " << e.what() << std::endl;
     return 1;
@@ -88,7 +88,7 @@ int ColdTransactionFuzzer::run(const std::string &filename)
     bool success = wallet.sign_tx(exported_txs, "/tmp/cold-transaction-test-signed", ptx);
     std::cout << (success ? "signed" : "error") << std::endl;
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     std::cerr << "Failed to sign transaction: " << e.what() << std::endl;
     return 1;

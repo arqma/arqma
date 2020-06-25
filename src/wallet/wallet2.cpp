@@ -345,7 +345,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   else if (!daemon_ssl_ca_file.empty() || !daemon_ssl_allowed_fingerprints.empty())
   {
     std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ daemon_ssl_allowed_fingerprints.size() };
-    std::transform(daemon_ssl_allowed_fingerprints.begin(), daemon_ssl_allowed_fingerprints.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
+    std::transform(daemon_ssl_allowed_fingerprints.begin(), daemon_ssl_allowed_fingerprints.end(), ssl_allowed_fingerprints.begin(), epee::from_hex_locale::to_vector);
     for (const auto &fpr: ssl_allowed_fingerprints)
     {
       THROW_WALLET_EXCEPTION_IF(fpr.size() != SSL_FINGERPRINT_SIZE, tools::error::wallet_internal_error, "SHA-256 fingerprint should be " BOOST_PP_STRINGIZE(SSL_FINGERPRINT_SIZE) " bytes long.");
@@ -457,7 +457,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
         trusted_daemon = true;
       }
     }
-    catch (const std::exception &e) { }
+    catch (const std::exception& e) { }
   }
 
   std::unique_ptr<tools::wallet2> wallet(new tools::wallet2(nettype, kdf_rounds, unattended));
@@ -475,7 +475,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
     if (!command_line::is_arg_defaulted(vm, opts.tx_notify))
       wallet->set_tx_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, opts.tx_notify).c_str())));
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     MERROR("Failed to parse tx notify spec");
   }
@@ -1575,7 +1575,7 @@ static uint64_t decodeRct(const rct::rctSig & rv, const crypto::key_derivation &
       return 0;
     }
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     LOG_ERROR("Failed to decode input " << i);
     return 0;
@@ -5097,7 +5097,7 @@ void wallet2::load(const std::string& wallet_, const epee::wipeable_string& pass
   {
     find_and_save_rings(false);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     MERROR("Failed to save rings, will try again next time");
   }
@@ -5978,7 +5978,7 @@ bool wallet2::parse_unsigned_tx_from_str(const std::string &unsigned_tx_st, unsi
         return false;
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       LOG_PRINT_L0("Failed to decrypt unsigned tx: " << e.what());
       return false;
@@ -6216,7 +6216,7 @@ bool wallet2::parse_tx_from_str(const std::string &signed_tx_st, std::vector<too
         return false;
       }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       LOG_PRINT_L0("Failed to decrypt signed transaction: " << e.what());
       return false;
@@ -6345,7 +6345,7 @@ bool wallet2::parse_multisig_tx_from_str(std::string multisig_tx_st, multisig_tx
   {
     multisig_tx_st = decrypt_with_view_secret_key(std::string(multisig_tx_st, magiclen));
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     LOG_PRINT_L0("Failed to decrypt multisig tx data: " << e.what());
     return false;
@@ -6756,7 +6756,7 @@ uint32_t wallet2::adjust_priority(uint32_t priority)
       MINFO("We'll use the low priority because probably it's safe to do so.");
       return 1;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       MERROR(e.what());
     }
@@ -6777,7 +6777,7 @@ bool wallet2::set_ring_database(const std::string &filename)
       generate_genesis(b);
       m_ringdb.reset(new tools::ringdb(m_ring_database, epee::string_tools::pod_to_hex(get_block_hash(b))));
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       MERROR("Failed to initialize ringdb: " << e.what());
       m_ring_database = "";
@@ -6804,13 +6804,13 @@ bool wallet2::add_rings(const crypto::chacha_key &key, const cryptonote::transac
   if (!m_ringdb)
     return false;
   try { return m_ringdb->add_rings(key, tx); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::add_rings(const cryptonote::transaction_prefix &tx)
 {
   try { return add_rings(get_ringdb_key(), tx); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::remove_rings(const cryptonote::transaction_prefix &tx)
@@ -6818,7 +6818,7 @@ bool wallet2::remove_rings(const cryptonote::transaction_prefix &tx)
   if (!m_ringdb)
     return false;
   try { return m_ringdb->remove_rings(get_ringdb_key(), tx); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::get_ring(const crypto::chacha_key &key, const crypto::key_image &key_image, std::vector<uint64_t> &outs)
@@ -6826,7 +6826,7 @@ bool wallet2::get_ring(const crypto::chacha_key &key, const crypto::key_image &k
   if (!m_ringdb)
     return false;
   try { return m_ringdb->get_ring(key, key_image, outs); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> &outs)
@@ -6855,7 +6855,7 @@ bool wallet2::get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::
 bool wallet2::get_ring(const crypto::key_image &key_image, std::vector<uint64_t> &outs)
 {
   try { return get_ring(get_ringdb_key(), key_image, outs); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::set_ring(const crypto::key_image &key_image, const std::vector<uint64_t> &outs, bool relative)
@@ -6864,7 +6864,7 @@ bool wallet2::set_ring(const crypto::key_image &key_image, const std::vector<uin
     return false;
 
   try { return m_ringdb->set_ring(get_ringdb_key(), key_image, outs, relative); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::find_and_save_rings(bool force)
@@ -6942,7 +6942,7 @@ bool wallet2::blackball_output(const std::pair<uint64_t, uint64_t> &output)
   if (!m_ringdb)
     return false;
   try { return m_ringdb->blackball(output); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::set_blackballed_outputs(const std::vector<std::pair<uint64_t, uint64_t>> &outputs, bool add)
@@ -6957,7 +6957,7 @@ bool wallet2::set_blackballed_outputs(const std::vector<std::pair<uint64_t, uint
     ret &= m_ringdb->blackball(outputs);
     return ret;
   }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::unblackball_output(const std::pair<uint64_t, uint64_t> &output)
@@ -6965,7 +6965,7 @@ bool wallet2::unblackball_output(const std::pair<uint64_t, uint64_t> &output)
   if (!m_ringdb)
     return false;
   try { return m_ringdb->unblackball(output); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::is_output_blackballed(const std::pair<uint64_t, uint64_t> &output) const
@@ -6973,7 +6973,7 @@ bool wallet2::is_output_blackballed(const std::pair<uint64_t, uint64_t> &output)
   if (!m_ringdb)
     return false;
   try { return m_ringdb->blackballed(output); }
-  catch (const std::exception &e) { return false; }
+  catch (const std::exception& e) { return false; }
 }
 
 bool wallet2::lock_keys_file()
@@ -9394,7 +9394,7 @@ bool wallet2::sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, s
         std::string proof = get_tx_proof(ptx.tx, ptx.tx_key, ptx.additional_tx_keys, address, r.second.second, "automatic-sanity-check");
         check_tx_proof(ptx.tx, address, r.second.second, "automatic-sanity-check", proof, received);
       }
-      catch (const std::exception &e) { received = 0; }
+      catch (const std::exception& e) { received = 0; }
       total_received += received;
     }
 
@@ -11213,7 +11213,7 @@ uint64_t wallet2::import_key_images(const std::string &filename, uint64_t &spent
     PERF_TIMER(import_key_images_decrypt);
     data = decrypt_with_view_secret_key(std::string(data, magiclen));
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     THROW_WALLET_EXCEPTION(error::wallet_internal_error, std::string("Failed to decrypt ") + filename + ": " + e.what());
   }
@@ -11703,7 +11703,7 @@ size_t wallet2::import_outputs_from_str(const std::string &outputs_st)
     PERF_TIMER(import_outputs_decrypt);
     data = decrypt_with_view_secret_key(std::string(data, magiclen));
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     THROW_WALLET_EXCEPTION(error::wallet_internal_error, std::string("Failed to decrypt outputs: ") + e.what());
   }
@@ -11743,7 +11743,7 @@ size_t wallet2::import_outputs_from_str(const std::string &outputs_st)
 
     imported_outputs = import_outputs(outputs);
   }
-  catch (const std::exception &e)
+  catch (const std::exception& e)
   {
     THROW_WALLET_EXCEPTION(error::wallet_internal_error, std::string("Failed to import outputs") + e.what());
   }
