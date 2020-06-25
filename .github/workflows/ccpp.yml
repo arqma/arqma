@@ -97,7 +97,7 @@ jobs:
     - name: update apt
       run: sudo apt update
     - name: install ArQmA dependencies
-      run: sudo apt -y install build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin python3 g++-mingw-w64-x86-64 wine bc
+      run: sudo apt -y install build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8 libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin python3 g++-mingw-w64-x86-64 wine bc
     - name: Get specific version CMake
       uses: lukka/get-cmake@v3.17.2
     - name: build
