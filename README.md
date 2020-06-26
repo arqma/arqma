@@ -305,7 +305,7 @@ application.
 
 * If you are on a 64-bit system, run:
 
-  `$ make release-static-win`
+  `$ USE_SINGLE_BUILDDIR=1 make release-static-win`
 
 * The resulting executables can be found in `build/release/bin`
 
