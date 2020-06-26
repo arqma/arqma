@@ -353,31 +353,31 @@ We assume you are compiling with a non-root user and you have `doas` enabled.
 
 Note: do not use the boost package provided by OpenBSD, as we are installing boost to `/usr/local`.
 
-# Create boost building directory
+### Create boost building directory
 `$ mkdir ~/boost`
 `$ cd ~/boost`
 
-# Fetch boost source
+### Fetch boost source
 `$ ftp -o boost_1_64_0.tar.bz2 https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2`
 
-# MUST output: (SHA256) boost_1_64_0.tar.bz2: OK
+### MUST output: (SHA256) boost_1_64_0.tar.bz2: OK
 `$ echo "7bcc5caace97baa948931d712ea5f37038dbb1c5d89b43ad4def4ed7cb683332 boost_1_64_0.tar.bz2" | sha256 -c`
 `$ tar xfj boost_1_64_0.tar.bz2`
 
-# Fetch and apply boost patches, required for OpenBSD
+### Fetch and apply boost patches, required for OpenBSD
 `$ ftp -o boost_test_impl_execution_monitor_ipp.patch https://raw.githubusercontent.com/openbsd/ports/bee9e6df517077a7269ff0dfd57995f5c6a10379/devel/boost/patches/patch-boost_test_impl_execution_monitor_ipp`
 `$ ftp -o boost_config_platform_bsd_hpp.patch https://raw.githubusercontent.com/openbsd/ports/90658284fb786f5a60dd9d6e8d14500c167bdaa0/devel/boost/patches/patch-boost_config_platform_bsd_hpp`
 
-# MUST output: (SHA256) boost_config_platform_bsd_hpp.patch: OK
+### MUST output: (SHA256) boost_config_platform_bsd_hpp.patch: OK
 `$ echo "1f5e59d1154f16ee1e0cc169395f30d5e7d22a5bd9f86358f738b0ccaea5e51d boost_config_platform_bsd_hpp.patch" | sha256 -c`
-# MUST output: (SHA256) boost_test_impl_execution_monitor_ipp.patch: OK
+### MUST output: (SHA256) boost_test_impl_execution_monitor_ipp.patch: OK
 `$ echo "30cec182a1437d40c3e0bd9a866ab5ddc1400a56185b7e671bb3782634ed0206 boost_test_impl_execution_monitor_ipp.patch" | sha256 -c`
 
 `$ cd boost_1_64_0`
 `$ patch -p0 < ../boost_test_impl_execution_monitor_ipp.patch`
 `$ patch -p0 < ../boost_config_platform_bsd_hpp.patch`
 
-# Start building boost
+### Start building boost
 `$ echo 'using clang : : c++ : <cxxflags>"-fvisibility=hidden -fPIC" <linkflags>"" <archiver>"ar" <striper>"strip"  <ranlib>"ranlib" <rc>"" : ;' > user-config.jam`
 `$ ./bootstrap.sh --without-icu --with-libraries=chrono,filesystem,program_options,system,thread,test,date_time,regex,serialization,locale --with-toolset=clang`
 `$ ./b2 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" -sICONV_PATH=/usr/local
