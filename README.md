@@ -384,14 +384,6 @@ Note: do not use the boost package provided by OpenBSD, as we are installing boo
 $ doas ./b2 -d0 runtime-link=shared threadapi=pthread threading=multi link=static variant=release --layout=tagged --build-type=complete --user-config=user-config.jam -sNO_BZIP2=1 -sICONV_PATH=/usr/local --prefix=/usr/local install
 `
 
-Build cppzmq
-
-Build the cppzmq bindings.
-
-We assume you are compiling with a non-root user and you have `doas` enabled.
-
-Build arqma: `$ env DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/usr/local make release-static`
-
 ### On Solaris:
 
 The default Solaris linker can't be used, you have to install GNU ld, then run cmake manually with the path to your copy of GNU ld:
