@@ -131,26 +131,26 @@ library archives (`.a`).
 [1] On Debian/Ubuntu `libgtest-dev` only includes sources and headers. You must
 build the library binary manually. This can be done with the following command:
 
-  `sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/`
+`sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/`
 
 Debian / Ubuntu one liner for all dependencies
 
-	`$ sudo apt update && sudo apt install build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
+`$ sudo apt update && sudo apt install build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
 
 Install all dependencies at once on OSX:
 
-	`$ brew update && brew bundle --file=contrib/apple/brew`
+`$ brew update && brew bundle --file=contrib/apple/brew`
 
 ### Cloning the repository
 
 Clone recursively to pull-in needed submodule(s):
 
-	`$ git clone https://github.com/arqma/arqma`
+`$ git clone https://github.com/arqma/arqma`
 
 If you already have a repo cloned, initialize and update:
 
-	`$ cd arqma && git checkout release-v0.6.0`
-	`$ git submodule init && git submodule update`
+`$ cd arqma && git checkout release-v0.6.0`
+`$ git submodule init && git submodule update`
 
 ### Build instructions
 
@@ -404,12 +404,12 @@ The default Solaris linker can't be used, you have to install GNU ld, then run c
 
 ### On Linux for Android (using docker):
 
-  # Build image
-    `docker build -f utils/build_scripts/android32.Dockerfile -t arqma-android .`
-  # Create container
-    `docker create -it --name arqma-android arqma-android bash`
-  # Get binaries
-    `docker cp arqma-android:/opt/android/arqma/build/release/bin .`
+### Build image
+`docker build -f utils/build_scripts/android32.Dockerfile -t arqma-android .`
+### Create container
+`docker create -it --name arqma-android arqma-android bash`
+### Get binaries
+`docker cp arqma-android:/opt/android/arqma/build/release/bin .`
 
 ### Building portable statically linked binaries
 
@@ -506,7 +506,7 @@ setting the following configuration parameters and environment variables:
 
 Example command line to start arqmad through Tor:
 
-    DNS_PUBLIC=tcp torsocks arqmad --p2p-bind-ip 127.0.0.1 --no-igd
+`DNS_PUBLIC=tcp torsocks arqmad --p2p-bind-ip 127.0.0.1 --no-igd`
 
 ### Using Tor on Tails
 
@@ -514,8 +514,8 @@ TAILS ships with a very restrictive set of firewall rules. Therefore, you need
 to add a rule to allow this connection too, in addition to telling torsocks to
 allow inbound connections. Full example:
 
-    `$ sudo iptables -I OUTPUT 2 -p tcp -d 127.0.0.1 -m tcp --dport 19994 -j ACCEPT`
-    `$ DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
+`$ sudo iptables -I OUTPUT 2 -p tcp -d 127.0.0.1 -m tcp --dport 19994 -j ACCEPT`
+`$ DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
         --data-dir /home/amnesia/Persistent/your/directory/to/the/blockchain`
 ## Debugging
 
