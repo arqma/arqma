@@ -35,6 +35,7 @@
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/blockchain.h"
 #include "blockchain_db/blockchain_db.h"
+#include "blockchain_objects.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -123,10 +124,9 @@ int main(int argc, char* argv[])
   bool do_hours = command_line::get_arg(vm, arg_hours);
 
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  std::unique_ptr<Blockchain> core_storage;
-  tx_memory_pool m_mempool(*core_storage);
-  core_storage.reset(new Blockchain(m_mempool));
-  BlockchainDB *db = new_db();
+  blockchain_objects_t blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.m_blockchain;
+  BlockchainDB* db = new_db(db_type);
   if (db == NULL)
   {
     LOG_ERROR("Failed to initialize a database");
