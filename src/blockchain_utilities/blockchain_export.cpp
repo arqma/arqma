@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
   blockchain_objects_t blockchain_objects = {};
   Blockchain *core_storage = &blockchain_objects.m_blockchain;
-  BlockchainDB* db = new_db(db_type);
+  BlockchainDB *db = new_db();
   if (db == NULL)
   {
     LOG_ERROR("Failed to initialize a database");
