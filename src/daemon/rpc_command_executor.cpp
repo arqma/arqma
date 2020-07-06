@@ -467,7 +467,7 @@ bool t_rpc_command_executor::show_status() {
     }
   }
 
-  tools::success_msg_writer() << boost::format("Height: %llu/%llu (%.1f%%) on %s%s, %s, net hash %s, v%u%s, %s, %u(out)+%u(in) connections, uptime %ud %uh %um %us")
+  tools::success_msg_writer() << boost::format("Height: %llu/%llu (%.1f%%) on %s%s, %s, net hash %s, v%u%s, %u(out)+%u(in) connections")
     % (unsigned long long)ires.height
     % (unsigned long long)net_height
     % get_sync_percentage(ires)
@@ -477,7 +477,6 @@ bool t_rpc_command_executor::show_status() {
     % get_mining_speed(ires.difficulty / ires.target)
     % (unsigned)hfres.version
     % get_fork_extra_info(hfres.earliest_height, net_height, ires.target)
-    % (hfres.state == cryptonote::HardFork::Ready ? "up to date" : hfres.state == cryptonote::HardFork::UpdateNeeded ? "update needed" : "out of date, likely forked")
     % (unsigned)ires.outgoing_connections_count
     % (unsigned)ires.incoming_connections_count
     % (unsigned int)floor(uptime / 60.0 / 60.0 / 24.0)
@@ -1390,14 +1389,14 @@ bool t_rpc_command_executor::out_peers(bool set, uint32_t limit)
 {
   cryptonote::COMMAND_RPC_OUT_PEERS::request req;
   cryptonote::COMMAND_RPC_OUT_PEERS::response res;
-  
+
   epee::json_rpc::error error_resp;
-  
+
   req.set = set;
   req.out_peers = limit;
-  
+
   std::string fail_message = "Unsuccessful";
-  
+
   if(m_is_rpc)
   {
     if(!m_rpc_client->rpc_request(req, res, "/out_peers", fail_message.c_str()))
@@ -1413,10 +1412,10 @@ bool t_rpc_command_executor::out_peers(bool set, uint32_t limit)
       return true;
     }
   }
-  
+
   const std::string s = res.out_peers == (uint32_t)-1 ? "unlimited" : std::to_string(res.out_peers);
   tools::msg_writer() << "Maximum number of out peers is set to: " << s << std::endl;
-  
+
   return true;
 }
 
