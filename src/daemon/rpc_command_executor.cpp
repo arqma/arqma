@@ -477,6 +477,7 @@ bool t_rpc_command_executor::show_status() {
     % get_mining_speed(ires.difficulty / ires.target)
     % (unsigned)hfres.version
     % get_fork_extra_info(hfres.earliest_height, net_height, ires.target)
+    % (unsigned)ires.outgoing_connections_count
     % (unsigned)ires.incoming_connections_count
     % (unsigned int)floor(uptime / 60.0 / 60.0 / 24.0)
     % (unsigned int)floor(fmod((uptime / 60.0 / 60.0), 24.0))
