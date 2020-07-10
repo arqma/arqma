@@ -148,7 +148,7 @@ static inline int use_rx_jit(void)
 #endif
 }
 
-#define SEEDHASH_EPOCH_BLOCKS	512 	/* Must be same as BLOCKS_SYNCHRONIZING_MAX_COUNT in cryptonote_config.h */
+#define SEEDHASH_EPOCH_BLOCKS	256 	/* Must be same as BLOCKS_SYNCHRONIZING_MAX_COUNT in cryptonote_config.h */
 #define SEEDHASH_EPOCH_LAG	64
 
 void rx_reorg(const uint64_t split_height) {
