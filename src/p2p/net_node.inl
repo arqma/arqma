@@ -749,7 +749,7 @@ namespace nodetool
     public_zone.m_net_server.add_idle_handler(boost::bind(&t_payload_net_handler::on_idle, &m_payload_handler), 1000);
 
     //here you can set worker threads count
-    int thrds_count = 10;
+    int thrds_count = 16;
 
     boost::thread::attributes attrs;
     attrs.set_stack_size(THREAD_STACK_SIZE);
@@ -908,7 +908,8 @@ namespace nodetool
         }
         LOG_INFO_CC(context, "New connection handshaked, pruning seed " << epee::string_tools::to_string_hex(context.m_pruning_seed));
         LOG_DEBUG_CC(context, " COMMAND_HANDSHAKE INVOKED OK");
-      }else
+      }
+      else
       {
         LOG_DEBUG_CC(context, " COMMAND_HANDSHAKE(AND CLOSE) INVOKED OK");
       }

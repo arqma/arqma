@@ -147,12 +147,12 @@ namespace cryptonote
   static const command_line::arg_descriptor<uint64_t> arg_prep_blocks_threads = {
     "prep-blocks-threads"
   , "Max number of threads to use when preparing block hashes in groups."
-  , 4
+  , 8
   };
   static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
   , "Show time-stats when processing blocks/txs and disk synchronization."
-  , 0
+  , 1
   };
   static const command_line::arg_descriptor<size_t> arg_block_sync_size = {
     "block-sync-size"
@@ -517,7 +517,7 @@ namespace cryptonote
         MDEBUG("option: " << option);
 
       // default to fast:async:1
-      uint64_t DEFAULT_FLAGS = DBF_FAST;
+      uint64_t DEFAULT_FLAGS = DBF_FASTEST;
 
       if(options.size() == 0)
       {
