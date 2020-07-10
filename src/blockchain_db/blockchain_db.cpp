@@ -47,7 +47,7 @@ namespace cryptonote
 const command_line::arg_descriptor<std::string> arg_db_sync_mode = {
   "db-sync-mode"
 , "Specify sync option, using format [safe|fast|fastest]:[sync|async]:[<nblocks_per_sync>[blocks]|<nbytes_per_sync>[bytes]]."
-, "fastest:async:2097152bytes"
+, "fast:async:250000000bytes"
 };
 const command_line::arg_descriptor<bool> arg_db_salvage  = {
   "db-salvage"
