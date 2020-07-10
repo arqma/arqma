@@ -207,7 +207,7 @@ add_definitions("-DPER_BLOCK_CHECKPOINT")
 set(Blocks "blocks")
 
 list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+  "${CMAKE_SOURCE_DIR}/cmake")
 
 option(BOOST_IGNORE_SYSTEM_PATHS "Ignore boost system paths for local boost installation" OFF)
 
@@ -298,10 +298,8 @@ if(MINGW)
 endif()
 
 if(STATIC)
-  if(MSVC OR MINGW OR WIN32)
+  if(MSVC)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .dll.a .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  elseif(APPLE)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .dylib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
   else()
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
   endif()
@@ -388,7 +386,7 @@ if(STATIC AND NOT IOS)
   if(UNIX)
     set(OPENSSL_LIBRARIES "${OPENSSL_LIBRARIES};${CMAKE_DL_LIBS};${CMAKE_THREAD_LIBS_INIT}")
   elseif(MINGW)
-    set(OPENSSL_LIBRARIES "${OPENSSL_LIBRARIES};${EXTRA_LIBRARIES}")
+    set(OPENSSL_LIBRARIES "${OPENSSL_LIBRARIES}")
   endif()
 endif()
 
@@ -648,13 +646,21 @@ else()
     add_linker_flag_if_supported(-Wl,--high-entropy-va LD_SECURITY_FLAGS)
   endif()
 
+  if(STATIC)
+    add_linker_flag_if_supported(-static-libgcc STATIC_FLAGS)
+    add_linker_flag_if_supported(-static-libstdc++ STATIC_FLAGS)
+    if(MINGW)
+      add_linker_flag_if_supported(-static STATIC_FLAGS)
+    endif()
+  endif()
+
   message(STATUS "Using C security hardening flags: ${C_SECURITY_FLAGS}")
   message(STATUS "Using C++ security hardening flags: ${CXX_SECURITY_FLAGS}")
   message(STATUS "Using linker security hardening flags: ${LD_SECURITY_FLAGS}")
 
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_FLAG} ${WARNINGS} ${C_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${C_SECURITY_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_CPP_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${LD_BACKCOMPAT_FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${C_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${C_SECURITY_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${LD_BACKCOMPAT_FLAGS} ${STATIC_FLAGS}")
 
   # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that
   # is fixed in the code (Issue #847), force compiler to be conservative.
@@ -787,20 +793,6 @@ else()
       endif()
     endif()
   endif()
-
-  if(STATIC)
-    # STATIC already configures most deps to be linked in statically,
-    # here we make more deps static if the platform permits it
-    if(MINGW)
-      # On Windows, this is as close to fully-static as we get:
-      # this leaves only deps on /c/Windows/system32/*.dll
-      set(STATIC_FLAGS "-static")
-    elseif(NOT (APPLE OR FREEBSD OR OPENBSD OR DRAGONFLY))
-      # On Linux, we don't support fully static build, but these can be static
-      set(STATIC_FLAGS "-static-libgcc -static-libstdc++")
-    endif()
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${STATIC_FLAGS} ")
-  endif()
 endif()
 
 if(${BOOST_IGNORE_SYSTEM_PATHS} STREQUAL "ON")
@@ -862,7 +854,7 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 if(MINGW)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wa,-mbig-obj")
-  set(EXTRA_LIBRARIES mswsock ws2_32 iphlpapi crypt32 bcrypt)
+  set(EXTRA_LIBRARIES mswsock;ws2_32;iphlpapi;crypt32;bcrypt)
   if(DEPENDS)
     set(ICU_LIBRARIES icuio icui18n icuuc icudata icutu iconv)
   else()

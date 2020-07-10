@@ -135,8 +135,8 @@
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 
-#define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // Kbps
-#define P2P_DEFAULT_LIMIT_RATE_DOWN                     16384      // Kbps
+#define P2P_DEFAULT_LIMIT_RATE_UP                       2048       // kB/s
+#define P2P_DEFAULT_LIMIT_RATE_DOWN                     8192       // kB/s
 
 #define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)    // 1 hour
 #define P2P_IP_BLOCKTIME                                (60*60*24) // 24 hour
