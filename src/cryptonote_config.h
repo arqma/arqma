@@ -124,7 +124,7 @@
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT                   8
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
-#define P2P_DEFAULT_PACKET_MAX_SIZE                     2097152    // 2MB maximum pocket size
+#define P2P_DEFAULT_PACKET_MAX_SIZE                     2097152    // 2MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
 #define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               45         // seconds
