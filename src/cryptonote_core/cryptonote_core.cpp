@@ -136,7 +136,7 @@ namespace cryptonote
   };
   static const command_line::arg_descriptor<bool> arg_dns_checkpoints = {
     "enforce-dns-checkpointing"
-  , "checkpoints from DNS server will be enforced - Obsolete. ON by Default"
+  , "checkpoints from DNS server will be enforced"
   , true
   };
   static const command_line::arg_descriptor<uint64_t> arg_fast_block_sync = {
@@ -147,12 +147,12 @@ namespace cryptonote
   static const command_line::arg_descriptor<uint64_t> arg_prep_blocks_threads = {
     "prep-blocks-threads"
   , "Max number of threads to use when preparing block hashes in groups."
-  , 8
+  , 4
   };
   static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
   , "Show time-stats when processing blocks/txs and disk synchronization."
-  , 1
+  , 0
   };
   static const command_line::arg_descriptor<size_t> arg_block_sync_size = {
     "block-sync-size"
@@ -517,7 +517,7 @@ namespace cryptonote
         MDEBUG("option: " << option);
 
       // default to fast:async:1
-      uint64_t DEFAULT_FLAGS = DBF_FASTEST;
+      uint64_t DEFAULT_FLAGS = DBF_FAST;
 
       if(options.size() == 0)
       {
@@ -684,7 +684,7 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-    bool core::deinit()
+  bool core::deinit()
   {
     m_miner.stop();
     m_mempool.deinit();
@@ -1163,10 +1163,10 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 465000 : 0;
+    static const uint64_t quick_height = 465000;
     if(block_sync_size > 0)
       return block_sync_size;
-    if(height >= quick_height)
+    if(height >= quick_height && m_nettype == MAINNET)
       return config::sync::NORMAL_SYNC;
     return config::sync::RAPID_SYNC;
   }

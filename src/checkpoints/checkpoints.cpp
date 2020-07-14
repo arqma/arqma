@@ -29,7 +29,7 @@
 //
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#include <boost/bind/bind.hpp>
+//#include <boost/bind/bind.hpp>
 
 #include "checkpoints.h"
 
@@ -37,18 +37,19 @@
 #include "string_tools.h"
 #include "storages/portable_storage_template_helper.h" // epee json include
 #include "serialization/keyvalue_serialization.h"
+#include <functional>
 #include <vector>
 
-#include <iostream>
-#include <utility>
+//#include <iostream>
+//#include <utility>
 
 using namespace epee;
-using namespace boost::placeholders;
+//using namespace boost::placeholders;
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "checkpoints"
 
-#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+//#define BOOST_BIND_GLOBAL_PLACEHOLDERS
 
 namespace cryptonote
 {
@@ -111,7 +112,8 @@ namespace cryptonote
     {
       MINFO("CHECKPOINT PASSED FOR HEIGHT " << height << " " << h);
       return true;
-    }else
+    }
+    else
     {
       MWARNING("CHECKPOINT FAILED FOR HEIGHT " << height << ". EXPECTED HASH: " << it->second << ", FETCHED HASH: " << h);
       return false;
@@ -142,11 +144,15 @@ namespace cryptonote
   //---------------------------------------------------------------------------
   uint64_t checkpoints::get_max_height() const
   {
-    std::map< uint64_t, crypto::hash >::const_iterator highest =
+/*    std::map< uint64_t, crypto::hash >::const_iterator highest =
         std::max_element( m_points.begin(), m_points.end(),
                          ( boost::bind(&std::map< uint64_t, crypto::hash >::value_type::first, _1) <
                            boost::bind(&std::map< uint64_t, crypto::hash >::value_type::first, _2 ) ) );
     return highest->first;
+*/
+  if(m_points.empty())
+    return 0;
+  return m_points.rbegin()->first;
   }
   //---------------------------------------------------------------------------
   const std::map<uint64_t, crypto::hash>& checkpoints::get_points() const
@@ -411,11 +417,10 @@ namespace cryptonote
     std::vector<std::string> records;
 
     // All four ArQ-Net domains have DNSSEC on and valid
-    static const std::vector<std::string> dns_urls = {
-        "checkpoints.arqma.com",
-        "checkpoints.myarqma.com",
-        "checkpoints.supportarqma.com",
-        "checkpoints.supportarqma.eu"
+    static const std::vector<std::string> dns_urls = { "checkpoints.arqma.com"
+                                                     , "checkpoints.myarqma.com"
+                                                     , "checkpoints.supportarqma.com"
+                                                     , "checkpoints.supportarqma.eu"
 	};
 
     static const std::vector<std::string> testnet_dns_urls = {

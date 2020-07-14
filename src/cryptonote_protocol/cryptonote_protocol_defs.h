@@ -69,15 +69,15 @@ namespace cryptonote
     std::string state;
 
     uint64_t live_time;
-    
+
     uint64_t avg_download;
     uint64_t current_download;
-    
+
     uint64_t avg_upload;
     uint64_t current_upload;
-    
+
     uint32_t support_flags;
-    
+
     std::string connection_id;
 
     uint64_t height;
@@ -155,7 +155,7 @@ namespace cryptonote
 
     struct request_t
     {
-      std::vector<blobdata>   txs;
+      std::vector<blobdata> txs;
       std::string _; // padding
 
       BEGIN_KV_SERIALIZE_MAP()
@@ -174,8 +174,8 @@ namespace cryptonote
 
     struct request_t
     {
-      std::vector<crypto::hash>    txs;
-      std::vector<crypto::hash>    blocks;
+      std::vector<crypto::hash> txs;
+      std::vector<crypto::hash> blocks;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_CONTAINER_POD_AS_BLOB(txs)
@@ -191,10 +191,10 @@ namespace cryptonote
 
     struct request_t
     {
-      std::vector<blobdata>              txs;
-      std::vector<block_complete_entry>  blocks;
-      std::vector<crypto::hash>          missed_ids;
-      uint64_t                         current_blockchain_height;
+      std::vector<blobdata> txs;
+      std::vector<block_complete_entry> blocks;
+      std::vector<crypto::hash> missed_ids;
+      uint64_t current_blockchain_height;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(txs)
@@ -211,7 +211,7 @@ namespace cryptonote
   {
     uint64_t current_height;
     uint64_t cumulative_difficulty;
-    crypto::hash  top_id;
+    crypto::hash top_id;
     uint8_t top_version;
     uint32_t pruning_seed;
 
@@ -278,7 +278,7 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
-  };  
+  };
 
   /************************************************************************/
   /*                                                                      */

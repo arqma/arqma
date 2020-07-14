@@ -157,32 +157,32 @@ namespace cryptonote
     double up_sum = 0.0;
     double up_curr_sum = 0.0;
 
-    ss << std::setw(30) << std::left << "Remote Host"
+    ss << std::setw(25) << std::left << "Remote Host"
       << std::setw(20) << "Peer id"
       << std::setw(20) << "Support Flags"
       << std::setw(30) << "Recv/Sent (inactive,sec)"
       << std::setw(25) << "State"
-      << std::setw(20) << "Livetime(sec)"
-      << std::setw(12) << "Down (Kbps)"
-      << std::setw(14) << "Down(now)"
-      << std::setw(10) << "Up (Kbps)"
-      << std::setw(13) << "Up(now)"
+      << std::setw(15) << "Livetime(sec)"
+      << std::setw(10) << "Down (kB/s)"
+      << std::setw(10) << "Down(now)"
+      << std::setw(10) << "Up (kB/s)"
+      << std::setw(10) << "Up(now)"
       << ENDL;
 
     m_p2p->for_each_connection([&](const connection_context& cntxt, nodetool::peerid_type peer_id, uint32_t support_flags)
     {
       bool local_ip = cntxt.m_remote_address.is_local();
       auto connection_time = time(NULL) - cntxt.m_started;
-      ss << std::setw(30) << std::left << std::string(cntxt.m_is_income ? " [INC]":"[OUT]") + cntxt.m_remote_address.str()
+      ss << std::setw(25) << std::left << std::string(cntxt.m_is_income ? " [INC]":"[OUT]") + cntxt.m_remote_address.str()
         << std::setw(20) << std::hex << peer_id
         << std::setw(20) << std::hex << support_flags
         << std::setw(30) << std::to_string(cntxt.m_recv_cnt)+ "(" + std::to_string(time(NULL) - cntxt.m_last_recv) + ")" + "/" + std::to_string(cntxt.m_send_cnt) + "(" + std::to_string(time(NULL) - cntxt.m_last_send) + ")"
         << std::setw(25) << get_protocol_state_string(cntxt.m_state)
-        << std::setw(20) << std::to_string(time(NULL) - cntxt.m_started)
-        << std::setw(12) << std::fixed << (connection_time == 0 ? 0.0 : cntxt.m_recv_cnt / connection_time / 1024)
-        << std::setw(14) << std::fixed << cntxt.m_current_speed_down / 1024
+        << std::setw(15) << std::to_string(time(NULL) - cntxt.m_started)
+        << std::setw(10) << std::fixed << (connection_time == 0 ? 0.0 : cntxt.m_recv_cnt / connection_time / 1024)
+        << std::setw(10) << std::fixed << cntxt.m_current_speed_down / 1024
         << std::setw(10) << std::fixed << (connection_time == 0 ? 0.0 : cntxt.m_send_cnt / connection_time / 1024)
-        << std::setw(13) << std::fixed << cntxt.m_current_speed_up / 1024
+        << std::setw(10) << std::fixed << cntxt.m_current_speed_up / 1024
         << (local_ip ? "[LAN]" : "")
         << std::left << (cntxt.m_remote_address.is_loopback() ? "[LOCALHOST]" : "") // 127.0.0.1
         << ENDL;
@@ -200,10 +200,10 @@ namespace cryptonote
     });
     ss << ENDL
       << std::setw(125) << " "
-      << std::setw(12) << down_sum
-      << std::setw(14) << down_curr_sum
+      << std::setw(10) << down_sum
+      << std::setw(10) << down_curr_sum
       << std::setw(10) << up_sum
-      << std::setw(13) << up_curr_sum
+      << std::setw(10) << up_curr_sum
       << ENDL;
     LOG_PRINT_L0("Connections: " << ENDL << ss.str());
   }

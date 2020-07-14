@@ -111,10 +111,11 @@ namespace nodetool
     peerid_type peer_id;
     uint32_t support_flags;
     bool m_in_timedsync;
+    std::set<epee::net_utils::network_address> sent_addresses;
   };
 
   template<class t_payload_net_handler>
-  class node_server: public epee::levin::levin_commands_handler<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>,
+  class node_server: public epee::levin::levin_commands_handler<p2p_connection_context_t<typename t_payload_net_handler::connection_context> >,
                      public i_p2p_endpoint<typename t_payload_net_handler::connection_context>,
                      public epee::net_utils::i_connection_filter
   {
@@ -205,7 +206,7 @@ namespace nodetool
         m_config.m_support_flags = 0; // only set in public zone
       }
     };
-    
+
     enum igd_t
     {
       no_igd,
@@ -337,7 +338,7 @@ namespace nodetool
         const boost::program_options::variables_map& vm
       );
     bool idle_worker();
-    bool handle_remote_peerlist(const std::vector<peerlist_entry>& peerlist, time_t local_time, const epee::net_utils::connection_context_base& context);
+    bool handle_remote_peerlist(const std::vector<peerlist_entry>& peerlist, const epee::net_utils::connection_context_base& context);
     bool get_local_node_data(basic_node_data& node_data, const network_zone& zone);
     //bool get_local_handshake_data(handshake_data& hshd);
 

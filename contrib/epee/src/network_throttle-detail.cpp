@@ -79,15 +79,15 @@ namespace net_utils
 /* ============================================================================ */
 
 class connection_basic_pimpl {
-	public:
-		connection_basic_pimpl(const std::string &name);
+  public:
+    connection_basic_pimpl(const std::string &name);
 
-		static int m_default_tos;
+    static int m_default_tos;
 
-		network_throttle_bw m_throttle; // per-perr
+    network_throttle_bw m_throttle; // per-perr
     critical_section m_throttle_lock;
 
-		void _packet(size_t packet_size, int phase, int q_len); // execute a sleep ; phase is not really used now(?) could be used for different kinds of sleep e.g. direct/queue write
+    void _packet(size_t packet_size, int phase, int q_len); // execute a sleep ; phase is not really used now(?) could be used for different kinds of sleep e.g. direct/queue write
 };
 
 
@@ -122,7 +122,7 @@ network_throttle::packet_info::packet_info()
 }
 
 network_throttle::network_throttle(const std::string &nameshort, const std::string &name, int window_size)
-    : m_window_size( (window_size==-1) ? 10 : window_size  ),
+    : m_window_size( (window_size == -1) ? 10 : window_size  ),
 	  m_history( m_window_size ), m_nameshort(nameshort)
 {
 	set_name(name);
@@ -147,7 +147,7 @@ void network_throttle::set_name(const std::string &name)
 void network_throttle::set_target_speed( network_speed_kbps target )
 {
     m_target_speed = target * 1024;
-	MINFO("Setting LIMIT: " << target << " Kbps");
+    MINFO("Setting LIMIT: " << target << " kbps");
 }
 
 network_speed_kbps network_throttle::get_target_speed()

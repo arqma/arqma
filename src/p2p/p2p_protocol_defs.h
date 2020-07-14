@@ -84,8 +84,7 @@ namespace nodetool
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(adr)
       KV_SERIALIZE(id)
-      if(!is_store || this_ref.last_seen != 0)
-        KV_SERIALIZE_OPT(last_seen, (int64_t)0)
+      KV_SERIALIZE_OPT(last_seen, (int64_t)0)
       KV_SERIALIZE_OPT(pruning_seed, (uint32_t)0)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)0)
       KV_SERIALIZE_OPT(zmq_port, (uint16_t)0)
@@ -169,7 +168,6 @@ namespace nodetool
   struct basic_node_data
   {
     uuid network_id;
-    uint64_t local_time;
     uint32_t my_port;
     uint16_t rpc_port;
     uint16_t zmq_port;
@@ -179,7 +177,6 @@ namespace nodetool
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE_VAL_POD_AS_BLOB(network_id)
       KV_SERIALIZE(peer_id)
-      KV_SERIALIZE(local_time)
       KV_SERIALIZE(my_port)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)(0))
       KV_SERIALIZE_OPT(zmq_port, (uint16_t)(0))
@@ -194,9 +191,9 @@ namespace nodetool
   /*                                                                      */
   /************************************************************************/
   template<class t_playload_type>
-	struct COMMAND_HANDSHAKE_T
-	{
-		const static int ID = P2P_COMMANDS_POOL_BASE + 1;
+    struct COMMAND_HANDSHAKE_T
+    {
+      const static int ID = P2P_COMMANDS_POOL_BASE + 1;
 
     struct request_t
     {
@@ -219,35 +216,7 @@ namespace nodetool
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(node_data)
         KV_SERIALIZE(payload_data)
-        if (is_store)
-        {
-          // saving: save both, so old and new peers can understand it
-          KV_SERIALIZE(local_peerlist_new)
-          std::vector<peerlist_entry_base<network_address_old>> local_peerlist;
-          for (const auto &p: this_ref.local_peerlist_new)
-          {
-            if (p.adr.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
-            {
-              const epee::net_utils::network_address  &na = p.adr;
-              const epee::net_utils::ipv4_network_address &ipv4 = na.as<const epee::net_utils::ipv4_network_address>();
-              local_peerlist.push_back(peerlist_entry_base<network_address_old>({{ipv4.ip(), ipv4.port()}, p.id, p.last_seen, p.pruning_seed, p.rpc_port, p.zmq_port, p.rpc_credits_per_hash}));
-            }
-            else
-              MDEBUG("Not including in legacy peer list: " << p.adr.str());
-          }
-          epee::serialization::selector<is_store>::serialize_stl_container_pod_val_as_blob(local_peerlist, stg, hparent_section, "local_peerlist");
-        }
-        else
-        {
-          // loading: load old list only if there is no new one
-          if (!epee::serialization::selector<is_store>::serialize(this_ref.local_peerlist_new, stg, hparent_section, "local_peerlist_new"))
-          {
-            std::vector<peerlist_entry_base<network_address_old>> local_peerlist;
-            epee::serialization::selector<is_store>::serialize_stl_container_pod_val_as_blob(local_peerlist, stg, hparent_section, "local_peerlist");
-            for (const auto &p: local_peerlist)
-              ((response&)this_ref).local_peerlist_new.push_back(peerlist_entry({epee::net_utils::ipv4_network_address(p.adr.ip, p.adr.port), p.id, p.last_seen, p.pruning_seed, p.rpc_port, p.zmq_port, p.rpc_credits_per_hash}));
-          }
-        }
+        KV_SERIALIZE(local_peerlist_new)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -273,42 +242,12 @@ namespace nodetool
 
     struct response_t
     {
-      uint64_t local_time;
       t_playload_type payload_data;
       std::vector<peerlist_entry> local_peerlist_new;
 
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(local_time)
         KV_SERIALIZE(payload_data)
-        if (is_store)
-        {
-          // saving: save both, so old and new peers can understand it
-          KV_SERIALIZE(local_peerlist_new)
-          std::vector<peerlist_entry_base<network_address_old>> local_peerlist;
-          for (const auto &p: this_ref.local_peerlist_new)
-          {
-            if (p.adr.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
-            {
-              const epee::net_utils::network_address  &na = p.adr;
-              const epee::net_utils::ipv4_network_address &ipv4 = na.as<const epee::net_utils::ipv4_network_address>();
-              local_peerlist.push_back(peerlist_entry_base<network_address_old>({{ipv4.ip(), ipv4.port()}, p.id, p.last_seen}));
-            }
-            else
-              MDEBUG("Not including in legacy peer list: " << p.adr.str());
-          }
-          epee::serialization::selector<is_store>::serialize_stl_container_pod_val_as_blob(local_peerlist, stg, hparent_section, "local_peerlist");
-        }
-        else
-        {
-          // loading: load old list only if there is no new one
-          if (!epee::serialization::selector<is_store>::serialize(this_ref.local_peerlist_new, stg, hparent_section, "local_peerlist_new"))
-          {
-            std::vector<peerlist_entry_base<network_address_old>> local_peerlist;
-            epee::serialization::selector<is_store>::serialize_stl_container_pod_val_as_blob(local_peerlist, stg, hparent_section, "local_peerlist");
-            for (const auto &p: local_peerlist)
-              ((response&)this_ref).local_peerlist_new.push_back(peerlist_entry({epee::net_utils::ipv4_network_address(p.adr.ip, p.adr.port), p.id, p.last_seen}));
-          }
-        }
+        KV_SERIALIZE(local_peerlist_new)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;

@@ -89,7 +89,9 @@ public: \
 
 #define KV_SERIALIZE_OPT_N(variable, val_name, default_value) \
   do { \
-    if (!epee::serialization::selector<is_store>::serialize(this_ref.variable, stg, hparent_section, val_name)) \
+    if(is_store && this_ref.variable == default_value) \
+      break; \
+    if(!epee::serialization::selector<is_store>::serialize(this_ref.variable, stg, hparent_section, val_name)) \
       epee::serialize_default(this_ref.variable, default_value); \
   } while (0);
 

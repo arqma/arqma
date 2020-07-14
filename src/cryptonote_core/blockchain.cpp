@@ -145,7 +145,7 @@ static const struct {
 Blockchain::Blockchain(tx_memory_pool& tx_pool) :
   m_db(), m_tx_pool(tx_pool), m_hardfork(NULL), m_timestamps_and_difficulties_height(0), m_current_block_cumul_weight_limit(0), m_current_block_cumul_weight_median(0),
   m_enforce_dns_checkpoints(true), m_max_prepare_blocks_threads(4), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false),
-  m_fast_sync(true), m_show_time_stats(true), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
+  m_fast_sync(true), m_show_time_stats(false), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
   m_long_term_block_weights_window(CRYPTONOTE_LONG_TERM_BLOCK_WEIGHT_WINDOW_SIZE),
   m_long_term_effective_median_block_weight(0),
   m_difficulty_for_next_block_top_hash(crypto::null_hash),
@@ -352,11 +352,11 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   if (m_hardfork == nullptr)
   {
     if (m_nettype ==  FAKECHAIN || m_nettype == STAGENET)
-      m_hardfork = new HardFork(*db, 1);
+      m_hardfork = new HardFork(*db, 1, 0);
     else if (m_nettype == TESTNET)
-      m_hardfork = new HardFork(*db, 1);
+      m_hardfork = new HardFork(*db, 1, 0);
     else
-      m_hardfork = new HardFork(*db, 1);
+      m_hardfork = new HardFork(*db, 1, 0);
   }
   if (m_nettype == FAKECHAIN)
   {
@@ -5015,7 +5015,7 @@ void Blockchain::cancel()
 }
 
 #if defined(PER_BLOCK_CHECKPOINT)
-static const char expected_block_hashes_hash[] = "eb243f81267ef1d1c2092ff5ea134d1e0d3b8c9fbe217c392ae2e02792cedcd2";
+static const char expected_block_hashes_hash[] = "c5ff0bc2e569a412e08c7b9cf69a2849a21c62a4981dc77fcfcb05316d926ae6";
 void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get_checkpoints)
 {
   if (get_checkpoints == nullptr || !m_fast_sync)

@@ -70,7 +70,7 @@
 
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
 
-#define MIN_WANTED_SEED_NODES 8
+#define MIN_WANTED_SEED_NODES 16
 
 using namespace boost::placeholders;
 
@@ -531,7 +531,7 @@ namespace nodetool
       // TODO: at some point add IPv6 support, but that won't be relevant
       // for some time yet.
 
-      std::vector<std::vector<std::string>> dns_results;
+      std::vector<std::vector<std::string> > dns_results;
       dns_results.resize(m_seed_nodes_list.size());
 
       std::list<boost::thread> dns_threads;
@@ -857,15 +857,18 @@ namespace nodetool
 
     epee::simple_event ev;
     std::atomic<bool> hsh_result(false);
+    bool timeout = false;
 
     bool r = epee::net_utils::async_invoke_remote_command2<typename COMMAND_HANDSHAKE::response>(context_.m_connection_id, COMMAND_HANDSHAKE::ID, arg, zone.m_net_server.get_config_object(),
-      [this, &pi, &ev, &hsh_result, &just_take_peerlist, &context_](int code, const typename COMMAND_HANDSHAKE::response& rsp, p2p_connection_context& context)
+      [this, &pi, &ev, &hsh_result, &just_take_peerlist, &context_, &timeout](int code, const typename COMMAND_HANDSHAKE::response& rsp, p2p_connection_context& context)
     {
       epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ev.raise();});
 
       if(code < 0)
       {
         LOG_WARNING_CC(context, "COMMAND_HANDSHAKE invoke failed. (" << code << ", " << epee::levin::get_err_descr(code) << ")");
+        if(code == LEVIN_ERROR_CONNECTION_TIMEDOUT || code == LEVIN_ERROR_CONNECTION_DESTROYED)
+          timeout = true;
         return;
       }
 
@@ -875,7 +878,7 @@ namespace nodetool
         return;
       }
 
-      if(!handle_remote_peerlist(rsp.local_peerlist_new, rsp.node_data.local_time, context))
+      if(!handle_remote_peerlist(rsp.local_peerlist_new, context))
       {
         LOG_WARNING_CC(context, "COMMAND_HANDSHAKE: failed to handle_remote_peerlist(...), closing connection.");
         add_host_fail(context.m_remote_address);
@@ -924,7 +927,8 @@ namespace nodetool
     if(!hsh_result)
     {
       LOG_WARNING_CC(context_, "COMMAND_HANDSHAKE Failed");
-      m_network_zones.at(context_.m_remote_address.get_zone()).m_net_server.get_config_object().close(context_.m_connection_id);
+      if(!timeout)
+        zone.m_net_server.get_config_object().close(context_.m_connection_id);
     }
     else
     {
@@ -954,7 +958,7 @@ namespace nodetool
         return;
       }
 
-      if(!handle_remote_peerlist(rsp.local_peerlist_new, rsp.local_time, context))
+      if(!handle_remote_peerlist(rsp.local_peerlist_new, context))
       {
         LOG_WARNING_CC(context, "COMMAND_TIMED_SYNC: failed to handle_remote_peerlist(...), closing connection.");
         m_network_zones.at(context.m_remote_address.get_zone()).m_net_server.get_config_object().close(context.m_connection_id );
@@ -1108,7 +1112,6 @@ namespace nodetool
     {
       bool is_priority = is_priority_node(na);
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, *con, " Failed to HANDSHAKE with peer: " << na.str()/*<< ", try " << try_count*/);
-      zone.m_net_server.get_config_object().close(con->m_connection_id);
       return false;
     }
 
@@ -1167,7 +1170,6 @@ namespace nodetool
       bool is_priority = is_priority_node(na);
 
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, *con, " Failed to HANDSHAKE with peer: " << na.str());
-      zone.m_net_server.get_config_object().close(con->m_connection_id);
       return false;
     }
 
@@ -1658,7 +1660,7 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::handle_remote_peerlist(const std::vector<peerlist_entry>& peerlist, time_t local_time, const epee::net_utils::connection_context_base& context)
+  bool node_server<t_payload_net_handler>::handle_remote_peerlist(const std::vector<peerlist_entry>& peerlist, const epee::net_utils::connection_context_base& context)
   {
     std::vector<peerlist_entry> peerlist_ = peerlist;
     if(!sanitize_peerlist(peerlist_))
@@ -1681,9 +1683,6 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::get_local_node_data(basic_node_data& node_data, const network_zone& zone)
   {
-    time_t local_time;
-    time(&local_time);
-    node_data.local_time = local_time;  // \TODO This can be an identifying value across zones (public internet to tor/i2p) ...
     node_data.peer_id = zone.m_config.m_peer_id;
     if(!m_hide_my_port && zone.m_can_pingback)
       node_data.my_port = m_external_port ? m_external_port : m_listening_port;
@@ -1795,7 +1794,7 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)
+  bool node_server<t_payload_net_handler>::relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid> > connections)
   {
     std::sort(connections.begin(), connections.end());
     auto zone = m_network_zones.begin();
@@ -1972,12 +1971,20 @@ namespace nodetool
     }
 
     //fill response
-    rsp.local_time = time(NULL);
 
     const epee::net_utils::zone zone_type = context.m_remote_address.get_zone();
     network_zone& zone = m_network_zones.at(zone_type);
 
-    zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new, true);
+    std::vector<peerlist_entry> local_peerlist_new;
+    zone.m_peerlist.get_peerlist_head(local_peerlist_new, true, P2P_DEFAULT_PEERS_IN_HANDSHAKE);
+
+    rsp.local_peerlist_new.reserve(local_peerlist_new.size());
+    for(auto &pe: local_peerlist_new)
+    {
+      if(!context.sent_addresses.insert(pe.adr).second)
+        continue;
+      rsp.local_peerlist_new.push_back(std::move(pe));
+    }
     m_payload_handler.get_payload_sync_data(rsp.payload_data);
 
     if(!context.m_is_income && zone.m_our_address.get_zone() == zone_type)
@@ -2077,6 +2084,8 @@ namespace nodetool
 
     //fill response
     zone.m_peerlist.get_peerlist_head(rsp.local_peerlist_new, true);
+    for(const auto &e: rsp.local_peerlist_new)
+      context.sent_addresses.insert(e.adr);
     get_local_node_data(rsp.node_data, zone);
     m_payload_handler.get_payload_sync_data(rsp.payload_data);
     LOG_DEBUG_CC(context, "COMMAND_HANDSHAKE");
@@ -2217,6 +2226,10 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::set_max_in_peers(network_zone& zone, int64_t max)
   {
+    if(max == -1) {
+      zone.m_config.m_net_config.max_in_connection_count = max;
+      return true;
+    }
     zone.m_config.m_net_config.max_in_connection_count = max;
     return true;
   }
@@ -2286,7 +2299,7 @@ namespace nodetool
     }
 
     epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_up_limit( limit );
-    MINFO("Set limit-up to " << limit << " Kbps");
+    MINFO("Set limit-up to " << limit << " kB/s");
     return true;
   }
 
@@ -2298,7 +2311,7 @@ namespace nodetool
       limit = default_limit_down;
     }
     epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_down_limit( limit );
-    MINFO("Set limit-down to " << limit << " Kbps");
+    MINFO("Set limit-down to " << limit << " kB/s");
     return true;
   }
 
@@ -2320,11 +2333,11 @@ namespace nodetool
     }
     if(!this->islimitup) {
       epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_up_limit(limit_up);
-      MINFO("Set limit-up to " << limit_up << " Kbps");
+      MINFO("Set limit-up to " << limit_up << " kB/s");
     }
     if(!this->islimitdown) {
       epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_down_limit(limit_down);
-      MINFO("Set limit-down to " << limit_down << " Kbps");
+      MINFO("Set limit-down to " << limit_down << " kB/s");
     }
 
     return true;
@@ -2513,7 +2526,7 @@ namespace nodetool
   }
 
   template<typename t_payload_net_handler>
-  boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>
+  boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context> >
   node_server<t_payload_net_handler>::socks_connect(network_zone& zone, const epee::net_utils::network_address& remote, epee::net_utils::ssl_support_t ssl_support)
   {
     auto result = socks_connect_internal(zone.m_net_server.get_stop_signal(), zone.m_net_server.get_io_service(), zone.m_proxy_address, remote);
@@ -2527,7 +2540,7 @@ namespace nodetool
   }
 
   template<typename t_payload_net_handler>
-  boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>
+  boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context> >
   node_server<t_payload_net_handler>::public_connect(network_zone& zone, epee::net_utils::network_address const& na, epee::net_utils::ssl_support_t ssl_support)
   {
     CHECK_AND_ASSERT_MES(na.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id(), boost::none,
