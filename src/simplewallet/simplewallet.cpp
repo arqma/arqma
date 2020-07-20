@@ -3067,7 +3067,7 @@ simple_wallet::simple_wallet()
                            tr(USAGE_STOP_MINING_FOR_RPC),
                            tr("Stop mining to pay for RPC access"));
   m_cmd_binder.set_handler("show_qr_code",
-                           boost::bind(&simple_wallet::on_command, this, &simple_wallet::show_qr_code, _1),
+                           boost::bind(&simple_wallet::show_qr_code, this, _1),
                            tr(USAGE_SHOW_QR_CODE),
                            tr("Show address as QR code"));
   m_cmd_binder.set_handler("help",
