@@ -84,9 +84,9 @@ namespace cryptonote
     std::string get_commands_str();
     std::string get_command_usage(const std::vector<std::string> &args);
   private:
-    
+
     enum ResetType { ResetNone, ResetSoft, ResetHard, ResetSoftKeepKI };
-    
+
     bool handle_command_line(const boost::program_options::variables_map& vm);
 
     bool run_console_handler();
@@ -235,6 +235,7 @@ namespace cryptonote
     bool rpc_payment_info(const std::vector<std::string> &args);
     bool start_mining_for_rpc(const std::vector<std::string> &args);
     bool stop_mining_for_rpc(const std::vector<std::string> &args);
+    bool show_qr_code(const std::vector<std::string> &args);
     bool net_stats(const std::vector<std::string>& args);
     bool public_nodes(const std::vector<std::string>& args);
     bool welcome(const std::vector<std::string>& args);
@@ -402,7 +403,7 @@ namespace cryptonote
     bool m_rpc_payment_mining_requested;
     bool m_daemon_rpc_payment_message_displayed;
     float m_rpc_payment_hash_rate;
-    
+
     std::unordered_map<std::string, uint32_t> m_claimed_cph;
   };
 }

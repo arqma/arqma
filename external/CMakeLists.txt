@@ -92,4 +92,5 @@ endif()
 
 add_subdirectory(liblmdb)
 add_subdirectory(easylogging++)
+add_subdirectory(qrcodegen)
 add_subdirectory(randomarq EXCLUDE_FROM_ALL)
