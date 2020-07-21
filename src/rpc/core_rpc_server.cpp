@@ -1404,7 +1404,7 @@ namespace cryptonote
     return 0;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, epee::json_rpc::error &error_resp)
+  bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, epee::json_rpc::error &error_resp)
   {
     b = boost::value_initialized<cryptonote::block>();
     if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
@@ -1424,16 +1424,15 @@ namespace cryptonote
       return false;
     }
 
-    seed_hash = next_seed_hash = crypto::null_hash;
-    if(b.major_version >= RX_BLOCK_VERSION)
+    if (b.major_version >= RX_BLOCK_VERSION)
     {
-      uint64_t seed_height, next_height;
+      uint64_t next_height;
       crypto::rx_seedheights(height, &seed_height, &next_height);
       seed_hash = m_core.get_block_id_by_height(seed_height);
-      if(next_height != seed_height)
-      {
+      if (next_height != seed_height)
         next_seed_hash = m_core.get_block_id_by_height(next_height);
-      }
+      else
+        next_seed_hash = seed_hash;
     }
 
     if (extra_nonce.empty())
@@ -1511,18 +1510,23 @@ namespace cryptonote
         return false;
       }
     }
+    uint64_t seed_height;
     crypto::hash seed_hash, next_seed_hash;
-    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, error_resp))
+    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, error_resp))
       return false;
+    if (b.major_version >= RX_BLOCK_VERSION)
+    {
+      res.seed_hash = string_tools::pod_to_hex(seed_hash);
+      if (seed_hash != next_seed_hash)
+        res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
+    }
+
     res.reserved_offset = reserved_offset;
     blobdata block_blob = t_serializable_object_to_blob(b);
     blobdata hashing_blob = get_block_hashing_blob(b);
     res.prev_hash = string_tools::pod_to_hex(b.prev_id);
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
     res.blockhashing_blob =  string_tools::buff_to_hex_nodelimer(hashing_blob);
-    res.seed_hash = string_tools::pod_to_hex(seed_hash);
-    if(next_seed_hash != crypto::null_hash)
-      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -2775,6 +2779,7 @@ namespace cryptonote
       res.credits_per_hash_found = 0;
       res.credits = 0;
       res.height = 0;
+      res.seed_height = 0;
       res.status = CORE_RPC_STATUS_OK;
       return true;
     }
@@ -2792,14 +2797,14 @@ namespace cryptonote
     m_core.get_blockchain_top(res.height, top_hash);
     ++res.height;
     cryptonote::blobdata hashing_blob;
-    if (!m_rpc_payment->get_info(client, [&](const cryptonote::blobdata &extra_nonce, cryptonote::block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash)->bool{
+    if (!m_rpc_payment->get_info(client, [&](const cryptonote::blobdata &extra_nonce, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash)->bool{
       cryptonote::difficulty_type difficulty;
       uint64_t height, expected_reward;
       size_t reserved_offset;
-      if (!get_block_template(m_rpc_payment->get_payment_address(), NULL, extra_nonce, reserved_offset, difficulty, height, expected_reward, b, seed_hash, next_seed_hash, error_resp))
+      if (!get_block_template(m_rpc_payment->get_payment_address(), NULL, extra_nonce, reserved_offset, difficulty, height, expected_reward, b, seed_height, seed_hash, next_seed_hash, error_resp))
         return false;
       return true;
-    }, hashing_blob, seed_hash, next_seed_hash, top_hash, res.diff, res.credits_per_hash_found, res.credits, res.cookie))
+    }, hashing_blob, res.seed_height, seed_hash, top_hash, res.diff, res.credits_per_hash_found, res.credits, res.cookie))
     {
       return false;
     }

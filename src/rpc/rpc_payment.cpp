@@ -60,6 +60,10 @@
 namespace cryptonote
 {
   rpc_payment::client_info::client_info():
+    previous_seed_height(0),
+    seed_height(0),
+    previous_seed_hash(crypto::null_hash),
+    seed_hash(crypto::null_hash),
     cookie(0),
     top(crypto::null_hash),
     previous_top(crypto::null_hash),
@@ -127,7 +131,7 @@ namespace cryptonote
     return true;
   }
 
-  bool rpc_payment::get_info(const crypto::public_key &client, const std::function<bool(const cryptonote::blobdata&, cryptonote::block&, crypto::hash&, crypto::hash&)> &get_block_template, cryptonote::blobdata &hashing_blob, crypto::hash &seed_hash, crypto::hash &next_seed_hash, const crypto::hash &top, uint64_t &diff, uint64_t &credits_per_hash_found, uint64_t &credits, uint32_t &cookie)
+  bool rpc_payment::get_info(const crypto::public_key &client, const std::function<bool(const cryptonote::blobdata&, cryptonote::block&, uint64_t &seed_height, crypto::hash &seed_hash)> &get_block_template, cryptonote::blobdata &hashing_blob, uint64_t &seed_height, crypto::hash &seed_hash, const crypto::hash &top, uint64_t &diff, uint64_t &credits_per_hash_found, uint64_t &credits, uint32_t &cookie)
   {
     client_info &info = m_client_info[client]; // creates if not found
     const uint64_t now = time(NULL);
@@ -135,9 +139,10 @@ namespace cryptonote
     if (need_template)
     {
       cryptonote::block new_block;
-      crypto::hash new_seed_hash, new_next_seed_hash;
+      uint64_t new_seed_height;
+      crypto::hash new_seed_hash;
       cryptonote::blobdata extra_nonce("\x42\x42\x42\x42", 4);
-      if (!get_block_template(extra_nonce, new_block, new_seed_hash, new_next_seed_hash))
+      if (!get_block_template(extra_nonce, new_block, new_seed_height, new_seed_hash))
         return false;
       if(!remove_field_from_tx_extra(new_block.miner_tx.extra, typeid(cryptonote::tx_extra_nonce)))
         return false;
@@ -154,11 +159,11 @@ namespace cryptonote
       hashing_blob = get_block_hashing_blob(info.block);
       info.previous_hashing_blob = info.hashing_blob;
       info.hashing_blob = hashing_blob;
+      info.previous_top = info.top;
+      info.previous_seed_height = info.seed_height;
+      info.seed_height = new_seed_height;
       info.previous_seed_hash = info.seed_hash;
       info.seed_hash = new_seed_hash;
-      info.previous_next_seed_hash = info.next_seed_hash;
-      info.next_seed_hash = new_next_seed_hash;
-      info.previous_top = info.top;
       std::swap(info.previous_payments, info.payments);
       info.payments.clear();
       ++info.cookie;
@@ -167,11 +172,11 @@ namespace cryptonote
     info.top = top;
     info.update_time = now;
     hashing_blob = info.hashing_blob;
-    seed_hash = info.seed_hash;
-    next_seed_hash = info.next_seed_hash;
     diff = m_diff;
     credits_per_hash_found = m_credits_per_hash_found;
     credits = info.credits;
+    seed_height = info.seed_height;
+    seed_hash = info.seed_hash;
     cookie = info.cookie;
     return true;
   }
@@ -229,16 +234,12 @@ namespace cryptonote
 
     block = is_current ? info.block : info.previous_block;
     *(uint32_t*)(hashing_blob.data() + 39) = SWAP32LE(nonce);
-    const uint8_t major_version = hashing_blob[0];
-    if(major_version >= RX_BLOCK_VERSION)
+    if(block.major_version >= RX_BLOCK_VERSION)
     {
-      const int miners = 1;
-      uint64_t seed_height;
-      if(crypto::rx_needhash(cryptonote::get_block_height(block), &seed_height))
-      {
-        crypto::rx_seedhash(seed_height, is_current ? info.seed_hash.data : info.previous_seed_hash.data, miners);
-      }
-      crypto::rx_slow_hash(hashing_blob.data(), hashing_blob.size(), hash.data, miners);
+      const uint64_t seed_height = is_current ? info.seed_height : info.previous_seed_height;
+      const crypto::hash &seed_hash = is_current ? info.seed_hash : info.previous_seed_hash;
+      const uint64_t height = cryptonote::get_block_height(block);
+      crypto::rx_slow_hash(height, seed_height, seed_hash.data, hashing_blob.data(), hashing_blob.size(), hash.data, 0, 0);
     }
     else
     {

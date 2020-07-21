@@ -1755,7 +1755,7 @@ bool simple_wallet::rpc_payment_info(const std::vector<std::string> &args)
   try
   {
     bool payment_required;
-    uint64_t credits, diff, credits_per_hash_found, height;
+    uint64_t credits, diff, credits_per_hash_found, height, seed_height;
     uint32_t cookie;
     std::string hashing_blob;
     crypto::hash seed_hash, next_seed_hash;
@@ -1763,7 +1763,7 @@ bool simple_wallet::rpc_payment_info(const std::vector<std::string> &args)
     crypto::secret_key_to_public_key(m_wallet->get_rpc_client_secret_key(), pkey);
     message_writer() << tr("RPC client ID: ") << pkey;
     message_writer() << tr("RPC client secret key: ") << m_wallet->get_rpc_client_secret_key();
-    if (!m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie))
+    if (!m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_height, seed_hash, next_seed_hash, cookie))
     {
       fail_msg_writer() << tr("Failed to query daemon");
       return true;
@@ -2054,11 +2054,11 @@ bool simple_wallet::start_mining_for_rpc(const std::vector<std::string> &args)
   LOCK_IDLE_SCOPE();
 
   bool payment_required;
-  uint64_t credits, diff, credits_per_hash_found, height;
+  uint64_t credits, diff, credits_per_hash_found, height, seed_height;
   uint32_t cookie;
   std::string hashing_blob;
   crypto::hash seed_hash, next_seed_hash;
-  if (!m_wallet->get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie))
+  if (!m_wallet->get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_height, seed_hash, next_seed_hash, cookie))
   {
     fail_msg_writer() << tr("Failed to query daemon");
     return true;
@@ -4498,11 +4498,11 @@ bool simple_wallet::check_daemon_rpc_prices(const std::string &daemon_url, uint3
 
     claimed_cph = m_claimed_cph[daemon_url];
     bool payment_required;
-    uint64_t credits, diff, credits_per_hash_found, height;
+    uint64_t credits, diff, credits_per_hash_found, height, seed_height;
     uint32_t cookie;
     cryptonote::blobdata hashing_blob;
     crypto::hash seed_hash, next_seed_hash;
-    if (m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie) && payment_required)
+    if (m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_height, seed_hash, next_seed_hash, cookie) && payment_required)
     {
       actual_cph = RPC_CREDITS_PER_HASH_SCALE * (credits_per_hash_found / (float)diff);
       return true;

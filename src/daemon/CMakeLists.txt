@@ -90,8 +90,8 @@ target_link_libraries(daemon
     ${CMAKE_THREAD_LIBS_INIT}
     libzmq
     ${GNU_READLINE_LIBRARY}
-    ${EXTRA_LIBRARIES}
-    ${Blocks})
+    ${Blocks}
+    ${EXTRA_LIBRARIES})
 set_property(TARGET daemon
   PROPERTY
     OUTPUT_NAME "arqmad")

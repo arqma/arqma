@@ -5015,7 +5015,7 @@ void Blockchain::cancel()
 }
 
 #if defined(PER_BLOCK_CHECKPOINT)
-static const char expected_block_hashes_hash[] = "c5ff0bc2e569a412e08c7b9cf69a2849a21c62a4981dc77fcfcb05316d926ae6";
+static const char expected_block_hashes_hash[] = "967ab2bf5914388e8fd9b12cdbc8db20a2f0ebeb23261a24bc5ac658b347c6de";
 void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get_checkpoints)
 {
   if (get_checkpoints == nullptr || !m_fast_sync)
@@ -5066,12 +5066,14 @@ void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get
         m_blocks_hash_of_hashes.reserve(nblocks);
         for (uint32_t i = 0; i < nblocks; i++)
         {
-          crypto::hash hash;
-          memcpy(hash.data, p, sizeof(hash.data));
-          p += sizeof(hash.data);
-          m_blocks_hash_of_hashes.push_back(hash);
+          crypto::hash hash_hashes, hash_weights;
+          memcpy(hash_hashes.data, p, sizeof(hash_hashes.data));
+          p += sizeof(hash_hashes.data);
+          memcpy(hash_weights.data, p, sizeof(hash_weights.data));
+          p += sizeof(hash_weights.data);
+          m_blocks_hash_of_hashes.push_back(std::make_pair(hash_hashes, hash_weights));
         }
-        m_blocks_hash_check.resize(m_blocks_hash_of_hashes.size() * HASH_OF_HASHES_STEP, crypto::null_hash);
+        m_blocks_hash_check.resize(m_blocks_hash_of_hashes.size() * HASH_OF_HASHES_STEP, std::make_pair(crypto::null_hash, 0));
         MINFO(nblocks << " block hashes loaded");
 
         // FIXME: clear tx_pool because the process might have been
