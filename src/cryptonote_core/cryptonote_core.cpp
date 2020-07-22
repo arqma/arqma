@@ -1514,13 +1514,13 @@ namespace cryptonote
     block lb;
     if(!b)
     {
-      if(!parse_and_validate_block_from_blob(block_blob, lb)
+      if(!parse_and_validate_block_from_blob(block_blob, lb))
       {
         LOG_PRINT_L1("Failed to parse and validate new block");
         bvc.m_verifivation_failed = true;
         return false;
       }
-      b = &lb
+      b = &lb;
     }
     add_new_block(*b, bvc);
     if(update_miner_blocktemplate && bvc.m_added_to_main_chain)

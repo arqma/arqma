@@ -2060,13 +2060,13 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
         if (result)
           throw0(DB_ERROR(lmdb_error("Failed to delete transaction tip data: ", result).c_str()));
 
-        if(mode !- prune_mode_check && commit_counter >= 4096)
+        if(mode != prune_mode_check && commit_counter >= 4096)
         {
           MDEBUG("Commiting txn at checkpoint...");
           txn.commit();
-          result = mdb_txn_begin(m_env, NULL, txn);
+          result = mdb_txn_begin(m_env, NULL, 0, txn);
           if(result)
-            throw0(DB_ERROR)(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
+            throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
           result = mdb_cursor_open(txn, m_txs_pruned, &c_txs_pruned);
           if (result)
             throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_pruned: ", result).c_str()));
@@ -2078,7 +2078,6 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
             throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable_tip: ", result).c_str()));
           commit_counter = 0;
         }
-      )
       }
     }
   }
@@ -2978,8 +2977,6 @@ bool BlockchainLMDB::get_tx_blob(const crypto::hash& h, cryptonote::blobdata &bd
     return false;
   else if (get_result)
     throw0(DB_ERROR(lmdb_error("DB error attempting to fetch tx from hash", get_result).c_str()));
-  else if(result1.mv_size = 0)
-    return false;
 
   bd.assign(reinterpret_cast<char*>(result0.mv_data), result0.mv_size);
   bd.append(reinterpret_cast<char*>(result1.mv_data), result1.mv_size);
@@ -3041,7 +3038,6 @@ bool BlockchainLMDB::get_prunable_tx_blob(const crypto::hash& h, cryptonote::blo
     return false;
   else if (get_result)
     throw0(DB_ERROR(lmdb_error("DB error attempting to fetch tx from hash", get_result).c_str()));
-  else if()
 
   bd.assign(reinterpret_cast<char*>(result.mv_data), result.mv_size);
 

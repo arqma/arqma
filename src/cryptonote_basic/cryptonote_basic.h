@@ -180,7 +180,15 @@ namespace cryptonote
     END_SERIALIZE()
 
   public:
-    transaction_prefix(){}
+    transaction_prefix(){ set_null(); }
+    void set_null()
+    {
+      version = 1;
+      unlock_time = 0;
+      vin.clear();
+      vout.clear();
+      extra.clear();
+    }
   };
 
   class transaction: public transaction_prefix
@@ -332,6 +340,7 @@ namespace cryptonote
     prunable_hash_valid(false),
     blob_size_valid(false),
     signatures(t.signatures),
+    rct_signatures(t.rct_signatures),
     pruned(t.pruned),
     unprunable_size(t.unprunable_size.load()),
     prefix_size(t.prefix_size.load())
@@ -398,11 +407,7 @@ namespace cryptonote
   inline
   void transaction::set_null()
   {
-    version = 1;
-    unlock_time = 0;
-    vin.clear();
-    vout.clear();
-    extra.clear();
+    transaction_prefix::set_null();
     signatures.clear();
     rct_signatures.type = rct::RCTTypeNull;
     set_hash_valid(false);

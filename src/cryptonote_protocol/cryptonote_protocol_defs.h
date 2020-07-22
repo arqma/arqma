@@ -296,7 +296,7 @@ namespace cryptonote
         KV_SERIALIZE(total_height)
         KV_SERIALIZE(cumulative_difficulty)
         KV_SERIALIZE_CONTAINER_POD_AS_BLOB(m_block_ids)
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(m_block_weights))
+        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(m_block_weights)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;

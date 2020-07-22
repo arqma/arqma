@@ -1989,7 +1989,7 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
     // FIXME: s/rsp.missed_ids/missed_tx_id/ ?  Seems like rsp.missed_ids
     //        is for missed blocks, not missed transactions as well.
     e.pruned = arg.prune;
-    get_transactions_blobs(bl.second.tx_hahses, e.txs, missed_tx_ids, arg.prune);
+    get_transactions_blobs(bl.second.tx_hashes, e.txs, missed_tx_ids, arg.prune);
     if (missed_tx_ids.size() != 0)
     {
       LOG_ERROR("Error retrieving blocks, missed " << missed_tx_ids.size()
@@ -2007,7 +2007,7 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
     //pack block
     e.block = std::move(bl.first);
     e.block_weight = 0;
-    if(arg.prune && m_db->block_exist(arg.blocks[i]))
+    if(arg.prune && m_db->block_exists(arg.blocks[i]))
       e.block_weight = m_db->get_block_weight(m_db->get_block_height(arg.blocks[i]));
   }
   //get and pack other transactions, if needed
@@ -3852,12 +3852,7 @@ leave:
       proof_of_work = it->second;
     }
     else
-    {
-      if(bl.major_version < 15)
-        proof_of_work = get_block_longhash_old(bl, blockchain_height);
-      else
-        proof_of_work = get_block_longhash(this, bl, blockchain_height, 0);
-    }
+      proof_of_work = get_block_longhash(this, bl, blockchain_height, 0);
 
     // validate proof_of_work versus difficulty target
     if(!check_hash(proof_of_work, current_diffic))
@@ -4020,7 +4015,7 @@ leave:
       MERROR("Block at " << blockchain_height << " is pruned, but we do not have a weight for it");
       goto leave;
     }
-    cumulative_block_weight = m_blocks_hash_ckeck[blockchain_height].second;
+    cumulative_block_weight = m_blocks_hash_check[blockchain_height].second;
   }
 
   m_blocks_txs_check.clear();
@@ -4388,6 +4383,8 @@ void Blockchain::set_enforce_dns_checkpoints(bool enforce_checkpoints)
 //------------------------------------------------------------------
 void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const
 {
+//  uint64_t c_height = get_current_blockchain_height();
+
   TIME_MEASURE_START(t);
 
   for (const auto & block : blocks)
@@ -4395,10 +4392,8 @@ void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const b
     if (m_cancel)
        break;
     crypto::hash id = get_block_hash(block);
-    if(bl.major_version < 15)
-      crypto::hash pow = get_block_longhash_old(block, height++);
-    else
-      crypto::hash pow = get_block_longhash(this, block, height++, 0);
+    crypto::hash pow = get_block_longhash(this, block, height++, 0);
+//    crypto::hash pow = c_height < 303666 ? get_block_longhash_old(block, height++) : get_block_longhash(this, block, height++, 0);
     map.emplace(id, pow);
   }
 
@@ -5161,7 +5156,7 @@ void Blockchain::cancel()
 }
 
 #if defined(PER_BLOCK_CHECKPOINT)
-static const char expected_block_hashes_hash[] = "c5ff0bc2e569a412e08c7b9cf69a2849a21c62a4981dc77fcfcb05316d926ae6";
+static const char expected_block_hashes_hash[] = "967ab2bf5914388e8fd9b12cdbc8db20a2f0ebeb23261a24bc5ac658b347c6de";
 void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get_checkpoints)
 {
   if (get_checkpoints == nullptr || !m_fast_sync)
@@ -5212,7 +5207,7 @@ void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get
         m_blocks_hash_of_hashes.reserve(nblocks);
         for (uint32_t i = 0; i < nblocks; i++)
         {
-          crypto::hash hash_hashes, hash_weights
+          crypto::hash hash_hashes, hash_weights;
           memcpy(hash_hashes.data, p, sizeof(hash_hashes.data));
           p += sizeof(hash_hashes.data);
           memcpy(hash_weights.data, p, sizeof(hash_weights.data));

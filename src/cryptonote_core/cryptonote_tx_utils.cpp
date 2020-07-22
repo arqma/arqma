@@ -673,7 +673,7 @@ namespace cryptonote
   bool get_block_longhash(const Blockchain *pbc, const block& b, crypto::hash& res, const uint64_t height, const int miners)
   {
     blobdata bd = get_block_hashing_blob(b);
-    if(b.major_version >= RX_BLOCK_VERSION)
+    if(b.major_version >= 15)
     {
       uint64_t seed_height, main_height;
       crypto::hash hash;
@@ -690,6 +690,18 @@ namespace cryptonote
         main_height = 0;
       }
       rx_slow_hash(main_height, seed_height, hash.data, bd.data(), bd.size(), res.data, miners, 0);
+    }
+    else if(b.major_version >= 12)
+    {
+      crypto::cn_turtle_hash(bd.data(), bd.size(), res);
+    }
+    else if(b.major_version >= 7)
+    {
+      crypto::cn_arqma_hash_v1(bd.data(), bd.size(), res);
+    }
+    else
+    {
+      crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
     }
     return true;
   }

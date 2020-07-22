@@ -1113,9 +1113,9 @@ namespace cryptonote
     {
       if(!t.is_blob_size_valid())
       {
-        t.set_blob_size(blob_size());
+        t.set_blob_size(blob.size());
       }
-      *blob_size = get_object_blobsize(t);
+      *blob_size = t.blob_size;
     }
 
     return true;
@@ -1168,7 +1168,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool calculate_block_hash(const block& b, crypto::hash& res, const blobdata *blob)
   {
-    blobldata bd;
+    blobdata bd;
     if(!blob)
     {
       bd = block_to_blob(b);
@@ -1205,7 +1205,7 @@ namespace cryptonote
     return p;
   }
   //---------------------------------------------------------------
-  bool get_block_longhash_old(const block& b, crypto::hash& res, uint64_t height)
+/*  bool get_block_longhash_old(const block& b, crypto::hash& res, uint64_t height)
   {
     blobdata bd = get_block_hashing_blob(b);
 
@@ -1222,7 +1222,7 @@ namespace cryptonote
       crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
     }
     return true;
-  }
+  }*/
   //---------------------------------------------------------------
   std::vector<uint64_t> relative_output_offsets_to_absolute(const std::vector<uint64_t>& off)
   {
@@ -1244,12 +1244,12 @@ namespace cryptonote
     return res;
   }
   //---------------------------------------------------------------
-  crypto::hash get_block_longhash_old(const block& b, uint64_t height)
+/*  crypto::hash get_block_longhash_old(const block& b, uint64_t height)
   {
     crypto::hash p = null_hash;
-    get_block_longhash(b, p, height);
+    get_block_longhash_old(b, p, height);
     return p;
-  }
+  }*/
   //---------------------------------------------------------------
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash *block_hash)
   {
