@@ -256,6 +256,7 @@ namespace config
    {
      static constexpr size_t NORMAL_SYNC = 20; // Amount of Blocks to download and Validate at ones while Synchronizung with Arqma Network.
      static constexpr size_t RAPID_SYNC = 250; // Amount of Blocks to download at ones from already known by Arqma Daemon and Checkpoint are hardcoded into codebase
+     static constexpr uint64_t C_POINTS = 480000; // Hardcoded Checkpoints Height
    }
 }
 

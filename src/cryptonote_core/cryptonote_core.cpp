@@ -1190,7 +1190,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = 400000;
+    static const uint64_t quick_height = config::sync::C_POINTS;
     if(block_sync_size > 0)
       return block_sync_size;
     if(height >= quick_height && m_nettype == MAINNET)
