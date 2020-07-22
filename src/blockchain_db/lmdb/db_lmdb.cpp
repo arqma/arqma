@@ -84,7 +84,7 @@ inline void throw1(const T &e)
   throw e;
 }
 
-#define MDB_val_set(var, val)   MDB_val var = {sizeof(val), (void *)&val}
+#define MDB_val_set(var, val) MDB_val var = {sizeof(val), (void *)&val}
 
 #define MDB_val_sized(var, val) MDB_val var = {val.size(), (void *)val.data()}
 
@@ -1946,7 +1946,7 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
 
   TIME_MEASURE_START(t);
 
-  size_t n_total_records = 0, n_prunable_records = 0, n_pruned_records = 0;
+  size_t n_total_records = 0, n_prunable_records = 0, n_pruned_records = 0, commit_counter = 0;
   uint64_t n_bytes = 0;
 
   mdb_txn_safe txn;
@@ -2042,13 +2042,14 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
           ++n_prunable_records;
           result = mdb_cursor_get(c_txs_prunable, &k, &v, MDB_SET);
           if (result == MDB_NOTFOUND)
-            MWARNING("Already pruned at height " << block_height << "/" << blockchain_height);
+            MDEBUG("Already pruned at height " << block_height << "/" << blockchain_height);
           else if (result)
             throw0(DB_ERROR(lmdb_error("Failed to find transaction prunable data: ", result).c_str()));
           else
           {
             MDEBUG("Pruning at height " << block_height << "/" << blockchain_height);
             ++n_pruned_records;
+            ++commit_counter;
             n_bytes += k.mv_size + v.mv_size;
             result = mdb_cursor_del(c_txs_prunable, 0);
             if (result)
@@ -2058,6 +2059,26 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
         result = mdb_cursor_del(c_txs_prunable_tip, 0);
         if (result)
           throw0(DB_ERROR(lmdb_error("Failed to delete transaction tip data: ", result).c_str()));
+
+        if(mode !- prune_mode_check && commit_counter >= 4096)
+        {
+          MDEBUG("Commiting txn at checkpoint...");
+          txn.commit();
+          result = mdb_txn_begin(m_env, NULL, txn);
+          if(result)
+            throw0(DB_ERROR)(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
+          result = mdb_cursor_open(txn, m_txs_pruned, &c_txs_pruned);
+          if (result)
+            throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_pruned: ", result).c_str()));
+          result = mdb_cursor_open(txn, m_txs_prunable, &c_txs_prunable);
+          if (result)
+            throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable: ", result).c_str()));
+          result = mdb_cursor_open(txn, m_txs_prunable_tip, &c_txs_prunable_tip);
+          if (result)
+            throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable_tip: ", result).c_str()));
+          commit_counter = 0;
+        }
+      )
       }
     }
   }
@@ -2118,7 +2139,7 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
         {
           ++n_prunable_records;
           if (result == MDB_NOTFOUND)
-            MWARNING("Already pruned at height " << block_height << "/" << blockchain_height);
+            MDEBUG("Already pruned at height " << block_height << "/" << blockchain_height);
           else
           {
             MDEBUG("Pruning at height " << block_height << "/" << blockchain_height);
@@ -2127,6 +2148,7 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
             result = mdb_cursor_del(c_txs_prunable, 0);
             if (result)
               throw0(DB_ERROR(lmdb_error("Failed to delete transaction prunable data: ", result).c_str()));
+            ++commit_counter;
           }
         }
       }
@@ -2142,6 +2164,34 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
             MERROR("Prunable data not found for unpruned height " << block_height << "/" << blockchain_height <<
                 ", seed " << epee::string_tools::to_string_hex(pruning_seed));
         }
+      }
+
+      if (mode != prune_mode_check && commit_counter >= 4096)
+      {
+        MDEBUG("Committing txn at checkpoint...");
+        txn.commit();
+        result = mdb_txn_begin(m_env, NULL, 0, txn);
+        if (result)
+          throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
+        result = mdb_cursor_open(txn, m_txs_pruned, &c_txs_pruned);
+        if (result)
+          throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_pruned: ", result).c_str()));
+        result = mdb_cursor_open(txn, m_txs_prunable, &c_txs_prunable);
+        if (result)
+          throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable: ", result).c_str()));
+        result = mdb_cursor_open(txn, m_txs_prunable_tip, &c_txs_prunable_tip);
+        if (result)
+          throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable_tip: ", result).c_str()));
+        result = mdb_cursor_open(txn, m_tx_indices, &c_tx_indices);
+        if (result)
+          throw0(DB_ERROR(lmdb_error("Failed to open a cursor for tx_indices: ", result).c_str()));
+        MDB_val val;
+        val.mv_size = sizeof(ti);
+        val.mv_data = (void *)&ti;
+        result = mdb_cursor_get(c_tx_indices, (MDB_val*)&zerokval, &val, MDB_GET_BOTH);
+        if (result)
+          throw0(DB_ERROR(lmdb_error("Failed to restore cursor for tx_indices: ", result).c_str()));
+        commit_counter = 0;
       }
     }
     mdb_cursor_close(c_tx_indices);
@@ -2928,6 +2978,8 @@ bool BlockchainLMDB::get_tx_blob(const crypto::hash& h, cryptonote::blobdata &bd
     return false;
   else if (get_result)
     throw0(DB_ERROR(lmdb_error("DB error attempting to fetch tx from hash", get_result).c_str()));
+  else if(result1.mv_size = 0)
+    return false;
 
   bd.assign(reinterpret_cast<char*>(result0.mv_data), result0.mv_size);
   bd.append(reinterpret_cast<char*>(result1.mv_data), result1.mv_size);
@@ -2989,6 +3041,7 @@ bool BlockchainLMDB::get_prunable_tx_blob(const crypto::hash& h, cryptonote::blo
     return false;
   else if (get_result)
     throw0(DB_ERROR(lmdb_error("DB error attempting to fetch tx from hash", get_result).c_str()));
+  else if()
 
   bd.assign(reinterpret_cast<char*>(result.mv_data), result.mv_size);
 

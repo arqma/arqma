@@ -165,7 +165,7 @@ namespace cryptonote
 
     CHECK_AND_ASSERT_MES(summary_amounts == block_reward, false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal block_reward = " << block_reward);
 
-    tx.version = config::tx_settings::CURRENT_TX_VERSION;
+    tx.version = config::tx_settings::ARQMA_TX_VERSION;
 
     //lock
     tx.unlock_time = height + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
@@ -216,7 +216,7 @@ namespace cryptonote
       msout->c.clear();
     }
 
-    tx.version = config::tx_settings::CURRENT_TX_VERSION;
+    tx.version = config::tx_settings::ARQMA_TX_VERSION;
     tx.unlock_time = unlock_time;
 
     tx.extra = extra;
@@ -690,18 +690,6 @@ namespace cryptonote
         main_height = 0;
       }
       rx_slow_hash(main_height, seed_height, hash.data, bd.data(), bd.size(), res.data, miners, 0);
-    }
-    else if(b.major_version >= 12)
-    {
-      crypto::cn_turtle_hash(bd.data(), bd.size(), res);
-    }
-    else if(b.major_version >= 7)
-    {
-      crypto::cn_arqma_hash_v1(bd.data(), bd.size(), res);
-    }
-    else
-    {
-      crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
     }
     return true;
   }

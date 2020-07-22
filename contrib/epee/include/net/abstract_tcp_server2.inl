@@ -59,7 +59,7 @@ using namespace boost::placeholders;
 #define DEFAULT_TIMEOUT_MS_LOCAL 1800000 // 30 minutes
 #define DEFAULT_TIMEOUT_MS_REMOTE 300000 // 5 minutes
 #define TIMEOUT_EXTRA_MS_PER_BYTE 0.2
-#define AGGRESSIVE_TIMEOUT_THRESHOLD 120 // sockets
+#define AGGRESSIVE_TIMEOUT_THRESHOLD 240  // sockets
 #define NEW_CONNECTION_TIMEOUT_LOCAL 1200000 // 2 minutes
 #define NEW_CONNECTION_TIMEOUT_REMOTE 10000 // 10 seconds
 
@@ -125,7 +125,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  boost::shared_ptr<connection<t_protocol_handler>> connection<t_protocol_handler>::safe_shared_from_this()
+  boost::shared_ptr<connection<t_protocol_handler> > connection<t_protocol_handler>::safe_shared_from_this()
   {
     try
     {
@@ -134,7 +134,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     catch (const boost::bad_weak_ptr&)
     {
       // It happens when the connection is being deleted
-      return boost::shared_ptr<connection<t_protocol_handler>>();
+      return boost::shared_ptr<connection<t_protocol_handler> >();
     }
   }
   //---------------------------------------------------------------------------------
@@ -263,7 +263,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   bool connection<t_protocol_handler>::release()
   {
     TRY_ENTRY();
-    boost::shared_ptr<connection<t_protocol_handler>> back_connection_copy;
+    boost::shared_ptr<connection<t_protocol_handler> > back_connection_copy;
     LOG_TRACE_CC(context, "[sock " << socket().native_handle() << "] release");
     CRITICAL_REGION_BEGIN(m_self_refs_lock);
     CHECK_AND_ASSERT_MES(m_reference_count, false, "[sock " << socket().native_handle() << "] m_reference_count already at 0 at connection<t_protocol_handler>::release() call");

@@ -172,7 +172,7 @@
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
-#define HASH_OF_HASHES_STEP                             256
+#define HASH_OF_HASHES_STEP                             512
 
 #define DEFAULT_TXPOOL_MAX_WEIGHT                       648000000ull // 3 days at 300000, in bytes
 
@@ -247,7 +247,7 @@ namespace config
    namespace tx_settings
    {
      static constexpr uint8_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     static constexpr uint8_t CURRENT_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
+     static constexpr uint8_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
      static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
