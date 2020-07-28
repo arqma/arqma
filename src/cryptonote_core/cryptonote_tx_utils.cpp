@@ -94,9 +94,9 @@ namespace cryptonote
     in.height = height;
 
     uint64_t block_reward;
-	if (height == 1) {
-		block_reward = MONEY_PREMINE;
-	}
+    if (height == 1) {
+      block_reward = MONEY_PREMINE;
+    }
     else if(!get_block_reward(median_weight, current_block_weight, already_generated_coins, block_reward, hard_fork_version))
     {
       LOG_PRINT_L0("Block is too big");
@@ -648,7 +648,7 @@ namespace cryptonote
   bool generate_genesis_block(block& bl)
   {
     //genesis block
-    bl = boost::value_initialized<block>();
+    bl = {};
 
     blobdata tx_bl;
     bool r = string_tools::parse_hexstr_to_binbuff(config::GENESIS_TX, tx_bl);
@@ -659,7 +659,9 @@ namespace cryptonote
     bl.minor_version = config::blockchain_settings::ARQMA_GENESIS_BLOCK_MINOR_VERSION;
     bl.timestamp = 0;
     bl.nonce = config::GENESIS_NONCE;
-    miner::find_nonce_for_given_block(NULL, bl, 1, 0);
+    miner::find_nonce_for_given_block([](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash){
+      return cryptonote::get_block_longhash(NULL, b, hash, height, threads);
+    }, bl, 1, 0);
     bl.invalidate_hashes();
     return true;
   }
@@ -673,7 +675,7 @@ namespace cryptonote
   bool get_block_longhash(const Blockchain *pbc, const block& b, crypto::hash& res, const uint64_t height, const int miners)
   {
     blobdata bd = get_block_hashing_blob(b);
-    if(b.major_version >= 15)
+    if(b.major_version >= RX_BLOCK_VERSION)
     {
       uint64_t seed_height, main_height;
       crypto::hash hash;
@@ -691,7 +693,7 @@ namespace cryptonote
       }
       rx_slow_hash(main_height, seed_height, hash.data, bd.data(), bd.size(), res.data, miners, 0);
     }
-    else if(b.major_version >= 12)
+/*    else if(b.major_version >= 12)
     {
       crypto::cn_turtle_hash(bd.data(), bd.size(), res);
     }
@@ -702,8 +704,61 @@ namespace cryptonote
     else
     {
       crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
-    }
+    }*/
     return true;
+  }
+
+  bool check_proof_of_work_new(const Blockchain *pbc, const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
+  {
+    MDEBUG("Checking RandomARQ POW diff " << current_diffic);
+    if(bl.major_version != 1 && bl.major_version < 15)
+      return false;
+
+    if (!get_block_longhash(pbc, bl, proof_of_work, height, 0))
+    {
+       MDEBUG("Failed to get block longhash");
+       return false;
+    }
+    return check_hash(proof_of_work, current_diffic);
+  }
+
+  bool check_proof_of_work_old(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
+  {
+    MDEBUG("Checking Pre-RandomARQ POW diff " << current_diffic);
+    if(bl.major_version > 14)
+      return false;
+
+    if(!get_block_longhash_old(bl, proof_of_work, height))
+    {
+      MDEBUG("Failed to get pre-RandomARQ block longhash");
+      return false;
+    }
+
+    if(!check_hash(proof_of_work, current_diffic))
+    {
+      MDEBUG("Failed to check hash for pow");
+      return false;
+    }
+
+    return true;
+  }
+
+  bool check_proof_of_work(const Blockchain *pbc, const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
+  {
+    switch(bl.major_version)
+    {
+      case 7:
+      case 8:
+      case 9:
+      case 10:
+      case 11:
+      case 12:
+      case 13:
+      case 14:
+        return check_proof_of_work_old(bl, current_diffic, proof_of_work, height);
+      default:
+        return check_proof_of_work_new(pbc, bl, current_diffic, proof_of_work, height);
+    }
   }
 
   crypto::hash get_block_longhash(const Blockchain *pbc, const block& b, const uint64_t height, const int miners)

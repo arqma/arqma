@@ -1408,7 +1408,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, epee::json_rpc::error &error_resp)
   {
-    b = boost::value_initialized<cryptonote::block>();
+    b = cryptonote::block{};
     if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
@@ -1612,7 +1612,7 @@ namespace cryptonote
     template_req.reserve_size = 1;
     template_req.wallet_address = req.wallet_address;
     template_req.prev_block = req.prev_block;
-    submit_req.push_back(boost::value_initialized<std::string>());
+    submit_req.push_back(std::string{});
     res.height = m_core.get_blockchain_storage().get_current_blockchain_height();
 
     bool r = CORE_RPC_STATUS_OK;
@@ -1640,7 +1640,9 @@ namespace cryptonote
         return false;
       }
       b.nonce = req.starting_nonce;
-      miner::find_nonce_for_given_block(&(m_core.get_blockchain_storage()), b, template_res.difficulty, template_res.height);
+      miner::find_nonce_for_given_block([this](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash) {
+        return cryptonote::get_block_longhash(&(m_core.get_blockchain_storage()), b, hash, height, threads);
+      }, b, template_res.difficulty, template_res.height);
 
       submit_req.front() = string_tools::buff_to_hex_nodelimer(block_to_blob(b));
       r = on_submitblock(submit_req, submit_res, error_resp, ctx);
@@ -1684,7 +1686,7 @@ namespace cryptonote
     response.block_size = response.block_weight = m_core.get_blockchain_storage().get_db().get_block_weight(height);
     response.num_txes = blk.tx_hashes.size();
     response.pow_hash = fill_pow_hash ? string_tools::pod_to_hex(get_block_longhash(&(m_core.get_blockchain_storage()), blk, height, 0)) : "";
-	 response.long_term_weight = m_core.get_blockchain_storage().get_db().get_block_long_term_weight(height);
+    response.long_term_weight = m_core.get_blockchain_storage().get_db().get_block_long_term_weight(height);
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------

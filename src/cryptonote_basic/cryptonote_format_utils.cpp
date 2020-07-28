@@ -1205,7 +1205,7 @@ namespace cryptonote
     return p;
   }
   //---------------------------------------------------------------
-/*  bool get_block_longhash_old(const block& b, crypto::hash& res, uint64_t height)
+  bool get_block_longhash_old(const block& b, crypto::hash& res, uint64_t height)
   {
     blobdata bd = get_block_hashing_blob(b);
 
@@ -1222,7 +1222,7 @@ namespace cryptonote
       crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
     }
     return true;
-  }*/
+  }
   //---------------------------------------------------------------
   std::vector<uint64_t> relative_output_offsets_to_absolute(const std::vector<uint64_t>& off)
   {
@@ -1244,12 +1244,12 @@ namespace cryptonote
     return res;
   }
   //---------------------------------------------------------------
-/*  crypto::hash get_block_longhash_old(const block& b, uint64_t height)
+  crypto::hash get_block_longhash_old(const block& b, uint64_t height)
   {
     crypto::hash p = null_hash;
     get_block_longhash_old(b, p, height);
     return p;
-  }*/
+  }
   //---------------------------------------------------------------
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash *block_hash)
   {
@@ -1331,7 +1331,7 @@ namespace cryptonote
     return std::binary_search(begin, end, amount);
   }
   //---------------------------------------------------------------
-  void get_hash_stats(uint64_t &tx_hashes_calculated, uint64_t &tx_hashes_cached, uint64_t &block_hashes_calculated, uint64_t & block_hashes_cached)
+  void get_hash_stats(uint64_t &tx_hashes_calculated, uint64_t &tx_hashes_cached, uint64_t &block_hashes_calculated, uint64_t &block_hashes_cached)
   {
     tx_hashes_calculated = tx_hashes_calculated_count;
     tx_hashes_cached = tx_hashes_cached_count;

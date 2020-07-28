@@ -44,6 +44,7 @@
 #include "profile_tools.h"
 #include "net/network_throttle-detail.hpp"
 #include "common/pruning.h"
+#include "common/util.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.cn"
@@ -53,8 +54,8 @@
   MCINFO(ARQMA_DEFAULT_LOG_CATEGORY, context << "[" << epee::string_tools::to_string_hex(context.m_pruning_seed) << "] state: " << x << " in state " << cryptonote::get_protocol_state_string(context.m_state))
 
 #define BLOCK_QUEUE_NSPANS_THRESHOLD 10 // chunks of N blocks
-#define BLOCK_QUEUE_SIZE_THRESHOLD (300 * 1024 * 1024) // MB
-#define BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS 5000
+#define BLOCK_QUEUE_SIZE_THRESHOLD (100 * 1024 * 1024) // MB
+#define BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS 1000
 #define REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY (5 * 1000000) // microseconds
 #define REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD (30 * 1000000) // microseconds
 #define IDLE_PEER_KICK_TIME (600 * 1000000) // microseconds
@@ -124,7 +125,7 @@ namespace cryptonote
 
     if(context.m_state == cryptonote_connection_context::state_synchronizing)
     {
-      NOTIFY_REQUEST_CHAIN::request r = boost::value_initialized<NOTIFY_REQUEST_CHAIN::request>();
+      NOTIFY_REQUEST_CHAIN::request r = {};
       context.m_needed_objects.clear();
       m_core.get_short_chain_history(r.block_ids);
       handler_request_blocks_history( r.block_ids ); // change the limit(?), sleep(?)
@@ -301,7 +302,7 @@ namespace cryptonote
       if (version >= 7 && version != hshd.top_version)
       {
         if (version < hshd.top_version && version == m_core.get_ideal_hard_fork_version())
-          MCLOG_RED(el::Level::Warning, "global", context << " peer claims higher version that we think (" <<
+          MDEBUG(context << " peer claims higher version that we think (" <<
               (unsigned)hshd.top_version << " for " << (hshd.current_height - 1) << " instead of " << (unsigned)version <<
               ") - we may be forked from the network and a software upgrade may be needed");
         return false;
@@ -338,7 +339,7 @@ namespace cryptonote
         return false;
       }
       context.m_state = cryptonote_connection_context::state_normal;
-      if(is_inital && target == m_core.get_current_blockchain_height())
+      if(is_inital && hshd.current_height >= target && target == m_core.get_current_blockchain_height())
         on_connection_synchronized();
       return true;
     }
@@ -359,7 +360,7 @@ namespace cryptonote
       uint64_t abs_diff = std::abs(diff);
       uint64_t max_block_height = std::max(hshd.current_height,m_core.get_current_blockchain_height());
       MCLOG(is_inital ? el::Level::Info : el::Level::Debug, "global", el::Color::Yellow, context <<  "Sync data returned a new top block candidate: " << m_core.get_current_blockchain_height() << " -> " << hshd.current_height
-        << " [Your node is " << abs_diff << " blocks (" << (abs_diff / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) << " days) "
+        << " [Your node is " << abs_diff << " blocks (" << tools::get_human_readable_timespan(abs_diff * DIFFICULTY_TARGET_V11) << ") "
         << (0 <= diff ? std::string("behind") : std::string("ahead"))
         << "] " << ENDL << "SYNCHRONIZATION started");
 
@@ -402,7 +403,7 @@ namespace cryptonote
   template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::get_payload_sync_data(blobdata& data)
   {
-    CORE_SYNC_DATA hsd = boost::value_initialized<CORE_SYNC_DATA>();
+    CORE_SYNC_DATA hsd = {};
     get_payload_sync_data(hsd);
     epee::serialization::store_t_to_binary(hsd, data);
     return true;
@@ -439,7 +440,7 @@ namespace cryptonote
       }
     }
 
-    block_verification_context bvc = boost::value_initialized<block_verification_context>();
+    block_verification_context bvc = {};
     m_core.handle_incoming_block(arg.b.block, pblocks.empty() ? NULL : &pblocks[0], bvc); // got block from handle_notify_new_block
     if (!m_core.cleanup_handle_incoming_blocks(true))
     {
@@ -463,7 +464,7 @@ namespace cryptonote
     {
       context.m_needed_objects.clear();
       context.m_state = cryptonote_connection_context::state_synchronizing;
-      NOTIFY_REQUEST_CHAIN::request r = boost::value_initialized<NOTIFY_REQUEST_CHAIN::request>();
+      NOTIFY_REQUEST_CHAIN::request r = {};
       m_core.get_short_chain_history(r.block_ids);
       r.prune = m_sync_pruned_blocks;
       handler_request_blocks_history( r.block_ids ); // change the limit(?), sleep(?)
@@ -708,7 +709,7 @@ namespace cryptonote
         std::vector<block> pblocks;
         m_core.prepare_handle_incoming_blocks(blocks, pblocks);
 
-        block_verification_context bvc = boost::value_initialized<block_verification_context>();
+        block_verification_context bvc = {};
         m_core.handle_incoming_block(arg.b.block, pblocks.empty() ? NULL : &pblocks[0], bvc); // got block from handle_notify_new_block
         if (!m_core.cleanup_handle_incoming_blocks(true))
         {
@@ -736,7 +737,7 @@ namespace cryptonote
         {
           context.m_needed_objects.clear();
           context.m_state = cryptonote_connection_context::state_synchronizing;
-          NOTIFY_REQUEST_CHAIN::request r = boost::value_initialized<NOTIFY_REQUEST_CHAIN::request>();
+          NOTIFY_REQUEST_CHAIN::request r = {};
           m_core.get_short_chain_history(r.block_ids);
           handler_request_blocks_history(r.block_ids); // change the limit(?), sleep(?)
           r.prune = m_sync_pruned_blocks;
@@ -886,7 +887,7 @@ namespace cryptonote
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context)
   {
-    MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_GET_OBJECTS (" << arg.blocks.size() << " blocks, " << arg.txs.size() << " txes)");
+    MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_GET_OBJECTS (" << arg.blocks.size() << " blocks)");
     NOTIFY_RESPONSE_GET_OBJECTS::request rsp;
     if(!m_core.handle_get_objects(arg, rsp, context))
     {
@@ -894,7 +895,7 @@ namespace cryptonote
       drop_connection(context, false, false);
       return 1;
     }
-    MLOG_P2P_MESSAGE("-->>NOTIFY_RESPONSE_GET_OBJECTS: blocks.size()=" << rsp.blocks.size() << ", txs.size()=" << rsp.txs.size()
+    MLOG_P2P_MESSAGE("-->>NOTIFY_RESPONSE_GET_OBJECTS: blocks.size()=" << rsp.blocks.size()
                             << ", rsp.m_current_blockchain_height=" << rsp.current_blockchain_height << ", missed_ids.size()=" << rsp.missed_ids.size());
     post_notify<NOTIFY_RESPONSE_GET_OBJECTS>(rsp, context);
     //handler_response_blocks_now(sizeof(rsp)); // XXX
@@ -918,7 +919,7 @@ namespace cryptonote
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::handle_response_get_objects(int command, NOTIFY_RESPONSE_GET_OBJECTS::request& arg, cryptonote_connection_context& context)
   {
-    MLOG_P2P_MESSAGE("Received NOTIFY_RESPONSE_GET_OBJECTS (" << arg.blocks.size() << " blocks, " << arg.txs.size() << " txes)");
+    MLOG_P2P_MESSAGE("Received NOTIFY_RESPONSE_GET_OBJECTS (" << arg.blocks.size() << " blocks)");
     MLOG_PEER_STATE("received objects");
 
     boost::posix_time::ptime request_time = context.m_last_request_time;
@@ -926,8 +927,6 @@ namespace cryptonote
 
     // calculate size of request
     size_t size = 0;
-    for (const auto &element : arg.txs) size += element.size();
-
     size_t blocks_size = 0;
     for (const auto &element : arg.blocks) {
       blocks_size += element.block.size();
@@ -1101,6 +1100,55 @@ namespace cryptonote
     return 1;
   }
 
+  // Get an estimate for the remaining sync time from given current to target blockchain height, in seconds
+  template<class t_core>
+  uint64_t t_cryptonote_protocol_handler<t_core>::get_estimated_remaining_sync_seconds(uint64_t current_blockchain_height, uint64_t target_blockchain_height)
+  {
+    // The average sync speed varies so much, even averaged over quite long time periods like 10 minutes,
+    // that using some sliding window would be difficult to implement without often leading to bad estimates.
+    // The simplest strategy - always average sync speed over the maximum available interval i.e. since sync
+    // started at all (from "m_sync_start_time" and "m_sync_start_height") - gives already useful results
+    // and seems to be quite robust. Some quite special cases like "Internet connection suddenly becoming
+    // much faster after syncing already a long time, and staying fast" are not well supported however.
+
+    if (target_blockchain_height <= current_blockchain_height)
+    {
+      // Syncing stuck, or other special circumstance: Avoid errors, simply give back 0
+      return 0;
+    }
+
+    const boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+    const boost::posix_time::time_duration sync_time = now - m_sync_start_time;
+    cryptonote::network_type nettype = m_core.get_nettype();
+
+    // Don't simply use remaining number of blocks for the estimate but "sync weight" as provided by
+    // "cumulative_block_sync_weight" which knows about strongly varying Monero mainnet block sizes
+    uint64_t synced_weight = tools::cumulative_block_sync_weight(nettype, m_sync_start_height, current_blockchain_height - m_sync_start_height);
+    float us_per_weight = (float)sync_time.total_microseconds() / (float)synced_weight;
+    uint64_t remaining_weight = tools::cumulative_block_sync_weight(nettype, current_blockchain_height, target_blockchain_height - current_blockchain_height);
+    float remaining_us = us_per_weight * (float)remaining_weight;
+    return (uint64_t)(remaining_us / 1e6);
+  }
+
+  // Return a textual remaining sync time estimate, or the empty string if waiting period not yet over
+  template<class t_core>
+  std::string t_cryptonote_protocol_handler<t_core>::get_periodic_sync_estimate(uint64_t current_blockchain_height, uint64_t target_blockchain_height)
+  {
+    std::string text = "";
+    const boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+    boost::posix_time::time_duration period_sync_time = now - m_period_start_time;
+    if (period_sync_time > boost::posix_time::minutes(2))
+    {
+      // Period is over, time to report another estimate
+      uint64_t remaining_seconds = get_estimated_remaining_sync_seconds(current_blockchain_height, target_blockchain_height);
+      text = tools::get_human_readable_timespan(remaining_seconds);
+
+      // Start the new period
+      m_period_start_time = now;
+    }
+    return text;
+  }
+
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::try_add_next_blocks(cryptonote_connection_context& context)
   {
@@ -1129,6 +1177,9 @@ namespace cryptonote
           if (!starting)
             m_last_add_end_time = tools::get_tick_count();
         });
+        m_sync_start_time = boost::posix_time::microsec_clock::universal_time();
+        m_sync_start_height = m_core.get_current_blockchain_height();
+        m_period_start_time = m_sync_start_time;
 
         while (1)
         {
@@ -1304,7 +1355,7 @@ namespace cryptonote
             // process block
 
             TIME_MEASURE_START(block_process_time);
-            block_verification_context bvc = boost::value_initialized<block_verification_context>();
+            block_verification_context bvc = {};
 
             m_core.handle_incoming_block(block_entry.block, pblocks.empty() ? NULL : &pblocks[blockidx], bvc, false); // <--- process block
 
@@ -1375,7 +1426,16 @@ namespace cryptonote
               if (completion_percent == 100) // never show 100% if not actually up to date
                 completion_percent = 99;
               progress_message = " (" + std::to_string(completion_percent) + "%, "
-                  + std::to_string(target_blockchain_height - current_blockchain_height) + " left)";
+                  + std::to_string(target_blockchain_height - current_blockchain_height) + " left";
+              std::string time_message = get_periodic_sync_estimate(current_blockchain_height, target_blockchain_height);
+              if (!time_message.empty())
+              {
+                uint64_t total_blocks_to_sync = target_blockchain_height - m_sync_start_height;
+                uint64_t total_blocks_synced = current_blockchain_height - m_sync_start_height;
+                progress_message += ", " + std::to_string(total_blocks_synced * 100 / total_blocks_to_sync) + "% of total synced";
+                progress_message += ", estimated " + time_message + " left";
+              }
+              progress_message += ")";
             }
             const uint32_t previous_stripe = tools::get_pruning_stripe(previous_height, target_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES);
             const uint32_t current_stripe = tools::get_pruning_stripe(current_blockchain_height, target_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES);
@@ -1609,9 +1669,9 @@ skip:
             const float max_multiplier = 10.f;
             const float min_multiplier = 1.25f;
             float multiplier = max_multiplier;
-            if (dt/1e6 >= REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY)
+            if (dt >= REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY)
             {
-              multiplier = max_multiplier - (dt/1e6-REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY) * (max_multiplier - min_multiplier) / (REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD - REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY);
+              multiplier = max_multiplier - (dt-REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY) * (max_multiplier - min_multiplier) / (REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD - REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY);
               multiplier = std::min(max_multiplier, std::max(min_multiplier, multiplier));
             }
             if (dl_speed * .8f > ctx.m_current_speed_down * multiplier)
@@ -1660,7 +1720,7 @@ skip:
       return false;
     }
     const uint32_t local_stripe = tools::get_pruning_stripe(m_core.get_blockchain_pruning_seed());
-    if(m_sync_pruned_blocks && peer_stripe == local_stripe)
+    if(m_sync_pruned_blocks && local_stripe && next_stripe != local_stripe)
     {
       MDEBUG(context << "We can syncpruned blocks off this peer, not dropping");
       return false;
@@ -1728,6 +1788,9 @@ skip:
     const uint32_t local_stripe = tools::get_pruning_stripe(m_core.get_blockchain_pruning_seed());
     if(local_stripe == 0)
       return false;
+    static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(12);
+     if (first_block_height + nblocks - 1 < bp_fork_height)
+       return false;
     // assumes the span size is less or equal to the stripe size
     bool full_data_needed = tools::get_pruning_stripe(first_block_height, context.m_remote_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES) == local_stripe
         || tools::get_pruning_stripe(first_block_height + nblocks - 1, context.m_remote_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES) == local_stripe;
@@ -1772,7 +1835,7 @@ skip:
           next_block_height = next_needed_height;
         else
           next_block_height = context.m_last_response_height - context.m_needed_objects.size() + 1;
-        bool stripe_proceed_main = ((m_sync_pruned_blocks && peer_stripe == local_stripe) || add_stripe == 0 || peer_stripe == 0 || add_stripe == peer_stripe) && (next_block_height < bc_height + BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS || next_needed_height < bc_height + BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS);
+        bool stripe_proceed_main = ((m_sync_pruned_blocks && local_stripe && add_stripe != local_stripe) || add_stripe == 0 || peer_stripe == 0 || add_stripe == peer_stripe) && (next_block_height < bc_height + BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS || next_needed_height < bc_height + BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS);
         bool stripe_proceed_secondary = tools::has_unpruned_block(next_block_height, context.m_remote_blockchain_height, context.m_pruning_seed);
         bool proceed = stripe_proceed_main || (queue_proceed && stripe_proceed_secondary);
         if (!stripe_proceed_main && !stripe_proceed_secondary && should_drop_connection(context, tools::get_pruning_stripe(next_block_height, context.m_remote_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES)))
@@ -1903,7 +1966,8 @@ skip:
         skip_unneeded_hashes(context, false);
 
         const uint64_t first_block_height = context.m_last_response_height - context.m_needed_objects.size() + 1;
-        bool sync_pruned_blocks = m_sync_pruned_blocks && m_core.get_blockchain_pruning_seed();
+        static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(12);
+        bool sync_pruned_blocks = m_sync_pruned_blocks && first_block_height >= bp_fork_height && m_core.get_blockchain_pruning_seed();
         span = m_block_queue.reserve_span(first_block_height, context.m_last_response_height, count_limit, context.m_connection_id, sync_pruned_blocks, m_core.get_blockchain_pruning_seed(), context.m_pruning_seed, context.m_remote_blockchain_height, context.m_needed_objects);
         MDEBUG(context << " span from " << first_block_height << ": " << span.first << "/" << span.second);
         if (span.second > 0)
@@ -1978,7 +2042,7 @@ skip:
           const uint32_t peer_stripe = tools::get_pruning_stripe(context.m_pruning_seed);
           const uint32_t first_stripe = tools::get_pruning_stripe(span.first, context.m_remote_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES);
           const uint32_t last_stripe = tools::get_pruning_stripe(span.first + span.second - 1, context.m_remote_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES);
-          if ((first_stripe && peer_stripe != first_stripe) || (last_stripe && peer_stripe != last_stripe))
+          if ((((first_stripe && peer_stripe != first_stripe) || (last_stripe && peer_stripe != last_stripe)) && !m_sync_pruned_blocks) || (m_sync_pruned_blocks && req.prune))
           {
             MDEBUG(context << "We need full data, but the peer does not have it, dropping peer");
             return false;
@@ -1986,7 +2050,7 @@ skip:
         }
 
         context.m_last_request_time = boost::posix_time::microsec_clock::universal_time();
-        MLOG_P2P_MESSAGE("-->>NOTIFY_REQUEST_GET_OBJECTS: blocks.size()=" << req.blocks.size() << ", txs.size()=" << req.txs.size()
+        MLOG_P2P_MESSAGE("-->>NOTIFY_REQUEST_GET_OBJECTS: blocks.size()=" << req.blocks.size()
             << "requested blocks count=" << count << " / " << count_limit << " from " << span.first << ", first hash " << req.blocks.front());
         //epee::net_utils::network_throttle_manager::get_global_throttle_inreq().logger_handle_net("log/dr-arqma/net/req-all.data", sec, get_avg_block_size());
 
@@ -2056,7 +2120,7 @@ skip:
     if(context.m_last_response_height < context.m_remote_blockchain_height-1)
     {//we have to fetch more objects ids, request blockchain entry
 
-      NOTIFY_REQUEST_CHAIN::request r = boost::value_initialized<NOTIFY_REQUEST_CHAIN::request>();
+      NOTIFY_REQUEST_CHAIN::request r = {};
       m_core.get_short_chain_history(r.block_ids);
       CHECK_AND_ASSERT_MES(!r.block_ids.empty(), false, "Short chain history is empty");
 
@@ -2112,8 +2176,26 @@ skip:
   bool t_cryptonote_protocol_handler<t_core>::on_connection_synchronized()
   {
     bool val_expected = false;
-    if(m_synchronized.compare_exchange_strong(val_expected, true))
+    uint64_t current_blockchain_height = m_core.get_current_blockchain_height();
+    if(!m_core.is_within_compiled_block_hash_area(current_blockchain_height) && m_synchronized.compare_exchange_strong(val_expected, true))
     {
+      if ((current_blockchain_height > m_sync_start_height) && (m_sync_spans_downloaded > 0))
+      {
+        uint64_t synced_blocks = current_blockchain_height - m_sync_start_height;
+        // Report only after syncing an "interesting" number of blocks:
+        if (synced_blocks > 20)
+        {
+          const boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+          uint64_t synced_seconds = (now - m_sync_start_time).total_seconds();
+          if (synced_seconds == 0)
+          {
+            synced_seconds = 1;
+          }
+          float blocks_per_second = (1000 * synced_blocks / synced_seconds) / 1000.0f;
+          MGINFO_YELLOW("Synced " << synced_blocks << " blocks in "
+            << tools::get_human_readable_timespan(synced_seconds) << " (" << blocks_per_second << " blocks per second)");
+        }
+      }
       MGINFO_YELLOW(ENDL << "**********************************************************************" << ENDL
         << "You are now synchronized with the network. You may now start arqma-wallet-cli." << ENDL
         << ENDL

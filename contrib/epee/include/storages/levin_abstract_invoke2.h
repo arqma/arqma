@@ -28,6 +28,7 @@
 
 #include "portable_storage_template_helper.h"
 #include <boost/utility/value_init.hpp>
+#include <functional>
 #include "span.h"
 #include "net/levin_base.h"
 
@@ -54,7 +55,7 @@ namespace epee
       stg.store_to_binary(buff_to_send);
 
       int res = transport.invoke(command, buff_to_send, buff_to_recv);
-      if( res <=0 )
+      if(res <= 0)
       {
         MERROR("Failed to invoke command " << command << " return code " << res);
         return false;
@@ -80,7 +81,7 @@ namespace epee
       stg.store_to_binary(buff_to_send);
 
       int res = transport.notify(command, buff_to_send);
-      if(res <=0 )
+      if(res <= 0)
       {
         LOG_ERROR("Failed to notify command " << command << " return code " << res);
         return false;
@@ -98,7 +99,7 @@ namespace epee
       stg.store_to_binary(buff_to_send);
 
       int res = transport.invoke(command, buff_to_send, buff_to_recv, conn_id);
-      if( res <=0 )
+      if(res <= 0)
       {
         LOG_PRINT_L1("Failed to invoke command " << command << " return code " << res);
         return false;
@@ -122,7 +123,7 @@ namespace epee
       int res = transport.invoke_async(command, epee::strspan<uint8_t>(buff_to_send), conn_id, [cb, command](int code, const epee::span<const uint8_t> buff, typename t_transport::connection_context& context)->bool
       {
         t_result result_struct = AUTO_VAL_INIT(result_struct);
-        if( code <=0 )
+        if(code <= 0)
         {
           LOG_PRINT_L1("Failed to invoke command " << command << " return code " << code);
           cb(code, result_struct, context);
@@ -144,7 +145,7 @@ namespace epee
         cb(code, result_struct, context);
         return true;
       }, inv_timeout);
-      if( res <=0 )
+      if(res <= 0)
       {
         LOG_PRINT_L1("Failed to invoke command " << command << " return code " << res);
         return false;
@@ -162,7 +163,7 @@ namespace epee
       stg.store_to_binary(buff_to_send);
 
       int res = transport.notify(command, epee::strspan<uint8_t>(buff_to_send), conn_id);
-      if(res <=0 )
+      if(res <= 0)
       {
         MERROR("Failed to notify command " << command << " return code " << res);
         return false;
@@ -261,20 +262,20 @@ namespace epee
 
 #define HANDLE_INVOKE2(command_id, func, type_name_in, typename_out) \
   if(!is_notify && command_id == command) \
-  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, type_name_in, typename_out>(this, command, in_buff, buff_out, boost::bind(func, this, _1, _2, _3, _4), context);}
+  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, type_name_in, typename_out>(this, command, in_buff, buff_out, std::bind(func, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4), context);}
 
 #define HANDLE_INVOKE_T2(COMMAND, func) \
   if(!is_notify && COMMAND::ID == command) \
-  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, typename COMMAND::request, typename COMMAND::response>(command, in_buff, buff_out, boost::bind(func, this, _1, _2, _3, _4), context);}
+  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, typename COMMAND::request, typename COMMAND::response>(command, in_buff, buff_out, std::bind(func, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4), context);}
 
 
 #define HANDLE_NOTIFY2(command_id, func, type_name_in) \
   if(is_notify && command_id == command) \
-  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, type_name_in>(this, command, in_buff, boost::bind(func, this, _1, _2, _3), context);}
+  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, type_name_in>(this, command, in_buff, std::bind(func, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), context);}
 
 #define HANDLE_NOTIFY_T2(NOTIFY, func) \
   if(is_notify && NOTIFY::ID == command) \
-  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, typename NOTIFY::request>(this, command, in_buff, boost::bind(func, this, _1, _2, _3), context);}
+  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, typename NOTIFY::request>(this, command, in_buff, std::bind(func, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), context);}
 
 
 #define CHAIN_INVOKE_MAP2(func) \

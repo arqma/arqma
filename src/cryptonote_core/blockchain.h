@@ -235,7 +235,7 @@ namespace cryptonote
      *
      * @return false on erroneous blocks, else true
      */
-    bool prepare_handle_incoming_blocks(const std::vector<block_complete_entry>  &blocks_entry, std::vector<block> &blocks);
+    bool prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks);
 
     /**
      * @brief incoming blocks post-processing, cleanup, and disk sync
@@ -1049,8 +1049,8 @@ namespace cryptonote
     std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, bool>> m_check_txin_table;
 
     // SHA-3 hashes for each block and for fast pow checking
-    std::vector<std::pair<crypto::hash, crypto::hash> > m_blocks_hash_of_hashes;
-    std::vector<std::pair<crypto::hash, uint64_t> > m_blocks_hash_check;
+    std::vector<std::pair<crypto::hash, crypto::hash>> m_blocks_hash_of_hashes;
+    std::vector<std::pair<crypto::hash, uint64_t>> m_blocks_hash_check;
     std::vector<crypto::hash> m_blocks_txs_check;
 
     blockchain_db_sync_mode m_db_sync_mode;
@@ -1113,7 +1113,7 @@ namespace cryptonote
     std::shared_ptr<tools::Notify> m_block_notify;
     std::shared_ptr<tools::Notify> m_reorg_notify;
 
-	zmq::context_t context;
+    zmq::context_t context;
     zmq::socket_t producer{context, ZMQ_DEALER};
     zmq::message_t create_message(std::string &&data);
 

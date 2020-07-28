@@ -188,7 +188,7 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
 
     // process block
 
-    block_verification_context bvc = boost::value_initialized<block_verification_context>();
+    block_verification_context bvc = {};
 
     core.handle_incoming_block(block_entry.block, pblocks.empty() ? NULL : &pblocks[blockidx++], bvc, false); // <--- process block
 
@@ -557,22 +557,15 @@ int main(int argc, char* argv[])
   po::options_description desc_cmd_only("Command line options");
   po::options_description desc_cmd_sett("Command line options and settings options");
   const command_line::arg_descriptor<std::string> arg_input_file = {"input-file", "Specify input file", "", true};
-  const command_line::arg_descriptor<std::string> arg_log_level   = {"log-level",  "0-4 or categories", ""};
-  const command_line::arg_descriptor<uint64_t> arg_block_stop  = {"block-stop", "Stop at block number", block_stop};
-  const command_line::arg_descriptor<uint64_t> arg_batch_size  = {"batch-size", "", db_batch_size};
-  const command_line::arg_descriptor<uint64_t> arg_pop_blocks  = {"pop-blocks", "Remove blocks from end of blockchain", num_blocks};
-  const command_line::arg_descriptor<bool>        arg_drop_hf  = {"drop-hard-fork", "Drop hard fork subdbs", false};
-  const command_line::arg_descriptor<bool>     arg_count_blocks = {
-    "count-blocks"
-      , "Count blocks in bootstrap file and exit"
-      , false
-  };
-  const command_line::arg_descriptor<bool> arg_noverify =  {"dangerous-unverified-import",
-    "Blindly trust the import file and use potentially malicious blocks and transactions during import (only enable if you exported the file yourself)", false};
-  const command_line::arg_descriptor<bool> arg_batch  =  {"batch",
-    "Batch transactions for faster import", true};
-  const command_line::arg_descriptor<bool> arg_resume =  {"resume",
-    "Resume from current height if output database already exists", true};
+  const command_line::arg_descriptor<std::string> arg_log_level = {"log-level", "0-4 or categories", ""};
+  const command_line::arg_descriptor<uint64_t> arg_block_stop = {"block-stop", "Stop at block number", block_stop};
+  const command_line::arg_descriptor<uint64_t> arg_batch_size = {"batch-size", "", db_batch_size};
+  const command_line::arg_descriptor<uint64_t> arg_pop_blocks = {"pop-blocks", "Remove blocks from end of blockchain", num_blocks};
+  const command_line::arg_descriptor<bool> arg_drop_hf = {"drop-hard-fork", "Drop hard fork subdbs", false};
+  const command_line::arg_descriptor<bool> arg_count_blocks = {"count-blocks", "Count blocks in bootstrap file and exit", false};
+  const command_line::arg_descriptor<bool> arg_noverify = {"no-verify", "Blindly trust the import file and use potentially malicious blocks and transactions during import (only enable if you exported the file yourself)", false};
+  const command_line::arg_descriptor<bool> arg_batch = {"batch", "Batch transactions for faster import", true};
+  const command_line::arg_descriptor<bool> arg_resume = {"resume", "Resume from current height if output database already exists", true};
 
   command_line::add_arg(desc_cmd_sett, arg_input_file);
   command_line::add_arg(desc_cmd_sett, arg_log_level);
@@ -699,9 +692,9 @@ int main(int argc, char* argv[])
       "This is a DANGEROUS operation: if the file was tampered with in transit, or obtained from a malicious source,\n"
       "you could end up with a compromised database. It is recommended to NOT use " << arg_noverify.name << ".\n"
       "*****************************************************************************************\n"
-      "You have 90 seconds to press ^C or terminate this program before unverified import starts\n"
+      "You have 20 seconds to press ^C or terminate this program before unverified import starts\n"
       "*****************************************************************************************");
-    sleep(90);
+    sleep(20);
   }
 
   cryptonote::cryptonote_protocol_stub pr; //TODO: stub only for this kind of test, make real validation of relayed objects
