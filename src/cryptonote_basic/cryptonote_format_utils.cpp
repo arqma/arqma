@@ -1205,25 +1205,6 @@ namespace cryptonote
     return p;
   }
   //---------------------------------------------------------------
-  bool get_block_longhash_old(const block& b, crypto::hash& res, uint64_t height)
-  {
-    blobdata bd = get_block_hashing_blob(b);
-
-    if(b.major_version >= 12 && b.major_version < 15)
-    {
-      crypto::cn_turtle_hash(bd.data(), bd.size(), res);
-    }
-    else if(b.major_version >= 7)
-    {
-      crypto::cn_arqma_hash_v1(bd.data(), bd.size(), res);
-    }
-    else
-    {
-      crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
-    }
-    return true;
-  }
-  //---------------------------------------------------------------
   std::vector<uint64_t> relative_output_offsets_to_absolute(const std::vector<uint64_t>& off)
   {
     std::vector<uint64_t> res = off;
@@ -1242,13 +1223,6 @@ namespace cryptonote
       res[i] -= res[i-1];
 
     return res;
-  }
-  //---------------------------------------------------------------
-  crypto::hash get_block_longhash_old(const block& b, uint64_t height)
-  {
-    crypto::hash p = null_hash;
-    get_block_longhash_old(b, p, height);
-    return p;
   }
   //---------------------------------------------------------------
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash *block_hash)

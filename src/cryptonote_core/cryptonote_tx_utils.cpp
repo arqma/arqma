@@ -693,7 +693,7 @@ namespace cryptonote
       }
       rx_slow_hash(main_height, seed_height, hash.data, bd.data(), bd.size(), res.data, miners, 0);
     }
-/*    else if(b.major_version >= 12)
+    else if(b.major_version >= 12)
     {
       crypto::cn_turtle_hash(bd.data(), bd.size(), res);
     }
@@ -704,61 +704,8 @@ namespace cryptonote
     else
     {
       crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
-    }*/
+    }
     return true;
-  }
-
-  bool check_proof_of_work_new(const Blockchain *pbc, const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
-  {
-    MDEBUG("Checking RandomARQ POW diff " << current_diffic);
-    if(bl.major_version != 1 && bl.major_version < 15)
-      return false;
-
-    if (!get_block_longhash(pbc, bl, proof_of_work, height, 0))
-    {
-       MDEBUG("Failed to get block longhash");
-       return false;
-    }
-    return check_hash(proof_of_work, current_diffic);
-  }
-
-  bool check_proof_of_work_old(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
-  {
-    MDEBUG("Checking Pre-RandomARQ POW diff " << current_diffic);
-    if(bl.major_version > 14)
-      return false;
-
-    if(!get_block_longhash_old(bl, proof_of_work, height))
-    {
-      MDEBUG("Failed to get pre-RandomARQ block longhash");
-      return false;
-    }
-
-    if(!check_hash(proof_of_work, current_diffic))
-    {
-      MDEBUG("Failed to check hash for pow");
-      return false;
-    }
-
-    return true;
-  }
-
-  bool check_proof_of_work(const Blockchain *pbc, const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
-  {
-    switch(bl.major_version)
-    {
-      case 7:
-      case 8:
-      case 9:
-      case 10:
-      case 11:
-      case 12:
-      case 13:
-      case 14:
-        return check_proof_of_work_old(bl, current_diffic, proof_of_work, height);
-      default:
-        return check_proof_of_work_new(pbc, bl, current_diffic, proof_of_work, height);
-    }
   }
 
   crypto::hash get_block_longhash(const Blockchain *pbc, const block& b, const uint64_t height, const int miners)

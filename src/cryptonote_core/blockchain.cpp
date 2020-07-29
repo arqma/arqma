@@ -1811,7 +1811,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     // Check the block's hash against the difficulty target for its alt chain
     difficulty_type current_diff = get_next_difficulty_for_alternative_chain(alt_chain, bei);
     CHECK_AND_ASSERT_MES(current_diff, false, "!!!!!!! DIFFICULTY OVERHEAD !!!!!!!");
-    crypto::hash proof_of_work;
+    crypto::hash proof_of_work = null_hash;
     if(b.major_version >= RX_BLOCK_VERSION)
     {
       crypto::hash seedhash = null_hash;
@@ -1838,10 +1838,9 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     {
       get_block_longhash(this, bei.bl, proof_of_work, bei.height, 0);
     }
-    if(!check_proof_of_work(this, bei.bl, current_diff, proof_of_work, bei.height))
+    if(!check_hash(proof_of_work, current_diff))
     {
       MERROR_VER("Block with id: " << id << std::endl << " for alternative chain, does not have enough proof of work: " << proof_of_work << std::endl << " expected difficulty: " << current_diff);
-      MDEBUG("Block info - ts " << bei.bl.timestamp << " nonce " << bei.bl.nonce);
       bvc.m_verifivation_failed = true;
       return false;
     }
@@ -3760,7 +3759,7 @@ bool Blockchain::handle_block_to_main_chain(const block& bl, const crypto::hash&
   static bool seen_future_version = false;
 
   db_rtxn_guard rtxn_guard(m_db);
-  uint64_t blockchain_height = m_db->height();;
+  uint64_t blockchain_height;
   const crypto::hash top_hash = get_tail_id(blockchain_height);
   ++blockchain_height; // block height to chain height
   if(bl.prev_id != top_hash)
@@ -3819,7 +3818,7 @@ leave:
 
   TIME_MEASURE_START(longhash_calculating_time);
 
-  crypto::hash proof_of_work;
+  crypto::hash proof_of_work = null_hash;
 
   // Formerly the code below contained an if loop with the following condition
   // !m_checkpoints.is_in_checkpoint_zone(get_current_blockchain_height())
@@ -3835,7 +3834,6 @@ leave:
 #if defined(PER_BLOCK_CHECKPOINT)
   if (blockchain_height < m_blocks_hash_check.size())
   {
-    auto hash = get_block_hash(bl);
     const auto &expected_hash = m_blocks_hash_check[blockchain_height].first;
     if (expected_hash != crypto::null_hash)
     {
@@ -3860,23 +3858,16 @@ leave:
     {
       precomputed = true;
       proof_of_work = it->second;
-      if(!check_hash(proof_of_work, current_diffic))
-      {
-        MERROR_VER("Block with id: " << id << std::endl << "does not have enough proof of work: " << proof_of_work << " at height " << blockchain_height << ", unexpected difficulty: " << current_diffic);
-        bvc.m_verifivation_failed = true;
-        goto leave;
-      }
     }
     else
-    {
       proof_of_work = get_block_longhash(this, bl, blockchain_height, 0);
 
-      if (!check_proof_of_work(this, bl, current_diffic, proof_of_work, blockchain_height))
-      {
-        MERROR_VER("Block with id: " << id << std::endl << "does not have enough proof of work: " << proof_of_work << " at height " << blockchain_height << ", unexpected difficulty: " << current_diffic);
-        bvc.m_verifivation_failed = true;
-        goto leave;
-      }
+    // validate proof_of_work versus difficulty target
+    if(!check_hash(proof_of_work, current_diffic))
+    {
+      MERROR_VER("Block with id: " << id << std::endl << "does not have enough proof of work: " << proof_of_work << std::endl << "unexpected difficulty: " << current_diffic);
+      bvc.m_verifivation_failed = true;
+      goto leave;
     }
   }
 
@@ -4407,21 +4398,8 @@ void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const b
     if (m_cancel)
        break;
     crypto::hash id = get_block_hash(block);
-    crypto::hash pow;
-    if(block.major_version >= RX_BLOCK_VERSION)
-    {
-      if(!get_block_longhash(this, block, pow, height++, 0))
-        MERROR("Block longhash worker: failed to get block longhash");
-      else
-        map.emplace(id, pow);
-    }
-    else
-    {
-      if(!get_block_longhash_old(block, pow, height++))
-        MERROR("Block longhash worker: failed to get block longhash");
-      else
-        map.emplace(id, pow);
-    }
+    crypto::hash pow = get_block_longhash(this, block, height++, 0);
+    map.emplace(id, pow);
   }
 
   TIME_MEASURE_FINISH(t);
