@@ -194,7 +194,7 @@ namespace net_utils
 
 	public:
 	  void setRpcStation();
-      void setZmqStation();
+    void setZmqStation();
   };
 
 

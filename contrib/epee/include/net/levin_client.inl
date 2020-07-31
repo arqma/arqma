@@ -45,9 +45,9 @@ bool levin_client_impl::connect(u_long ip, int port, unsigned int timeout, const
 }
 //------------------------------------------------------------------------------
 inline
-  bool levin_client_impl::connect(const std::string& addr, int port, unsigned int timeout, const std::string& bind_ip)
+bool levin_client_impl::connect(const std::string& addr, int port, unsigned int timeout, const std::string& bind_ip)
 {
-  return m_transport.connect(addr, port, timeout, timeout, bind_ip);
+	return m_transport.connect(addr, port, timeout, timeout, bind_ip);
 }
 //------------------------------------------------------------------------------
 inline

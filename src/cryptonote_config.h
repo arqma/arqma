@@ -117,7 +117,7 @@
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 //seconds, one week
 
-#define COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT           100
+#define COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT           1000
 
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
@@ -246,8 +246,8 @@ namespace config
 
    namespace tx_settings
    {
-     static constexpr uint8_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     static constexpr uint8_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
+     static constexpr size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     static constexpr size_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
      static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
