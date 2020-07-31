@@ -1341,8 +1341,9 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
   }
   auto h = m_db->height();
 
-  if(h == 1) {
-  base_reward = MONEY_PREMINE;
+  if(h == 1)
+  {
+    base_reward = MONEY_PREMINE;
   }
   else if (h > 1 && base_reward + fee < money_in_use)
   {
@@ -1589,7 +1590,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
    */
   //make blocks coin-base tx looks close to real coinbase tx to get truthful blob weight
   uint8_t hf_version = b.major_version;
-  size_t max_outs = hf_version >= 4 ? 1 : 11;
+  size_t max_outs = hf_version >= 7 ? 1 : 11;
   bool r = construct_miner_tx(height, median_weight, already_generated_coins, txs_weight, fee, miner_address, b.miner_tx, ex_nonce, max_outs, hf_version);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, first chance");
   size_t cumulative_weight = txs_weight + get_transaction_weight(b.miner_tx);
@@ -1811,7 +1812,8 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     // Check the block's hash against the difficulty target for its alt chain
     difficulty_type current_diff = get_next_difficulty_for_alternative_chain(alt_chain, bei);
     CHECK_AND_ASSERT_MES(current_diff, false, "!!!!!!! DIFFICULTY OVERHEAD !!!!!!!");
-    crypto::hash proof_of_work = null_hash;
+    crypto::hash proof_of_work;
+    memset(proof_of_work.data, 0xff, sizeof(proof_of_work.data));
     if(b.major_version >= RX_BLOCK_VERSION)
     {
       crypto::hash seedhash = null_hash;
@@ -1953,7 +1955,7 @@ bool Blockchain::get_blocks(uint64_t start_offset, size_t count, std::vector<std
     return false;
 
   blocks.reserve(blocks.size() + height - start_offset);
-  for(size_t i = start_offset; i < start_offset + count && i < height;i++)
+  for(size_t i = start_offset; i < start_offset + count && i < height; i++)
   {
     blocks.push_back(std::make_pair(m_db->get_block_blob_from_height(i), block()));
     if (!parse_and_validate_block_from_blob(blocks.back().first, blocks.back().second))
@@ -2849,7 +2851,7 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
     }
   }
 
-  if (hf_version < 12 && tx.rct_signatures.type == rct::RCTTypeBulletproof) {
+  if (hf_version < 13 && tx.rct_signatures.type == rct::RCTTypeBulletproof) {
     if (tx.version >= 2) {
       const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
       if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
@@ -2970,7 +2972,7 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
 //        check_tx_input() rather than here, and use this function simply
 //        to iterate the inputs as necessary (splitting the task
 //        using threads, etc.)
-bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, uint64_t* pmax_used_block_height)
+bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, uint64_t* pmax_used_block_height)
 {
   PERF_TIMER(check_tx_inputs);
   LOG_PRINT_L3("Blockchain::" << __func__);
@@ -2988,11 +2990,11 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
 
   // from hard fork 2, we require mixin at least 2 unless one output cannot mix with 2 others
   // if one output cannot mix with 2 others, we accept at most 1 output that can mix
-  if (hf_version >= 2)
+  if (hf_version >= 7)
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();
-    const size_t min_mixin = hf_version >= HF_VERSION_MIN_MIXIN_10 ? 10 : hf_version >= HF_VERSION_MIN_MIXIN_6 ? 6 : 4;
+    const size_t min_mixin = hf_version >= HF_VERSION_MIN_MIXIN_10 ? 10 : 6;
     for (const auto& txin : tx.vin)
     {
       // non txin_to_key inputs will be rejected below
@@ -3046,7 +3048,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
     }
 
     // min/max tx version based on HF, and we accept v1 txes if having a non mixable
-    const size_t max_tx_version = (hf_version <= 3) ? 1 : 2;
+    const size_t max_tx_version = config::tx_settings::ARQMA_TX_VERSION;
     if (tx.version > max_tx_version)
     {
       MERROR_VER("transaction version " << (unsigned)tx.version << " is higher than max accepted version " << max_tx_version);
@@ -3350,13 +3352,13 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
     // for bulletproofs, check they're only multi-output after v13
     if(rct::is_rct_bulletproof(rv.type) && rv.type == rct::RCTTypeBulletproof)
     {
-      if (hf_version < 12)
+      if (hf_version < 13)
       {
         for (const rct::Bulletproof &proof: rv.p.bulletproofs)
         {
           if (proof.V.size() > 1)
           {
-            MERROR_VER("Multi output bulletproofs are invalid before v8");
+            MERROR_VER("Multi output bulletproofs are invalid before v13");
             return false;
           }
         }
@@ -3629,7 +3631,7 @@ bool Blockchain::check_block_timestamp(std::vector<uint64_t>& timestamps, const 
   size_t blockchain_timestamp_check_window = hf_version < 2 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
 
   uint64_t top_block_timestamp = timestamps.back();
-  if (hf_version  > 9 && b.timestamp < top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11)
+  if (hf_version > 9 && b.timestamp < top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11)
   {
     MERROR_VER("Timestamp of Block with id: " << get_block_hash(b) << ", " << b.timestamp << ", is less than Top Block Timestamp - FTL" << top_block_timestamp - CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11);
     return false;
@@ -3818,7 +3820,8 @@ leave:
 
   TIME_MEASURE_START(longhash_calculating_time);
 
-  crypto::hash proof_of_work = null_hash;
+  crypto::hash proof_of_work;
+  memset(proof_of_work.data, 0xff, sizeof(proof_of_work.data));
 
   // Formerly the code below contained an if loop with the following condition
   // !m_checkpoints.is_in_checkpoint_zone(get_current_blockchain_height())
@@ -5206,7 +5209,12 @@ void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get
         return;
       }
       const size_t size_needed = 4 + nblocks * (sizeof(crypto::hash) * 2);
-      if(nblocks > 0 && nblocks > (m_db->height() + HASH_OF_HASHES_STEP - 1) / HASH_OF_HASHES_STEP && checkpoints.size() >= size_needed)
+      if(checkpoints.size() != size_needed)
+      {
+        MERROR("Failed to load hashes - unexpected data size");
+        return;
+      }
+      else if(nblocks > 0 && nblocks > (m_db->height() + HASH_OF_HASHES_STEP - 1) / HASH_OF_HASHES_STEP)
       {
         p += sizeof(uint32_t);
         m_blocks_hash_of_hashes.reserve(nblocks);

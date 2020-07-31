@@ -714,8 +714,7 @@ estim:
   return threshold_size;
 }
 
-void BlockchainLMDB::add_block(const block& blk, size_t block_weight, uint64_t long_term_block_weight, const difficulty_type& cumulative_difficulty, const uint64_t& coins_generated,
-    uint64_t num_rct_outs, const crypto::hash& blk_hash)
+void BlockchainLMDB::add_block(const block& blk, size_t block_weight, uint64_t long_term_block_weight, const difficulty_type& cumulative_difficulty, const uint64_t& coins_generated, uint64_t num_rct_outs, const crypto::hash& blk_hash)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
@@ -765,7 +764,7 @@ void BlockchainLMDB::add_block(const block& blk, size_t block_weight, uint64_t l
   bi.bi_diff = cumulative_difficulty;
   bi.bi_hash = blk_hash;
   bi.bi_cum_rct = num_rct_outs;
-  if (blk.major_version >= 4)
+  if (blk.major_version >= 7)
   {
     uint64_t last_height = m_height-1;
     MDB_val_set(h, last_height);
