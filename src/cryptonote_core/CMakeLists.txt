@@ -56,7 +56,6 @@ target_link_libraries(cryptonote_core
     common
     cncrypto
     blockchain_db
-    checkpoints
     multisig
     ringct
     device
@@ -70,8 +69,3 @@ target_link_libraries(cryptonote_core
     ${Boost_THREAD_LIBRARY}
   PRIVATE
     ${EXTRA_LIBRARIES})
-
-if(PER_BLOCK_CHECKPOINT)
-  target_compile_definitions(cryptonote_core PUBLIC PER_BLOCK_CHECKPOINT)
-  target_link_libraries(cryptonote_core PUBLIC blocks)
-endif()

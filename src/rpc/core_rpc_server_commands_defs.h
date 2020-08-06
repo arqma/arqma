@@ -634,7 +634,6 @@ namespace cryptonote
       bool too_big;
       bool overspend;
       bool fee_too_low;
-      bool not_rct;
       bool sanity_check_failed;
 
       BEGIN_KV_SERIALIZE_MAP()
@@ -648,7 +647,6 @@ namespace cryptonote
         KV_SERIALIZE(too_big)
         KV_SERIALIZE(overspend)
         KV_SERIALIZE(fee_too_low)
-        KV_SERIALIZE(not_rct)
         KV_SERIALIZE(sanity_check_failed)
       END_KV_SERIALIZE_MAP()
     };

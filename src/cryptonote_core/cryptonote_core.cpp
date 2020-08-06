@@ -112,7 +112,7 @@ namespace cryptonote
   };
   const command_line::arg_descriptor<bool> arg_disable_dns_checkpoints = {
     "disable-dns-checkpoints"
-  , "Do not retrieve checkpoints from DNS - OBSOLETE. Enabled by Default"
+  , "Do not retrieve checkpoints from DNS"
   };
   const command_line::arg_descriptor<size_t> arg_block_download_max_size = {
     "block-download-max-size"
@@ -140,7 +140,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<bool> arg_dns_checkpoints = {
     "enforce-dns-checkpointing"
   , "checkpoints from DNS server will be enforced"
-  , true
+  , false
   };
   static const command_line::arg_descriptor<uint64_t> arg_fast_block_sync = {
     "fast-block-sync"
@@ -150,7 +150,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<uint64_t> arg_prep_blocks_threads = {
     "prep-blocks-threads"
   , "Max number of threads to use when preparing block hashes in groups."
-  , 4
+  , 8
   };
   static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
@@ -254,14 +254,14 @@ namespace cryptonote
     m_blockchain_storage.set_enforce_dns_checkpoints(enforce_dns);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::update_checkpoints()
+  bool core::update_checkpoints(const bool skip_dns/* = false*/)
   {
     if (m_nettype != MAINNET || m_disable_dns_checkpoints) return true;
 
     if (m_checkpoints_updating.test_and_set()) return true;
 
     bool res = true;
-    if (time(NULL) - m_last_dns_checkpoints_update >= 3600)
+    if (!skip_dns && time(NULL) - m_last_dns_checkpoints_update >= 3600)
     {
       res = m_blockchain_storage.update_checkpoints(m_checkpoints_path, true);
       m_last_dns_checkpoints_update = time(NULL);
@@ -388,19 +388,19 @@ namespace cryptonote
     top_id = m_blockchain_storage.get_tail_id(height);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_blocks(uint64_t start_offset, size_t count, std::vector<std::pair<cryptonote::blobdata,block> >& blocks, std::vector<cryptonote::blobdata>& txs) const
+  bool core::get_blocks(uint64_t start_offset, size_t count, std::vector<std::pair<cryptonote::blobdata,block>>& blocks, std::vector<cryptonote::blobdata>& txs) const
   {
     return m_blockchain_storage.get_blocks(start_offset, count, blocks, txs);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_blocks(uint64_t start_offset, size_t count, std::vector<std::pair<cryptonote::blobdata,block> >& blocks) const
+  bool core::get_blocks(uint64_t start_offset, size_t count, std::vector<std::pair<cryptonote::blobdata,block>>& blocks) const
   {
     return m_blockchain_storage.get_blocks(start_offset, count, blocks);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_blocks(uint64_t start_offset, size_t count, std::vector<block>& blocks) const
   {
-    std::vector<std::pair<cryptonote::blobdata, cryptonote::block> > bs;
+    std::vector<std::pair<cryptonote::blobdata, cryptonote::block>> bs;
     if (!m_blockchain_storage.get_blocks(start_offset, count, bs))
       return false;
     for (const auto &b: bs)
@@ -413,7 +413,7 @@ namespace cryptonote
     return m_blockchain_storage.get_transactions_blobs(txs_ids, txs, missed_txs);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_split_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata> >& txs, std::vector<crypto::hash>& missed_txs) const
+  bool core::get_split_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>>& txs, std::vector<crypto::hash>& missed_txs) const
   {
     return m_blockchain_storage.get_split_transactions_blobs(txs_ids, txs, missed_txs);
   }
@@ -646,7 +646,8 @@ namespace cryptonote
 
     // load json & DNS checkpoints, and verify them
     // with respect to what blocks we already have
-    CHECK_AND_ASSERT_MES(update_checkpoints(), false, "One or more checkpoints loaded from json or dns conflicted with existing checkpoints.");
+    const bool skip_dns_checkpoints = !command_line::get_arg(vm, arg_dns_checkpoints);
+    CHECK_AND_ASSERT_MES(update_checkpoints(skip_dns_checkpoints), false, "One or more checkpoints loaded from json or dns conflicted with existing checkpoints.");
 
    //DNS versions checking
     if (check_updates_string == "disabled")
@@ -1088,17 +1089,6 @@ namespace cryptonote
     return handle_incoming_tx({tx_blob, crypto::null_hash}, tvc, keeped_by_block, relayed, do_not_relay);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_stat_info(core_stat_info& st_inf) const
-  {
-    st_inf.mining_speed = m_miner.get_speed();
-    st_inf.alternative_blocks = m_blockchain_storage.get_alternative_blocks_count();
-    st_inf.blockchain_height = m_blockchain_storage.get_current_blockchain_height();
-    st_inf.tx_pool_size = m_mempool.get_transactions_count();
-    st_inf.top_block_id_str = epee::string_tools::pod_to_hex(m_blockchain_storage.get_tail_id());
-    return true;
-  }
-
-  //-----------------------------------------------------------------------------------------------
   bool core::check_tx_semantic(const transaction& tx, bool keeped_by_block) const
   {
     if(!tx.vin.size())
@@ -1192,9 +1182,12 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
+    static const uint64_t quick_height = 248920; // Need to be confirmed
     if(block_sync_size > 0)
       return block_sync_size;
-    return config::sync::SYNC_BLOCKS;
+    if(height >= quick_height)
+      return config::sync::SYNC_BLOCKS;
+    return config::sync::FAST_SYNC;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::are_key_images_spent_in_pool(const std::vector<crypto::key_image>& key_im, std::vector<bool> &spent) const
@@ -1698,7 +1691,6 @@ namespace cryptonote
       m_starter_message_showed = true;
     }
 
-//  m_fork_moaner.do_call(boost::bind(&core::check_fork_time, this));
     m_txpool_auto_relayer.do_call(boost::bind(&core::relay_txpool_transactions, this));
     m_check_updates_interval.do_call(boost::bind(&core::check_updates, this));
     m_check_disk_space_interval.do_call(boost::bind(&core::check_disk_space, this));
@@ -1707,30 +1699,6 @@ namespace cryptonote
     m_mempool.on_idle();
     return true;
   }
-  //-----------------------------------------------------------------------------------------------
-/*
-  bool core::check_fork_time()
-  {
-    HardFork::State state = m_blockchain_storage.get_hard_fork_state();
-    const el::Level level = el::Level::Warning;
-    switch (state) {
-      case HardFork::LikelyForked:
-        MCLOG_RED(level, "global", "**********************************************************************");
-        MCLOG_RED(level, "global", "Last scheduled hard fork is too far in the past.");
-        MCLOG_RED(level, "global", "We are most likely forked from the network. Daemon update needed now.");
-        MCLOG_RED(level, "global", "**********************************************************************");
-        break;
-      case HardFork::UpdateNeeded:
-        MCLOG_RED(level, "global", "**********************************************************************");
-        MCLOG_RED(level, "global", "Last scheduled hard fork time shows a daemon update is needed soon.");
-        MCLOG_RED(level, "global", "**********************************************************************");
-        break;
-      default:
-        break;
-    }
-    return true;
-  }
-*/
   //-----------------------------------------------------------------------------------------------
   uint8_t core::get_ideal_hard_fork_version() const
   {

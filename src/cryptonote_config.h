@@ -111,7 +111,6 @@
 #define DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN             DIFFICULTY_TARGET_V2 //just alias; used by tests
 
 #define BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT          10000  //by default, blocks ids count in synchronizing
-
 #define BLOCKS_SYNCHRONIZING_MAX_COUNT                  2048   //must be a power of 2, greater than 128, equal to SEEDHASH_EPOCH_BLOCKS
 
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
@@ -122,7 +121,7 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT                   32
+#define P2P_DEFAULT_CONNECTIONS_COUNT		        32
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -132,7 +131,7 @@
 #define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  // 2 minutes
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
-#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
+#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            4
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 
 #define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // kB/s
@@ -145,8 +144,6 @@
 
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
-
-#define ALLOW_DEBUG_COMMANDS
 
 #define CRYPTONOTE_NAME                                 "arqma"
 #define CRYPTONOTE_POOLDATA_FILENAME                    "poolstate.bin"
@@ -194,7 +191,6 @@ namespace config
 {
    uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)0); // Deprecated
    uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
-   std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
    uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
    uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
@@ -252,10 +248,13 @@ namespace config
      static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
 
+
    namespace sync
    {
-     static constexpr size_t SYNC_BLOCKS = 100; // Amount of Blocks to download and Validate at ones while Synchronizung with Arqma Network.
+     static constexpr size_t SYNC_BLOCKS = 20;
+     static constexpr size_t FAST_SYNC = 100;
    }
+
 }
 
 namespace cryptonote

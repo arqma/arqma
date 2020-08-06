@@ -44,6 +44,7 @@
 
 #include "net/net_utils_base.h"
 #include "misc_log_ex.h"
+#include <boost/chrono.hpp>
 #include "misc_language.h"
 #include "pragma_comp_defs.h"
 #include <sstream>
@@ -202,7 +203,7 @@ void network_throttle::_handle_trafic_exact(size_t packet_size, size_t orginal_s
 	MTRACE("Throttle " << m_name << ": packet of ~"<<packet_size<<"b " << " (from "<<orginal_size<<" b)"
         << " Speed AVG=" << std::setw(4) <<  ((long int)(cts .average/1024)) <<"[w="<<cts .window<<"]"
         <<           " " << std::setw(4) <<  ((long int)(cts2.average/1024)) <<"[w="<<cts2.window<<"]"
-				<<" / " << " Limit="<< ((long int)(m_target_speed/1024)) <<" KiB/sec "
+				<<" / " << " Limit="<< ((long int)(m_target_speed/1024)) <<" kB/s "
 				<< " " << history_str
 		);
 }
@@ -298,8 +299,8 @@ void network_throttle::calculate_times(size_t packet_size, calculate_times_struc
 			<< " so sleep: "
 			<< "D=" << std::setw(8) <<cts.delay<<" sec "
 			<< "E="<< std::setw(8) << E << " (Enow="<<std::setw(8)<<Enow<<") "
-            << "M=" << std::setw(8) << M <<" W="<< std::setw(8) << cts.window << " "
-            << "R=" << std::setw(8) << cts.recomendetDataSize << " Wgood" << std::setw(8) << Wgood << " "
+                        << "M=" << std::setw(8) << M <<" W="<< std::setw(8) << cts.window << " "
+                        << "R=" << std::setw(8) << cts.recomendetDataSize << " Wgood" << std::setw(8) << Wgood << " "
 			<< "History: " << std::setw(8) << history_str << " "
 			<< "m_last_sample_time=" << std::setw(8) << m_last_sample_time
 		);

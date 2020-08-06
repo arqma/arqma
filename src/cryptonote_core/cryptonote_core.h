@@ -46,7 +46,6 @@
 #include "blockchain.h"
 #include "cryptonote_basic/miner.h"
 #include "cryptonote_basic/connection_context.h"
-#include "cryptonote_basic/cryptonote_stat_info.h"
 #include "warnings.h"
 #include "crypto/hash.h"
 
@@ -538,15 +537,6 @@ namespace cryptonote
      bool find_blockchain_supplement(const uint64_t req_start_block, const std::list<crypto::hash>& qblock_ids, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata> > > >& blocks, uint64_t& total_height, uint64_t& start_height, bool pruned, bool get_miner_tx_hash, size_t max_count) const;
 
      /**
-      * @brief gets some stats about the daemon
-      *
-      * @param st_inf return-by-reference container for the stats requested
-      *
-      * @return true
-      */
-     bool get_stat_info(core_stat_info& st_inf) const;
-
-     /**
       * @copydoc Blockchain::get_tx_outputs_gindexs
       *
       * @note see Blockchain::get_tx_outputs_gindexs
@@ -689,7 +679,7 @@ namespace cryptonote
       *
       * @note see Blockchain::update_checkpoints()
       */
-     bool update_checkpoints();
+     bool update_checkpoints(const bool skip_dns = false);
 
      /**
       * @brief tells the daemon to wind down operations and stop running

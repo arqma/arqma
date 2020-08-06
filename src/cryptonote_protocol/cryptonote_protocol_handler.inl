@@ -54,7 +54,7 @@
   MCINFO(ARQMA_DEFAULT_LOG_CATEGORY, context << "[" << epee::string_tools::to_string_hex(context.m_pruning_seed) << "] state: " << x << " in state " << cryptonote::get_protocol_state_string(context.m_state))
 
 #define BLOCK_QUEUE_NSPANS_THRESHOLD 10 // chunks of N blocks
-#define BLOCK_QUEUE_SIZE_THRESHOLD (100 * 1024 * 1024) // MB
+#define BLOCK_QUEUE_SIZE_THRESHOLD (300 * 1024 * 1024) // MB
 #define BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS 1000
 #define REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY (5 * 1000000) // microseconds
 #define REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD (30 * 1000000) // microseconds
@@ -141,12 +141,6 @@ namespace cryptonote
     }
 
     return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------
-  template<class t_core>
-  bool t_cryptonote_protocol_handler<t_core>::get_stat_info(core_stat_info& stat_inf)
-  {
-    return m_core.get_stat_info(stat_inf);
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
@@ -333,11 +327,6 @@ namespace cryptonote
 
     if(m_core.have_block(hshd.top_id))
     {
-      if(target > m_core.get_current_blockchain_height())
-      {
-        MINFO(context << "peer is not ahead of us and we are syncing, disconnecting");
-        return false;
-      }
       context.m_state = cryptonote_connection_context::state_normal;
       if(is_inital && hshd.current_height >= target && target == m_core.get_current_blockchain_height())
         on_connection_synchronized();
@@ -363,6 +352,11 @@ namespace cryptonote
         << " [Your node is " << abs_diff << " blocks (" << tools::get_human_readable_timespan(abs_diff * DIFFICULTY_TARGET_V11) << ") "
         << (0 <= diff ? std::string("behind") : std::string("ahead"))
         << "] " << ENDL << "SYNCHRONIZATION started");
+
+      if (hshd.current_height >= m_core.get_current_blockchain_height() + 5) // don't switch to unsafe mode just for a few blocks
+      {
+        m_core.safesyncmode(false);
+      }
 
       if(m_core.get_target_blockchain_height() == 0) // only when sync starts
       {
@@ -769,8 +763,14 @@ namespace cryptonote
   int t_cryptonote_protocol_handler<t_core>::handle_request_fluffy_missing_tx(int command, NOTIFY_REQUEST_FLUFFY_MISSING_TX::request& arg, cryptonote_connection_context& context)
   {
     MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_FLUFFY_MISSING_TX (" << arg.missing_tx_indices.size() << " txes), block hash " << arg.block_hash);
+    if(context.m_state == cryptonote_connection_context::state_before_handshake)
+    {
+      LOG_ERROR_CCONTEXT("Requested fluffy tx before handshake, dropping connection");
+      drop_connection(context, false, false);
+      return 1;
+    }
 
-    std::vector<std::pair<cryptonote::blobdata, block> > local_blocks;
+    std::vector<std::pair<cryptonote::blobdata, block>> local_blocks;
     std::vector<cryptonote::blobdata> local_txs;
 
     block b;
@@ -887,6 +887,12 @@ namespace cryptonote
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context)
   {
+    if(context.m_state == cryptonote_connection_context::state_before_handshake)
+    {
+      LOG_ERROR_CCONTEXT("Requested objects before handshake, dropping connection");
+      drop_connection(context, false, false);
+      return 1;
+    }
     MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_GET_OBJECTS (" << arg.blocks.size() << " blocks)");
     NOTIFY_RESPONSE_GET_OBJECTS::request rsp;
     if(!m_core.handle_get_objects(arg, rsp, context))
@@ -895,8 +901,7 @@ namespace cryptonote
       drop_connection(context, false, false);
       return 1;
     }
-    MLOG_P2P_MESSAGE("-->>NOTIFY_RESPONSE_GET_OBJECTS: blocks.size()=" << rsp.blocks.size()
-                            << ", rsp.m_current_blockchain_height=" << rsp.current_blockchain_height << ", missed_ids.size()=" << rsp.missed_ids.size());
+    MLOG_P2P_MESSAGE("-->>NOTIFY_RESPONSE_GET_OBJECTS: blocks.size()=" << rsp.blocks.size() << ", rsp.m_current_blockchain_height=" << rsp.current_blockchain_height << ", missed_ids.size()=" << rsp.missed_ids.size());
     post_notify<NOTIFY_RESPONSE_GET_OBJECTS>(rsp, context);
     //handler_response_blocks_now(sizeof(rsp)); // XXX
     //handler_response_blocks_now(200);
@@ -1600,6 +1605,12 @@ skip:
   int t_cryptonote_protocol_handler<t_core>::handle_request_chain(int command, NOTIFY_REQUEST_CHAIN::request& arg, cryptonote_connection_context& context)
   {
     MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_CHAIN (" << arg.block_ids.size() << " blocks");
+    if(context.m_state == cryptonote_connection_context::state_before_handshake)
+    {
+      LOG_ERROR_CCONTEXT("Requested chain before handshake, dropping connection");
+      drop_connection(context, false, false);
+      return 1;
+    }
     NOTIFY_RESPONSE_CHAIN_ENTRY::request r;
     if(!m_core.find_blockchain_supplement(arg.block_ids, !arg.prune, r))
     {
@@ -1788,8 +1799,8 @@ skip:
     const uint32_t local_stripe = tools::get_pruning_stripe(m_core.get_blockchain_pruning_seed());
     if(local_stripe == 0)
       return false;
-    static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(12);
-     if (first_block_height + nblocks - 1 < bp_fork_height)
+    static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(14);
+     if(first_block_height + nblocks - 1 < bp_fork_height)
        return false;
     // assumes the span size is less or equal to the stripe size
     bool full_data_needed = tools::get_pruning_stripe(first_block_height, context.m_remote_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES) == local_stripe
@@ -1966,7 +1977,7 @@ skip:
         skip_unneeded_hashes(context, false);
 
         const uint64_t first_block_height = context.m_last_response_height - context.m_needed_objects.size() + 1;
-        static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(12);
+        static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(14);
         bool sync_pruned_blocks = m_sync_pruned_blocks && first_block_height >= bp_fork_height && m_core.get_blockchain_pruning_seed();
         span = m_block_queue.reserve_span(first_block_height, context.m_last_response_height, count_limit, context.m_connection_id, sync_pruned_blocks, m_core.get_blockchain_pruning_seed(), context.m_pruning_seed, context.m_remote_blockchain_height, context.m_needed_objects);
         MDEBUG(context << " span from " << first_block_height << ": " << span.first << "/" << span.second);
