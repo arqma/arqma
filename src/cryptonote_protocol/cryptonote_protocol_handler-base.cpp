@@ -80,15 +80,15 @@ class cryptonote_protocol_handler_base_pimpl { // placeholer if needed
 namespace cryptonote {
 
 double cryptonote_protocol_handler_base::estimate_one_block_size() noexcept { // for estimating size of blocks to download
- const double size_min = 500; // XXX 500
- //const int history_len = 20; // how many blocks to average over
+  const double size_min = 100; // XXX 500
+  //const int history_len = 20; // how many blocks to average over
 
- double avg=0;
- try {
- avg = get_avg_block_size(/*history_len*/);
- } catch (...) { }
- avg = std::max( size_min , avg);
- return avg;
+  double avg = 0;
+  try {
+    avg = get_avg_block_size(/*history_len*/);
+  } catch (...) { }
+  avg = std::max(size_min , avg);
+  return avg;
 }
 
 cryptonote_protocol_handler_base::cryptonote_protocol_handler_base() {
@@ -102,7 +102,7 @@ void cryptonote_protocol_handler_base::handler_request_blocks_history(std::list<
 
 void cryptonote_protocol_handler_base::handler_response_blocks_now(size_t packet_size) {
 	using namespace epee::net_utils;
-	double delay=0; // will be calculated
+	double delay = 0; // will be calculated
 	MDEBUG("Packet size: " << packet_size);
 	do
 	{ // rate limiting

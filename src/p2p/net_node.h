@@ -115,7 +115,7 @@ namespace nodetool
   };
 
   template<class t_payload_net_handler>
-  class node_server: public epee::levin::levin_commands_handler<p2p_connection_context_t<typename t_payload_net_handler::connection_context> >,
+  class node_server: public epee::levin::levin_commands_handler<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>,
                      public i_p2p_endpoint<typename t_payload_net_handler::connection_context>,
                      public epee::net_utils::i_connection_filter
   {

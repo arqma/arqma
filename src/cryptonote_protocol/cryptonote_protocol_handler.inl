@@ -54,8 +54,8 @@
   MCINFO(ARQMA_DEFAULT_LOG_CATEGORY, context << "[" << epee::string_tools::to_string_hex(context.m_pruning_seed) << "] state: " << x << " in state " << cryptonote::get_protocol_state_string(context.m_state))
 
 #define BLOCK_QUEUE_NSPANS_THRESHOLD 10 // chunks of N blocks
-#define BLOCK_QUEUE_SIZE_THRESHOLD (300 * 1024 * 1024) // MB
-#define BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS 1000
+#define BLOCK_QUEUE_SIZE_THRESHOLD (209715200) // MB
+#define BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS 2000
 #define REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY (5 * 1000000) // microseconds
 #define REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD (30 * 1000000) // microseconds
 #define IDLE_PEER_KICK_TIME (600 * 1000000) // microseconds
@@ -419,7 +419,13 @@ namespace cryptonote
     std::vector<block_complete_entry> blocks;
     blocks.push_back(arg.b);
     std::vector<block> pblocks;
-    m_core.prepare_handle_incoming_blocks(blocks, pblocks);
+    if(!m_core.prepare_handle_incoming_blocks(blocks, pblocks))
+    {
+      LOG_PRINT_CCONTEXT_L1("Block verification failed, dropping connection");
+      drop_connection(context, false, false);
+      m_core.resume_mine();
+      return 1;
+    }
     for(auto tx_blob_it = arg.b.txs.begin(); tx_blob_it!=arg.b.txs.end();tx_blob_it++)
     {
       cryptonote::tx_verification_context tvc = AUTO_VAL_INIT(tvc);
@@ -701,7 +707,12 @@ namespace cryptonote
         std::vector<block_complete_entry> blocks;
         blocks.push_back(b);
         std::vector<block> pblocks;
-        m_core.prepare_handle_incoming_blocks(blocks, pblocks);
+        if(!m_core.prepare_handle_incoming_blocks(blocks, pblocks))
+        {
+          LOG_PRINT_CCONTEXT_L0("Failure in prepare_handle_incoming_blocks");
+          m_core.resume_mine();
+          return 1;
+        }
 
         block_verification_context bvc = {};
         m_core.handle_incoming_block(arg.b.block, pblocks.empty() ? NULL : &pblocks[0], bvc); // got block from handle_notify_new_block
@@ -914,7 +925,7 @@ namespace cryptonote
     CRITICAL_REGION_LOCAL(m_buffer_mutex);
     if (m_avg_buffer.empty()) {
       MWARNING("m_avg_buffer.size() == 0");
-      return 500;
+      return 100;
     }
     double avg = 0;
     for (const auto &element : m_avg_buffer) avg += element;
@@ -1287,7 +1298,11 @@ namespace cryptonote
           }
 
           std::vector<block> pblocks;
-          m_core.prepare_handle_incoming_blocks(blocks, pblocks);
+          if(!m_core.prepare_handle_incoming_blocks(blocks, pblocks))
+          {
+            LOG_ERROR_CCONTEXT("Failure in prepare_handle_incoming_blocks");
+            return 1;
+          }
           if(!pblocks.empty() && pblocks.size() != blocks.size())
           {
             m_core.cleanup_handle_incoming_blocks();
@@ -1799,7 +1814,7 @@ skip:
     const uint32_t local_stripe = tools::get_pruning_stripe(m_core.get_blockchain_pruning_seed());
     if(local_stripe == 0)
       return false;
-    static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(14);
+    static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(8);
      if(first_block_height + nblocks - 1 < bp_fork_height)
        return false;
     // assumes the span size is less or equal to the stripe size
@@ -1977,7 +1992,7 @@ skip:
         skip_unneeded_hashes(context, false);
 
         const uint64_t first_block_height = context.m_last_response_height - context.m_needed_objects.size() + 1;
-        static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(14);
+        static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(8);
         bool sync_pruned_blocks = m_sync_pruned_blocks && first_block_height >= bp_fork_height && m_core.get_blockchain_pruning_seed();
         span = m_block_queue.reserve_span(first_block_height, context.m_last_response_height, count_limit, context.m_connection_id, sync_pruned_blocks, m_core.get_blockchain_pruning_seed(), context.m_pruning_seed, context.m_remote_blockchain_height, context.m_needed_objects);
         MDEBUG(context << " span from " << first_block_height << ": " << span.first << "/" << span.second);

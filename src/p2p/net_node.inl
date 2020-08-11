@@ -70,7 +70,7 @@
 
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
 
-#define MIN_WANTED_SEED_NODES 12
+#define MIN_WANTED_SEED_NODES 8
 
 using namespace boost::placeholders;
 
@@ -1731,7 +1731,7 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid> > connections)
+  bool node_server<t_payload_net_handler>::relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)
   {
     std::sort(connections.begin(), connections.end());
     auto zone = m_network_zones.begin();
@@ -2459,7 +2459,7 @@ namespace nodetool
   }
 
   template<typename t_payload_net_handler>
-  boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context> >
+  boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>
   node_server<t_payload_net_handler>::socks_connect(network_zone& zone, const epee::net_utils::network_address& remote, epee::net_utils::ssl_support_t ssl_support)
   {
     auto result = socks_connect_internal(zone.m_net_server.get_stop_signal(), zone.m_net_server.get_io_service(), zone.m_proxy_address, remote);
@@ -2473,7 +2473,7 @@ namespace nodetool
   }
 
   template<typename t_payload_net_handler>
-  boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context> >
+  boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>
   node_server<t_payload_net_handler>::public_connect(network_zone& zone, epee::net_utils::network_address const& na, epee::net_utils::ssl_support_t ssl_support)
   {
     CHECK_AND_ASSERT_MES(na.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id(), boost::none,

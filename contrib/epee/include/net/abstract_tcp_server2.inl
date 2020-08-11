@@ -56,7 +56,7 @@
 #define DEFAULT_TIMEOUT_MS_LOCAL 10000 // 10 seconds
 #define DEFAULT_TIMEOUT_MS_REMOTE 30000 // 30 seconds
 #define TIMEOUT_EXTRA_MS_PER_BYTE 0.2
-#define AGGRESSIVE_TIMEOUT_THRESHOLD 120  // sockets
+#define AGGRESSIVE_TIMEOUT_THRESHOLD 240  // sockets
 #define NEW_CONNECTION_TIMEOUT_LOCAL 15000 // 15 seconds
 #define NEW_CONNECTION_TIMEOUT_REMOTE 3000 // 3 seconds
 
@@ -841,7 +841,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     if (rpc_speed_limit_is_enabled())
       do_send_handler_write_from_queue(e, m_send_que.front().size(), m_send_que.size()); // (((H)))
     CHECK_AND_ASSERT_MES(size_now == m_send_que.front().size(), void(), "Unexpected queue size");
-    async_write(boost::asio::buffer(m_send_que.front().data(), size_now), strand_.wrap(boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), _1, _2)));
+    async_write(boost::asio::buffer(m_send_que.front().data(), size_now), strand_.wrap(std::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
       //_dbg3("(normal)" << size_now);
     }
     CRITICAL_REGION_END();

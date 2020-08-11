@@ -131,7 +131,7 @@
 #define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  // 2 minutes
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
-#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            4
+#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            6
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 
 #define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // kB/s
@@ -232,27 +232,28 @@ namespace config
 
    namespace blockchain_settings
    {
-     static constexpr uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
-     static constexpr uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
-     static constexpr uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
-     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     static constexpr uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+     const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
+     const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
+     const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     const uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
+     const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
    }
 
    namespace tx_settings
    {
-     static constexpr size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     static constexpr size_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
-     static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
-     static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
+     const size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     const size_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
+     const uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
+     const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
 
 
    namespace sync
    {
-     static constexpr size_t SYNC_BLOCKS = 20;
-     static constexpr size_t FAST_SYNC = 100;
+     const uint64_t HIGHEST_CHECKPOINT = 248920;
+     const size_t NORMAL_SYNC = 10;
+     const size_t FAST_SYNC = 50;
    }
 
 }

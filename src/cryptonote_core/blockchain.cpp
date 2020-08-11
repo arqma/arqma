@@ -101,7 +101,6 @@ static const struct {
  { 14, 248920, 0, 1566598080 },
  { 15, 303666, 0, 1573257000 },
 };
-const uint64_t mainnet_hard_fork_version_1_till = 0;
 
 static const struct {
  uint8_t version;
@@ -120,7 +119,6 @@ static const struct {
  { 13, 2000, 0, 1566511680 },
  { 14, 3000, 0, 1566598080 },
 };
-const uint64_t testnet_hard_fork_version_1_till = 0;
 
 static const struct {
  uint8_t version;
@@ -140,12 +138,10 @@ static const struct {
  { 14, 2720, 0, 1560351600 },
  { 15, 12100, 0, 1570414500 },
 };
-const uint64_t stagenet_hard_fork_version_1_till = 0;
-
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool) :
   m_db(), m_tx_pool(tx_pool), m_hardfork(NULL), m_timestamps_and_difficulties_height(0), m_current_block_cumul_weight_limit(0), m_current_block_cumul_weight_median(0),
-  m_enforce_dns_checkpoints(false), m_max_prepare_blocks_threads(8), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false),
+  m_enforce_dns_checkpoints(true), m_max_prepare_blocks_threads(4), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false),
   m_fast_sync(true), m_show_time_stats(false), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
   m_long_term_block_weights_window(CRYPTONOTE_LONG_TERM_BLOCK_WEIGHT_WINDOW_SIZE),
   m_long_term_effective_median_block_weight(0),
@@ -351,11 +347,11 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   if (m_hardfork == nullptr)
   {
     if (m_nettype ==  FAKECHAIN || m_nettype == STAGENET)
-      m_hardfork = new HardFork(*db, 1, stagenet_hard_fork_version_1_till);
+      m_hardfork = new HardFork(*db, 1, 0);
     else if (m_nettype == TESTNET)
-      m_hardfork = new HardFork(*db, 1, testnet_hard_fork_version_1_till);
+      m_hardfork = new HardFork(*db, 1, 0);
     else
-      m_hardfork = new HardFork(*db, 1, mainnet_hard_fork_version_1_till);
+      m_hardfork = new HardFork(*db, 1, 0);
   }
   if (m_nettype == FAKECHAIN)
   {
@@ -419,7 +415,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 
   // create general purpose async service queue
 
-  m_async_work_idle = std::unique_ptr < boost::asio::io_service::work > (new boost::asio::io_service::work(m_async_service));
+  m_async_work_idle = std::unique_ptr<boost::asio::io_service::work> (new boost::asio::io_service::work(m_async_service));
   // we only need 1
   m_async_pool.create_thread(boost::bind(&boost::asio::io_service::run, &m_async_service));
 
@@ -2538,6 +2534,7 @@ bool Blockchain::find_blockchain_supplement(const uint64_t req_start_block, cons
   }
 
   db_rtxn_guard rtxn_guard(m_db);
+  total_height = get_current_blockchain_height();
   blocks.reserve(std::min(std::min(max_count, (size_t)10000), (size_t)(total_height - start_height)));
   CHECK_AND_ASSERT_MES(m_db->get_blocks_from(start_height, 3, max_count, FIND_BLOCKCHAIN_SUPPLEMENT_MAX_SIZE, blocks, pruned, true, get_miner_tx_hash), false, "Error getting blocks");
 
@@ -2671,7 +2668,7 @@ bool Blockchain::check_for_double_spend(const transaction& tx, key_images_contai
   return true;
 }
 //------------------------------------------------------------------
-bool Blockchain::get_tx_outputs_gindexs(const crypto::hash& tx_id, size_t n_txes, std::vector<std::vector<uint64_t> >& indexs) const
+bool Blockchain::get_tx_outputs_gindexs(const crypto::hash& tx_id, size_t n_txes, std::vector<std::vector<uint64_t>>& indexs) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
@@ -3051,7 +3048,7 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
   }
 
   std::vector<std::vector<rct::ctkey>> pubkeys(tx.vin.size());
-  std::vector < uint64_t > results;
+  std::vector<uint64_t> results;
   results.resize(tx.vin.size(), 0);
 
   tools::threadpool& tpool = tools::threadpool::getInstance();
@@ -3648,7 +3645,7 @@ bool Blockchain::check_median_block_timestamp(const block& b, uint64_t& median_t
   return check_block_timestamp(timestamps, b);
 }
 //------------------------------------------------------------------
-void Blockchain::return_tx_to_pool(std::vector<transaction> &txs)
+void Blockchain::return_tx_to_pool(std::vector<std::pair<transaction, blobdata>> &txs)
 {
   uint8_t version = get_current_hard_fork_version();
   for (auto& tx : txs)
@@ -3659,9 +3656,11 @@ void Blockchain::return_tx_to_pool(std::vector<transaction> &txs)
     // that might not be always true. Unlikely though, and always relaying
     // these again might cause a spike of traffic as many nodes re-relay
     // all the transactions in a popped block when a reorg happens.
-    if (!m_tx_pool.add_tx(tx, tvc, true, true, false, version))
+    const size_t weight = get_transaction_weight(tx.first, tx.second.size());
+    const crypto::hash tx_hash = get_transaction_hash(tx.first);
+    if (!m_tx_pool.add_tx(tx.first, tx_hash, tx.second, weight, tvc, true, true, false, version))
     {
-      MERROR("Failed to return taken transaction with hash: " << get_transaction_hash(tx) << " to tx_pool");
+      MERROR("Failed to return taken transaction with hash: " << get_transaction_hash(tx.first) << " to tx_pool");
     }
   }
 }
@@ -3674,11 +3673,12 @@ bool Blockchain::flush_txes_from_pool(const std::vector<crypto::hash> &txids)
   for (const auto &txid: txids)
   {
     cryptonote::transaction tx;
+    cryptonote::blobdata txblob;
     size_t tx_weight;
     uint64_t fee;
     bool relayed, do_not_relay, double_spend_seen, pruned;
     MINFO("Removing txid " << txid << " from the pool");
-    if(m_tx_pool.have_tx(txid) && !m_tx_pool.take_tx(txid, tx, tx_weight, fee, relayed, do_not_relay, double_spend_seen, pruned))
+    if(m_tx_pool.have_tx(txid) && !m_tx_pool.take_tx(txid, tx, txblob, tx_weight, fee, relayed, do_not_relay, double_spend_seen, pruned))
     {
       MERROR("Failed to remove txid " << txid << " from the pool");
       res = false;
@@ -3725,9 +3725,10 @@ leave:
   }
 
   // this is a cheap test
+  const uint8_t hf_version = get_current_hard_fork_version();
   if (!m_hardfork->check(bl))
   {
-    MERROR_VER("Block with id: " << id << std::endl << "has old version: " << (unsigned)bl.major_version << std::endl << "current: " << (unsigned)m_hardfork->get_current_version());
+    MERROR_VER("Block with id: " << id << std::endl << "has old version: " << (unsigned)bl.major_version << std::endl << "current: " << (unsigned)hf_version);
     bvc.m_verifivation_failed = true;
     goto leave;
   }
@@ -3777,7 +3778,7 @@ leave:
 #if defined(PER_BLOCK_CHECKPOINT)
   if (blockchain_height < m_blocks_hash_check.size())
   {
-    const auto &expected_hash = m_blocks_hash_check[blockchain_height].first;
+    const auto& expected_hash = m_blocks_hash_check[blockchain_height].first;
     if (expected_hash != crypto::null_hash)
     {
       if (memcmp(&id, &expected_hash, sizeof(hash)) != 0)
@@ -3843,7 +3844,7 @@ leave:
   size_t coinbase_weight = get_transaction_weight(bl.miner_tx);
   size_t cumulative_block_weight = coinbase_weight;
 
-  std::vector<transaction> txs;
+  std::vector<std::pair<transaction, blobdata>> txs;
   key_images_container keys;
 
   uint64_t fee_summary = 0;
@@ -3863,7 +3864,8 @@ leave:
   txs.reserve(bl.tx_hashes.size());
   for (const crypto::hash& tx_id : bl.tx_hashes)
   {
-    transaction tx;
+    transaction tx_tmp;
+    blobdata txblob;
     size_t tx_weight = 0;
     uint64_t fee = 0;
     bool relayed = false, do_not_relay = false, double_spend_seen = false, pruned = false;
@@ -3883,7 +3885,7 @@ leave:
     TIME_MEASURE_START(bb);
 
     // get transaction with hash <tx_id> from tx_pool
-    if(!m_tx_pool.take_tx(tx_id, tx, tx_weight, fee, relayed, do_not_relay, double_spend_seen, pruned))
+    if(!m_tx_pool.take_tx(tx_id, tx_tmp, txblob, tx_weight, fee, relayed, do_not_relay, double_spend_seen, pruned))
     {
       MERROR_VER("Block with id: " << id  << " has at least one unknown transaction with id: " << tx_id);
       bvc.m_verifivation_failed = true;
@@ -3898,7 +3900,8 @@ leave:
     // add the transaction to the temp list of transactions, so we can either
     // store the list of transactions all at once or return the ones we've
     // taken from the tx_pool back to it if the block fails verification.
-    txs.push_back(tx);
+    txs.push_back(std::make_pair(std::move(tx_tmp), std::move(txblob)));
+    transaction &tx = txs.back().first;
     TIME_MEASURE_START(dd);
 
     // FIXME: the storage should not be responsible for validation.
@@ -3931,6 +3934,8 @@ leave:
         //TODO: why is this done?  make sure that keeping invalid blocks makes sense.
         add_block_as_invalid(bl, id);
         MERROR_VER("Block with id " << id << " added as invalid because of wrong inputs in transactions");
+        MERROR_VER("tx_index " << tx_index << ", m_blocks_txs_check " << m_blocks_txs_check.size() << ":");
+        for (const auto &h: m_blocks_txs_check) MERROR_VER("  " << h);
         bvc.m_verifivation_failed = true;
         return_tx_to_pool(txs);
         goto leave;
@@ -4009,7 +4014,8 @@ leave:
     try
     {
       uint64_t long_term_block_weight = get_next_long_term_block_weight(block_weight);
-      new_height = m_db->add_block(bl, block_weight, long_term_block_weight, cumulative_difficulty, already_generated_coins, txs);
+      cryptonote::blobdata bd = cryptonote::block_to_blob(bl);
+      new_height = m_db->add_block(std::make_pair(std::move(bl), std::move(bd)), block_weight, long_term_block_weight, cumulative_difficulty, already_generated_coins, txs);
     }
     catch (const KEY_IMAGE_EXISTS& e)
     {
@@ -4103,6 +4109,7 @@ bool Blockchain::prune_blockchain(uint32_t pruning_seed)
   m_tx_pool.lock();
   epee::misc_utils::auto_scope_leave_caller unlocker = epee::misc_utils::create_scope_leave_handler([&](){m_tx_pool.unlock();});
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
+
   return m_db->prune_blockchain(pruning_seed);
 }
 //------------------------------------------------------------------
@@ -4658,6 +4665,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
           if (block.prev_id != tophash)
           {
             MDEBUG("Skipping prepare blocks. New blocks don't belong to chain.");
+            blocks.clear();
             return true;
           }
         }
@@ -5096,7 +5104,7 @@ void Blockchain::cancel()
 }
 
 #if defined(PER_BLOCK_CHECKPOINT)
-static const char expected_block_hashes_hash[] = "bd040b54b569f9277ed373a8ee71b1d0fce0dd2e2d6a8a039937c3a8fab66dcd";
+static const char expected_block_hashes_hash[] = "5e301ca6aca3ae52a88037164b553d321391e10062b9aa6c9e1c7713f3ae9eee";
 void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get_checkpoints)
 {
   if (get_checkpoints == nullptr || !m_fast_sync)
@@ -5176,10 +5184,11 @@ void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get
         uint64_t fee;
         bool relayed, do_not_relay, double_spend_seen, pruned;
         transaction pool_tx;
+        blobdata txblob;
         for(const transaction &tx : txs)
         {
           crypto::hash tx_hash = get_transaction_hash(tx);
-          m_tx_pool.take_tx(tx_hash, pool_tx, tx_weight, fee, relayed, do_not_relay, double_spend_seen, pruned);
+          m_tx_pool.take_tx(tx_hash, pool_tx, txblob, tx_weight, fee, relayed, do_not_relay, double_spend_seen, pruned);
         }
       }
     }

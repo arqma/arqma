@@ -35,8 +35,6 @@
 #include "string_tools.h"
 #include "storages/portable_storage_template_helper.h" // epee json include
 #include "serialization/keyvalue_serialization.h"
-#include <functional>
-#include <vector>
 
 using namespace epee;
 
@@ -136,9 +134,11 @@ namespace cryptonote
   //---------------------------------------------------------------------------
   uint64_t checkpoints::get_max_height() const
   {
-  if(m_points.empty())
-    return 0;
-  return m_points.rbegin()->first;
+    std::map<uint64_t, crypto::hash>::const_iterator highest = std::max_element(m_points.begin(), m_points.end(),
+             (boost::bind(&std::map<uint64_t, crypto::hash>::value_type::first, boost::placeholders::_1) <
+              boost::bind(&std::map<uint64_t, crypto::hash>::value_type::first, boost::placeholders::_2)));
+
+    return highest->first;
   }
   //---------------------------------------------------------------------------
   const std::map<uint64_t, crypto::hash>& checkpoints::get_points() const
@@ -181,13 +181,14 @@ namespace cryptonote
     ADD_CHECKPOINT(300000, "1cd8edefb47332b6d5afc1b161a8f1845aff817988763b5dc2094762b5bc5551");
     ADD_CHECKPOINT(400000, "c43ff8acd01aef5f22a1a875e167d9b28b3c703110255bdd6faf010fad5b2efa");
     ADD_CHECKPOINT(480000, "616bdd82bbeb6ac46228c277d7fadb90ff2ba624ce088bb2c0970f7a1b2bdc69");
+    ADD_CHECKPOINT(491520, "ac93c7e4759b54aac4055316e4eab841d82c47e478edfd6c8f6c363c36572e18");
     return true;
   }
 
   bool checkpoints::load_checkpoints_from_json(const std::string &json_hashfile_fullpath)
   {
     boost::system::error_code errcode;
-    if (! (boost::filesystem::exists(json_hashfile_fullpath, errcode)))
+    if(!(boost::filesystem::exists(json_hashfile_fullpath, errcode)))
     {
       LOG_PRINT_L1("Blockchain checkpoints file not found");
       return true;
@@ -198,12 +199,12 @@ namespace cryptonote
     uint64_t prev_max_height = get_max_height();
     LOG_PRINT_L1("Hard-coded max checkpoint height is " << prev_max_height);
     t_hash_json hashes;
-    if (!epee::serialization::load_t_from_json_file(hashes, json_hashfile_fullpath))
+    if(!epee::serialization::load_t_from_json_file(hashes, json_hashfile_fullpath))
     {
       MERROR("Error loading checkpoints from " << json_hashfile_fullpath);
       return false;
     }
-    for (std::vector<t_hashline>::const_iterator it = hashes.hashlines.begin(); it != hashes.hashlines.end(); )
+    for(std::vector<t_hashline>::const_iterator it = hashes.hashlines.begin(); it != hashes.hashlines.end(); )
     {
       uint64_t height;
       height = it->height;

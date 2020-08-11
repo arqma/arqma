@@ -140,7 +140,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<bool> arg_dns_checkpoints = {
     "enforce-dns-checkpointing"
   , "checkpoints from DNS server will be enforced"
-  , false
+  , true
   };
   static const command_line::arg_descriptor<uint64_t> arg_fast_block_sync = {
     "fast-block-sync"
@@ -150,7 +150,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<uint64_t> arg_prep_blocks_threads = {
     "prep-blocks-threads"
   , "Max number of threads to use when preparing block hashes in groups."
-  , 8
+  , 4
   };
   static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
@@ -359,7 +359,6 @@ namespace cryptonote
 
       set_checkpoints_file_path(checkpoint_json_hashfile_fullpath.string());
     }
-
 
     set_enforce_dns_checkpoints(command_line::get_arg(vm, arg_dns_checkpoints));
     test_drop_download_height(command_line::get_arg(vm, arg_test_drop_download_height));
@@ -1059,7 +1058,7 @@ namespace cryptonote
       // different from the actual transaction weight, but it's OK for our use. Those txes
       // will be ignored when mining, and using that "pruned" weight seems appropriate for
       // keeping the txpool size constrained
-      const uint64_t weight = results[i].tx.pruned ? 0 : get_transaction_weight(results[i].tx, it->blob.size());
+      const uint64_t weight = results[i].tx.pruned ? get_pruned_transaction_weight(results[i].tx) : get_transaction_weight(results[i].tx, it->blob.size());
       ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i].blob, weight, tvc[i], keeped_by_block, relayed, do_not_relay);
       if(tvc[i].m_verifivation_failed)
       {MERROR_VER("Transaction verification failed: " << results[i].hash);}
@@ -1182,12 +1181,12 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = 248920; // Need to be confirmed
     if(block_sync_size > 0)
       return block_sync_size;
-    if(height >= quick_height)
-      return config::sync::SYNC_BLOCKS;
-    return config::sync::FAST_SYNC;
+    if(get_current_blockchain_height() <= config::sync::HIGHEST_CHECKPOINT)
+      return config::sync::FAST_SYNC;
+    else
+      return config::sync::NORMAL_SYNC;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::are_key_images_spent_in_pool(const std::vector<crypto::key_image>& key_im, std::vector<bool> &spent) const
@@ -1323,7 +1322,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   void core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
   {
-    std::vector<std::pair<crypto::hash, cryptonote::blobdata> > txs;
+    std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
     cryptonote::transaction tx;
     crypto::hash tx_hash;
     if (!parse_and_validate_tx_from_blob(tx_blob, tx, tx_hash))
@@ -1414,7 +1413,12 @@ namespace cryptonote
       return false;
     }
     std::vector<block> pblocks;
-    prepare_handle_incoming_blocks(blocks, pblocks);
+    if(!prepare_handle_incoming_blocks(blocks, pblocks))
+    {
+      MERROR("Block found, but failed to prepare to add");
+      m_miner.resume();
+      return false;
+    }
     m_blockchain_storage.add_new_block(b, bvc);
     cleanup_handle_incoming_blocks(true);
     //anyway - update miner template
@@ -1468,7 +1472,11 @@ namespace cryptonote
   bool core::prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks)
   {
     m_incoming_tx_lock.lock();
-    m_blockchain_storage.prepare_handle_incoming_blocks(blocks_entry, blocks);
+    if(!m_blockchain_storage.prepare_handle_incoming_blocks(blocks_entry, blocks))
+    {
+      cleanup_handle_incoming_blocks(false);
+      return false;
+    }
     return true;
   }
 
@@ -1507,7 +1515,8 @@ namespace cryptonote
     block lb;
     if(!b)
     {
-      if(!parse_and_validate_block_from_blob(block_blob, lb))
+      crypto::hash block_hash;
+      if(!parse_and_validate_block_from_blob(block_blob, lb, block_hash))
       {
         LOG_PRINT_L1("Failed to parse and validate new block");
         bvc.m_verifivation_failed = true;
