@@ -27,16 +27,31 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required (VERSION 3.7)
-project(arqma)
+set(cryptonote_protocol_sources
+  block_queue.cpp
+  cryptonote_protocol_handler-base.cpp
+  cryptonote_protocol_handler.inl)
 
-file(GLOB CRYPTONOTE_PROTOCOL *)
-source_group(cryptonote_protocol FILES ${CRYPTONOTE_PROTOCOL})
+set(cryptonote_protocol_headers)
 
-#arqma_private_headers(cryptonote_protocol ${CRYPTONOTE_PROTOCOL})
-arqma_add_library(cryptonote_protocol ${CRYPTONOTE_PROTOCOL})
+set(cryptonote_protocol_private_headers
+  block_queue.h
+  cryptonote_protocol_defs.h
+  cryptonote_protocol_handler.h
+  cryptonote_protocol_handler_common.h)
+
+arqma_private_headers(cryptonote_protocol
+  ${cryptonote_protocol_private_headers})
+
+arqma_add_library(cryptonote_protocol
+  ${cryptonote_protocol_sources}
+  ${cryptonote_protocol_headers}
+  ${cryptonote_protocol_private_headers})
+
 target_link_libraries(cryptonote_protocol
   PUBLIC
     p2p
   PRIVATE
+    ${MINIUPNPC_LIB}
+    easylogging
     ${EXTRA_LIBRARIES})

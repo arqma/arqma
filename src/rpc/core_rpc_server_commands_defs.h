@@ -634,7 +634,6 @@ namespace cryptonote
       bool too_big;
       bool overspend;
       bool fee_too_low;
-      bool not_rct;
       bool sanity_check_failed;
 
       BEGIN_KV_SERIALIZE_MAP()
@@ -648,7 +647,6 @@ namespace cryptonote
         KV_SERIALIZE(too_big)
         KV_SERIALIZE(overspend)
         KV_SERIALIZE(fee_too_low)
-        KV_SERIALIZE(not_rct)
         KV_SERIALIZE(sanity_check_failed)
       END_KV_SERIALIZE_MAP()
     };
@@ -919,6 +917,7 @@ namespace cryptonote
       uint64_t reserved_offset;
       uint64_t expected_reward;
       std::string prev_hash;
+      uint64_t seed_height;
       std::string seed_hash;
       std::string next_seed_hash;
       blobdata blocktemplate_blob;
@@ -931,6 +930,7 @@ namespace cryptonote
         KV_SERIALIZE(reserved_offset)
         KV_SERIALIZE(expected_reward)
         KV_SERIALIZE(prev_hash)
+        KV_SERIALIZE(seed_height)
         KV_SERIALIZE(seed_hash)
         KV_SERIALIZE(next_seed_hash)
         KV_SERIALIZE(blocktemplate_blob)
@@ -2346,6 +2346,7 @@ struct request_t: public rpc_access_request_base
     struct response_t: public rpc_access_response_base
     {
       std::string hashing_blob;
+      uint64_t seed_height;
       std::string seed_hash;
       std::string next_seed_hash;
       uint32_t cookie;
@@ -2356,6 +2357,7 @@ struct request_t: public rpc_access_request_base
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_response_base)
         KV_SERIALIZE(hashing_blob)
+        KV_SERIALIZE(seed_height)
         KV_SERIALIZE(seed_hash)
         KV_SERIALIZE(next_seed_hash)
         KV_SERIALIZE(cookie)

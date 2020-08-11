@@ -53,7 +53,7 @@ namespace levin
 		virtual ~levin_client_impl();
 
 		bool connect(u_long ip, int port, unsigned int timeout, const std::string& bind_ip = "0.0.0.0");
-    bool connect(const std::string& addr, int port, unsigned int timeout, const std::string& bind_ip = "0.0.0.0");
+		bool connect(const std::string& addr, int port, unsigned int timeout, const std::string& bind_ip = "0.0.0.0");
 		bool is_connected();
 		bool disconnect();
 

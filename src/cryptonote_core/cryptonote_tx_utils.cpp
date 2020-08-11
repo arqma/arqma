@@ -94,9 +94,9 @@ namespace cryptonote
     in.height = height;
 
     uint64_t block_reward;
-	if (height == 1) {
-		block_reward = MONEY_PREMINE;
-	}
+    if (height == 1) {
+      block_reward = MONEY_PREMINE;
+    }
     else if(!get_block_reward(median_weight, current_block_weight, already_generated_coins, block_reward, hard_fork_version))
     {
       LOG_PRINT_L0("Block is too big");
@@ -165,7 +165,7 @@ namespace cryptonote
 
     CHECK_AND_ASSERT_MES(summary_amounts == block_reward, false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal block_reward = " << block_reward);
 
-    tx.version = config::tx_settings::CURRENT_TX_VERSION;
+    tx.version = config::tx_settings::ARQMA_TX_VERSION;
 
     //lock
     tx.unlock_time = height + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
@@ -216,7 +216,7 @@ namespace cryptonote
       msout->c.clear();
     }
 
-    tx.version = config::tx_settings::CURRENT_TX_VERSION;
+    tx.version = config::tx_settings::ARQMA_TX_VERSION;
     tx.unlock_time = unlock_time;
 
     tx.extra = extra;
@@ -648,7 +648,7 @@ namespace cryptonote
   bool generate_genesis_block(block& bl)
   {
     //genesis block
-    bl = boost::value_initialized<block>();
+    bl = {};
 
     blobdata tx_bl;
     bool r = string_tools::parse_hexstr_to_binbuff(config::GENESIS_TX, tx_bl);
@@ -659,7 +659,9 @@ namespace cryptonote
     bl.minor_version = config::blockchain_settings::ARQMA_GENESIS_BLOCK_MINOR_VERSION;
     bl.timestamp = 0;
     bl.nonce = config::GENESIS_NONCE;
-    miner::find_nonce_for_given_block(NULL, bl, 1, 0);
+    miner::find_nonce_for_given_block([](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash){
+      return cryptonote::get_block_longhash(NULL, b, hash, height, threads);
+    }, bl, 1, 0);
     bl.invalidate_hashes();
     return true;
   }
@@ -667,27 +669,29 @@ namespace cryptonote
   void get_altblock_longhash(const block& b, crypto::hash& res, const uint64_t main_height, const uint64_t height, const uint64_t seed_height, const crypto::hash& seed_hash)
   {
     blobdata bd = get_block_hashing_blob(b);
-    rx_alt_slowhash(main_height, seed_height, seed_hash.data, bd.data(), bd.size(), res.data);
+    rx_slow_hash(main_height, seed_height, seed_hash.data, bd.data(), bd.size(), res.data, 0, 1);
   }
 
   bool get_block_longhash(const Blockchain *pbc, const block& b, crypto::hash& res, const uint64_t height, const int miners)
   {
     blobdata bd = get_block_hashing_blob(b);
-
     if(b.major_version >= RX_BLOCK_VERSION)
     {
-      uint64_t seed_height;
-      if(rx_needhash(height, &seed_height))
+      uint64_t seed_height, main_height;
+      crypto::hash hash;
+      if(pbc != NULL)
       {
-        crypto::hash hash;
-        if(pbc != NULL)
-          hash = pbc->get_pending_block_id_by_height(seed_height);
-        else
-          memset(&hash, 0, sizeof(hash)); // Can only happens when generating Genesis Block
-        rx_seedhash(seed_height, hash.data, miners);
+        seed_height = rx_seedheight(height);
+        hash = pbc->get_pending_block_id_by_height(seed_height);
+        main_height = pbc->get_current_blockchain_height();
       }
-      rx_slow_hash(bd.data(), bd.size(), res.data, miners);
-      return true;
+      else
+      {
+        memset(&hash, 0, sizeof(hash));
+        seed_height = 0;
+        main_height = 0;
+      }
+      rx_slow_hash(main_height, seed_height, hash.data, bd.data(), bd.size(), res.data, miners, 0);
     }
     else if(b.major_version >= 12)
     {

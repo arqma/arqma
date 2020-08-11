@@ -48,8 +48,6 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/array.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
 #include <boost/thread/thread.hpp>
@@ -61,7 +59,7 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
-#define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 1000
+#define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 3000
 
 namespace epee
 {
@@ -143,7 +141,7 @@ namespace net_utils
     virtual bool add_ref();
     virtual bool release();
     //------------------------------------------------------
-    boost::shared_ptr<connection<t_protocol_handler>> safe_shared_from_this();
+    boost::shared_ptr<connection<t_protocol_handler> > safe_shared_from_this();
     bool shutdown();
 
     // Handle completion of a receive operation.
@@ -164,7 +162,7 @@ namespace net_utils
     unsigned int host_count(const std::string &host, int delta = 0);
 
     /// Buffer for incoming data.
-    boost::array<char, 8192> buffer_;
+    boost::array<char, 16384> buffer_;
     size_t buffer_ssl_init_fill;
 
     t_connection_context context;
@@ -192,9 +190,9 @@ namespace net_utils
     bool m_ready_to_close;
     std::string m_host;
 
-	public:
-	  void setRpcStation();
-      void setZmqStation();
+  public:
+    void setRpcStation();
+    void setZmqStation();
   };
 
 
@@ -204,7 +202,7 @@ namespace net_utils
   template<class t_protocol_handler>
   class boosted_tcp_server
     : private boost::noncopyable
-  {
+    {
     enum try_connect_result_t
     {
       CONNECT_SUCCESS,
@@ -226,7 +224,7 @@ namespace net_utils
     void create_server_type_map();
 
     bool init_server(uint32_t port, const std::string address = "0.0.0.0", ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);
-    bool init_server(const std::string port,  const std::string& address = "0.0.0.0", ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);
+    bool init_server(const std::string port, const std::string& address = "0.0.0.0", ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);
 
     // Run the server's io_service loop.
     bool run_server(size_t threads_count, bool wait = true, const boost::thread::attributes& attrs = boost::thread::attributes());

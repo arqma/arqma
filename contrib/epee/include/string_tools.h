@@ -133,25 +133,25 @@ DISABLE_GCC_WARNING(maybe-uninitialized)
     return true;
   }
 POP_WARNINGS
-	//----------------------------------------------------------------------------
-	template<class XType>
-	inline bool xtype_to_string(const  XType& val, std::string& str)
-	{
-		try
-		{
-			str = boost::lexical_cast<std::string>(val);
-		}
-		catch(...)
-		{
-			return false;
-		}
+  //----------------------------------------------------------------------------
+  template<class XType>
+  inline bool xtype_to_string(const  XType& val, std::string& str)
+  {
+    try
+    {
+      str = boost::lexical_cast<std::string>(val);
+    }
+    catch(...)
+    {
+      return false;
+    }
 
-		return true;
-	}
-	//----------------------------------------------------------------------------
-	std::string get_ip_string_from_int32(uint32_t ip);
-	//----------------------------------------------------------------------------
-	bool get_ip_int32_from_string(uint32_t& ip, const std::string& ip_str);
+    return true;
+  }
+  //----------------------------------------------------------------------------
+  std::string get_ip_string_from_int32(uint32_t ip);
+  //----------------------------------------------------------------------------
+  bool get_ip_int32_from_string(uint32_t& ip, const std::string& ip_str);
   //----------------------------------------------------------------------------
   inline bool parse_peer_from_string(uint32_t& ip, uint16_t& port, const std::string& addres)
   {
@@ -181,42 +181,42 @@ POP_WARNINGS
     return true;
   }
 
-	inline std::string num_to_string_fast(int64_t val)
-	{
-		/*
-		char  buff[30] = {0};
-		i64toa_s(val, buff, sizeof(buff)-1, 10);
-		return buff;*/
-		return boost::lexical_cast<std::string>(val);
-	}
-	//----------------------------------------------------------------------------
-	inline std::string to_string_hex(uint32_t val)
-	{
-		std::stringstream ss;
-		ss << std::hex << val;
-		std::string s;
-		ss >> s;
-		return s;
-	}
-	//----------------------------------------------------------------------------
-
-	inline bool compare_no_case(const std::string& str1, const std::string& str2)
-	{
-
-		return !boost::iequals(str1, str2);
-	}
-	//----------------------------------------------------------------------------
-	inline std::string& get_current_module_name()
-	{
-		static std::string module_name;
-		return module_name;
-	}
-	//----------------------------------------------------------------------------
-	inline std::string& get_current_module_folder()
-	{
-		static std::string module_folder;
-		return module_folder;
-	}
+  inline std::string num_to_string_fast(int64_t val)
+  {
+    /*
+    char  buff[30] = {0};
+    i64toa_s(val, buff, sizeof(buff)-1, 10);
+    return buff;*/
+    return boost::lexical_cast<std::string>(val);
+  }
+  //----------------------------------------------------------------------------
+  template<typename T>
+  inline std::string to_string_hex(const T &val)
+  {
+    static_assert(std::is_arithmetic<T>::value, "only arithmetic types");
+    std::stringstream ss;
+    ss << std::hex << val;
+    std::string s;
+    ss >> s;
+    return s;
+  }
+  //----------------------------------------------------------------------------
+  inline bool compare_no_case(const std::string& str1, const std::string& str2)
+  {
+    return !boost::iequals(str1, str2);
+  }
+  //----------------------------------------------------------------------------
+  inline std::string& get_current_module_name()
+  {
+    static std::string module_name;
+    return module_name;
+  }
+  //----------------------------------------------------------------------------
+  inline std::string& get_current_module_folder()
+  {
+    static std::string module_folder;
+    return module_folder;
+  }
   //----------------------------------------------------------------------------
 #ifdef _WIN32
   inline std::string get_current_module_path()
