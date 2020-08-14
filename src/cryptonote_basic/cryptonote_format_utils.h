@@ -32,6 +32,7 @@
 #pragma once
 #include "blobdatatype.h"
 #include "cryptonote_basic_impl.h"
+#include "difficulty.h"
 #include "tx_extra.h"
 #include "account.h"
 #include "subaddress_index.h"
@@ -115,12 +116,12 @@ namespace cryptonote
   crypto::hash get_pruned_transaction_hash(const transaction& t, const crypto::hash &pruned_data_hash);
 
   blobdata get_block_hashing_blob(const block& b);
-  bool calculate_block_hash(const block& b, crypto::hash& res);
+  bool calculate_block_hash(const block& b, crypto::hash& res, const blobdata *blob = NULL);
   bool get_block_hash(const block& b, crypto::hash& res);
   crypto::hash get_block_hash(const block& b);
-//  bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height);
-//  crypto::hash get_block_longhash(const block& b, uint64_t height);
+  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash *block_hash);
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b);
+  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash &block_hash);
   bool get_inputs_money_amount(const transaction& tx, uint64_t& money);
   uint64_t get_outs_money_amount(const transaction& tx);
   bool check_inputs_types_supported(const transaction& tx);
@@ -128,6 +129,7 @@ namespace cryptonote
   bool parse_amount(uint64_t& amount, const std::string& str_amount);
   uint64_t get_transaction_weight(const transaction &tx);
   uint64_t get_transaction_weight(const transaction &tx, size_t blob_size);
+  uint64_t get_pruned_transaction_weight(const transaction &tx);
 
   bool check_money_overflow(const transaction& tx);
   bool check_outs_overflow(const transaction& tx);

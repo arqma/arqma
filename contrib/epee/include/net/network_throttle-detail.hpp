@@ -101,8 +101,8 @@ class network_throttle : public i_network_throttle {
 
 	private:
 		virtual network_time_seconds time_to_slot(network_time_seconds t) const { return std::floor( t ); } // convert exact time eg 13.7 to rounded time for slot number in history 13
-        virtual void _handle_trafic_exact(size_t packet_size, size_t orginal_size);
-        virtual void logger_handle_net(const std::string &filename, double time, size_t size);
+                virtual void _handle_trafic_exact(size_t packet_size, size_t orginal_size);
+                virtual void logger_handle_net(const std::string &filename, double time, size_t size);
 };
 
 /***

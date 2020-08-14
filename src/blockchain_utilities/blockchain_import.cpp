@@ -154,10 +154,22 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
     }
     hashes.push_back(cryptonote::get_block_hash(block));
   }
-  core.prevalidate_block_hashes(core.get_blockchain_storage().get_db().height(), hashes);
+  core.prevalidate_block_hashes(core.get_blockchain_storage().get_db().height(), hashes, {});
 
-  core.prepare_handle_incoming_blocks(blocks);
+  std::vector<block> pblocks;
+  if(!core.prepare_handle_incoming_blocks(blocks, pblocks))
+  {
+    MERROR("Failed to prepare to add blocks");
+    return 1;
+  }
+  if(!pblocks.empty() && pblocks.size() != blocks.size())
+  {
+    MERROR("Unexpected parsed blocks size");
+    core.cleanup_handle_incoming_blocks();
+    return 1;
+  }
 
+  size_t blockidx = 0;
   for(const block_complete_entry& block_entry: blocks)
   {
     // process transactions
@@ -168,7 +180,7 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
       if(tvc.m_verifivation_failed)
       {
         MERROR("transaction verification failed, tx_id = "
-            << epee::string_tools::pod_to_hex(get_blob_hash(tx_blob)));
+            << epee::string_tools::pod_to_hex(get_blob_hash(tx_blob.blob)));
         core.cleanup_handle_incoming_blocks();
         return 1;
       }
@@ -176,9 +188,9 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
 
     // process block
 
-    block_verification_context bvc = boost::value_initialized<block_verification_context>();
+    block_verification_context bvc = {};
 
-    core.handle_incoming_block(block_entry.block, bvc, false); // <--- process block
+    core.handle_incoming_block(block_entry.block, pblocks.empty() ? NULL : &pblocks[blockidx++], bvc, false); // <--- process block
 
     if(bvc.m_verifivation_failed)
     {
@@ -402,13 +414,17 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
         {
           cryptonote::blobdata block;
           cryptonote::block_to_blob(bp.block, block);
-          std::vector<cryptonote::blobdata> txs;
+          std::vector<tx_blob_entry> txs;
           for (const auto &tx: bp.txs)
           {
-            txs.push_back(cryptonote::blobdata());
-            cryptonote::tx_to_blob(tx, txs.back());
+            txs.push_back({cryptonote::blobdata(), crypto::null_hash});
+            cryptonote::tx_to_blob(tx, txs.back().blob);
           }
-          blocks.push_back({block, txs});
+          block_complete_entry bce;
+          bce.pruned = false;
+          bce.block = std::move(block);
+          bce.txs = std::move(txs);
+          blocks.push_back(bce);
           int ret = check_flush(core, blocks, false);
           if (ret)
           {
@@ -418,7 +434,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
         }
         else
         {
-          std::vector<transaction> txs;
+          std::vector<std::pair<transaction, blobdata>> txs;
           std::vector<transaction> archived_txs;
 
           archived_txs = bp.txs;
@@ -435,7 +451,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
             // because add_block() calls
             // add_transaction(blk_hash, blk.miner_tx) first, and
             // then a for loop for the transactions in txs.
-            txs.push_back(tx);
+            txs.push_back(std::make_pair(tx, tx_to_blob(tx)));
           }
 
           size_t block_weight;
@@ -449,7 +465,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
           try
           {
             uint64_t long_term_block_weight = core.get_blockchain_storage().get_next_long_term_block_weight(block_weight);
-            core.get_blockchain_storage().get_db().add_block(b, block_weight, long_term_block_weight, cumulative_difficulty, coins_generated, txs);
+            core.get_blockchain_storage().get_db().add_block(std::make_pair(b, block_to_blob(b)), block_weight, long_term_block_weight, cumulative_difficulty, coins_generated, txs);
           }
           catch (const std::exception& e)
           {
@@ -541,22 +557,15 @@ int main(int argc, char* argv[])
   po::options_description desc_cmd_only("Command line options");
   po::options_description desc_cmd_sett("Command line options and settings options");
   const command_line::arg_descriptor<std::string> arg_input_file = {"input-file", "Specify input file", "", true};
-  const command_line::arg_descriptor<std::string> arg_log_level   = {"log-level",  "0-4 or categories", ""};
-  const command_line::arg_descriptor<uint64_t> arg_block_stop  = {"block-stop", "Stop at block number", block_stop};
-  const command_line::arg_descriptor<uint64_t> arg_batch_size  = {"batch-size", "", db_batch_size};
-  const command_line::arg_descriptor<uint64_t> arg_pop_blocks  = {"pop-blocks", "Remove blocks from end of blockchain", num_blocks};
-  const command_line::arg_descriptor<bool>        arg_drop_hf  = {"drop-hard-fork", "Drop hard fork subdbs", false};
-  const command_line::arg_descriptor<bool>     arg_count_blocks = {
-    "count-blocks"
-      , "Count blocks in bootstrap file and exit"
-      , false
-  };
-  const command_line::arg_descriptor<bool> arg_noverify =  {"dangerous-unverified-import",
-    "Blindly trust the import file and use potentially malicious blocks and transactions during import (only enable if you exported the file yourself)", false};
-  const command_line::arg_descriptor<bool> arg_batch  =  {"batch",
-    "Batch transactions for faster import", true};
-  const command_line::arg_descriptor<bool> arg_resume =  {"resume",
-    "Resume from current height if output database already exists", true};
+  const command_line::arg_descriptor<std::string> arg_log_level = {"log-level", "0-4 or categories", ""};
+  const command_line::arg_descriptor<uint64_t> arg_block_stop = {"block-stop", "Stop at block number", block_stop};
+  const command_line::arg_descriptor<uint64_t> arg_batch_size = {"batch-size", "", db_batch_size};
+  const command_line::arg_descriptor<uint64_t> arg_pop_blocks = {"pop-blocks", "Remove blocks from end of blockchain", num_blocks};
+  const command_line::arg_descriptor<bool> arg_drop_hf = {"drop-hard-fork", "Drop hard fork subdbs", false};
+  const command_line::arg_descriptor<bool> arg_count_blocks = {"count-blocks", "Count blocks in bootstrap file and exit", false};
+  const command_line::arg_descriptor<bool> arg_noverify = {"no-verify", "Blindly trust the import file and use potentially malicious blocks and transactions during import (only enable if you exported the file yourself)", false};
+  const command_line::arg_descriptor<bool> arg_batch = {"batch", "Batch transactions for faster import", true};
+  const command_line::arg_descriptor<bool> arg_resume = {"resume", "Resume from current height if output database already exists", true};
 
   command_line::add_arg(desc_cmd_sett, arg_input_file);
   command_line::add_arg(desc_cmd_sett, arg_log_level);
@@ -683,9 +692,9 @@ int main(int argc, char* argv[])
       "This is a DANGEROUS operation: if the file was tampered with in transit, or obtained from a malicious source,\n"
       "you could end up with a compromised database. It is recommended to NOT use " << arg_noverify.name << ".\n"
       "*****************************************************************************************\n"
-      "You have 90 seconds to press ^C or terminate this program before unverified import starts\n"
+      "You have 20 seconds to press ^C or terminate this program before unverified import starts\n"
       "*****************************************************************************************");
-    sleep(90);
+    sleep(20);
   }
 
   cryptonote::cryptonote_protocol_stub pr; //TODO: stub only for this kind of test, make real validation of relayed objects

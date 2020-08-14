@@ -34,6 +34,10 @@
  *
  * \brief Source file that defines simple_wallet class.
  */
+
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS 1 // It is just for now :)
+#include <boost/bind/bind.hpp>
+
 #include <thread>
 #include <iostream>
 #include <sstream>
@@ -67,10 +71,12 @@
 #include "wallet/wallet_args.h"
 #include "version.h"
 #include <stdexcept>
+#include "QrCode.hpp"
 
 #ifdef WIN32
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
+#include <fcntl.h>
 #endif
 
 #ifdef HAVE_READLINE
@@ -227,6 +233,7 @@ namespace
   const char* USAGE_RPC_PAYMENT_INFO("rpc_payment_info");
   const char* USAGE_START_MINING_FOR_RPC("start_mining_for_rpc");
   const char* USAGE_STOP_MINING_FOR_RPC("stop_mining_for_rpc");
+  const char* USAGE_SHOW_QR_CODE("show_qr_code [<subaddress_index>]");
   const char* USAGE_NET_STATS("net_stats");
   const char* USAGE_WELCOME("welcome");
   const char* USAGE_VERSION("version");
@@ -1755,7 +1762,7 @@ bool simple_wallet::rpc_payment_info(const std::vector<std::string> &args)
   try
   {
     bool payment_required;
-    uint64_t credits, diff, credits_per_hash_found, height;
+    uint64_t credits, diff, credits_per_hash_found, height, seed_height;
     uint32_t cookie;
     std::string hashing_blob;
     crypto::hash seed_hash, next_seed_hash;
@@ -1763,7 +1770,7 @@ bool simple_wallet::rpc_payment_info(const std::vector<std::string> &args)
     crypto::secret_key_to_public_key(m_wallet->get_rpc_client_secret_key(), pkey);
     message_writer() << tr("RPC client ID: ") << pkey;
     message_writer() << tr("RPC client secret key: ") << m_wallet->get_rpc_client_secret_key();
-    if (!m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie))
+    if (!m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_height, seed_hash, next_seed_hash, cookie))
     {
       fail_msg_writer() << tr("Failed to query daemon");
       return true;
@@ -2054,11 +2061,11 @@ bool simple_wallet::start_mining_for_rpc(const std::vector<std::string> &args)
   LOCK_IDLE_SCOPE();
 
   bool payment_required;
-  uint64_t credits, diff, credits_per_hash_found, height;
+  uint64_t credits, diff, credits_per_hash_found, height, seed_height;
   uint32_t cookie;
   std::string hashing_blob;
   crypto::hash seed_hash, next_seed_hash;
-  if (!m_wallet->get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie))
+  if (!m_wallet->get_rpc_payment_info(true, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_height, seed_hash, next_seed_hash, cookie))
   {
     fail_msg_writer() << tr("Failed to query daemon");
     return true;
@@ -2086,6 +2093,62 @@ bool simple_wallet::stop_mining_for_rpc(const std::vector<std::string> &args)
   m_rpc_payment_mining_requested = false;
   m_last_rpc_payment_mining_time = boost::posix_time::ptime(boost::gregorian::date(1970, 1, 1));
   m_rpc_payment_hash_rate = -1.0f;
+  return true;
+}
+
+bool simple_wallet::show_qr_code(const std::vector<std::string> &args)
+{
+  uint32_t subaddress_index = 0;
+  if (args.size() >= 1)
+  {
+    if (!string_tools::get_xtype_from_string(subaddress_index, args[0]))
+    {
+      fail_msg_writer() << tr("invalid index: must be an unsigned integer");
+      return true;
+    }
+    if (subaddress_index >= m_wallet->get_num_subaddresses(m_current_subaddress_account))
+    {
+      fail_msg_writer() << tr("<subaddress_index> is out of bounds");
+      return true;
+    }
+  }
+
+#ifdef _WIN32
+#define PRINT_UTF8(pre, x) std::wcout << pre ## x
+#define WTEXTON() _setmode(_fileno(stdout), _O_WTEXT)
+#define WTEXTOFF() _setmode(_fileno(stdout), _O_TEXT)
+#else
+#define PRINT_UTF8(pre, x) std::cout << x
+#define WTEXTON()
+#define WTEXTOFF()
+#endif
+
+  WTEXTON();
+  try
+  {
+    const std::string address = "arqma:" + m_wallet->get_subaddress_as_str({m_current_subaddress_account, subaddress_index});
+    const qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(address.c_str(), qrcodegen::QrCode::Ecc::LOW);
+    for (int y = -2; y < qr.getSize() + 2; y+=2)
+    {
+      for (int x = -2; x < qr.getSize() + 2; x++)
+      {
+        if (qr.getModule(x, y) && qr.getModule(x, y + 1))
+          PRINT_UTF8(L, "\u2588");
+        else if (qr.getModule(x, y) && !qr.getModule(x, y + 1))
+          PRINT_UTF8(L, "\u2580");
+        else if (!qr.getModule(x, y) && qr.getModule(x, y + 1))
+          PRINT_UTF8(L, "\u2584");
+        else
+          PRINT_UTF8(L, " ");
+      }
+      PRINT_UTF8(, std::endl);
+    }
+  }
+  catch (const std::length_error&)
+  {
+    fail_msg_writer() << tr("Failed to generate QR code, input too large");
+  }
+  WTEXTOFF();
   return true;
 }
 
@@ -3007,6 +3070,10 @@ simple_wallet::simple_wallet()
                            boost::bind(&simple_wallet::stop_mining_for_rpc, this, _1),
                            tr(USAGE_STOP_MINING_FOR_RPC),
                            tr("Stop mining to pay for RPC access"));
+  m_cmd_binder.set_handler("show_qr_code",
+                           boost::bind(&simple_wallet::show_qr_code, this, _1),
+                           tr(USAGE_SHOW_QR_CODE),
+                           tr("Show address as QR code"));
   m_cmd_binder.set_handler("help",
                            boost::bind(&simple_wallet::help, this, _1),
                            tr(USAGE_HELP),
@@ -4498,11 +4565,11 @@ bool simple_wallet::check_daemon_rpc_prices(const std::string &daemon_url, uint3
 
     claimed_cph = m_claimed_cph[daemon_url];
     bool payment_required;
-    uint64_t credits, diff, credits_per_hash_found, height;
+    uint64_t credits, diff, credits_per_hash_found, height, seed_height;
     uint32_t cookie;
     cryptonote::blobdata hashing_blob;
     crypto::hash seed_hash, next_seed_hash;
-    if (m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_hash, next_seed_hash, cookie) && payment_required)
+    if (m_wallet->get_rpc_payment_info(false, payment_required, credits, diff, credits_per_hash_found, hashing_blob, height, seed_height, seed_hash, next_seed_hash, cookie) && payment_required)
     {
       actual_cph = RPC_CREDITS_PER_HASH_SCALE * (credits_per_hash_found / (float)diff);
       return true;

@@ -44,6 +44,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 
 
+#include "crypto/crypto.h"
 #include "cryptonote_config.h"
 #include "net/enums.h"
 #include "net/local_ip.h"
@@ -164,7 +165,7 @@ namespace nodetool
     typedef boost::multi_index_container<
       peerlist_entry,
       boost::multi_index::indexed_by<
-      // access by peerlist_entry::net_adress
+      // access by peerlist_entry::net_address
       boost::multi_index::ordered_unique<boost::multi_index::tag<by_addr>, boost::multi_index::member<peerlist_entry,epee::net_utils::network_address,&peerlist_entry::adr> >,
       // sort by peerlist_entry::last_seen<
       boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_time>, boost::multi_index::member<peerlist_entry,int64_t,&peerlist_entry::last_seen> >
@@ -271,16 +272,16 @@ namespace nodetool
     peers_indexed::index<by_time>::type& by_time_index=m_peers_white.get<by_time>();
     uint32_t cnt = 0;
 
-    // picks a random set of peers within the first 120%, rather than a set of the first 100%.
+    // picks a random set of peers within the whole set, rather pick the first depth elements.
     // The intent is that if someone asks twice, they can't easily tell:
     // - this address was not in the first list, but is in the second, so the only way this can be
     // is if its last_seen was recently reset, so this means the target node recently had a new
     // connection to that address
     // - this address was in the first list, and not in the second, which means either the address
-    // was moved to the gray list (if it's not accessibe, which the attacker can check if
+    // was moved to the gray list (if it's not accessible, which the attacker can check if
     // the address accepts incoming connections) or it was the oldest to still fit in the 250 items,
     // so its last_seen is old.
-    const uint32_t pick_depth = anonymize ? depth + depth / 5 : depth;
+    const uint32_t pick_depth = anonymize ? m_peers_white.size() : depth;
     bs_head.reserve(pick_depth);
     for(const peers_indexed::value_type& vl: boost::adaptors::reverse(by_time_index))
     {

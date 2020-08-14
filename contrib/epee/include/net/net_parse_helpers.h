@@ -27,7 +27,7 @@
 
 
 
-#pragma once 
+#pragma once
 #include "http_base.h"
 #include "reg_exp_definer.h"
 
@@ -43,7 +43,7 @@ namespace net_utils
   { 
     enum state
     {
-      st_param_name, 
+      st_param_name,
       st_param_val
     };
     state st = st_param_name;
@@ -102,7 +102,7 @@ namespace net_utils
     content.m_query_params.clear();
     STATIC_REGEXP_EXPR_1(rexp_match_uri, "^([^?#]*)(\\?([^#]*))?(#(.*))?", boost::regex::icase | boost::regex::normal);
 
-    boost::smatch result;	
+    boost::smatch result;
     if(!(boost::regex_search(uri, result, rexp_match_uri, boost::match_default) && result[0].matched))
     {
       LOG_PRINT_L1("[PARSE URI] regex not matched for uri: " << uri);
@@ -129,7 +129,7 @@ namespace net_utils
   }
 
 
-  inline 
+  inline
     bool parse_url(const std::string url_str, http::url_content& content)
   {
 
@@ -138,7 +138,7 @@ namespace net_utils
     STATIC_REGEXP_EXPR_1(rexp_match_uri, "^((.*?)://)?(([^/:]*)(:(\\d+))?)(.*)?", boost::regex::icase | boost::regex::normal);
     //                                     12         34      5 6        7
     content.port = 0;
-    boost::smatch result;	
+    boost::smatch result;
     if(!(boost::regex_search(url_str, result, rexp_match_uri, boost::match_default) && result[0].matched))
     {
       LOG_PRINT_L1("[PARSE URI] regex not matched for uri: " << rexp_match_uri);

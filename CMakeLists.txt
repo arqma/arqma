@@ -203,8 +203,13 @@ if(NOT MANUAL_SUBMODULES)
 endif()
 
 set(PER_BLOCK_CHECKPOINT 1)
-add_definitions("-DPER_BLOCK_CHECKPOINT")
-set(Blocks "blocks")
+
+if(PER_BLOCK_CHECKPOINT)
+  add_definitions("-DPER_BLOCK_CHECKPOINT")
+  set(Blocks "blocks")
+else()
+  set(Blocks "")
+endif()
 
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_SOURCE_DIR}/cmake")

@@ -30,6 +30,7 @@
 
 #include "misc_language.h"
 #include "portable_storage_base.h"
+#include "portable_storage_bin_utils.h"
 
 #ifdef EPEE_PORTABLE_STORAGE_RECURSION_LIMIT
 #define EPEE_PORTABLE_STORAGE_RECURSION_LIMIT_INTERNAL EPEE_PORTABLE_STORAGE_RECURSION_LIMIT
@@ -117,6 +118,7 @@ namespace epee
       RECURSION_LIMITATION();
       static_assert(std::is_pod<t_pod_type>::value, "POD type expected");
       read(&pod_val, sizeof(pod_val));
+      pod_val = CONVERT_POD(pod_val);
     }
 
     template<class t_type>

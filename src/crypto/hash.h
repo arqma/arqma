@@ -33,7 +33,6 @@
 
 #include <stddef.h>
 #include <iostream>
-#include <boost/utility/value_init.hpp>
 
 #include "common/pod-class.h"
 #include "generic-ops.h"
@@ -67,25 +66,25 @@ namespace crypto {
     Cryptonight hash functions
   */
 
-  inline void cn_fast_hash(const void *data, size_t length, hash &hash) {
+  inline void cn_fast_hash(const void *data, std::size_t length, hash &hash) {
     cn_fast_hash(data, length, reinterpret_cast<char *>(&hash));
   }
 
-  inline hash cn_fast_hash(const void *data, size_t length) {
+  inline hash cn_fast_hash(const void *data, std::size_t length) {
     hash h;
     cn_fast_hash(data, length, reinterpret_cast<char *>(&h));
     return h;
   }
 
-  inline void cn_arqma_hash_v0(const void *data, size_t length, hash &hash) {
+  inline void cn_arqma_hash_v0(const void *data, std::size_t length, hash &hash) {
     cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 0, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
   }
 
-  inline void cn_arqma_hash_v1(const void *data, size_t length, hash &hash) {
+  inline void cn_arqma_hash_v1(const void *data, std::size_t length, hash &hash) {
     cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 1, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
   }
 
-  inline void cn_turtle_hash(const void *data, size_t length, hash &hash) {
+  inline void cn_turtle_hash(const void *data, std::size_t length, hash &hash) {
     cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 1, 2, 0, CN_TURTLE_PAGE_SIZE, CN_TURTLE_SCRATCHPAD, CN_TURTLE_ITERATIONS);
   }
 
@@ -100,8 +99,8 @@ namespace crypto {
     epee::to_hex::formatted(o, epee::as_byte_span(v)); return o;
   }
 
-  const static crypto::hash null_hash = boost::value_initialized<crypto::hash>();
-  const static crypto::hash8 null_hash8 = boost::value_initialized<crypto::hash8>();
+  constexpr static crypto::hash null_hash = {};
+  constexpr static crypto::hash8 null_hash8 = {};
 }
 
 CRYPTO_MAKE_HASHABLE(hash)

@@ -100,8 +100,8 @@ namespace net_utils
       blocked_mode_client() :
           m_io_service(),
           m_ctx(boost::asio::ssl::context::tlsv12),
-          m_connector(direct_connect{}),
           m_ssl_socket(new boost::asio::ssl::stream<boost::asio::ip::tcp::socket>(m_io_service, m_ctx)),
+          m_connector(direct_connect{}),
           m_ssl_options(epee::net_utils::ssl_support_t::e_ssl_support_autodetect),
           m_initialized(true),
           m_connected(false),
@@ -191,7 +191,7 @@ namespace net_utils
 							}
 						}
 					}
-					
+
 					return CONNECT_SUCCESS;
 				}
         else
@@ -587,7 +587,7 @@ namespace net_utils
 		{
 			return m_ssl_socket->next_layer();
 		}
-    
+
         uint64_t get_bytes_sent() const
 		{
 			return m_bytes_sent;
