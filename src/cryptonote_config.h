@@ -126,6 +126,7 @@
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT                   32
+#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST              2
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     52428800   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -135,7 +136,8 @@
 #define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  // 2 minutes
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
-#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
+#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            6
+#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST       1
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 
 #define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // kbps

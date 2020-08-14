@@ -115,7 +115,7 @@ namespace cryptonote {
     static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
     static_assert(DIFFICULTY_TARGET_V16 % 30 == 0,"After HF-16 we are changing Rules");
     const int target_minutes = hard_fork_version < 16 ? DIFFICULTY_TARGET_V2 / 60: DIFFICULTY_TARGET_V16 / 30;
-    const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes-3);
+    const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes - 3);
 
     uint64_t full_reward_zone = get_min_block_weight(hard_fork_version);
 
@@ -124,8 +124,8 @@ namespace cryptonote {
       median_weight = full_reward_zone;
     }
 
-    if(current_block_weight > 2 * median_weight) {
-      MERROR("Block cumulative weight is too big: " << current_block_weight << ", expected less than " << 2 * median_weight);
+    if(current_block_weight > (2 * median_weight)) {
+      MERROR("Block cumulative weight is too big: " << current_block_weight << ", expected less than " << (2 * median_weight));
       return false;
     }
 
@@ -135,9 +135,9 @@ namespace cryptonote {
     }
 
     uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
-    if(base_reward < FINAL_SUBSIDY_PER_MINUTE*target_minutes)
+    if(base_reward < (FINAL_SUBSIDY_PER_MINUTE * target_minutes))
     {
-      base_reward = FINAL_SUBSIDY_PER_MINUTE*target_minutes;
+      base_reward = (FINAL_SUBSIDY_PER_MINUTE * target_minutes);
     }
 
     const uint64_t arqma_reward = arqma_bc::PREMINE;

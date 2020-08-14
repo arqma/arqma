@@ -1483,7 +1483,7 @@ private:
     // We save the info from the first call in m_light_wallet_address_txs for easier lookup.
     std::unordered_map<crypto::hash, address_tx> m_light_wallet_address_txs;
     // store calculated key image for faster lookup
-    std::unordered_map<crypto::public_key, std::map<uint64_t, crypto::key_image> > m_key_image_cache;
+    std::unordered_map<crypto::public_key, std::map<uint64_t, crypto::key_image>> m_key_image_cache;
 
     std::string m_ring_database;
     bool m_ring_history_saved;
