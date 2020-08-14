@@ -546,7 +546,7 @@ namespace arqmaMQ
   {
     if(!check_core_ready())
     {
-      res.status  = cryptonote::rpc::Message::STATUS_FAILED; 
+      res.status  = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "Core is busy";
       return;
     }
@@ -815,7 +815,7 @@ namespace arqmaMQ
 
   void ZmqHandler::handle(const cryptonote::rpc::GetOutputHistogram::Request& req, cryptonote::rpc::GetOutputHistogram::Response& res)
   {
-    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t> > histogram;
+    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> histogram;
     try
     {
       histogram = m_core.get_blockchain_storage().get_output_histogram(req.amounts, req.unlocked, req.recent_cutoff);

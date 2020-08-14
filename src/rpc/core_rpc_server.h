@@ -273,7 +273,7 @@ private:
     bool check_payment(const std::string &client, uint64_t payment, const std::string &rpc, bool same_ts, std::string &message, uint64_t &credits, std::string &top_hash);
 
     core& m_core;
-    nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> >& m_p2p;
+    nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>& m_p2p;
     std::string m_bootstrap_daemon_address;
     epee::net_utils::http::http_simple_client m_http_client;
     boost::shared_mutex m_bootstrap_daemon_mutex;
@@ -285,4 +285,4 @@ private:
   };
 }
 
-BOOST_CLASS_VERSION(nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> >, 1);
+BOOST_CLASS_VERSION(nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>, 1);

@@ -229,7 +229,7 @@ bool block_queue::have(const crypto::hash &hash) const
   return have_blocks.find(hash) != have_blocks.end();
 }
 
-std::pair<uint64_t, uint64_t> block_queue::reserve_span(uint64_t first_block_height, uint64_t last_block_height, uint64_t max_blocks, const boost::uuids::uuid &connection_id, bool sync_pruned_blocks, uint32_t local_pruning_seed, uint32_t pruning_seed, uint64_t blockchain_height, const std::vector<std::pair<crypto::hash, uint64_t> > &block_hashes, boost::posix_time::ptime time)
+std::pair<uint64_t, uint64_t> block_queue::reserve_span(uint64_t first_block_height, uint64_t last_block_height, uint64_t max_blocks, const boost::uuids::uuid &connection_id, bool sync_pruned_blocks, uint32_t local_pruning_seed, uint32_t pruning_seed, uint64_t blockchain_height, const std::vector<std::pair<crypto::hash, uint64_t>> &block_hashes, boost::posix_time::ptime time)
 {
   boost::unique_lock<boost::recursive_mutex> lock(mutex);
 
@@ -248,7 +248,7 @@ std::pair<uint64_t, uint64_t> block_queue::reserve_span(uint64_t first_block_hei
 
   // skip everything we've already requested
   uint64_t span_start_height = last_block_height - block_hashes.size() + 1;
-  std::vector<std::pair<crypto::hash, uint64_t> >::const_iterator i = block_hashes.begin();
+  std::vector<std::pair<crypto::hash, uint64_t>>::const_iterator i = block_hashes.begin();
   while (i != block_hashes.end() && requested_internal((*i).first))
   {
     ++i;

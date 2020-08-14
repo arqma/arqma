@@ -42,7 +42,7 @@ using namespace epee;
 
 namespace
 {
-  typedef nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> > t_p2p;
+  typedef nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>> t_p2p;
 }  // anonymous namespace
 
 namespace cryptonote
