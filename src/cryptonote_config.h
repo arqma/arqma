@@ -190,7 +190,7 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 namespace config
 {
    uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
-   uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000); // Deprecated
+   uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)20000); // Deprecated
    uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
 
    uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
