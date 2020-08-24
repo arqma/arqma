@@ -117,7 +117,7 @@ library archives (`.a`).
 | Dep          | Min. version  | Vendored | Debian/Ubuntu pkg  | Arch pkg     | Fedora            | Optional | Purpose        |
 | ------------ | ------------- | -------- | ------------------ | ------------ | ----------------- | -------- | -------------- |
 | GCC          | 7.3.0         | NO       | `build-essential`  | `base-devel` | `gcc`             | NO       |                |
-| CMake        | 3.7.0         | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
+| CMake        | 3.12.0        | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
 | pkg-config   | any           | NO       | `pkg-config`       | `base-devel` | `pkgconf`         | NO       |                |
 | Boost        | 1.62          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | 1.1.1         | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
@@ -143,7 +143,7 @@ build the library binary manually. This can be done with the following command:
 
 Debian / Ubuntu one liner for all dependencies
 
-`$ sudo apt update && sudo apt install build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
+`$ sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
 
 Install all dependencies at once on OSX:
 
@@ -157,7 +157,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.6.0`
+`$ cd arqma && git checkout release-v0.6.1`
 `$ git submodule init && git submodule update`
 
 ### Build instructions
@@ -305,7 +305,7 @@ application.
 
 * Change branch to last Release:
 
-	`$ cd arqma && git checkout release-v0.6.0`
+	`$ cd arqma && git checkout release-v0.6.1`
 
 * Activate and update submodules:
 
