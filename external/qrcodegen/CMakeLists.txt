@@ -1,8 +1,10 @@
+cmake_minimum_required(VERSION 3.12)
 project(libqrcodegen)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 add_library(qrcodegen STATIC QrCode.cpp)
-set_target_properties(qrcodegen PROPERTIES POSITION_INDEPENDENT_CODE ON)
-set_target_properties(qrcodegen PROPERTIES CXX_STANDARD 11)
 
 target_include_directories(qrcodegen PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR})
