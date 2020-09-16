@@ -556,8 +556,8 @@ namespace rpc
 
     if(req.reserve_size > 255)
     {
-      res.status  = Message::STATUS_FAILED;
-      res.error_details  = "Too big reserved size, maximum 255";
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Too big reserved size, maximum 255";
       return;
     }
 
@@ -565,29 +565,50 @@ namespace rpc
 
     if(!req.wallet_address.size() || !cryptonote::get_account_address_from_str(info, nettype(), req.wallet_address))
     {
-      res.status  = Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Failed to parse wallet address";
       return;
     }
+    
     if (info.is_subaddress)
     {
-      res.status  = Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Mining to subaddress is not supported yet";
       return;
     }
 
     block b;
     cryptonote::blobdata blob_reserve;
-    blob_reserve.resize(req.reserve_size, 0);
     size_t reserved_offset;
+    if(!req.extra_nonce.empty())
+    {
+      if(!string_tools::parse_hexstr_to_binbuff(req.extra_nonce, blob_reserve))
+      {
+        res.status = Message::STATUS_FAILED;
+        res.error_details = "Parameter extra_nonce should be a hex string";
+        return;
+      }
+    }
+    else
+      blob_reserve.resize(req.reserve_size, 0);
+    crypto::hash prev_block;
+    if(!req.prev_block.empty())
+    {
+      if(!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
+      {
+        res.status = Message::STATUS_FAILED;
+        res.error_details = "Invalid prev_block";
+        return;
+      }
+    }
     uint64_t seed_height;
     crypto::hash seed_hash, next_seed_hash;
-    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
+    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
       return;
     if(b.major_version >= RX_BLOCK_VERSION)
     {
       res.seed_hash = string_tools::pod_to_hex(seed_hash);
-      if (seed_hash != next_seed_hash)
+      if(seed_hash != next_seed_hash)
         res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     }
     res.reserved_offset = reserved_offset;
@@ -596,9 +617,6 @@ namespace rpc
     res.prev_hash = string_tools::pod_to_hex(b.prev_id);
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
     res.blockhashing_blob =  string_tools::buff_to_hex_nodelimer(hashing_blob);
-    res.seed_hash = string_tools::pod_to_hex(seed_hash);
-    if(next_seed_hash != crypto::null_hash)
-      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     res.status = Message::STATUS_OK;
     return;
   }
@@ -623,7 +641,7 @@ namespace rpc
       return false;
     }
 
-    if (extra_nonce.empty())
+    if(extra_nonce.empty())
     {
       reserved_offset = 0;
       return true;
