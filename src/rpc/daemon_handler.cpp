@@ -580,9 +580,16 @@ namespace rpc
     cryptonote::blobdata blob_reserve;
     blob_reserve.resize(req.reserve_size, 0);
     size_t reserved_offset;
+    uint64_t seed_height;
     crypto::hash seed_hash, next_seed_hash;
-    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, res))
+    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
       return;
+    if(b.major_version >= RX_BLOCK_VERSION)
+    {
+      res.seed_hash = string_tools::pod_to_hex(seed_hash);
+      if (seed_hash != next_seed_hash)
+        res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
+    }
     res.reserved_offset = reserved_offset;
     blobdata block_blob = t_serializable_object_to_blob(b);
     blobdata hashing_blob = get_block_hashing_blob(b);
@@ -596,10 +603,10 @@ namespace rpc
     return;
   }
 
-  bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
+  bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
   {
     b = boost::value_initialized<cryptonote::block>();
-    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
+    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       res.status = Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
@@ -614,18 +621,6 @@ namespace rpc
       res.error_details = "Internal error: failed to create block template";
       LOG_ERROR("Failed to get tx pub key in coinbase extra");
       return false;
-    }
-
-    seed_hash = next_seed_hash = crypto::null_hash;
-    if(b.major_version >= RX_BLOCK_VERSION)
-    {
-      uint64_t seed_height, next_height;
-      crypto::rx_seedheights(height, &seed_height, &next_height);
-      seed_hash = m_core.get_block_id_by_height(seed_height);
-      if(next_height != seed_height)
-      {
-        next_seed_hash = m_core.get_block_id_by_height(next_height);
-      }
     }
 
     if (extra_nonce.empty())

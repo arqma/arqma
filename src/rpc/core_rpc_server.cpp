@@ -1407,7 +1407,7 @@ namespace cryptonote
   bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, epee::json_rpc::error &error_resp)
   {
     b = cryptonote::block{};
-    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
+    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Internal error: failed to create block template";
@@ -1423,14 +1423,6 @@ namespace cryptonote
       LOG_ERROR("Failed to get tx pub key in coinbase extra");
       return false;
     }
-
-    uint64_t next_height;
-    crypto::rx_seedheights(height, &seed_height, &next_height);
-    seed_hash = m_core.get_block_id_by_height(seed_height);
-    if (next_height != seed_height)
-      next_seed_hash = m_core.get_block_id_by_height(next_height);
-    else
-      next_seed_hash = seed_hash;
 
     if (extra_nonce.empty())
     {
@@ -1477,6 +1469,20 @@ namespace cryptonote
       error_resp.message = "Too big reserved size, maximum 255";
       return false;
     }
+    
+    if(req.reserve_size && !req.extra_nonce.empty())
+    {
+      error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
+      error_resp.message = "Cannot specify both a reserve_size and an extra_nonce";
+      return false;
+    }
+
+    if(req.extra_nonce.size() > 510)
+    {
+      error_resp.code = CORE_RPC_ERROR_CODE_TOO_BIG_RESERVE_SIZE;
+      error_resp.message = "Too big extra_nonce size, maximum 510 hex chars";
+      return false;
+    }
 
     cryptonote::address_parse_info info;
 
@@ -1495,8 +1501,17 @@ namespace cryptonote
 
     block b;
     cryptonote::blobdata blob_reserve;
-    blob_reserve.resize(req.reserve_size, 0);
-    size_t reserved_offset;
+    if(!req.extra_nonce.empty())
+    {
+      if(!string_tools::parse_hexstr_to_binbuff(req.extra_nonce, blob_reserve))
+      {
+        error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
+        error_resp.message = "Parameter extra_nonce should be a hex string";
+        return false;
+      }
+    }
+    else
+      blob_reserve.resize(req.reserve_size, 0);
     crypto::hash prev_block;
     if (!req.prev_block.empty())
     {
@@ -1635,9 +1650,16 @@ namespace cryptonote
         return false;
       }
       b.nonce = req.starting_nonce;
-      miner::find_nonce_for_given_block([this](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash) {
-        return cryptonote::get_block_longhash(&(m_core.get_blockchain_storage()), b, hash, height, threads);
-      }, b, template_res.difficulty, template_res.height);
+      crypto::hash seed_hash = crypto::null_hash;
+      if(b.major_version >= RX_BLOCK_VERSION && !epee::string_tools::hex_to_pod(template_res.seed_hash, seed_hash))
+      {
+        error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
+        error_resp.message = "Error converting seed hash";
+        return false;
+      }
+      miner::find_nonce_for_given_block([this](const cryptonote::block &b, uint64_t height, const crypto::hash *seed_hash, unsigned int threads, crypto::hash &hash) {
+        return cryptonote::get_block_longhash(&(m_core.get_blockchain_storage()), b, hash, height, seed_hash, threads);
+       }, b, template_res.difficulty, template_res.height, &seed_hash);
 
       submit_req.front() = string_tools::buff_to_hex_nodelimer(block_to_blob(b));
       r = on_submitblock(submit_req, submit_res, error_resp, ctx);

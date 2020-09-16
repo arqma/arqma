@@ -65,6 +65,8 @@ target_link_libraries(arqma_mq
   PRIVATE
     common
     epee
+    libunbound
+    miniupnpc
     net
     rpc
     daemon_messages

@@ -89,7 +89,7 @@ namespace cryptonote
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define CORE_RPC_VERSION_MAJOR 3
-#define CORE_RPC_VERSION_MINOR 3
+#define CORE_RPC_VERSION_MINOR 4
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -888,7 +888,6 @@ namespace cryptonote
   struct COMMAND_RPC_GETBLOCKHASH
   {
     typedef std::vector<uint64_t> request;
-
     typedef std::string response;
   };
 
@@ -900,12 +899,14 @@ namespace cryptonote
       uint64_t reserve_size;       //max 255 bytes
       std::string wallet_address;
       std::string prev_block;
+      std::string extra_nonce;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE(reserve_size)
         KV_SERIALIZE(wallet_address)
         KV_SERIALIZE(prev_block)
+        KV_SERIALIZE(extra_nonce)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;

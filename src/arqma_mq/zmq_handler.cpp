@@ -577,9 +577,16 @@ namespace arqmaMQ
     cryptonote::blobdata blob_reserve;
     blob_reserve.resize(req.reserve_size, 0);
     size_t reserved_offset;
+    uint64_t seed_height;
     crypto::hash seed_hash, next_seed_hash;
-    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, res))
+    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
       return;
+    if(b.major_version >= RX_BLOCK_VERSION)
+    {
+      res.seed_hash = string_tools::pod_to_hex(seed_hash);
+      if(seed_hash != next_seed_hash)
+        res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
+    }
     res.reserved_offset = reserved_offset;
     cryptonote::blobdata block_blob = cryptonote::t_serializable_object_to_blob(b);
     cryptonote::blobdata hashing_blob = get_block_hashing_blob(b);
@@ -593,10 +600,10 @@ namespace arqmaMQ
     return;
   }
 
-  bool ZmqHandler::get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, cryptonote::rpc::GetBlockTemplate::Response& res)
+  bool ZmqHandler::get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, cryptonote::rpc::GetBlockTemplate::Response& res)
   {
     b = boost::value_initialized<cryptonote::block>();
-    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
+    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
@@ -612,13 +619,6 @@ namespace arqmaMQ
       LOG_ERROR("Failed to get tx pub key in coinbase extra");
       return false;
     }
-
-    uint64_t next_height, seed_height;
-    crypto::rx_seedheights(height, &seed_height, &next_height);
-    if (next_height != seed_height)
-      next_seed_hash = m_core.get_block_id_by_height(next_height);
-    else
-      next_seed_hash = seed_hash;
 
     if (extra_nonce.empty())
     {
