@@ -99,6 +99,7 @@ target_link_libraries(common
     cncrypto
     libunbound
     miniupnpc
+    ${LIBUNWIND_LIBRARIES}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
