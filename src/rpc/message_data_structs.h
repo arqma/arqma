@@ -1,5 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2016-2018, The Monero Project
+// Copyright (c) 2018-2019, The Arqma Network Copyright (c) 2016-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -204,18 +203,19 @@ namespace rpc
     bool cumulative;
   };
 
-  struct GetBlockTemplateInfo
+  struct BlockTemplateInfo
   {
-    std::string blocktemplate_blob;
     std::string blockhashing_blob;
+    std::string blocktemplate_blob;
     uint64_t difficulty;
     uint64_t expected_reward;
     uint64_t height;
+    std::string next_seed_hash;
     std::string prev_hash;
     uint64_t reserved_offset;
-    std::string status;
     std::string seed_hash;
-    std::string next_seed_hash;
+    uint64_t seed_height;
+    std::string status;
   };
 
 }  // namespace rpc

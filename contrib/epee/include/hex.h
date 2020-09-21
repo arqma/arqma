@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <iosfwd>
 #include <string>
+#include <cstddef>
 #include <boost/utility/string_ref.hpp>
 
 #include "wipeable_string.h"

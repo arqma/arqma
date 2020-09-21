@@ -29,6 +29,12 @@
 
 #include "daemon_handler.h"
 
+#include <algorithm>
+#include <cstring>
+#include <stdexcept>
+
+#include <boost/uuid/nil_generator.hpp>
+#include <boost/utility/string_ref.hpp>
 // likely included by daemon_handler.h's includes,
 // but including here for clarity
 #include "cryptonote_core/cryptonote_core.h"
@@ -266,27 +272,27 @@ namespace rpc
     handleTxBlob(cryptonote::tx_to_blob(req.tx), req.relay, res);
   }
 
-	void DaemonHandler::handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res)
-	{
-	  std::string tx_blob;
-	  if(!epee::string_tools::parse_hexstr_to_binbuff(req.tx_as_hex, tx_blob))
-	  {
-	    MERROR("[SendRawTxHex]: Failed to parse tx from hexbuff: " << req.tx_as_hex);
-	    res.status = Message::STATUS_FAILED;
-	    res.error_details = "Invalid hex";
-	    return;
-	  }
-	  handleTxBlob(tx_blob, req.relay, res);
-	}
+  void DaemonHandler::handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res)
+  {
+    std::string tx_blob;
+    if(!epee::string_tools::parse_hexstr_to_binbuff(req.tx_as_hex, tx_blob))
+    {
+      MERROR("[SendRawTxHex]: Failed to parse tx from hexbuff: " << req.tx_as_hex);
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Invalid hex";
+      return;
+    }
+    handleTxBlob(tx_blob, req.relay, res);
+  }
 
-	void DaemonHandler::handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res)
-	{
-	  if (!m_p2p.get_payload_object().is_synchronized())
-	  {
-	    res.status = Message::STATUS_FAILED;
-	    res.error_details = "Not ready to accept transactions; try again later";
-	    return;
-	  }
+  void DaemonHandler::handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res)
+  {
+    if(!m_p2p.get_payload_object().is_synchronized())
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Not ready to accept transactions; try again later";
+      return;
+    }
 
     cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
     tx_verification_context tvc = AUTO_VAL_INIT(tvc);
@@ -546,7 +552,6 @@ namespace rpc
 
   void DaemonHandler::handle(const GetBlockTemplate::Request& req, GetBlockTemplate::Response& res)
   {
-
     if(!check_core_ready())
     {
       res.status  = Message::STATUS_FAILED;
@@ -561,6 +566,20 @@ namespace rpc
       return;
     }
 
+    if(req.reserve_size && !req.extra_nonce.empty())
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Can Not specify both reserve_size and extra_nonce";
+      return;
+    }
+
+    if(req.extra_nonce.size() > 510)
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Too big extra_nonce. Allowed max 510 hex chars";
+      return;
+    }
+
     cryptonote::address_parse_info info;
 
     if(!req.wallet_address.size() || !cryptonote::get_account_address_from_str(info, nettype(), req.wallet_address))
@@ -569,7 +588,7 @@ namespace rpc
       res.error_details = "Failed to parse wallet address";
       return;
     }
-    
+
     if (info.is_subaddress)
     {
       res.status = Message::STATUS_FAILED;
@@ -579,7 +598,6 @@ namespace rpc
 
     block b;
     cryptonote::blobdata blob_reserve;
-    size_t reserved_offset;
     if(!req.extra_nonce.empty())
     {
       if(!string_tools::parse_hexstr_to_binbuff(req.extra_nonce, blob_reserve))
@@ -602,6 +620,7 @@ namespace rpc
       }
     }
     uint64_t seed_height;
+    size_t reserved_offset;
     crypto::hash seed_hash, next_seed_hash;
     if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
       return;
@@ -611,6 +630,7 @@ namespace rpc
       if(seed_hash != next_seed_hash)
         res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     }
+
     res.reserved_offset = reserved_offset;
     blobdata block_blob = t_serializable_object_to_blob(b);
     blobdata hashing_blob = get_block_hashing_blob(b);

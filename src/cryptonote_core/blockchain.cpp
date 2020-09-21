@@ -1456,7 +1456,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
   size_t median_weight;
   uint64_t already_generated_coins;
   uint64_t pool_cookie;
-  
+
   seed_hash = crypto::null_hash;
 
   CRITICAL_REGION_BEGIN(m_blockchain_lock);
@@ -1509,7 +1509,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
       height = from_block_height + 1;
       if(m_hardfork->get_current_version() >= RX_BLOCK_VERSION)
       {
-        uint64_t seed_height;
+        uint64_t seed_height, next_height;
         crypto::rx_seedheights(height, &seed_height, &next_height);
         seed_hash = get_block_id_by_height(seed_height);
       }
@@ -1517,7 +1517,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
     else
     {
       height = alt_chain.back().height + 1;
-      uint64_t next_height;
+      uint64_t next_height, seed_height;
       crypto::rx_seedheights(height, &seed_height, &next_height);
 
       if(alt_chain.size() && alt_chain.front().height <= seed_height)
@@ -1571,7 +1571,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
     already_generated_coins = m_db->get_block_already_generated_coins(height - 1);
     if(m_hardfork->get_current_version() >= RX_BLOCK_VERSION)
     {
-      uint64_t next_height;
+      uint64_t next_height, seed_height;
       crypto::rx_seedheights(height, &seed_height, &next_height);
       seed_hash = get_block_id_by_height(seed_height);
     }

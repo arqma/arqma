@@ -239,30 +239,30 @@ namespace cryptonote
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
-    struct COMMAND_RPC_GET_ALT_BLOCKS_HASHES
+  struct COMMAND_RPC_GET_ALT_BLOCKS_HASHES
+  {
+    struct request_t: public rpc_access_request_base
     {
-        struct request_t: public rpc_access_request_base
-        {
-            BEGIN_KV_SERIALIZE_MAP()
-                KV_SERIALIZE_PARENT(rpc_access_request_base);
-            END_KV_SERIALIZE_MAP()
-        };
-        typedef epee::misc_utils::struct_init<request_t> request;
-
-        struct response_t: public rpc_access_response_base
-        {
-            std::vector<std::string> blks_hashes;
-
-            BEGIN_KV_SERIALIZE_MAP()
-                KV_SERIALIZE_PARENT(rpc_access_response_base)
-                KV_SERIALIZE(blks_hashes)
-            END_KV_SERIALIZE_MAP()
-        };
-        typedef epee::misc_utils::struct_init<response_t> response;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_access_request_base);
+      END_KV_SERIALIZE_MAP()
     };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t: public rpc_access_response_base
+    {
+      std::vector<std::string> blks_hashes;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_access_response_base)
+        KV_SERIALIZE(blks_hashes)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
   struct COMMAND_RPC_GET_HASHES_FAST
   {
-
     struct request_t: public rpc_access_request_base
     {
       std::list<crypto::hash> block_ids; //*first 10 blocks id goes sequential, next goes in pow(2,n) offset, like 2, 4, 8, 16, 32, 64 and so on, and the last one is always genesis block */
@@ -888,6 +888,7 @@ namespace cryptonote
   struct COMMAND_RPC_GETBLOCKHASH
   {
     typedef std::vector<uint64_t> request;
+
     typedef std::string response;
   };
 
@@ -932,10 +933,10 @@ namespace cryptonote
         KV_SERIALIZE(expected_reward)
         KV_SERIALIZE(prev_hash)
         KV_SERIALIZE(seed_height)
-        KV_SERIALIZE(seed_hash)
-        KV_SERIALIZE(next_seed_hash)
         KV_SERIALIZE(blocktemplate_blob)
         KV_SERIALIZE(blockhashing_blob)
+        KV_SERIALIZE(seed_hash)
+        KV_SERIALIZE(next_seed_hash)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;

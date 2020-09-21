@@ -1469,7 +1469,7 @@ namespace cryptonote
       error_resp.message = "Too big reserved size, maximum 255";
       return false;
     }
-    
+
     if(req.reserve_size && !req.extra_nonce.empty())
     {
       error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
@@ -1492,7 +1492,7 @@ namespace cryptonote
       error_resp.message = "Failed to parse wallet address";
       return false;
     }
-    if (info.is_subaddress)
+    if(info.is_subaddress)
     {
       error_resp.code = CORE_RPC_ERROR_CODE_MINING_TO_SUBADDRESS;
       error_resp.message = "Mining to subaddress is not supported yet";
@@ -1514,9 +1514,9 @@ namespace cryptonote
     else
       blob_reserve.resize(req.reserve_size, 0);
     crypto::hash prev_block;
-    if (!req.prev_block.empty())
+    if(!req.prev_block.empty())
     {
-      if (!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
+      if(!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
       {
         error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
         error_resp.message = "Invalid prev_block";
@@ -1527,10 +1527,10 @@ namespace cryptonote
     crypto::hash seed_hash, next_seed_hash;
     if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, error_resp))
       return false;
-    if (b.major_version >= RX_BLOCK_VERSION)
+    if(b.major_version >= RX_BLOCK_VERSION)
     {
       res.seed_hash = string_tools::pod_to_hex(seed_hash);
-      if (seed_hash != next_seed_hash)
+      if(seed_hash != next_seed_hash)
         res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     }
 
@@ -1539,7 +1539,7 @@ namespace cryptonote
     blobdata hashing_blob = get_block_hashing_blob(b);
     res.prev_hash = string_tools::pod_to_hex(b.prev_id);
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
-    res.blockhashing_blob =  string_tools::buff_to_hex_nodelimer(hashing_blob);
+    res.blockhashing_blob = string_tools::buff_to_hex_nodelimer(hashing_blob);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }

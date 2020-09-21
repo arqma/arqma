@@ -36,24 +36,27 @@
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "cryptonote_basic/blobdatatype.h"
 #include "ringct/rctSigs.h"
+#include "version.h"
+
+using namespace cryptonote::rpc;
 
 namespace arqmaMQ
 {
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetHeight::Request& req, cryptonote::rpc::GetHeight::Response& res)
+  void ZmqHandler::handle(const GetHeight::Request& req, GetHeight::Response& res)
   {
     res.height = m_core.get_current_blockchain_height();
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBlocksFast::Request& req, cryptonote::rpc::GetBlocksFast::Response& res)
+  void ZmqHandler::handle(const GetBlocksFast::Request& req, GetBlocksFast::Response& res)
   {
     std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>> blocks;
 
     if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "core::find_blockchain_supplement() returned false";
       return;
     }
@@ -66,13 +69,13 @@ namespace arqmaMQ
     uint64_t block_count = 0;
     while (it != blocks.end())
     {
-      cryptonote::rpc::block_with_transactions& bwt = res.blocks[block_count];
+      block_with_transactions& bwt = res.blocks[block_count];
 
       if (!parse_and_validate_block_from_blob(it->first.first, bwt.block))
       {
         res.blocks.clear();
         res.output_indices.clear();
-        res.status = cryptonote::rpc::Message::STATUS_FAILED;
+        res.status = Message::STATUS_FAILED;
         res.error_details = "failed retrieving a requested block";
         return;
       }
@@ -81,19 +84,19 @@ namespace arqmaMQ
       {
           res.blocks.clear();
           res.output_indices.clear();
-          res.status = cryptonote::rpc::Message::STATUS_FAILED;
+          res.status = Message::STATUS_FAILED;
           res.error_details = "incorrect number of transactions retrieved for block";
           return;
       }
 
-      cryptonote::rpc::block_output_indices& indices = res.output_indices[block_count];
+      block_output_indices& indices = res.output_indices[block_count];
 
       // miner tx output indices
       {
-        cryptonote::rpc::tx_output_indices tx_indices;
+        tx_output_indices tx_indices;
         if (!m_core.get_tx_outputs_gindexs(get_transaction_hash(bwt.block.miner_tx), tx_indices))
         {
-          res.status = cryptonote::rpc::Message::STATUS_FAILED;
+          res.status = Message::STATUS_FAILED;
           res.error_details = "core::get_tx_outputs_gindexs() returned false";
           return;
         }
@@ -109,15 +112,15 @@ namespace arqmaMQ
         {
           res.blocks.clear();
           res.output_indices.clear();
-          res.status = cryptonote::rpc::Message::STATUS_FAILED;
+          res.status = Message::STATUS_FAILED;
           res.error_details = "failed retrieving a requested transaction";
           return;
         }
 
-        cryptonote::rpc::tx_output_indices tx_indices;
+        tx_output_indices tx_indices;
         if (!m_core.get_tx_outputs_gindexs(*hash_it, tx_indices))
         {
-          res.status = cryptonote::rpc::Message::STATUS_FAILED;
+          res.status = Message::STATUS_FAILED;
           res.error_details = "core::get_tx_outputs_gindexs() returned false";
           return;
         }
@@ -130,10 +133,10 @@ namespace arqmaMQ
       block_count++;
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetHashesFast::Request& req, cryptonote::rpc::GetHashesFast::Response& res)
+  void ZmqHandler::handle(const GetHashesFast::Request& req, GetHashesFast::Response& res)
   {
     res.start_height = req.start_height;
 
@@ -141,15 +144,15 @@ namespace arqmaMQ
 
     if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, NULL, res.start_height, res.current_height, false))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Blockchain::find_blockchain_supplement() returned false";
       return;
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetTransactions::Request& req, cryptonote::rpc::GetTransactions::Response& res)
+  void ZmqHandler::handle(const GetTransactions::Request& req, GetTransactions::Response& res)
   {
     std::vector<cryptonote::transaction> found_txs_vec;
     std::vector<crypto::hash> missed_vec;
@@ -159,7 +162,7 @@ namespace arqmaMQ
     // TODO: consider fixing core::get_transactions to not hide exceptions
     if (!r)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "core::get_transactions() returned false (exception caught there)";
       return;
     }
@@ -170,7 +173,7 @@ namespace arqmaMQ
     std::vector<bool> in_pool(num_found, false);
     std::vector<crypto::hash> found_hashes(num_found);
 
-    for (size_t i=0; i < num_found; i++)
+    for(size_t i = 0; i < num_found; i++)
     {
       found_hashes[i] = get_transaction_hash(found_txs_vec[i]);
       heights[i] = m_core.get_blockchain_storage().get_db().get_tx_block_height(found_hashes[i]);
@@ -200,9 +203,9 @@ namespace arqmaMQ
       }
     }
 
-    for (size_t i=0; i < found_hashes.size(); i++)
+    for(size_t i = 0; i < found_hashes.size(); i++)
     {
-      cryptonote::rpc::transaction_info info;
+      transaction_info info;
       info.height = heights[i];
       info.in_pool = in_pool[i];
       info.transaction = std::move(found_txs_vec[i]);
@@ -211,12 +214,12 @@ namespace arqmaMQ
     }
 
     res.missed_hashes = std::move(missed_vec);
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::KeyImagesSpent::Request& req, cryptonote::rpc::KeyImagesSpent::Response& res)
+  void ZmqHandler::handle(const KeyImagesSpent::Request& req, KeyImagesSpent::Response& res)
   {
-    res.spent_status.resize(req.key_images.size(), cryptonote::rpc::KeyImagesSpent::STATUS::UNSPENT);
+    res.spent_status.resize(req.key_images.size(), KeyImagesSpent::STATUS::UNSPENT);
 
     std::vector<bool> chain_spent_status;
     std::vector<bool> pool_spent_status;
@@ -226,62 +229,62 @@ namespace arqmaMQ
 
     if ((chain_spent_status.size() != req.key_images.size()) || (pool_spent_status.size() != req.key_images.size()))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "tx_pool::have_key_images_as_spent() gave vectors of wrong size(s).";
       return;
     }
 
-    for(size_t i=0; i < req.key_images.size(); i++)
+    for(size_t i = 0; i < req.key_images.size(); i++)
     {
       if ( chain_spent_status[i] )
       {
-        res.spent_status[i] = cryptonote::rpc::KeyImagesSpent::STATUS::SPENT_IN_BLOCKCHAIN;
+        res.spent_status[i] = KeyImagesSpent::STATUS::SPENT_IN_BLOCKCHAIN;
       }
       else if ( pool_spent_status[i] )
       {
-        res.spent_status[i] = cryptonote::rpc::KeyImagesSpent::STATUS::SPENT_IN_POOL;
+        res.spent_status[i] = KeyImagesSpent::STATUS::SPENT_IN_POOL;
       }
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetTxGlobalOutputIndices::Request& req, cryptonote::rpc::GetTxGlobalOutputIndices::Response& res)
+  void ZmqHandler::handle(const GetTxGlobalOutputIndices::Request& req, GetTxGlobalOutputIndices::Response& res)
   {
     if (!m_core.get_tx_outputs_gindexs(req.tx_hash, res.output_indices))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "core::get_tx_outputs_gindexs() returned false";
       return;
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
 
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::SendRawTx::Request& req, cryptonote::rpc::SendRawTx::Response& res)
+  void ZmqHandler::handle(const SendRawTx::Request& req, SendRawTx::Response& res)
   {
     handleTxBlob(cryptonote::tx_to_blob(req.tx), req.relay, res);
   }
 
-	void ZmqHandler::handle(const cryptonote::rpc::SendRawTxHex::Request& req, cryptonote::rpc::SendRawTxHex::Response& res)
+	void ZmqHandler::handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res)
 	{
 	  std::string tx_blob;
 	  if(!epee::string_tools::parse_hexstr_to_binbuff(req.tx_as_hex, tx_blob))
 	  {
 	    MERROR("[SendRawTxHex]: Failed to parse tx from hexbuff: " << req.tx_as_hex);
-	    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+	    res.status = Message::STATUS_FAILED;
 	    res.error_details = "Invalid hex";
 	    return;
 	  }
 	  handleTxBlob(tx_blob, req.relay, res);
 	}
 
-	void ZmqHandler::handleTxBlob(const std::string& tx_blob, bool relay, cryptonote::rpc::SendRawTx::Response& res)
+	void ZmqHandler::handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res)
 	{
 	  if (!m_p2p.get_payload_object().is_synchronized())
 	  {
-	    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+	    res.status = Message::STATUS_FAILED;
 	    res.error_details = "Not ready to accept transactions; try again later";
 	    return;
 	  }
@@ -299,7 +302,7 @@ namespace arqmaMQ
       {
         MERROR("[SendRawTx]: Failed to process tx");
       }
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "";
 
       if (tvc.m_low_mixin)
@@ -349,7 +352,7 @@ namespace arqmaMQ
       MERROR("[SendRawTx]: tx accepted, but not relayed");
       res.error_details = "Not relayed";
       res.relayed = false;
-      res.status = cryptonote::rpc::Message::STATUS_OK;
+      res.status = Message::STATUS_OK;
 
       return;
     }
@@ -359,27 +362,27 @@ namespace arqmaMQ
     m_core.get_protocol()->relay_transactions(r, fake_context);
 
     //TODO: make sure that tx has reached other nodes here, probably wait to receive reflections from other nodes
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
     res.relayed = true;
 
     return;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::StartMining::Request& req, cryptonote::rpc::StartMining::Response& res)
+  void ZmqHandler::handle(const StartMining::Request& req, StartMining::Response& res)
   {
     cryptonote::address_parse_info info;
     if(!get_account_address_from_str(info, m_core.get_nettype(), req.miner_address))
     {
       res.error_details = "Failed, wrong address";
       LOG_PRINT_L0(res.error_details);
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       return;
     }
     if (info.is_subaddress)
     {
       res.error_details = "Failed, mining to subaddress isn't supported yet";
       LOG_PRINT_L0(res.error_details);
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       return;
     }
 
@@ -397,7 +400,7 @@ namespace arqmaMQ
     {
       res.error_details = "Failed, too many threads relative to CPU cores.";
       LOG_PRINT_L0(res.error_details);
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       return;
     }
 
@@ -408,15 +411,15 @@ namespace arqmaMQ
     {
       res.error_details = "Failed, mining not started";
       LOG_PRINT_L0(res.error_details);
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       return;
     }
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
     res.error_details = "";
 
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetInfo::Request& req, cryptonote::rpc::GetInfo::Response& res)
+  void ZmqHandler::handle(const GetInfo::Request& req, GetInfo::Response& res)
   {
     res.info.height = m_core.get_current_blockchain_height();
 
@@ -455,25 +458,25 @@ namespace arqmaMQ
     res.info.block_size_median = res.info.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
     res.info.start_time = (uint64_t)m_core.get_start_time();
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
     res.error_details = "";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::StopMining::Request& req, cryptonote::rpc::StopMining::Response& res)
+  void ZmqHandler::handle(const StopMining::Request& req, StopMining::Response& res)
   {
     if(!m_core.get_miner().stop())
     {
       res.error_details = "Failed, mining not stopped";
       LOG_PRINT_L0(res.error_details);
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       return;
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
     res.error_details = "";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::MiningStatus::Request& req, cryptonote::rpc::MiningStatus::Response& res)
+  void ZmqHandler::handle(const MiningStatus::Request& req, MiningStatus::Response& res)
   {
     const cryptonote::miner& lMiner = m_core.get_miner();
     res.active = lMiner.is_mining();
@@ -486,36 +489,36 @@ namespace arqmaMQ
       res.address = get_account_address_as_str(m_core.get_nettype(), false, lMiningAdr);
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
     res.error_details = "";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::SaveBC::Request& req, cryptonote::rpc::SaveBC::Response& res)
+  void ZmqHandler::handle(const SaveBC::Request& req, SaveBC::Response& res)
   {
     if (!m_core.get_blockchain_storage().store_blockchain())
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Error storing the blockchain";
     }
     else
     {
-      res.status = cryptonote::rpc::Message::STATUS_OK;
+      res.status = Message::STATUS_OK;
     }
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBlockHash::Request& req, cryptonote::rpc::GetBlockHash::Response& res)
+  void ZmqHandler::handle(const GetBlockHash::Request& req, GetBlockHash::Response& res)
   {
     if (m_core.get_current_blockchain_height() <= req.height)
     {
       res.hash = crypto::null_hash;
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "height given is higher than current chain height";
       return;
     }
 
     res.hash = m_core.get_block_id_by_height(req.height);
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
   uint64_t slow_memmem(const void* start_buff, size_t buflen,const void* pat,size_t patlen)
@@ -535,39 +538,39 @@ namespace arqmaMQ
 
   bool ZmqHandler::check_core_ready()
   {
-	if (m_core.get_current_blockchain_height() >= m_core.get_target_blockchain_height())
-	{
-	  return true;
-	}
-	return false;
+    if(m_core.get_current_blockchain_height() >= m_core.get_target_blockchain_height())
+    {
+      return true;
+    }
+    return false;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBlockTemplate::Request& req, cryptonote::rpc::GetBlockTemplate::Response& res)
+  void ZmqHandler::handle(const GetBlockTemplate::Request& req, GetBlockTemplate::Response& res)
   {
     if(!check_core_ready())
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED; 
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Core is busy";
       return;
     }
 
     if(req.reserve_size > 255)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details  = "Too big reserved size, maximum 255";
       return;
     }
-    
+
     if(req.reserve_size && !req.extra_nonce.empty())
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Cannot specify both a reserve_size and an extra_nonce";
       return;
     }
 
     if(req.extra_nonce.size() > 510)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Too big extra_nonce size, maximum 510 hex chars";
       return;
     }
@@ -576,14 +579,14 @@ namespace arqmaMQ
 
     if(!req.wallet_address.size() || !cryptonote::get_account_address_from_str(info, nettype(), req.wallet_address))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Failed to parse wallet address";
       return;
     }
-    
+
     if (info.is_subaddress)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Mining to subaddress is not supported yet";
       return;
     }
@@ -594,7 +597,7 @@ namespace arqmaMQ
     {
       if(!string_tools::parse_hexstr_to_binbuff(req.extra_nonce, blob_reserve))
       {
-        res.status = cryptonote::rpc::Message::STATUS_FAILED;
+        res.status = Message::STATUS_FAILED;
         res.error_details = "Parameter extra_nonce should be a hex string";
         return;
       }
@@ -606,7 +609,7 @@ namespace arqmaMQ
     {
       if(!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
       {
-        res.status = cryptonote::rpc::Message::STATUS_FAILED;
+        res.status = Message::STATUS_FAILED;
         res.error_details = "Invalid prev_block";
         return;
       }
@@ -622,22 +625,23 @@ namespace arqmaMQ
       if(seed_hash != next_seed_hash)
         res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     }
+
     res.reserved_offset = reserved_offset;
     cryptonote::blobdata block_blob = cryptonote::t_serializable_object_to_blob(b);
     cryptonote::blobdata hashing_blob = get_block_hashing_blob(b);
     res.prev_hash = string_tools::pod_to_hex(b.prev_id);
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
     res.blockhashing_blob = string_tools::buff_to_hex_nodelimer(hashing_blob);
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
     return;
   }
 
-  bool ZmqHandler::get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, cryptonote::rpc::GetBlockTemplate::Response& res)
+  bool ZmqHandler::get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
   {
     b = boost::value_initialized<cryptonote::block>();
     if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
       LOG_ERROR("Failed to create block template");
       return false;
@@ -646,7 +650,7 @@ namespace arqmaMQ
     crypto::public_key tx_pub_key = cryptonote::get_tx_pub_key_from_extra(b.miner_tx);
     if(tx_pub_key == crypto::null_pkey)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
       LOG_ERROR("Failed to get tx pub key in coinbase extra");
       return false;
@@ -661,7 +665,7 @@ namespace arqmaMQ
     reserved_offset = slow_memmem((void*)block_blob.data(), block_blob.size(), &tx_pub_key, sizeof(tx_pub_key));
     if(!reserved_offset)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
       LOG_ERROR("Failed to find tx pub key in blockblob");
       return false;
@@ -669,7 +673,7 @@ namespace arqmaMQ
     reserved_offset += sizeof(tx_pub_key) + 2; //2 bytes: tag for TX_EXTRA_NONCE(1 byte), counter in TX_EXTRA_NONCE(1 byte)
     if(reserved_offset + extra_nonce.size() > block_blob.size())
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
       LOG_ERROR("Failed to calculate offset for ");
       return false;
@@ -677,53 +681,53 @@ namespace arqmaMQ
     return true;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::SubmitBlock::Request& req, cryptonote::rpc::SubmitBlock::Response& res)
+  void ZmqHandler::handle(const SubmitBlock::Request& req, SubmitBlock::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetLastBlockHeader::Request& req, cryptonote::rpc::GetLastBlockHeader::Response& res)
+  void ZmqHandler::handle(const GetLastBlockHeader::Request& req, GetLastBlockHeader::Response& res)
   {
     const crypto::hash block_hash = m_core.get_tail_id();
 
     if (!getBlockHeaderByHash(block_hash, res.header))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Requested block does not exist";
       return;
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBlockHeaderByHash::Request& req, cryptonote::rpc::GetBlockHeaderByHash::Response& res)
+  void ZmqHandler::handle(const GetBlockHeaderByHash::Request& req, GetBlockHeaderByHash::Response& res)
   {
     if (!getBlockHeaderByHash(req.hash, res.header))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Requested block does not exist";
       return;
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBlockHeaderByHeight::Request& req, cryptonote::rpc::GetBlockHeaderByHeight::Response& res)
+  void ZmqHandler::handle(const GetBlockHeaderByHeight::Request& req, GetBlockHeaderByHeight::Response& res)
   {
     const crypto::hash block_hash = m_core.get_block_id_by_height(req.height);
 
     if (!getBlockHeaderByHash(block_hash, res.header))
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Requested block does not exist";
       return;
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBlockHeadersByHeight::Request& req, cryptonote::rpc::GetBlockHeadersByHeight::Response& res)
+  void ZmqHandler::handle(const GetBlockHeadersByHeight::Request& req, GetBlockHeadersByHeight::Response& res)
   {
     res.headers.resize(req.heights.size());
 
@@ -733,114 +737,114 @@ namespace arqmaMQ
 
       if (!getBlockHeaderByHash(block_hash, res.headers[i]))
       {
-        res.status = cryptonote::rpc::Message::STATUS_FAILED;
+        res.status = Message::STATUS_FAILED;
         res.error_details = "A requested block does not exist";
         return;
       }
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBlock::Request& req, cryptonote::rpc::GetBlock::Response& res)
+  void ZmqHandler::handle(const GetBlock::Request& req, GetBlock::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetPeerList::Request& req, cryptonote::rpc::GetPeerList::Response& res)
+  void ZmqHandler::handle(const GetPeerList::Request& req, GetPeerList::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::SetLogHashRate::Request& req, cryptonote::rpc::SetLogHashRate::Response& res)
+  void ZmqHandler::handle(const SetLogHashRate::Request& req, SetLogHashRate::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::SetLogLevel::Request& req, cryptonote::rpc::SetLogLevel::Response& res)
+  void ZmqHandler::handle(const SetLogLevel::Request& req, SetLogLevel::Response& res)
   {
     if (req.level < 0 || req.level > 4)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Error: log level not valid";
     }
     else
     {
-      res.status = cryptonote::rpc::Message::STATUS_OK;
+      res.status = Message::STATUS_OK;
       mlog_set_log_level(req.level);
     }
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetTransactionPool::Request& req, cryptonote::rpc::GetTransactionPool::Response& res)
+  void ZmqHandler::handle(const GetTransactionPool::Request& req, GetTransactionPool::Response& res)
   {
     bool r = m_core.get_pool_for_rpc(res.transactions, res.key_images);
 
-    if (!r) res.status = cryptonote::rpc::Message::STATUS_FAILED;
-    else res.status = cryptonote::rpc::Message::STATUS_OK;
+    if (!r) res.status = Message::STATUS_FAILED;
+    else res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetConnections::Request& req, cryptonote::rpc::GetConnections::Response& res)
+  void ZmqHandler::handle(const GetConnections::Request& req, GetConnections::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBlockHeadersRange::Request& req, cryptonote::rpc::GetBlockHeadersRange::Response& res)
+  void ZmqHandler::handle(const GetBlockHeadersRange::Request& req, GetBlockHeadersRange::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::StopDaemon::Request& req, cryptonote::rpc::StopDaemon::Response& res)
+  void ZmqHandler::handle(const StopDaemon::Request& req, StopDaemon::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::StartSaveGraph::Request& req, cryptonote::rpc::StartSaveGraph::Response& res)
+  void ZmqHandler::handle(const StartSaveGraph::Request& req, StartSaveGraph::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::StopSaveGraph::Request& req, cryptonote::rpc::StopSaveGraph::Response& res)
+  void ZmqHandler::handle(const StopSaveGraph::Request& req, StopSaveGraph::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::HardForkInfo::Request& req, cryptonote::rpc::HardForkInfo::Response& res)
+  void ZmqHandler::handle(const HardForkInfo::Request& req, HardForkInfo::Response& res)
   {
     const cryptonote::Blockchain &blockchain = m_core.get_blockchain_storage();
     uint8_t version = req.version > 0 ? req.version : blockchain.get_ideal_hard_fork_version();
     res.info.version = blockchain.get_current_hard_fork_version();
     res.info.enabled = blockchain.get_hard_fork_voting_info(version, res.info.window, res.info.votes, res.info.threshold, res.info.earliest_height, res.info.voting);
     res.info.state = blockchain.get_hard_fork_state();
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetBans::Request& req, cryptonote::rpc::GetBans::Response& res)
+  void ZmqHandler::handle(const GetBans::Request& req, GetBans::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::SetBans::Request& req, cryptonote::rpc::SetBans::Response& res)
+  void ZmqHandler::handle(const SetBans::Request& req, SetBans::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::FlushTransactionPool::Request& req, cryptonote::rpc::FlushTransactionPool::Response& res)
+  void ZmqHandler::handle(const FlushTransactionPool::Request& req, FlushTransactionPool::Response& res)
   {
-    res.status = cryptonote::rpc::Message::STATUS_FAILED;
+    res.status = Message::STATUS_FAILED;
     res.error_details = "RPC method not yet implemented.";
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetOutputHistogram::Request& req, cryptonote::rpc::GetOutputHistogram::Response& res)
+  void ZmqHandler::handle(const GetOutputHistogram::Request& req, GetOutputHistogram::Response& res)
   {
     std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t> > histogram;
     try
@@ -849,7 +853,7 @@ namespace arqmaMQ
     }
     catch (const std::exception& e)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = e.what();
       return;
     }
@@ -859,13 +863,13 @@ namespace arqmaMQ
     for (const auto &i: histogram)
     {
       if (std::get<0>(i.second) >= req.min_count && (std::get<0>(i.second) <= req.max_count || req.max_count == 0))
-        res.histogram.emplace_back(cryptonote::rpc::output_amount_count{i.first, std::get<0>(i.second), std::get<1>(i.second), std::get<2>(i.second)});
+        res.histogram.emplace_back(output_amount_count{i.first, std::get<0>(i.second), std::get<1>(i.second), std::get<2>(i.second)});
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetOutputKeys::Request& req, cryptonote::rpc::GetOutputKeys::Response& res)
+  void ZmqHandler::handle(const GetOutputKeys::Request& req, GetOutputKeys::Response& res)
   {
     try
     {
@@ -875,26 +879,26 @@ namespace arqmaMQ
         rct::key mask;
         bool unlocked;
         m_core.get_blockchain_storage().get_output_key_mask_unlocked(i.amount, i.index, key, mask, unlocked);
-        res.keys.emplace_back(cryptonote::rpc::output_key_mask_unlocked{key, mask, unlocked});
+        res.keys.emplace_back(output_key_mask_unlocked{key, mask, unlocked});
       }
     }
     catch (const std::exception& e)
     {
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = e.what();
       return;
     }
 
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetRPCVersion::Request& req, cryptonote::rpc::GetRPCVersion::Response& res)
+  void ZmqHandler::handle(const GetRPCVersion::Request& req, GetRPCVersion::Response& res)
   {
-    res.version = cryptonote::rpc::DAEMON_RPC_VERSION_ZMQ;
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.version = DAEMON_RPC_VERSION_ZMQ;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetFeeEstimate::Request& req, cryptonote::rpc::GetFeeEstimate::Response& res)
+  void ZmqHandler::handle(const GetFeeEstimate::Request& req, GetFeeEstimate::Response& res)
   {
     res.hard_fork_version = m_core.get_blockchain_storage().get_current_hard_fork_version();
     res.estimated_base_fee = m_core.get_blockchain_storage().get_dynamic_base_fee_estimate(req.num_grace_blocks);
@@ -909,10 +913,10 @@ namespace arqmaMQ
       res.size_scale = 1; // per byte fee
       res.fee_mask = cryptonote::Blockchain::get_fee_quantization_mask();
     }
-    res.status = cryptonote::rpc::Message::STATUS_OK;
+    res.status = Message::STATUS_OK;
   }
 
-  void ZmqHandler::handle(const cryptonote::rpc::GetOutputDistribution::Request& req, cryptonote::rpc::GetOutputDistribution::Response& res)
+  void ZmqHandler::handle(const GetOutputDistribution::Request& req, GetOutputDistribution::Response& res)
   {
     try
     {
@@ -921,27 +925,27 @@ namespace arqmaMQ
       const uint64_t req_to_height = req.to_height ? req.to_height : (m_core.get_current_blockchain_height() - 1);
       for (std::uint64_t amount : req.amounts)
       {
-        auto data = cryptonote::rpc::RpcHandler::get_output_distribution([this](uint64_t amount, uint64_t from, uint64_t to, uint64_t &start_height, std::vector<uint64_t> &distribution, uint64_t &base) { return m_core.get_output_distribution(amount, from, to, start_height, distribution, base); }, amount, req.from_height, req_to_height, req.cumulative);
+        auto data = RpcHandler::get_output_distribution([this](uint64_t amount, uint64_t from, uint64_t to, uint64_t &start_height, std::vector<uint64_t> &distribution, uint64_t &base) { return m_core.get_output_distribution(amount, from, to, start_height, distribution, base); }, amount, req.from_height, req_to_height, req.cumulative);
         if (!data)
         {
           res.distributions.clear();
-          res.status = cryptonote::rpc::Message::STATUS_FAILED;
+          res.status = Message::STATUS_FAILED;
           res.error_details = "Failed to get output distribution";
           return;
         }
-        res.distributions.push_back(cryptonote::rpc::output_distribution{std::move(*data), amount, req.cumulative});
+        res.distributions.push_back(output_distribution{std::move(*data), amount, req.cumulative});
       }
-      res.status = cryptonote::rpc::Message::STATUS_OK;
+      res.status = Message::STATUS_OK;
     }
     catch (const std::exception& e)
     {
       res.distributions.clear();
-      res.status = cryptonote::rpc::Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = e.what();
     }
   }
 
-  bool ZmqHandler::getBlockHeaderByHash(const crypto::hash& hash_in, cryptonote::rpc::BlockHeaderResponse& header)
+  bool ZmqHandler::getBlockHeaderByHash(const crypto::hash& hash_in, BlockHeaderResponse& header)
   {
     cryptonote::block b;
 
@@ -980,51 +984,51 @@ namespace arqmaMQ
   {
     MDEBUG("Handling RPC request: " << request);
 
-    cryptonote::rpc::Message* resp_message = NULL;
+    Message* resp_message = NULL;
 
     try
     {
-      cryptonote::rpc::FullMessage req_full(request, true);
+      FullMessage req_full(request, true);
 
       rapidjson::Value& req_json = req_full.getMessage();
 
       const std::string request_type = req_full.getRequestType();
 
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetHeight, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetBlocksFast, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetHashesFast, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetTransactions, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::KeyImagesSpent, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetTxGlobalOutputIndices, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::SendRawTx, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::SendRawTxHex, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetInfo, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::StartMining, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::StopMining, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::MiningStatus, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::SaveBC, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetBlockHash, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetBlockTemplate, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetLastBlockHeader, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetBlockHeaderByHash, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetBlockHeaderByHeight, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetBlockHeadersByHeight, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetPeerList, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::SetLogLevel, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetTransactionPool, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::HardForkInfo, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetOutputHistogram, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetOutputKeys, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetRPCVersion, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetFeeEstimate, req_json, resp_message, handle);
-      //REQ_RESP_TYPES_MACRO(request_type, cryptonote::rpc::GetOutputDistribution, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetHeight, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetBlocksFast, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetHashesFast, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetTransactions, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, KeyImagesSpent, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetTxGlobalOutputIndices, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, SendRawTx, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, SendRawTxHex, req_json, resp_message, handle);
+      REQ_RESP_TYPES_MACRO(request_type, GetInfo, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, StartMining, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, StopMining, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, MiningStatus, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, SaveBC, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetBlockHash, req_json, resp_message, handle);
+      REQ_RESP_TYPES_MACRO(request_type, GetBlockTemplate, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetLastBlockHeader, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetBlockHeaderByHash, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetBlockHeaderByHeight, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetBlockHeadersByHeight, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetPeerList, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, SetLogLevel, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetTransactionPool, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, HardForkInfo, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetOutputHistogram, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetOutputKeys, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetRPCVersion, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetFeeEstimate, req_json, resp_message, handle);
+      //REQ_RESP_TYPES_MACRO(request_type, GetOutputDistribution, req_json, resp_message, handle);
 
       if (resp_message == NULL)
       {
-        return cryptonote::rpc::BAD_REQUEST(request_type, req_full.getID());
+        return BAD_REQUEST(request_type, req_full.getID());
       }
 
-      cryptonote::rpc::FullMessage resp_full = cryptonote::rpc::FullMessage::responseMessage(resp_message, req_full.getID());
+      FullMessage resp_full = FullMessage::responseMessage(resp_message, req_full.getID());
 
       const std::string response = resp_full.getJson();
       delete resp_message;
@@ -1041,7 +1045,7 @@ namespace arqmaMQ
         delete resp_message;
       }
 
-      return cryptonote::rpc::BAD_JSON(e.what());
+      return BAD_JSON(e.what());
     }
   }
 

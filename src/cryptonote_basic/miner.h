@@ -48,7 +48,7 @@ namespace cryptonote
   struct i_miner_handler
   {
     virtual bool handle_block_found(block& b, block_verification_context &bvc) = 0;
-    virtual bool get_block_template(block& b, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash) = 0;
+    virtual bool get_block_template(block &b, const account_public_address &adr, difficulty_type &diffic, uint64_t &height, uint64_t &expected_reward, const blobdata &ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash) = 0;
   protected:
     ~i_miner_handler(){};
   };
@@ -65,7 +65,7 @@ namespace cryptonote
     ~miner();
     bool init(const boost::program_options::variables_map& vm, network_type nettype);
     static void init_options(boost::program_options::options_description& desc);
-    bool set_block_template(const block& bl, const difficulty_type& diffic, uint64_t height);
+    bool set_block_template(const block &bl, const difficulty_type &diffic, uint64_t height);
     bool on_block_chain_update();
     bool start(const account_public_address& adr, size_t threads_count, const boost::thread::attributes& attrs, bool do_background = false, bool ignore_battery = false);
     uint64_t get_speed() const;

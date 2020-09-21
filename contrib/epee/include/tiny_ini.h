@@ -37,19 +37,19 @@ namespace epee
 namespace tiny_ini
 {
 
-	inline 
+	inline
 		bool get_param_value(const std::string& param_name, const std::string& ini_entry, std::string& res)
 	{
 		std::string expr_str = std::string() + "^("+ param_name +") *=(.*?)$";
-		const boost::regex match_ini_entry( expr_str, boost::regex::icase | boost::regex::normal); 
-		boost::smatch result;	
+		const boost::regex match_ini_entry( expr_str, boost::regex::icase | boost::regex::normal);
+		boost::smatch result;
 		if(!boost::regex_search(ini_entry, result, match_ini_entry, boost::match_default))
 			return false;
 		res = result[2];
 		string_tools::trim(res);
 		return true;
 	}
-	inline 
+	inline
 		std::string get_param_value(const std::string& param_name, const std::string& ini_entry)
 	{
 		std::string buff;
@@ -61,11 +61,11 @@ namespace tiny_ini
 		bool get_param_value_as_t(const std::string& param_name, const std::string& ini_entry, T& res)
 	{
 		std::string str_res = get_param_value(param_name, ini_entry);
-	
+
 		string_tools::trim(str_res);
 		if(!str_res.size())
 			return false;
-		
+
 		return string_tools::get_xtype_from_string(res, str_res);
 	}
 
