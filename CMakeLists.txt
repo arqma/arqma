@@ -957,31 +957,6 @@ else()
     endif()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${STATIC_FLAGS} ")
   endif()
-
-  if(CMAKE_BUILD_TYPE STREQUAL "Release" OR STATIC OR DEPENDS)
-    set(VAR_OPT_FLAGS "${VAR_OPT_FLAGS} -fuse-ld=gold -foptimize-strlen -pipe")
-    set(CMAKE_AR "gcc-ar")
-    set(CMAKE_RANLIB "gcc-ranlib")
-    set(CMAKE_NM "gcc-nm")
-  endif()
-
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_FLAGS}")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
-  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${RELEASE_FLAGS}")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")
-
-  #if(STATIC OR DEPENDS AND NOT (APPLE OR MSVC))
-  if(STATIC OR DEPENDS AND NOT (APPLE OR MSVC))
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -lgcc_eh -lstdc++ -lm -latomic -lrt")
-  endif()
-
-#  if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT APPLE)
-#    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -Wl,-Bstatic -lresolv -lgcc -lstdc++ -lm -latomic -lrt -Wl,-Bdynamic")
-#  endif()
-
-#  if(STATIC OR DEPENDS AND NOT APPLE)
-#    set(WRAP_CXA_THROW_FLAG "-Wl,--wrap=__cxa_throw")
-#  endif()
 endif()
 
 cmake_policy(SET CMP0093 NEW)
