@@ -70,6 +70,7 @@ target_link_libraries(arqma_mq
     net
     rpc
     daemon_messages
+    serialization
     cryptonote_core
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
