@@ -103,7 +103,7 @@ keypair get_deterministic_keypair_from_height(uint64_t height)
 uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hf_version)
 {
   if(hf_version >= 16)
-   return base_reward * 20 / 100;
+   return base_reward * 10 / 100;
   return 0;
 }
 
