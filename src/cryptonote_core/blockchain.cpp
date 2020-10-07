@@ -1335,7 +1335,7 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
 
 if(version >= 16)
 {
-  uint64_t governance_reward = get_governance_reward(height, base_reward, hf_version);
+  uint64_t governance_reward = get_governance_reward(height, base_reward, version);
 
   if(b.miner_tx.vout.back().amount != governance_reward)
   {
@@ -1353,7 +1353,6 @@ if(version >= 16)
       governance_wallet_address_str = std::string(config::governance::TESTNET_WALLET_ADDRESS);
       break;
     case MAINNET:
-    case FAKECHAIN:
       governance_wallet_address_str = std::string(config::governance::MAINNET_WALLET_ADDRESS);
       break;
     default:

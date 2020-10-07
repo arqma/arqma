@@ -133,7 +133,6 @@ bool validate_governance_reward_key(uint64_t height, const std::string& governan
     case TESTNET:
       cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, governance_wallet_address_str);
       break;
-    case FAKECHAIN:
     case MAINNET:
       cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, governance_wallet_address_str);
       break;
@@ -184,7 +183,7 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     uint64_t governance_reward = 0;
     if(hard_fork_version >= 16)
     {
-      governance_reward = get_governance_reward(height, block_reward);
+      governance_reward = get_governance_reward(height, block_reward, hf_version);
       block_reward -= governance_reward;
     }
 
@@ -224,7 +223,6 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
         case TESTNET:
           cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, std::string(config::governance::TESTNET_WALLET_ADDRESS));
           break;
-        case FAKECHAIN:
         case MAINNET:
           cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, std::string(config::governance::MAINNET_WALLET_ADDRESS));
           break;
