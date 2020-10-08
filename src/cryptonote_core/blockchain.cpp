@@ -897,6 +897,19 @@ size_t get_difficulty_blocks_count(uint8_t version)
     return DIFFICULTY_BLOCKS_COUNT_V16;
   }
 }
+//-----------------------------------------------------------------
+uint8_t get_current_diff_target(uint8_t version)
+{
+  LOG_PRINT_L3("Blockchain::" << __func__);
+
+  if(version < 10) {
+    return DIFFICULTY_TARGET_V2;
+  } else if(version < 16) {
+    return DIFFICULTY_TARGET_V11;
+  } else {
+    return DIFFICULTY_TARGET_V16;
+  }
+}
 //------------------------------------------------------------------
 // This function aggregates the cumulative difficulties and timestamps of the
 // last DIFFICULTY_BLOCKS_COUNT blocks and passes them to next_difficulty,
