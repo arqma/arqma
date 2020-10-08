@@ -53,6 +53,7 @@
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
 #define MONEY_PREMINE                                   ((uint64_t)7500000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
+#define EMISSION_FACTOR_V16                             (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
 
