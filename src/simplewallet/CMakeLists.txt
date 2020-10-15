@@ -50,7 +50,7 @@ target_link_libraries(simplewallet
     cncrypto
     common
     mnemonics
-    ${EPEE_READLINE}
+    epee
     qrcodegen
     version
     ${Boost_CHRONO_LIBRARY}

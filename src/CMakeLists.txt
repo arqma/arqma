@@ -29,6 +29,11 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
+if(WIN32 OR STATIC)
+  add_definitions(-DSTATICLIB)
+  add_definitions(-DMINIUPNP_STATICLIB)
+endif()
+ 
 function(arqma_private_headers group)
   source_group("${group}\\Private"
     FILES

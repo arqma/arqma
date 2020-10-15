@@ -68,7 +68,7 @@ target_link_libraries(wallet_api
     common
     cryptonote_core
     mnemonics
-    ${LMDB_LIBRARY}
+    lmdb
     ${Boost_CHRONO_LIBRARY}
     ${Boost_SERIALIZATION_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}

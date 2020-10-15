@@ -55,7 +55,7 @@ target_link_libraries(p2p
     cryptonote_core
     version
     net
-    ${MINIUPNPC_LIB}
+    miniupnpc
     ${Boost_CHRONO_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}

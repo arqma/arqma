@@ -26,30 +26,37 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-add_library(epee hex.cpp http_auth.cpp mlog.cpp net_helper.cpp net_utils_base.cpp string_tools.cpp wipeable_string.cpp memwipe.c
-    connection_basic.cpp network_throttle.cpp network_throttle-detail.cpp mlocker.cpp buffer.cpp net_ssl.cpp)
+add_library(epee
+  hex.cpp
+  http_auth.cpp
+  mlog.cpp
+  net_helper.cpp
+  net_utils_base.cpp
+  string_tools.cpp
+  wipeable_string.cpp
+  memwipe.c
+  connection_basic.cpp
+  network_throttle.cpp
+  network_throttle-detail.cpp
+  mlocker.cpp
+  buffer.cpp
+  net_ssl.cpp)
 
-if (USE_READLINE AND (GNU_READLINE_FOUND OR (DEPENDS AND NOT MINGW)))
-  add_library(epee_readline STATIC readline_buffer.cpp)
+if(TARGET readline)
+  target_sources(epee PRIVATE readline_buffer.cpp)
+  target_link_libraries(epee PUBLIC readline)
 endif()
 
-if(HAVE_C11)
-SET_PROPERTY(SOURCE memwipe.c PROPERTY COMPILE_FLAGS -std=c11)
-endif()
+set_property(SOURCE memwipe.c PROPERTY C_STANDARD 11)
 
 # Build and install libepee if we're building for GUI
-if (BUILD_GUI_DEPS)
-    if(IOS)
-        set(lib_folder lib-${ARCH})
-    else()
-        set(lib_folder lib)
-    endif()
-    install(TARGETS epee
-        ARCHIVE DESTINATION ${lib_folder})
-    if (USE_READLINE AND GNU_READLINE_FOUND)
-      install(TARGETS epee_readline
-          ARCHIVE DESTINATION ${lib_folder})
-    endif()
+if(BUILD_GUI_DEPS)
+  if(IOS)
+    set(lib_folder lib-${ARCH})
+  else()
+    set(lib_folder lib)
+  endif()
+  install(TARGETS epee ARCHIVE DESTINATION ${lib_folder})
 endif()
 
 target_link_libraries(epee
@@ -62,10 +69,4 @@ target_link_libraries(epee
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})
 
-if (USE_READLINE AND (GNU_READLINE_FOUND OR (DEPENDS AND NOT MINGW)))
-  target_link_libraries(epee_readline
-    PUBLIC
-      easylogging
-    PRIVATE
-    ${GNU_READLINE_LIBRARY})
-endif()
+target_include_directories(epee PUBLIC ../include)
