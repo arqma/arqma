@@ -774,7 +774,7 @@ else()
     add_linker_flag_if_supported(-Wl,--high-entropy-va LD_SECURITY_FLAGS)
   endif()
 
-  if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
+  if(NOT (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang"))
     set(LINKER_OPTIONS "${LINKER_OPTIONS} -ffunction-sections -fdata-sections -Wl,--gc-sections")
   endif()
   if(CMAKE_C_COMPILER_ID STREQUAL "Clang" AND APPLE)
