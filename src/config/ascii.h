@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 
+//cryptonote_core strings
 const std::string ascii_arqma_logo =
     "\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWWWWW@=WWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
@@ -49,3 +50,10 @@ const std::string main_message_true =
 const std::string main_message_false =
     "\n"
     "The daemon will start synchronizing with the network. This may take a long time to complete.\n";
+
+//cryptonote_protocol_handler
+const std::string crypto_synced =
+    "**********************************************************************\n"
+    "You are now synchronized with the network. You may now start arqma-wallet-cli.\n"
+    "Use the \"help\" command to see the list of available commands.\n"
+    "**********************************************************************";
