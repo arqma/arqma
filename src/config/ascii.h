@@ -43,3 +43,9 @@ const std::string ascii_arqma_info =
     "Use the \"help\" command to see the list of available commands.\n"
     "Use \"help <command>\" to see a command's documentation.\n"
     "**********************************************************************";
+const std::string main_message_true =
+    "\n"
+    "The daemon is running offline and will not attempt to sync to the ArQ-Net.\n";
+const std::string main_message_false =
+    "\n"
+    "The daemon will start synchronizing with the network. This may take a long time to complete.\n";

@@ -1653,14 +1653,12 @@ namespace cryptonote
   {
     if(!m_starter_message_showed)
      {
-       std::string main_message;
-       if (m_offline)
-        main_message = "The daemon is running offline and will not attempt to sync to the ArQ-Net.\n";
-      else
-        main_message = "The daemon will start synchronizing with the network. This may take a long time to complete.\n";
-      MGINFO_CYAN(ENDL << ascii_arqma_logo << ENDL);
-      MGINFO_YELLOW(ENDL << ascii_arqma_info << ENDL);
-      MGINFO_YELLOW(ENDL << main_message << ENDL);
+      MGINFO_YELLOW(ENDL << ascii_arqma_logo << ENDL);
+      MGINFO_CYAN(ENDL << ascii_arqma_info << ENDL);
+      if (m_offline)
+       MGINFO_GREEN(ENDL << main_message_true << ENDL);
+     else
+       MGINFO_GREEN(ENDL << main_message_false << ENDL);
 
       m_starter_message_showed = true;
     }
