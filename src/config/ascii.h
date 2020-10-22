@@ -1,16 +1,8 @@
 #pragma once
+#include <string>
 
-bool core::on_idle()
-{
-  if(!m_starter_message_showed)
-   {
-     std::string main_message;
-     if (m_offline)
-      main_message = "The daemon is running offline and will not attempt to sync to the ArQ-Net.";
-    else
-      main_message = "The daemon will start synchronizing with the network. This may take a long time to complete.";
-    MGINFO_CYAN(ENDL <<
-    "\n \n"
+const std::string ascii_arqma_logo =
+    "\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWWWWW@=WWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWW@+::.--+@WWWWWWWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWW=:::-:+W=----:#WWWWWWWWWWWWWWWWWWWWWW\n"
@@ -40,24 +32,14 @@ bool core::on_idle()
     "WWWWWWWWWWWWWWWWW#++*@WW*+@WWWWW#*=WW@**+#WWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWW@*+*##:=WWW**##***@WWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWWW@=++++=****#WWWWWWWWWWWWWWWWWWWWWWWW\n"
-    "WWWWWWWWWWWWWWWWWWWWWWWWWWW#*:*@WWWWWWWWWWWWWWWWWWWWWWWWWWW" << ENDL);
-    MGINFO_YELLOW(ENDL << "**********************************************************************" << ENDL
-      << main_message << ENDL
-      << ENDL
-      << "You can set the level of process detailization through \"set_log <level|categories>\" command," << ENDL
-      << "where <level> is between 0 (no details) and 4 (very verbose), or custom category based levels (eg, *:WARNING)." << ENDL
-      << ENDL
-      << "Use the \"help\" command to see the list of available commands." << ENDL
-      << "Use \"help <command>\" to see a command's documentation." << ENDL
-      << "**********************************************************************" << ENDL);
-    m_starter_message_showed = true;
-  }
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWW#*:*@WWWWWWWWWWWWWWWWWWWWWWWWWWW";
 
-  m_txpool_auto_relayer.do_call(boost::bind(&core::relay_txpool_transactions, this));
-  m_check_updates_interval.do_call(boost::bind(&core::check_updates, this));
-  m_check_disk_space_interval.do_call(boost::bind(&core::check_disk_space, this));
-  m_blockchain_pruning_interval.do_call(boost::bind(&core::update_blockchain_pruning, this));
-  m_miner.on_idle();
-  m_mempool.on_idle();
-  return true;
-}
+const std::string ascii_arqma_info =
+    "\n"
+    "**********************************************************************\n"
+    "You can set the level of process detailization through \"set_log <level|categories>\"\n"
+    "command, where <level> is between 0 (no details) and 4 (very verbose),\n"
+    "or custom category based levels (eg, *:WARNING).\n"
+    "Use the \"help\" command to see the list of available commands.\n"
+    "Use \"help <command>\" to see a command's documentation.\n"
+    "**********************************************************************";

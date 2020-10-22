@@ -56,7 +56,7 @@ using namespace epee;
 #include "ringct/rctSigs.h"
 #include "common/notify.h"
 #include "version.h"
-#include "ascii.h"
+#include "config/ascii.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
@@ -1648,7 +1648,31 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
+  //messages moved to ascii.h
+  bool core::on_idle()
+  {
+    if(!m_starter_message_showed)
+     {
+       std::string main_message;
+       if (m_offline)
+        main_message = "The daemon is running offline and will not attempt to sync to the ArQ-Net.\n";
+      else
+        main_message = "The daemon will start synchronizing with the network. This may take a long time to complete.\n";
+      MGINFO_CYAN(ENDL << ascii_arqma_logo << ENDL);
+      MGINFO_YELLOW(ENDL << ascii_arqma_info << ENDL);
+      MGINFO_YELLOW(ENDL << main_message << ENDL);
 
+      m_starter_message_showed = true;
+    }
+
+    m_txpool_auto_relayer.do_call(boost::bind(&core::relay_txpool_transactions, this));
+    m_check_updates_interval.do_call(boost::bind(&core::check_updates, this));
+    m_check_disk_space_interval.do_call(boost::bind(&core::check_disk_space, this));
+    m_blockchain_pruning_interval.do_call(boost::bind(&core::update_blockchain_pruning, this));
+    m_miner.on_idle();
+    m_mempool.on_idle();
+    return true;
+  }
 
   //-----------------------------------------------------------------------------------------------
   uint8_t core::get_ideal_hard_fork_version() const
