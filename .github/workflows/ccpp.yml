@@ -34,9 +34,9 @@ jobs:
         update: true
         install: mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-libusb mingw-w64-x86_64-libtool mingw-w64-x86_64-icu git automake autoconf patch
     - name: boost
-      run: pacman --noconfirm -U https://mirror.yandex.ru/mirrors/msys2/mingw/x86_64/mingw-w64-x86_64-boost-1.71.0-3-any.pkg.tar.xz
+      run: pacman --noconfirm -U https://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-boost-1.71.0-3-any.pkg.tar.xz
     - name: icu version
-      run: pacman --noconfirm -U https://mirror.yandex.ru/mirrors/msys2/mingw/x86_64/mingw-w64-x86_64-icu-65.1-1-any.pkg.tar.xz
+      run: pacman --noconfirm -U https://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-icu-65.1-1-any.pkg.tar.xz
     - name: build
       run: make release-static-win -j2
     - name: Upload windows artifacts
