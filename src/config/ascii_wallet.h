@@ -109,4 +109,37 @@ const char* USAGE_WELCOME("welcome");
 const char* USAGE_VERSION("version");
 const char* USAGE_RESCAN_BC("rescan_bc [hard|soft|keep_ki] [start_height=0]");
 const char* USAGE_HELP("help [<command>]");
+//chars related to this one up
+const char* START_MINING("Start mining in the daemon (bg_mining and ignore_battery are optional booleans).");
+const char* STOP_MINING("Stop mining in the daemon.");
+const char* SET_DAEMON("Set another daemon to connect to.");
+const char* SAVE_BC("Save the current blockchain data.");
+const char* REFRESH("Synchronize the transactions and balance.");
+const char* BALANCE("Show the wallet's balance of the currently selected account.");
+const char* INCOMING_TRANSFERS("Show the incoming transfers, all or filtered by availability and address index.\n\n"
+   "Output format:\n"
+   "Amount, Spent(\"T\"|\"F\"), \"locked\"|\"unlocked\", RingCT, Global Index, Transaction Hash, Address Index, [Public Key, Key Image] ");
+const char* PAYMENTS("Show the payments for the given payment IDs.");
+const char* BC_HEIGHT("Show the blockchain height.");
+const char* TRANSFER("Transfer <amount> to <address>. If the parameter \"index=<N1>[,<N2>,...]\" is specified, the wallet uses outputs received by addresses of those indices. If omitted, the wallet randomly chooses address indices to be used. In any case, it tries its best not to combine outputs across multiple addresses. <priority> is the priority of the transaction. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability. Multiple payments can be made at once by adding URI_2 or <address_2> <amount_2> etcetera (before the payment ID, if it's included)");
+const char* LOCKED_TRANSFER("Transfer <amount> to <address> and lock it for <lockblocks> (max. 1000000). If the parameter \"index=<N1>[,<N2>,...]\" is specified, the wallet uses outputs received by addresses of those indices. If omitted, the wallet randomly chooses address indices to be used. In any case, it tries its best not to combine outputs across multiple addresses. <priority> is the priority of the transaction. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability. Multiple payments can be made at once by adding URI_2 or <address_2> <amount_2> etcetera (before the payment ID, if it's included)");
+const char* LOCKED_SWEEP_ALL("Send all unlocked balance to an address and lock it for <lockblocks> (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used. <priority> is the priority of the sweep. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability.");
+const char* SWEEP_UNMIXABLE("Send all unmixable outputs to yourself with ring_size 1");
+const char* SWEEP_ALL("Send all unlocked balance to an address. If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used. If the parameter \"outputs=<N>\" is specified and  N > 0, wallet splits the transaction into N even outputs.");
+const char* SWEEP_BELOW("Send all unlocked outputs below the threshold to an address.");
+const char* SWEEP_SINGLE("Send a single output of the given key image to an address without change.");
+const char* DONATE("Donate <amount> to the development team (donations.arqma.com).");
+const char* SIGN_TRANSFER("Sign a transaction from a file. If the parameter \"export_raw\" is specified, transaction raw hex data suitable for the daemon RPC /sendrawtransaction is exported.");
+const char* SUBMIT_TRANSFER("Submit a signed transaction from a file.");
+const char* SET_LOG("Change the current log detail (level must be <0-4>).");
+const char* ACCOUNT("If no arguments are specified, the wallet shows all the existing accounts along with their balances.\n"
+   "If the \"new\" argument is specified, the wallet creates a new account with its label initialized by the provided label text (which can be empty).\n"
+   "If the \"switch\" argument is specified, the wallet switches to the account specified by <index>.\n"
+   "If the \"label\" argument is specified, the wallet sets the label of the account specified by <index> to the provided label text.\n"
+   "If the \"tag\" argument is specified, a tag <tag_name> is assigned to the specified accounts <account_index_1>, <account_index_2>, ....\n"
+   "If the \"untag\" argument is specified, the tags assigned to the specified accounts <account_index_1>, <account_index_2> ..., are removed.\n"
+   "If the \"tag_description\" argument is specified, the tag <tag_name> is assigned an arbitrary text <description>.");
+const char* ADDRESS("If no arguments are specified or <index> is specified, the wallet shows the default or specified address. If \"all\" is specified, the wallet shows all the existing addresses in the currently selected account. If \"new \" is specified, the wallet creates a new address with the provided label text (which can be empty). If \"label\" is specified, the wallet sets the label of the address specified by <index> to the provided label text.");
+const char* INTEGRATED_ADDRESS("Encode a payment ID into an integrated address for the current wallet public address (no argument uses a random payment ID), or decode an integrated address to standard address and payment ID");
+const char* ADDRESS_BOOK("Print all entries in the address book, optionally adding/deleting an entry to/from it.");
 }

@@ -2618,99 +2618,91 @@ simple_wallet::simple_wallet()
   m_cmd_binder.set_handler("start_mining",
                            boost::bind(&simple_wallet::start_mining, this, _1),
                            tr(ascii_wallet::USAGE_START_MINING),
-                           tr("Start mining in the daemon (bg_mining and ignore_battery are optional booleans)."));
+                           tr(ascii_wallet::START_MINING));
   m_cmd_binder.set_handler("stop_mining",
                            boost::bind(&simple_wallet::stop_mining, this, _1),
-                           tr("Stop mining in the daemon."));
+                           tr(ascii_wallet::STOP_MINING));
   m_cmd_binder.set_handler("set_daemon",
                            boost::bind(&simple_wallet::set_daemon, this, _1),
                            tr(ascii_wallet::USAGE_SET_DAEMON),
-                           tr("Set another daemon to connect to."));
+                           tr(ascii_wallet::SET_DAEMON));
   m_cmd_binder.set_handler("save_bc",
                            boost::bind(&simple_wallet::save_bc, this, _1),
-                           tr("Save the current blockchain data."));
+                           tr(ascii_wallet::SAVE_BC));
   m_cmd_binder.set_handler("refresh",
                            boost::bind(&simple_wallet::refresh, this, _1),
-                           tr("Synchronize the transactions and balance."));
+                           tr(ascii_wallet::REFRESH));
   m_cmd_binder.set_handler("balance",
                            boost::bind(&simple_wallet::show_balance, this, _1),
                            tr(ascii_wallet::USAGE_SHOW_BALANCE),
-                           tr("Show the wallet's balance of the currently selected account."));
+                           tr(ascii_wallet::BALANCE));
   m_cmd_binder.set_handler("incoming_transfers",
                            boost::bind(&simple_wallet::show_incoming_transfers, this, _1),
                            tr(ascii_wallet::USAGE_INCOMING_TRANSFERS),
-                           tr("Show the incoming transfers, all or filtered by availability and address index.\n\n"
-                              "Output format:\n"
-                              "Amount, Spent(\"T\"|\"F\"), \"locked\"|\"unlocked\", RingCT, Global Index, Transaction Hash, Address Index, [Public Key, Key Image] "));
+                           tr(ascii_wallet::INCOMING_TRANSFERS));
   m_cmd_binder.set_handler("payments",
                            boost::bind(&simple_wallet::show_payments, this, _1),
                            tr(ascii_wallet::USAGE_PAYMENTS),
-                           tr("Show the payments for the given payment IDs."));
+                           tr(ascii_wallet::PAYMENTS));
   m_cmd_binder.set_handler("bc_height",
                            boost::bind(&simple_wallet::show_blockchain_height, this, _1),
-                           tr("Show the blockchain height."));
+                           tr(ascii_wallet::BC_HEIGHT));
   m_cmd_binder.set_handler("transfer", boost::bind(&simple_wallet::transfer, this, _1),
                            tr(ascii_wallet::USAGE_TRANSFER),
-                           tr("Transfer <amount> to <address>. If the parameter \"index=<N1>[,<N2>,...]\" is specified, the wallet uses outputs received by addresses of those indices. If omitted, the wallet randomly chooses address indices to be used. In any case, it tries its best not to combine outputs across multiple addresses. <priority> is the priority of the transaction. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability. Multiple payments can be made at once by adding URI_2 or <address_2> <amount_2> etcetera (before the payment ID, if it's included)"));
+                           tr(ascii_wallet::TRANSFER));
   m_cmd_binder.set_handler("locked_transfer",
                            boost::bind(&simple_wallet::locked_transfer, this, _1),
                            tr(ascii_wallet::USAGE_LOCKED_TRANSFER),
-                           tr("Transfer <amount> to <address> and lock it for <lockblocks> (max. 1000000). If the parameter \"index=<N1>[,<N2>,...]\" is specified, the wallet uses outputs received by addresses of those indices. If omitted, the wallet randomly chooses address indices to be used. In any case, it tries its best not to combine outputs across multiple addresses. <priority> is the priority of the transaction. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability. Multiple payments can be made at once by adding URI_2 or <address_2> <amount_2> etcetera (before the payment ID, if it's included)"));
+                           tr(ascii_wallet::LOCKED_TRANSFER));
   m_cmd_binder.set_handler("locked_sweep_all",
                            boost::bind(&simple_wallet::locked_sweep_all, this, _1),
                            tr(ascii_wallet::USAGE_LOCKED_SWEEP_ALL),
-                           tr("Send all unlocked balance to an address and lock it for <lockblocks> (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used. <priority> is the priority of the sweep. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability."));
+                           tr(ascii_wallet::LOCKED_SWEEP_ALL));
   m_cmd_binder.set_handler("sweep_unmixable",
                            boost::bind(&simple_wallet::sweep_unmixable, this, _1),
-                           tr("Send all unmixable outputs to yourself with ring_size 1"));
+                           tr(ascii_wallet::SWEEP_UNMIXABLE));
   m_cmd_binder.set_handler("sweep_all", boost::bind(&simple_wallet::sweep_all, this, _1),
                            tr(ascii_wallet::USAGE_SWEEP_ALL),
-                           tr("Send all unlocked balance to an address. If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used. If the parameter \"outputs=<N>\" is specified and  N > 0, wallet splits the transaction into N even outputs."));
+                           tr(ascii_wallet::SWEEP_ALL));
   m_cmd_binder.set_handler("sweep_below",
                            boost::bind(&simple_wallet::sweep_below, this, _1),
                            tr(ascii_wallet::USAGE_SWEEP_BELOW),
-                           tr("Send all unlocked outputs below the threshold to an address."));
+                           tr(ascii_wallet::SWEEP_BELOW));
   m_cmd_binder.set_handler("sweep_single",
                            boost::bind(&simple_wallet::sweep_single, this, _1),
                            tr(ascii_wallet::USAGE_SWEEP_SINGLE),
-                           tr("Send a single output of the given key image to an address without change."));
+                           tr(ascii_wallet::SWEEP_SINGLE));
   m_cmd_binder.set_handler("donate",
                            boost::bind(&simple_wallet::donate, this, _1),
                            tr(ascii_wallet::USAGE_DONATE),
-                           tr("Donate <amount> to the development team (donations.arqma.com)."));
+                           tr(ascii_wallet::DONATE));
   m_cmd_binder.set_handler("sign_transfer",
                            boost::bind(&simple_wallet::sign_transfer, this, _1),
                            tr(ascii_wallet::USAGE_SIGN_TRANSFER),
-                           tr("Sign a transaction from a file. If the parameter \"export_raw\" is specified, transaction raw hex data suitable for the daemon RPC /sendrawtransaction is exported."));
+                           tr(ascii_wallet::SIGN_TRANSFER));
   m_cmd_binder.set_handler("submit_transfer",
                            boost::bind(&simple_wallet::submit_transfer, this, _1),
-                           tr("Submit a signed transaction from a file."));
+                           tr(ascii_wallet::SUBMIT_TRANSFER));
   m_cmd_binder.set_handler("set_log",
                            boost::bind(&simple_wallet::set_log, this, _1),
                            tr(ascii_wallet::USAGE_SET_LOG),
-                           tr("Change the current log detail (level must be <0-4>)."));
+                           tr(ascii_wallet::SET_LOG));
   m_cmd_binder.set_handler("account",
                            boost::bind(&simple_wallet::account, this, _1),
                            tr(ascii_wallet::USAGE_ACCOUNT),
-                           tr("If no arguments are specified, the wallet shows all the existing accounts along with their balances.\n"
-                              "If the \"new\" argument is specified, the wallet creates a new account with its label initialized by the provided label text (which can be empty).\n"
-                              "If the \"switch\" argument is specified, the wallet switches to the account specified by <index>.\n"
-                              "If the \"label\" argument is specified, the wallet sets the label of the account specified by <index> to the provided label text.\n"
-                              "If the \"tag\" argument is specified, a tag <tag_name> is assigned to the specified accounts <account_index_1>, <account_index_2>, ....\n"
-                              "If the \"untag\" argument is specified, the tags assigned to the specified accounts <account_index_1>, <account_index_2> ..., are removed.\n"
-                              "If the \"tag_description\" argument is specified, the tag <tag_name> is assigned an arbitrary text <description>."));
+                           tr(ascii_wallet::ACCOUNT));
   m_cmd_binder.set_handler("address",
                            boost::bind(&simple_wallet::print_address, this, _1),
                            tr(ascii_wallet::USAGE_ADDRESS),
-                           tr("If no arguments are specified or <index> is specified, the wallet shows the default or specified address. If \"all\" is specified, the wallet shows all the existing addresses in the currently selected account. If \"new \" is specified, the wallet creates a new address with the provided label text (which can be empty). If \"label\" is specified, the wallet sets the label of the address specified by <index> to the provided label text."));
+                           tr(ascii_wallet::ADDRESS));
   m_cmd_binder.set_handler("integrated_address",
                            boost::bind(&simple_wallet::print_integrated_address, this, _1),
                            tr(ascii_wallet::USAGE_INTEGRATED_ADDRESS),
-                           tr("Encode a payment ID into an integrated address for the current wallet public address (no argument uses a random payment ID), or decode an integrated address to standard address and payment ID"));
+                           tr(ascii_wallet::INTEGRATED_ADDRESS));
   m_cmd_binder.set_handler("address_book",
                            boost::bind(&simple_wallet::address_book, this, _1),
                            tr(ascii_wallet::USAGE_ADDRESS_BOOK),
-                           tr("Print all entries in the address book, optionally adding/deleting an entry to/from it."));
+                           tr(ascii_wallet::ADDRESS_BOOK));
   m_cmd_binder.set_handler("save",
                            boost::bind(&simple_wallet::save, this, _1),
                            tr("Save the wallet data."));
