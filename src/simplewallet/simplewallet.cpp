@@ -2705,82 +2705,33 @@ simple_wallet::simple_wallet()
                            tr(ascii_wallet::ADDRESS_BOOK));
   m_cmd_binder.set_handler("save",
                            boost::bind(&simple_wallet::save, this, _1),
-                           tr("Save the wallet data."));
+                           tr(ascii_wallet::SAVE));
   m_cmd_binder.set_handler("save_watch_only",
                            boost::bind(&simple_wallet::save_watch_only, this, _1),
-                           tr("Save a watch-only keys file."));
+                           tr(ascii_wallet::SAVE_WATCH_ONLY));
   m_cmd_binder.set_handler("viewkey",
                            boost::bind(&simple_wallet::viewkey, this, _1),
-                           tr("Display the private view key."));
+                           tr(ascii_wallet::VIEWKEY));
   m_cmd_binder.set_handler("spendkey",
                            boost::bind(&simple_wallet::spendkey, this, _1),
-                           tr("Display the private spend key."));
+                           tr(ascii_wallet::SPENDKEY));
   m_cmd_binder.set_handler("seed",
                            boost::bind(&simple_wallet::seed, this, _1),
-                           tr("Display the Electrum-style mnemonic seed"));
+                           tr(ascii_wallet::SEED));
   m_cmd_binder.set_handler("set",
                            boost::bind(&simple_wallet::set_variable, this, _1),
                            tr(ascii_wallet::USAGE_SET_VARIABLE),
-                           tr("Available options:\n "
-                                  "seed language\n "
-                                  "  Set the wallet's seed language.\n "
-                                  "always-confirm-transfers <1|0>\n "
-                                  "  Whether to confirm unsplit txes.\n "
-                                  "print-ring-members <1|0>\n "
-                                  "  Whether to print detailed information about ring members during confirmation.\n "
-                                  "store-tx-info <1|0>\n "
-                                  "  Whether to store outgoing tx info (destination address, payment ID, tx secret key) for future reference.\n "
-                                  "default-ring-size <n>\n "
-                                  "  Set the default ring size (obsolete).\n "
-                                  "auto-refresh <1|0>\n "
-                                  "  Whether to automatically synchronize new blocks from the daemon.\n "
-                                  "refresh-type <full|optimize-coinbase|no-coinbase|default>\n "
-                                  "  Set the wallet's refresh behaviour.\n "
-                                  "priority [0|1|2|3|4]\n "
-                                  "  Set the fee to default/unimportant/normal/elevated/priority.\n "
-                                  "confirm-missing-payment-id <1|0>\n "
-                                  "ask-password <0|1|2   (or never|action|decrypt)>\n "
-                                  "unit <arqma|milliarq|microarq|nanoarq>\n "
-                                  "  Set the default Arqma (sub-)unit.\n "
-                                  "min-outputs-count [n]\n "
-                                  "  Try to keep at least that many outputs of value at least min-outputs-value.\n "
-                                  "min-outputs-value [n]\n "
-                                  "  Try to keep at least min-outputs-count outputs of at least that value.\n "
-                                  "merge-destinations <1|0>\n "
-                                  "  Whether to merge multiple payments to the same destination address.\n "
-                                  "confirm-backlog <1|0>\n "
-                                  "  Whether to warn if there is transaction backlog.\n "
-                                  "confirm-backlog-threshold [n]\n "
-                                  "  Set a threshold for confirm-backlog to only warn if the transaction backlog is greater than n blocks.\n "
-                                  "refresh-from-block-height [n]\n "
-                                  "  Set the height before which to ignore blocks.\n "
-                                  "auto-low-priority <1|0>\n "
-                                  "  Whether to automatically use the low priority fee level when it's safe to do so.\n "
-                                  "segregate-pre-fork-outputs <1|0>\n "
-                                  "  Set this if you intend to spend outputs on both ArQmA AND a key reusing fork.\n "
-                                  "key-reuse-mitigation2 <1|0>\n "
-                                  "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n"
-                                  "subaddress-lookahead <major>:<minor>\n "
-                                  "  Set the lookahead sizes for the subaddress hash table.\n "
-                                  "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n "
-                                  "segregation-height <n>\n "
-                                  "  Set to the height of a key reusing fork you want to use, 0 to use default.\n"
-                                  "persistent-client-id <1|0>\n "
-                                  "  Whether to keep using the same client id for RPC payment over wallet restarts.\n"
-                                  "auto-mine-for-rpc-payment-threshold <float>\n "
-                                  "  Whether to automatically start mining for RPC payment if the daemon requires it.\n"
-                                  "credits-target <unsigned int>\n"
-                                  "  The RPC payment credits balance to target."));
+                           tr(ascii_wallet::SET));
   m_cmd_binder.set_handler("encrypted_seed",
                            boost::bind(&simple_wallet::encrypted_seed, this, _1),
-                           tr("Display the encrypted Electrum-style mnemonic seed."));
+                           tr(ascii_wallet::ENCRYPTED_KEY));
   m_cmd_binder.set_handler("rescan_spent",
                            boost::bind(&simple_wallet::rescan_spent, this, _1),
-                           tr("Rescan the blockchain for spent outputs."));
+                           tr(ascii_wallet::RESCAN_SPENT));
   m_cmd_binder.set_handler("get_tx_key",
                            boost::bind(&simple_wallet::get_tx_key, this, _1),
                            tr(ascii_wallet::USAGE_GET_TX_KEY),
-                           tr("Get the transaction key (r) for a given <txid>."));
+                           tr(ascii_wallet::GET_TX_KEY));
   m_cmd_binder.set_handler("set_tx_key",
                            boost::bind(&simple_wallet::set_tx_key, this, _1),
                            tr(ascii_wallet::USAGE_SET_TX_KEY),
