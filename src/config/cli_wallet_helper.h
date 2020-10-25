@@ -33,7 +33,7 @@
 #pragma once
 #include <string>
 
-namespace ascii_wallet
+namespace command_helper
 {
 const char* USAGE_START_MINING("start_mining [<number_of_threads>] [bg_mining] [ignore_battery]");
 const char* USAGE_SET_DAEMON("set_daemon <host>[:<port>] [trusted|untrusted]");
@@ -200,4 +200,68 @@ const char* SET("Available options:\n "
 const char* ENCRYPTED_KEY("Display the encrypted Electrum-style mnemonic seed.");
 const char* RESCAN_SPENT("Rescan the blockchain for spent outputs.");
 const char* GET_TX_KEY("Get the transaction key (r) for a given <txid>.");
+const char* SET_TX_KEY("Set the transaction key (r) for a given <txid> in case the tx was made by some other device or 3rd party wallet.");
+const char* CHECK_TX_KEY("Check the amount going to <address> in <txid>.");
+const char* GET_TX_PROOF("Generate a signature proving funds sent to <address> in <txid>, optionally with a challenge string <message>, using either the transaction secret key (when <address> is not your wallet's address) or the view secret key (otherwise), which does not disclose the secret key.");
+const char* CHECK_TX_PROOF("Check the proof for funds going to <address> in <txid> with the challenge string <message> if any.");
+const char* GET_SPEND_PROOF("Generate a signature proving that you generated <txid> using the spend secret key, optionally with a challenge string <message>.");
+const char* CHECK_SPEND_PROOF("Check a signature proving that the signer generated <txid>, optionally with a challenge string <message>.");
+const char* GET_RESERVE_PROOF("Generate a signature proving that you own at least this much, optionally with a challenge string <message>.\n"
+   "If 'all' is specified, you prove the entire sum of all of your existing accounts' balances.\n"
+   "Otherwise, you prove the reserve of the smallest possible amount above <amount> available in your current account.");
+const char* CHECK_RESERVE_PROOF("Check a signature proving that the owner of <address> holds at least this much, optionally with a challenge string <message>.");
+const char* SHOW_TRANSFERS("Show the incoming/outgoing transfers within an optional height range.\n\n"
+   "Output format:\n"
+   "In or Coinbase:    Block Number, \"block\"|\"in\",              Time, Amount,  Transaction Hash, Payment ID, Subaddress Index,                     \"-\", Note\n"
+   "Out:               Block Number, \"out\",                     Time, Amount*, Transaction Hash, Payment ID, Fee, Destinations, Input addresses**, \"-\", Note\n"
+   "Pool:                            \"pool\", \"in\",              Time, Amount,  Transaction Hash, Payment Id, Subaddress Index,                     \"-\", Note, Double Spend Note\n"
+   "Pending or Failed:               \"failed\"|\"pending\", \"out\", Time, Amount*, Transaction Hash, Payment ID, Fee, Input addresses**,               \"-\", Note\n\n"
+   "* Excluding change and fee.\n"
+   "** Set of address indices used as inputs in this transfer.");
+const char* EXPORT_TRANSFERS("Export to CSV the incoming/outgoing transfers within an optional height range.");
+const char* UNSPENT_OUTPUTS("Show the unspent outputs of a specified address within an optional amount range.");
+const char* RESCAN_BC("Rescan the blockchain from scratch. If \"hard\" is specified, you will lose any information which can not be recovered from the blockchain itself.");
+const char* SET_TX_NOTE("Set an arbitrary string note for a <txid>.");
+const char* GET_TX_NOTE("Get a string note for a txid.");
+const char* SET_DESCRIPTION("Set an arbitrary description for the wallet.");
+const char* GET_DESCRIPTION("Get the description of the wallet.");
+const char* STATUS("Show the wallet's status.");
+const char* WALLET_INFO("Show the wallet's information.");
+const char* SIGN("Sign the contents of a file.");
+const char* VERIFY("Verify a signature on the contents of a file.");
+const char* EXPORT_KEY_IMAGES("Export a signed set of key images to a <filename>.");
+const char* IMPORT_KEY_IMAGES("Import a signed key images list and verify their spent status.");
+const char* HW_RECONNECT("Attempts to reconnect HW wallet.");
+const char* EXPORT_OUTPUTS("Export a set of outputs owned by this wallet.");
+const char* IMPORT_OUTPUTS("Import a set of outputs owned by this wallet.");
+const char* SHOW_TRANSFER("Show information about a transfer to/from this address.");
+const char* PASSWORD("Change the wallet's password.");
+const char* PAYMENT_ID("Generate a new random full size payment id. These will be unencrypted on the blockchain, see integrated_address for encrypted short payment ids.");
+const char* FEE("Print the information about the current fee and transaction backlog.");
+const char* PREPARE_MULTISIG("Export data needed to create a multisig wallet");
+const char* MAKE_MULTISIG("Turn this wallet into a multisig wallet");
+const char* FINALIZE_MULTISIG("Turn this wallet into a multisig wallet, extra step for N-1/N wallets");
+const char* EXCHANGE_MULTISIG_KEYS("Performs extra multisig keys exchange rounds. Needed for arbitrary M/N multisig wallets");
+const char* EXPORT_MULTISIG_INFO("Export multisig info for other participants");
+const char* IMPORT_MULTISIG_INFO("Import multisig info from other participants");
+const char* SIGN_MULTISIG("Sign a multisig transaction from a file");
+const char* SUBMIT_MULTISIG("Submit a signed multisig transaction from a file");
+const char* EXPORT_RAW_MULTISIG_TX("Export a signed multisig transaction to a file");
+const char* PRINT_RING("Print the ring(s) used to spend a given key image or transaction (if the ring size is > 1)\n\n"
+   "Output format:\n"
+   "Key Image, \"absolute\", list of rings");
+const char* SET_RING("Set the ring used for a given key image, so it can be reused in a fork");
+const char* SAVE_KNOWN_RINGS("Save known rings to the shared rings database");
+const char* MARK_OUTPUT_SPENT("Mark output(s) as spent so they never get selected as fake outputs in a ring");
+const char* MARK_OUTPUT_UNSPENT("Mark an output as unspent so it may get selected as a fake output in a ring");
+const char* IS_OUTPUT_SPENT("Checks whether an output is marked as spent");
+const char* PUBLIC_NODES("Lists known public nodes.");
+const char* NET_STATS("Prints simple network stats.");
+const char* WELCOME("Prints basic info about Arqma for first time users");
+const char* VERSION("Returns version information.");
+const char* RPC_PAYMENT_INFO("Get info about RPC payments to current node");
+const char* START_MINING_FOR_RPC("Start mining to pay for RPC access");
+const char* STOP_MINING_FOR_RPC("Stop mining to pay for RPC access");
+const char* SHOW_QR_CODE("Show address as QR code.");
+const char* HELP("Show the help section or the documentation about a <command>.");
 }
