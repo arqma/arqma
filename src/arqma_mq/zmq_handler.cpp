@@ -613,17 +613,12 @@ namespace arqmaMQ
       return false;
     }
 
-    seed_hash = next_seed_hash = crypto::null_hash;
-    if(b.major_version >= RX_BLOCK_VERSION)
-    {
-      uint64_t seed_height, next_height;
-      crypto::rx_seedheights(height, &seed_height, &next_height);
-      seed_hash = m_core.get_block_id_by_height(seed_height);
-      if(next_height != seed_height)
-      {
-        next_seed_hash = m_core.get_block_id_by_height(next_height);
-      }
-    }
+    uint64_t next_height, seed_height;
+    crypto::rx_seedheights(height, &seed_height, &next_height);
+    if (next_height != seed_height)
+      next_seed_hash = m_core.get_block_id_by_height(next_height);
+    else
+      next_seed_hash = seed_hash;
 
     if (extra_nonce.empty())
     {
