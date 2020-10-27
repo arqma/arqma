@@ -31,7 +31,7 @@ SET(LIBUDEV_LIBRARY @prefix@/lib/libudev.a)
 
 SET(ZMQ_INCLUDE_DIRS @prefix@/include)
 SET(ZMQ_LIBRARIES @prefix@/lib/libzmq.a)
-SET(ZMQ_LIBRARY_DIR @prefix@/lib)
+SET(ZMQ_LIBRARY_DIRS @prefix@/lib)
 
 SET(SODIUM_INCLUDE_DIRS @prefix@/include)
 SET(SODIUM_LIBRARIES @prefix@/lib/libsodium.a)
@@ -46,9 +46,7 @@ SET(Boost_NO_SYSTEM_PATHS ON)
 SET(Boost_USE_STATIC_LIBS ON)
 SET(Boost_USE_STATIC_RUNTIME ON)
 
-SET(OPENSSL_LIBRARY_DIR @prefix@/lib)
-SET(OPENSSL_INCLUDE_DIR @prefix@/include)
-SET(OPENSSL_LIBRARIES @prefix@/lib/libcrypto.a)
+SET(OPENSSL_ROOT_DIR @prefix@)
 
 SET(ARCHITECTURE @arch@)
 
