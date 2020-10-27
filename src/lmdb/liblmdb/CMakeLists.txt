@@ -47,6 +47,15 @@ if(${ARCH_WIDTH} EQUAL 32)
   target_compile_definitions(lmdb PUBLIC -DMDB_VL32)
 endif()
 
+if(WIN32)
+  set(CMAKE_C_FLAGS "-Wall -Wno-unused-but-set-variable -Wno-array-bounds -Wno-stringop-overflow -Wno-return-local-addr -Wno-format -Wno-format-truncation -Wno-unknown-pragmas")
+endif()
+
+if(WIN32)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-truncation")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format-truncation")
+endif()
+
 # GUI/libwallet install target
 if(BUILD_GUI_DEPS)
   if(IOS)
