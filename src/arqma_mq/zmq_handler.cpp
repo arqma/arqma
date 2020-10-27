@@ -593,6 +593,7 @@ namespace arqmaMQ
 
     cryptonote::block b;
     cryptonote::blobdata blob_reserve;
+    size_t reserved_offset;
     if(!req.extra_nonce.empty())
     {
       if(!string_tools::parse_hexstr_to_binbuff(req.extra_nonce, blob_reserve))
@@ -614,7 +615,6 @@ namespace arqmaMQ
         return;
       }
     }
-    size_t reserved_offset;
     uint64_t seed_height;
     crypto::hash seed_hash, next_seed_hash;
     if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
@@ -654,6 +654,13 @@ namespace arqmaMQ
       LOG_ERROR("Failed to get tx pub key in coinbase extra");
       return false;
     }
+
+    uint64_t next_height;
+    crypto::rx_seedheights(height, &seed_height, &next_height);
+    if (next_height != seed_height)
+      next_seed_hash = m_core.get_block_id_by_height(next_height);
+    else
+      next_seed_hash = seed_hash;
 
     if(extra_nonce.empty())
     {
