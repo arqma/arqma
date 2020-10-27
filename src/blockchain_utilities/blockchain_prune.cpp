@@ -28,7 +28,6 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
-#include <lmdb.h>
 #include <boost/algorithm/string.hpp>
 #include "common/command_line.h"
 #include "common/pruning.h"
@@ -36,6 +35,7 @@
 #include "cryptonote_core/blockchain.h"
 #include "blockchain_db/blockchain_db.h"
 #include "blockchain_db/lmdb/db_lmdb.h"
+#include "lmdb/lmdb_drv/lmdb.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY

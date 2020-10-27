@@ -31,9 +31,9 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
-#include <lmdb.h>
 #include <utility>
 
+#include "lmdb/lmdb_drv/lmdb.h"
 #include "span.h"
 
 namespace lmdb

@@ -28,7 +28,7 @@
 
 #include "error.h"
 
-#include <lmdb.h>
+#include "lmdb/lmdb_drv/lmdb.h"
 #include <string>
 
 namespace {

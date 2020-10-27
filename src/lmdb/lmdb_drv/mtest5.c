@@ -1,6 +1,6 @@
-/* mtest3.c - memory-mapped database tester/toy */
+/* mtest5.c - memory-mapped database tester/toy */
 /*
- * Copyright 2011-2015 Howard Chu, Symas Corp.
+ * Copyright 2011-2018 Howard Chu, Symas Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,7 +12,7 @@
  * <http://www.OpenLDAP.org/license.html>.
  */
 
-/* Tests for sorted duplicate DBs */
+/* Tests for sorted duplicate DBs using cursor_put */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,6 +56,7 @@ int main(int argc,char * argv[])
 
 	E(mdb_txn_begin(env, NULL, 0, &txn));
 	E(mdb_dbi_open(txn, "id2", MDB_CREATE|MDB_DUPSORT, &dbi));
+	E(mdb_cursor_open(txn, dbi, &cursor));
 
 	key.mv_size = sizeof(int);
 	key.mv_data = kval;
@@ -67,10 +68,11 @@ int main(int argc,char * argv[])
 		if (!(i & 0x0f))
 			sprintf(kval, "%03x", values[i]);
 		sprintf(sval, "%03x %d foo bar", values[i], values[i]);
-		if (RES(MDB_KEYEXIST, mdb_put(txn, dbi, &key, &data, MDB_NODUPDATA)))
+		if (RES(MDB_KEYEXIST, mdb_cursor_put(cursor, &key, &data, MDB_NODUPDATA)))
 			j++;
 	}
 	if (j) printf("%d duplicates skipped\n", j);
+	mdb_cursor_close(cursor);
 	E(mdb_txn_commit(txn));
 	E(mdb_env_stat(env, &mst));
 

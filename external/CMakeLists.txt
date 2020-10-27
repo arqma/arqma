@@ -61,7 +61,6 @@ target_link_libraries(libunbound INTERFACE unbound)
 target_include_directories(libunbound INTERFACE unbound/libunbound)
 set(UNBOUND_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/unbound/libunbound" PARENT_SCOPE)
 
-add_subdirectory(liblmdb)
 add_subdirectory(easylogging++)
 add_subdirectory(qrcodegen)
 add_subdirectory(randomarq EXCLUDE_FROM_ALL)

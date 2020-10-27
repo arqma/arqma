@@ -34,7 +34,7 @@
 #include "ringct/rctTypes.h"
 #include <boost/thread/tss.hpp>
 
-#include <lmdb.h>
+#include "lmdb/lmdb_drv/lmdb.h"
 
 #define ENABLE_AUTO_RESIZE
 

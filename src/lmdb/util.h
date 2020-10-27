@@ -29,10 +29,10 @@
 
 #include <cstddef>
 #include <cstring>
-#include <lmdb.h>
 #include <type_traits>
 #include <utility>
 
+#include "lmdb/lmdb_drv/lmdb.h"
 #include "span.h"
 
 /*! Calculates types and offset of struct field. Use in template arguments for
