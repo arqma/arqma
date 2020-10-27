@@ -29,13 +29,13 @@
 
 #include <atomic>
 #include <cstddef>
+#include "lmdb/liblmdb/lmdb.h"
 #include <memory>
 #include <type_traits>
 
 #include "common/expect.h"
 #include "lmdb/error.h"
 #include "lmdb/transaction.h"
-#include "lmdb/lmdb_drv/lmdb.h"
 
 namespace lmdb
 {

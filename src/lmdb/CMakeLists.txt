@@ -27,8 +27,6 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-statusinfo("Using ${ARCH_WIDTH}-bit LMDB from source tree")
-
 set(lmdb_sources
   database.cpp
   error.cpp
@@ -44,42 +42,14 @@ set(lmdb_headers
   util.h
   value_stream.h)
 
-add_library(lmdb
-  lmdb_drv/mdb.c
-  lmdb_drv/midl.c)
-
 arqma_add_library(lmdb_lib
   ${lmdb_sources}
   ${lmdb_headers})
-
-target_include_directories(lmdb PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/lmdb_drv")
-target_link_libraries(lmdb PRIVATE ${CMAKE_THREAD_LIBS_INIT})
-
-if(FREEBSD)
-  target_compile_definitions(lmdb PRIVATE MDB_DSYNC=O_SYNC)
-endif()
-
-if(ANDROID)
-  target_compile_definitions(lmdb PRIVATE ANDROID=1)
-endif()
-
-if(${ARCH_WIDTH} EQUAL 32)
-  target_compile_definitions(lmdb PRIVATE MDB_VL32)
-endif()
 
 target_link_libraries(lmdb_lib
   common
   lmdb)
 
-# GUI/libwallet install target
-if(BUILD_GUI_DEPS)
-  if(IOS)
-    set(lib_folder lib-${ARCH})
-  else()
-    set(lib_folder lib)
-  endif()
-  install(TARGETS lmdb
-    ARCHIVE DESTINATION ${lib_folder}
-    LIBRARY DESTINATION ${lib_folder})
-endif()
-
+message(STATUS "Using ${ARCH_WIDTH}-bit LMDB from source tree")
+add_subdirectory(liblmdb)
+set(LMDB_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/liblmdb" CACHE STRING "LMDB Include path")

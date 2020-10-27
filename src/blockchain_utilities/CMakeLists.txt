@@ -114,6 +114,7 @@ arqma_add_executable(blockchain_import
 target_link_libraries(blockchain_import
   PRIVATE
     cryptonote_core
+    lmdb
     blockchain_db
     version
     epee
@@ -122,7 +123,7 @@ target_link_libraries(blockchain_import
     ${Boost_THREAD_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT}
     ${EXTRA_LIBRARIES}
-    ${Blocks})
+    blocks)
 
 if(ARCH_WIDTH)
   target_compile_definitions(blockchain_import
@@ -141,6 +142,7 @@ arqma_add_executable(blockchain_export
 target_link_libraries(blockchain_export
   PRIVATE
     cryptonote_core
+    lmdb
     blockchain_db
     version
     epee
@@ -162,6 +164,7 @@ arqma_add_executable(blockchain_blackball
 target_link_libraries(blockchain_blackball
   PRIVATE
     wallet
+    lmdb
     cryptonote_core
     blockchain_db
     version
@@ -185,6 +188,7 @@ arqma_add_executable(blockchain_usage
 target_link_libraries(blockchain_usage
   PRIVATE
     cryptonote_core
+    lmdb
     blockchain_db
     version
     epee
@@ -206,6 +210,7 @@ arqma_add_executable(blockchain_ancestry
 target_link_libraries(blockchain_ancestry
   PRIVATE
     cryptonote_core
+    lmdb
     blockchain_db
     version
     epee
@@ -227,6 +232,7 @@ arqma_add_executable(blockchain_depth
 target_link_libraries(blockchain_depth
   PRIVATE
     cryptonote_core
+    lmdb
     blockchain_db
     version
     epee
@@ -248,6 +254,7 @@ arqma_add_executable(blockchain_prune_known_spent_data
 target_link_libraries(blockchain_prune_known_spent_data
   PRIVATE
     cryptonote_core
+    lmdb
     blockchain_db
     p2p
     version
@@ -275,6 +282,7 @@ install(TARGETS blockchain_prune DESTINATION bin)
 target_link_libraries(blockchain_prune
   PRIVATE
     cryptonote_core
+    lmdb
     blockchain_db
     p2p
     version

@@ -580,6 +580,8 @@ include_directories(${UNBOUND_INCLUDE})
 include_directories(${EASYLOGGING_INCLUDE})
 link_directories(${EASYLOGGING_LIBRARY_DIRS})
 
+include_directories(${LMDB_INCLUDE_DIRS})
+
 include_directories(${LIBUNWIND_INCLUDE})
 link_directories(${LIBUNWIND_LIBRARY_DIRS})
 
@@ -698,6 +700,11 @@ else()
       add_definitions(-DWINVER=0x0501 -D_WIN32_WINNT=0x0501)
     endif()
   endif()
+
+  if(ARM7)
+    set(WARNINGS "${WARNINGS} -Wno-psabi -Wno-maybe-uninitialized")
+  endif()
+
   set(C_WARNINGS "-Waggregate-return -Wnested-externs -Wold-style-definition -Wstrict-prototypes")
   set(CXX_WARNINGS "-Wno-reorder -Wno-missing-field-initializers")
 

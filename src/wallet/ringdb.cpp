@@ -27,6 +27,7 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "lmdb/liblmdb/lmdb.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/filesystem.hpp>
@@ -35,7 +36,6 @@
 #include "misc_language.h"
 #include "wallet_errors.h"
 #include "ringdb.h"
-#include "lmdb/lmdb_drv/lmdb.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "wallet.ringdb"
