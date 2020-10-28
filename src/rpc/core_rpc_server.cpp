@@ -1424,12 +1424,12 @@ namespace cryptonote
       return false;
     }
 
+    seed_hash = next_seed_hash = crypto::null_hash;
     uint64_t next_height;
     crypto::rx_seedheights(height, &seed_height, &next_height);
-    if (next_height != seed_height)
+    seed_hash = m_core.get_block_id_by_height(seed_height);
+    if(next_height != seed_height)
       next_seed_hash = m_core.get_block_id_by_height(next_height);
-    else
-      next_seed_hash = seed_hash;
 
     if (extra_nonce.empty())
     {
@@ -1530,16 +1530,12 @@ namespace cryptonote
         return false;
       }
     }
-    uint64_t seed_height;
     crypto::hash seed_hash, next_seed_hash;
     if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, error_resp))
       return false;
-    if(b.major_version >= RX_BLOCK_VERSION)
-    {
-      res.seed_hash = string_tools::pod_to_hex(seed_hash);
-      if(seed_hash != next_seed_hash)
-        res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
-    }
+    res.seed_hash = string_tools::pod_to_hex(seed_hash);
+    if(seed_hash != next_seed_hash)
+      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
 
     res.reserved_offset = reserved_offset;
     blobdata block_blob = t_serializable_object_to_blob(b);

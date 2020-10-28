@@ -36,7 +36,13 @@
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "cryptonote_basic/blobdatatype.h"
 #include "ringct/rctSigs.h"
-#include "version.h"
+
+#define ARQMA_MQ_VERSION_MAJOR 1
+#define ARQMA_MQ_VERSION_MINOR 0
+
+#define MAKE_ARQMA_MQ_VERSION(major,minor) (((major) << 16) | (minor))
+#define ARQMA_MQ_VERSION MAKE_ARQMA_MQ_VERSION(ARQMA_MQ_VERSION_MAJOR, ARQMA_MQ_VERSION_MINOR)
+
 
 using namespace cryptonote::rpc;
 
@@ -521,16 +527,16 @@ namespace arqmaMQ
     res.status = Message::STATUS_OK;
   }
 
-  uint64_t slow_memmem(const void* start_buff, size_t buflen,const void* pat,size_t patlen)
+  uint64_t slow_memmem(const void* start_buff, size_t buflen, const void* pat, size_t patlen)
   {
     const void* buf = start_buff;
-    const void* end=(const char*)buf+buflen;
+    const void* end = (const char*)buf+buflen;
     if (patlen > buflen || patlen == 0) return 0;
     while(buflen>0 && (buf=memchr(buf,((const char*)pat)[0],buflen-patlen+1)))
     {
-      if(memcmp(buf,pat,patlen)==0)
+      if(memcmp(buf, pat, patlen) == 0)
         return (const char*)buf - (const char*)start_buff;
-      buf=(const char*)buf+1;
+      buf = (const char*)buf+1;
       buflen = (const char*)end - (const char*)buf;
     }
     return 0;
@@ -538,11 +544,9 @@ namespace arqmaMQ
 
   bool ZmqHandler::check_core_ready()
   {
-    if(m_core.get_current_blockchain_height() >= m_core.get_target_blockchain_height())
-    {
-      return true;
-    }
-    return false;
+    if(!m_p2p.get_payload_object().is_synchronized())
+      return false;
+    return true;
   }
 
   void ZmqHandler::handle(const GetBlockTemplate::Request& req, GetBlockTemplate::Response& res)
@@ -615,16 +619,13 @@ namespace arqmaMQ
         return;
       }
     }
-    uint64_t seed_height;
     crypto::hash seed_hash, next_seed_hash;
     if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
       return;
-    if(b.major_version >= RX_BLOCK_VERSION)
-    {
-      res.seed_hash = string_tools::pod_to_hex(seed_hash);
-      if(seed_hash != next_seed_hash)
-        res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
-    }
+
+    res.seed_hash = string_tools::pod_to_hex(seed_hash);
+    if(seed_hash != next_seed_hash)
+      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
 
     res.reserved_offset = reserved_offset;
     cryptonote::blobdata block_blob = cryptonote::t_serializable_object_to_blob(b);
@@ -633,6 +634,7 @@ namespace arqmaMQ
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
     res.blockhashing_blob = string_tools::buff_to_hex_nodelimer(hashing_blob);
     res.status = Message::STATUS_OK;
+    return;
   }
 
   bool ZmqHandler::get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
@@ -655,12 +657,12 @@ namespace arqmaMQ
       return false;
     }
 
+    seed_hash = next_seed_hash = crypto::null_hash;
     uint64_t next_height;
     crypto::rx_seedheights(height, &seed_height, &next_height);
-    if (next_height != seed_height)
+    seed_hash = m_core.get_block_id_by_height(seed_height);
+    if(next_height != seed_height)
       next_seed_hash = m_core.get_block_id_by_height(next_height);
-    else
-      next_seed_hash = seed_hash;
 
     if(extra_nonce.empty())
     {
@@ -900,7 +902,7 @@ namespace arqmaMQ
 
   void ZmqHandler::handle(const GetRPCVersion::Request& req, GetRPCVersion::Response& res)
   {
-    res.version = DAEMON_RPC_VERSION_ZMQ;
+    res.version = ARQMA_MQ_VERSION;
     res.status = Message::STATUS_OK;
   }
 

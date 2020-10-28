@@ -283,7 +283,7 @@ void toJsonValue(rapidjson::Document& doc, const rct::mgSig& sig, rapidjson::Val
 void fromJsonValue(const rapidjson::Value& val, rct::mgSig& sig);
 
 void toJsonValue(rapidjson::Document& doc, const cryptonote::rpc::BlockTemplateInfo& info, rapidjson::Value& val);
-void fromJsonValue(const rapidjson::Value& val, cryptonote::rpc::BlockTemplateInfo& info);
+void fromJsonValue(const rapidjson::Value& val, cryptonote::rpc::BlockTemplateInfo info);
 
 void toJsonValue(rapidjson::Document& doc, const cryptonote::rpc::DaemonInfo& info, rapidjson::Value& val);
 void fromJsonValue(const rapidjson::Value& val, cryptonote::rpc::DaemonInfo& info);

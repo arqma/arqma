@@ -209,8 +209,8 @@ namespace rpc
     std::string blockhashing_blob;
     std::string blocktemplate_blob;
     uint64_t difficulty;
-    uint64_t expected_reward;
     uint64_t height;
+    uint64_t expected_reward;
     std::string next_seed_hash;
     std::string prev_hash;
     uint64_t reserved_offset;

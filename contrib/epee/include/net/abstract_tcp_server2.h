@@ -59,7 +59,7 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
-#define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 3000
+#define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 10000
 
 namespace epee
 {
@@ -124,8 +124,8 @@ namespace net_utils
 
     void save_dbg_log();
 
-	bool rpc_speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on RPC connections)
-	bool zmq_speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on ZMQ connections)
+    bool rpc_speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on RPC connections)
+    bool zmq_speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on ZMQ connections)
 
     bool cancel();
 

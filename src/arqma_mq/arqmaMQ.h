@@ -47,10 +47,10 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include "zmq_addon.hpp"
+#include "arqma_mq/zmq.hpp"
 #include <map>
 #include <iterator>
-#include "INotifier.h"
+#include "arqma_mq/INotifier.h"
 #include <boost/utility/string_ref.hpp>
 
 #include <boost/algorithm/string.hpp>
@@ -60,7 +60,7 @@
 
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 
-#include "zmq_handler.h"
+#include "arqma_mq/zmq_handler.h"
 #include "daemon/command_line_args.h"
 
 #include "rapidjson/stringbuffer.h"

@@ -31,8 +31,8 @@
 #pragma once
 
 #include "rpc/daemon_messages.h"
-#include "rpc/daemon_rpc_version.h"
-#include "rpc/rpc_handler.h"
+//#include "rpc/daemon_rpc_version.h"
+//#include "rpc/rpc_handler.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_protocol/cryptonote_protocol_handler.h"
 #include "p2p/net_node.h"
@@ -44,7 +44,7 @@ using namespace cryptonote::rpc;
 
 namespace
 {
-  typedef nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> > t_p2p;
+  typedef nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>> t_p2p;
 }  // anonymous namespace
 
 
