@@ -43,6 +43,8 @@ set(daemon_messages_sources
   daemon_messages.cpp)
 
 set(daemon_rpc_server_sources
+  message.cpp
+  daemon_messages.cpp
   daemon_handler.cpp)
 
 
@@ -63,6 +65,7 @@ set(rpc_private_headers
   core_rpc_server_error_codes.h)
 
 set(daemon_messages_private_headers
+  message_data_structs.h
   message.h
   daemon_messages.h)
 

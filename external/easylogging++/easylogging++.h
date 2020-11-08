@@ -411,6 +411,7 @@ ELPP_INTERNAL_DEBUGGING_OUT_INFO << ELPP_INTERNAL_DEBUGGING_MSG(internalInfoStre
 #  if ELPP_USE_STD_THREADING
 #      include <mutex>
 #      include <thread>
+#      include <cstring>
 #  else
 #      if ELPP_OS_UNIX
 #         include <pthread.h>

@@ -743,9 +743,9 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     bl.minor_version = config::blockchain_settings::ARQMA_GENESIS_BLOCK_MINOR_VERSION;
     bl.timestamp = 0;
     bl.nonce = config::GENESIS_NONCE;
-    miner::find_nonce_for_given_block([](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash){
-      return cryptonote::get_block_longhash(NULL, b, hash, height, threads);
-    }, bl, 1, 0);
+    miner::find_nonce_for_given_block([](const cryptonote::block &b, uint64_t height, const crypto::hash *seed_hash, unsigned int threads, crypto::hash &hash){
+      return cryptonote::get_block_longhash(NULL, b, hash, height, seed_hash, threads);
+    }, bl, 1, 0, NULL);
     bl.invalidate_hashes();
     return true;
   }
@@ -756,7 +756,7 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     rx_slow_hash(main_height, seed_height, seed_hash.data, bd.data(), bd.size(), res.data, 0, 1);
   }
 
-  bool get_block_longhash(const Blockchain *pbc, const block& b, crypto::hash& res, const uint64_t height, const int miners)
+  bool get_block_longhash(const Blockchain *pbc, const block& b, crypto::hash& res, const uint64_t height, const crypto::hash *seed_hash, const int miners)
   {
     blobdata bd = get_block_hashing_blob(b);
     if(b.major_version >= RX_BLOCK_VERSION)
@@ -766,7 +766,7 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
       if(pbc != NULL)
       {
         seed_height = rx_seedheight(height);
-        hash = pbc->get_pending_block_id_by_height(seed_height);
+        hash = seed_hash ? *seed_hash : pbc->get_pending_block_id_by_height(seed_height);
         main_height = pbc->get_current_blockchain_height();
       }
       else
@@ -775,7 +775,7 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
         seed_height = 0;
         main_height = 0;
       }
-      rx_slow_hash(main_height, seed_height, hash.data, bd.data(), bd.size(), res.data, miners, 0);
+      rx_slow_hash(main_height, seed_height, hash.data, bd.data(), bd.size(), res.data, seed_hash ? 0 : miners, !!seed_hash);
     }
     else if(b.major_version >= 12)
     {
@@ -790,6 +790,11 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
       crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
     }
     return true;
+  }
+  
+  bool get_block_longhash(const Blockchain *pbc, const block& b, crypto::hash& res, const uint64_t height, const int miners)
+  {
+    return get_block_longhash(pbc, b, res, height, NULL, miners);
   }
 
   crypto::hash get_block_longhash(const Blockchain *pbc, const block& b, const uint64_t height, const int miners)

@@ -91,146 +91,147 @@ namespace cryptonote
 */
 
 
-namespace arqmaMQ 
+namespace arqmaMQ
 {
+  extern "C" void message_buffer_destroy(void*, void* hint)
+  {
+    delete reinterpret_cast<std::string*>(hint);
+  }
 
-	 extern "C" void message_buffer_destroy(void*, void* hint) {
- 		delete reinterpret_cast<std::string*>(hint);
-	}
+  zmq::message_t ArqmaNotifier::create_message(std::string &&data)
+  {
+    auto *buffer = new std::string(std::move(data));
+    return zmq::message_t(&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer);
+  }
 
-	zmq::message_t ArqmaNotifier::create_message(std::string &&data)
-	{
-		auto *buffer = new std::string(std::move(data));
-		return zmq::message_t(&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer);
-	}
+  ArqmaNotifier::ArqmaNotifier(ZmqHandler& h) : handler(h) {}
 
-    ArqmaNotifier::ArqmaNotifier(ZmqHandler& h): handler(h)
-    {}
+  ArqmaNotifier::~ArqmaNotifier() {}
 
-    ArqmaNotifier::~ArqmaNotifier()
-    {}
+  void ArqmaNotifier::stop()
+  {
+    producer.send(create_message(std::move("QUIT")), 0);
+    proxy_thread.join();
+    zmq_close(&producer);
+    zmq_close(&subscriber);
+    zmq_term(&context);
+  }
 
-	void ArqmaNotifier::stop()
-	{
-		producer.send(create_message(std::move("QUIT")), 0);
-		proxy_thread.join();
-		zmq_close(&producer);
-		zmq_close(&subscriber);
-        zmq_term(&context);
-	}
+  void ArqmaNotifier::run()
+  {
+    producer.bind("inproc://backend");
+    proxy_thread = std::thread{&ArqmaNotifier::proxy_loop, this};
+  }
 
-    void ArqmaNotifier::run()
+  bool ArqmaNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t clients)
+  {
+    if(address.empty())
+      address = "*";
+    if(port.empty())
+      port = "*";
+
+    bind_address.append(address.data(), address.size());
+    bind_address += ":";
+    bind_address.append(port.data(), port.size());
+
+    max_clients = clients;
+    remotes.max_size = clients;
+
+    return true;
+  }
+
+  void ArqmaNotifier::proxy_loop()
+  {
+    subscriber.connect("inproc://backend");
+    listener.setsockopt<int>(ZMQ_ROUTER_HANDOVER, 1);
+    listener.setsockopt<int>(ZMQ_ROUTER_MANDATORY, 1);
+    listener.bind(bind_address);
+    zmq::pollitem_t items[2];
+    items[0].socket = (void*)subscriber;
+    items[0].fd = 0;
+    items[0].events = ZMQ_POLLIN;
+    items[1].socket = (void*)listener;
+    items[1].fd = 0;
+    items[1].events = ZMQ_POLLIN;
+
+    while(true)
     {
-        producer.bind("inproc://backend");
-        proxy_thread = std::thread{&ArqmaNotifier::proxy_loop, this};
-    }
+      std::string  block_hash;
+      int rc = zmq::poll(items, 2, 1);
 
-    bool ArqmaNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t clients)
-    {
-        if(address.empty())
-            address = "*";
-        if(port.empty())
-            port = "*";
-
-        bind_address.append(address.data(), address.size());
-        bind_address += ":";
-        bind_address.append(port.data(), port.size());
-
-        max_clients = clients;
-		remotes.max_size = clients;
-        return true;
-    }
-    void ArqmaNotifier::proxy_loop()
-    {
-        subscriber.connect("inproc://backend");
-        listener.setsockopt<int>(ZMQ_ROUTER_HANDOVER, 1);
-        listener.setsockopt<int>(ZMQ_ROUTER_MANDATORY, 1);
-        listener.bind(bind_address);
-        zmq::pollitem_t items[2];
-        items[0].socket = (void*)subscriber;
-        items[0].fd = 0;
-        items[0].events = ZMQ_POLLIN;
-        items[1].socket = (void*)listener;
-        items[1].fd = 0;
-        items[1].events = ZMQ_POLLIN;
-
-
-        while (true) 
+      if(items[1].revents & ZMQ_POLLIN)
+      {
+        zmq::message_t envelope1;
+        listener.recv(&envelope1);
+        std::string remote_identifier = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
+        if(remote_identifier.compare("block") == 0)
         {
-			std::string  block_hash;
-            int rc = zmq::poll(items, 2, 1);
+          listener.recv(&envelope1);
+          listener.recv(&envelope1);
+          block_hash = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
+          LOG_PRINT_L1("received from blockchain " <<  block_hash);
 
-            if (items[1].revents & ZMQ_POLLIN)
-   	        {
-       	        zmq::message_t envelope1;
-           	    listener.recv(&envelope1);
-           	 	std::string remote_identifier = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
-				if (remote_identifier.compare("block") == 0)
-				{
-               		listener.recv(&envelope1);
-               		listener.recv(&envelope1);
-               		block_hash = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
-                	LOG_PRINT_L1("received from blockchain " <<  block_hash);
-                    for (auto iterator = remotes.cbegin(); iterator != remotes.cend();)
-                    {
-						try
-						{
-		    				std::string response = handler.handle(iterator->second);
-                    		LOG_PRINT_L1("sending client " << iterator->first << " " << response);
-							listener.send(create_message(std::string(iterator->first)), ZMQ_SNDMORE);
-							listener.send(create_message(std::move(response)), ZMQ_DONTWAIT);
-							++iterator;
-
-						}
-						catch(const zmq::error_t &error)
-						{
-							if (error.num() == EHOSTUNREACH)
-							{
-    	                        LOG_PRINT_L1("evicting client " << iterator->first);
-	                            remotes.erase(iterator++);
-							}
-						}
-                    }
-				}
-				else 
-				{
-               		listener.recv(&envelope1);
-               		listener.recv(&envelope1);
-               		std::string request = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
-                	LOG_PRINT_L1("received from client " <<  request);
-                    if (request.compare(EVICT) == 0)
-                    {
-                        LOG_PRINT_L1("evicting client " << remote_identifier);
-                        remotes.erase(remote_identifier);
-                    }
-                    else
-                    {
-						std::pair<std::string, std::string> remote(std::move(remote_identifier), std::move(request));
-                        if (remotes.addRemote(remote))
-						{
-	                        std::string response = handler.handle(remote.second);
-    	                    LOG_PRINT_L1("sending client " << remote.first << " " << response);
-                            listener.send(create_message(std::string(remote.first)), ZMQ_SNDMORE);
-                            listener.send(create_message(std::move(response)), ZMQ_DONTWAIT);
-						}
-                    }
-				}
-            }
-
-
-
-            if (items[0].revents & ZMQ_POLLIN)
+          for(auto iterator = remotes.cbegin(); iterator != remotes.cend();)
+          {
+            try
             {
-                zmq::message_t envelope;
-                subscriber.recv(&envelope);
-                std::string stop = std::string(static_cast<char*>(envelope.data()), envelope.size());
-                if (stop == QUIT) 
-                {
-                    LOG_PRINT_L1("closing thread");
-                    break;
-                }
+              std::string response = handler.handle(iterator->second);
+              LOG_PRINT_L1("sending client " << iterator->first << " " << response);
+              listener.send(create_message(std::string(iterator->first)), ZMQ_SNDMORE);
+              listener.send(create_message(std::move(response)), ZMQ_DONTWAIT);
+              ++iterator;
             }
+            catch(const zmq::error_t &error)
+            {
+              if(error.num() == EHOSTUNREACH)
+              {
+                LOG_PRINT_L1("evicting client " << iterator->first);
+                remotes.erase(iterator++);
+              }
+            }
+          }
         }
-        zmq_close(&listener);
+        else
+        {
+          listener.recv(&envelope1);
+          listener.recv(&envelope1);
+          std::string request = std::string(static_cast<char*>(envelope1.data()), envelope1.size());
+          LOG_PRINT_L1("received from client " <<  request);
+
+          if(request.compare(EVICT) == 0)
+          {
+            LOG_PRINT_L1("evicting client " << remote_identifier);
+            remotes.erase(remote_identifier);
+          }
+          else
+          {
+            std::pair<std::string, std::string> remote(std::move(remote_identifier), std::move(request));
+
+            if(remotes.addRemote(remote))
+            {
+              std::string response = handler.handle(remote.second);
+              LOG_PRINT_L1("sending client " << remote.first << " " << response);
+              listener.send(create_message(std::string(remote.first)), ZMQ_SNDMORE);
+              listener.send(create_message(std::move(response)), ZMQ_DONTWAIT);
+            }
+          }
+        }
+      }
+
+      if(items[0].revents & ZMQ_POLLIN)
+      {
+        zmq::message_t envelope;
+        subscriber.recv(&envelope);
+        std::string stop = std::string(static_cast<char*>(envelope.data()), envelope.size());
+
+        if(stop == QUIT)
+        {
+          LOG_PRINT_L1("closing thread");
+          break;
+        }
+      }
     }
+
+    zmq_close(&listener);
+  }
 }

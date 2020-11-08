@@ -42,17 +42,15 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-
 #pragma once
 
 #include <iostream>
 #include <string>
 #include <thread>
-#include "zmq_addon.hpp"
+#include "arqma_mq/zmq.hpp"
 #include <map>
 #include <iterator>
-#include "INotifier.h"
+#include "arqma_mq/INotifier.h"
 #include <boost/utility/string_ref.hpp>
 
 #include <boost/algorithm/string.hpp>
@@ -62,7 +60,7 @@
 
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 
-#include "zmq_handler.h"
+#include "arqma_mq/zmq_handler.h"
 #include "daemon/command_line_args.h"
 
 #include "rapidjson/stringbuffer.h"
@@ -73,81 +71,100 @@ using namespace rpc;
 using namespace boost::placeholders;
 
 
-namespace arqmaMQ {
+namespace arqmaMQ
+{
+  constexpr auto QUIT = "QUIT";
+  constexpr auto EVICT = "EVICT";
 
-    constexpr auto QUIT = "QUIT";
-    constexpr auto EVICT = "EVICT";
+  template<class K, class V>
+  class ClientMap
+  {
+    public:
+      std::size_t max_size = 0;
+      std::map<K, V> clients;
+      bool addRemote(K key, V value) {
+      auto it = clients.find(key);
+      bool result = false;
 
-    template<class K, class V>
-    class ClientMap
+      if( !(it != clients.end()) && (clients.size() + 1) <= max_size )
+      {
+        clients.insert( it, std::make_pair(key,value) );
+        result = true;
+      }
+
+      return result;
+  }
+
+  bool addRemote(std::pair<K, V> remote)
+  {
+    auto it = clients.find(remote.first);
+    bool result = false;
+
+    if( !(it != clients.end()) && (clients.size() + 1) <= max_size )
     {
-        public:
-        size_t max_size = 0;
-        std::map<K, V> clients;
-        bool addRemote(K key, V value) {
-            auto it = clients.find(key);
-			bool result = false;
-            if ( !(it != clients.end()) && (clients.size() + 1) <= max_size ) {
-                clients.insert( it, std::make_pair(key,value) );
-				result = true;
-            }
-			return result;
-        }
+      clients.insert( it, remote );
+      result = true;
+    }
 
-        bool addRemote(std::pair<K, V> remote) {
-            auto it = clients.find(remote.first);
-			bool result = false;
-            if ( !(it != clients.end()) && (clients.size() + 1) <= max_size ) {
-                clients.insert( it, remote );
-				result = true;
-            }
-			return result;
-        }
+    return result;
+  }
 
-        void erase(K key) {
-            clients.erase(key);
-        }
+  void erase(K key)
+  {
+    clients.erase(key);
+  }
 
-		void erase(typename std::map<K, V>::const_iterator iterator) {
-			clients.erase(iterator);
-		}
+  void erase(typename std::map<K, V>::const_iterator iterator)
+  {
+    clients.erase(iterator);
+  }
 
-		size_t size() {
-			return clients.size();
-		}
+  std::size_t size()
+  {
+    return clients.size();
+  }
 
-        typename std::map<K, V>::iterator begin() {return clients.begin();}
-        typename std::map<K, V>::iterator end() {return clients.end();}
-        typename std::map<K, V>::const_iterator begin() const {return clients.begin();}
-        typename std::map<K, V>::const_iterator end() const {return clients.end();}
-        typename std::map<K, V>::const_iterator cbegin() const {return clients.cbegin();}
-        typename std::map<K, V>::const_iterator cend() const {return clients.cend();}
-    };
+  typename std::map<K, V>::iterator begin() {return clients.begin();}
+  typename std::map<K, V>::iterator end() {return clients.end();}
+  typename std::map<K, V>::const_iterator begin() const {return clients.begin();}
+  typename std::map<K, V>::const_iterator end() const {return clients.end();}
+  typename std::map<K, V>::const_iterator cbegin() const {return clients.cbegin();}
+  typename std::map<K, V>::const_iterator cend() const {return clients.cend();}
+
+}; // namespace arqmaMQ
 
 
-    class ArqmaNotifier: public INotifier {
-        public:
-            ArqmaNotifier(ZmqHandler& h);
-            ~ArqmaNotifier();
-            ArqmaNotifier(const ArqmaNotifier&) = delete;
-            ArqmaNotifier& operator=(const ArqmaNotifier&) = delete;
-            ArqmaNotifier(ArqmaNotifier&&) = delete;
-            ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
-            bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t max_clients);
-            void run();
-			void stop();
-        private:
-            std::thread proxy_thread;
-			ZmqHandler& handler;
-            zmq::context_t context;
-            zmq::socket_t listener{context, ZMQ_ROUTER};
-            zmq::socket_t producer{context, ZMQ_PAIR};
-            zmq::socket_t subscriber{context, ZMQ_PAIR};
-            void proxy_loop();
-            ClientMap<std::string, std::string> remotes;
-            std::string bind_address = "tcp://";
-            uint16_t max_clients = 0;
-            bool m_enabled = false;
-			zmq::message_t create_message(std::string &&data);
-    };
-}
+class ArqmaNotifier: public INotifier
+{
+  public:
+
+    ArqmaNotifier(ZmqHandler& h);
+
+    ~ArqmaNotifier();
+
+    ArqmaNotifier(const ArqmaNotifier&) = delete;
+    ArqmaNotifier& operator=(const ArqmaNotifier&) = delete;
+    ArqmaNotifier(ArqmaNotifier&&) = delete;
+    ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
+    bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t max_clients);
+    void run();
+    void stop();
+
+  private:
+
+    std::thread proxy_thread;
+    ZmqHandler& handler;
+    zmq::context_t context;
+    zmq::socket_t listener{context, ZMQ_ROUTER};
+    zmq::socket_t producer{context, ZMQ_PAIR};
+    zmq::socket_t subscriber{context, ZMQ_PAIR};
+    void proxy_loop();
+    ClientMap<std::string, std::string> remotes;
+    std::string bind_address = "tcp://";
+    uint16_t max_clients = 0;
+    bool m_enabled = false;
+    zmq::message_t create_message(std::string &&data);
+
+}; // class ArqmaNotifier
+
+}  // arqmaMQ.h

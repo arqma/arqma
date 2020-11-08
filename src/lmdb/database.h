@@ -29,7 +29,7 @@
 
 #include <atomic>
 #include <cstddef>
-#include <lmdb.h>
+#include "lmdb/liblmdb/lmdb.h"
 #include <memory>
 #include <type_traits>
 

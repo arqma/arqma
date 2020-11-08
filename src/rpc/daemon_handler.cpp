@@ -266,27 +266,27 @@ namespace rpc
     handleTxBlob(cryptonote::tx_to_blob(req.tx), req.relay, res);
   }
 
-	void DaemonHandler::handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res)
-	{
-	  std::string tx_blob;
-	  if(!epee::string_tools::parse_hexstr_to_binbuff(req.tx_as_hex, tx_blob))
-	  {
-	    MERROR("[SendRawTxHex]: Failed to parse tx from hexbuff: " << req.tx_as_hex);
-	    res.status = Message::STATUS_FAILED;
-	    res.error_details = "Invalid hex";
-	    return;
-	  }
-	  handleTxBlob(tx_blob, req.relay, res);
-	}
+  void DaemonHandler::handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res)
+  {
+    std::string tx_blob;
+    if(!epee::string_tools::parse_hexstr_to_binbuff(req.tx_as_hex, tx_blob))
+    {
+      MERROR("[SendRawTxHex]: Failed to parse tx from hexbuff: " << req.tx_as_hex);
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Invalid hex";
+      return;
+    }
+    handleTxBlob(tx_blob, req.relay, res);
+  }
 
-	void DaemonHandler::handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res)
-	{
-	  if (!m_p2p.get_payload_object().is_synchronized())
-	  {
-	    res.status = Message::STATUS_FAILED;
-	    res.error_details = "Not ready to accept transactions; try again later";
-	    return;
-	  }
+  void DaemonHandler::handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res)
+  {
+    if(!m_p2p.get_payload_object().is_synchronized())
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Not ready to accept transactions; try again later";
+      return;
+    }
 
     cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
     tx_verification_context tvc = AUTO_VAL_INIT(tvc);
@@ -546,7 +546,6 @@ namespace rpc
 
   void DaemonHandler::handle(const GetBlockTemplate::Request& req, GetBlockTemplate::Response& res)
   {
-
     if(!check_core_ready())
     {
       res.status  = Message::STATUS_FAILED;
@@ -556,8 +555,22 @@ namespace rpc
 
     if(req.reserve_size > 255)
     {
-      res.status  = Message::STATUS_FAILED;
-      res.error_details  = "Too big reserved size, maximum 255";
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Too big reserved size, maximum 255";
+      return;
+    }
+
+    if(req.reserve_size && !req.extra_nonce.empty())
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Can Not specify both reserve_size and extra_nonce";
+      return;
+    }
+
+    if(req.extra_nonce.size() > 510)
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Too big extra_nonce. Allowed max 510 hex chars";
       return;
     }
 
@@ -565,41 +578,67 @@ namespace rpc
 
     if(!req.wallet_address.size() || !cryptonote::get_account_address_from_str(info, nettype(), req.wallet_address))
     {
-      res.status  = Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Failed to parse wallet address";
       return;
     }
+
     if (info.is_subaddress)
     {
-      res.status  = Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Mining to subaddress is not supported yet";
       return;
     }
 
     block b;
     cryptonote::blobdata blob_reserve;
-    blob_reserve.resize(req.reserve_size, 0);
+    if(!req.extra_nonce.empty())
+    {
+      if(!string_tools::parse_hexstr_to_binbuff(req.extra_nonce, blob_reserve))
+      {
+        res.status = Message::STATUS_FAILED;
+        res.error_details = "Parameter extra_nonce should be a hex string";
+        return;
+      }
+    }
+    else
+      blob_reserve.resize(req.reserve_size, 0);
+    crypto::hash prev_block;
+    if(!req.prev_block.empty())
+    {
+      if(!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
+      {
+        res.status = Message::STATUS_FAILED;
+        res.error_details = "Invalid prev_block";
+        return;
+      }
+    }
+    uint64_t seed_height;
     size_t reserved_offset;
     crypto::hash seed_hash, next_seed_hash;
-    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, res))
+    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
       return;
+    if(b.major_version >= RX_BLOCK_VERSION)
+    {
+      res.seed_hash = string_tools::pod_to_hex(seed_hash);
+      if(seed_hash != next_seed_hash)
+        res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
+    }
+
     res.reserved_offset = reserved_offset;
     blobdata block_blob = t_serializable_object_to_blob(b);
     blobdata hashing_blob = get_block_hashing_blob(b);
     res.prev_hash = string_tools::pod_to_hex(b.prev_id);
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
     res.blockhashing_blob =  string_tools::buff_to_hex_nodelimer(hashing_blob);
-    res.seed_hash = string_tools::pod_to_hex(seed_hash);
-    if(next_seed_hash != crypto::null_hash)
-      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     res.status = Message::STATUS_OK;
     return;
   }
 
-  bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
+  bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
   {
     b = boost::value_initialized<cryptonote::block>();
-    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
+    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       res.status = Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
@@ -616,19 +655,7 @@ namespace rpc
       return false;
     }
 
-    seed_hash = next_seed_hash = crypto::null_hash;
-    if(b.major_version >= RX_BLOCK_VERSION)
-    {
-      uint64_t seed_height, next_height;
-      crypto::rx_seedheights(height, &seed_height, &next_height);
-      seed_hash = m_core.get_block_id_by_height(seed_height);
-      if(next_height != seed_height)
-      {
-        next_seed_hash = m_core.get_block_id_by_height(next_height);
-      }
-    }
-
-    if (extra_nonce.empty())
+    if(extra_nonce.empty())
     {
       reserved_offset = 0;
       return true;

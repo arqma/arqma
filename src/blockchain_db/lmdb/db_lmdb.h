@@ -34,7 +34,7 @@
 #include "ringct/rctTypes.h"
 #include <boost/thread/tss.hpp>
 
-#include <lmdb.h>
+#include "lmdb/liblmdb/lmdb.h"
 
 #define ENABLE_AUTO_RESIZE
 
@@ -357,6 +357,7 @@ public:
   static int compare_string(const MDB_val *a, const MDB_val *b);
 
 private:
+  void check_mmap_support();
   void do_resize(uint64_t size_increase = 0);
 
   bool need_resize(uint64_t threshold_size = 0) const;

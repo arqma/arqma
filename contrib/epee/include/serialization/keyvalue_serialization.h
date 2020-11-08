@@ -77,7 +77,7 @@ public: \
 
 #define KV_SERIALIZE_N(varialble, val_name) \
   epee::serialization::selector<is_store>::serialize(this_ref.varialble, stg, hparent_section, val_name);
-  
+
 #define KV_SERIALIZE_PARENT(type) \
   do { \
     if (!((type*)this)->serialize_map<is_store, t_storage>(stg, hparent_section)) \
