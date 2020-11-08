@@ -601,13 +601,24 @@ namespace cryptonote
 
     try
     {
-     if (!command_line::is_arg_defaulted(vm, arg_block_notify))
-       m_blockchain_storage.set_block_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_block_notify).c_str())));
+      if(!command_line::is_arg_defaulted(vm, arg_block_notify))
+        m_blockchain_storage.set_block_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_block_notify).c_str())));
     }
     catch (const std::exception& e)
     {
       MERROR("Failed to parse block notify spec");
     }
+
+    try
+    {
+      bool zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled);
+      std::string zmq_ip_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip);
+      std::string zmq_port_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_port);
+      uint16_t zmq_max_clients = command_line::get_arg(vm, daemon_args::arg_zmq_max_clients);
+      if(zmq_enabled)
+        m_blockchain_storage.set_zmq_options(zmq_ip_str, zmq_port_str, zmq_max_clients, zmq_enabled);
+    }
+    catch(...) {}
 
     try
     {

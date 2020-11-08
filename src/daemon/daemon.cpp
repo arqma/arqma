@@ -187,17 +187,16 @@ bool t_daemon::run(bool interactive)
         return false;
       }
 
-      MINFO("Starting Arqma ZMQ server...");
-
       if(!arqmaNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
       {
         LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to Arqma ZMQ Server");
         return false;
       }
 
+      MINFO("Starting Arqma ZMQ server...");
       arqmaNotifier.run();
 
-      MGINFO_GREEN(std::string("Arqma ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
+      MGINFO_GREEN(std::string("Arqma ZMQ server started at ") << zmq_ip_str + ":" + zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
     }
     else
       MGINFO_GREEN(std::string("Arqma ZMQ Server Disabled"));

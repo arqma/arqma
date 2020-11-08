@@ -31,8 +31,8 @@
 #pragma once
 
 #include "rpc/daemon_messages.h"
-//#include "rpc/daemon_rpc_version.h"
-//#include "rpc/rpc_handler.h"
+#include "rpc/daemon_rpc_version.h"
+#include "rpc/rpc_handler.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_protocol/cryptonote_protocol_handler.h"
 #include "p2p/net_node.h"
@@ -40,7 +40,6 @@
 #include "string_tools.h"
 
 using namespace epee;
-using namespace cryptonote::rpc;
 
 namespace
 {
@@ -51,7 +50,7 @@ namespace
 namespace arqmaMQ
 {
 
-class ZmqHandler : public RpcHandler
+class ZmqHandler : public cryptonote::rpc::RpcHandler
 {
   public:
 
@@ -59,95 +58,95 @@ class ZmqHandler : public RpcHandler
 
     ~ZmqHandler() { }
 
-    void handle(const GetHeight::Request& req, GetHeight::Response& res);
+    void handle(const cryptonote::rpc::GetHeight::Request& req, cryptonote::rpc::GetHeight::Response& res);
 
-    void handle(const GetBlocksFast::Request& req, GetBlocksFast::Response& res);
+    void handle(const cryptonote::rpc::GetBlocksFast::Request& req, cryptonote::rpc::GetBlocksFast::Response& res);
 
-    void handle(const GetHashesFast::Request& req, GetHashesFast::Response& res);
+    void handle(const cryptonote::rpc::GetHashesFast::Request& req, cryptonote::rpc::GetHashesFast::Response& res);
 
-    void handle(const GetTransactions::Request& req, GetTransactions::Response& res);
+    void handle(const cryptonote::rpc::GetTransactions::Request& req, cryptonote::rpc::GetTransactions::Response& res);
 
-    void handle(const KeyImagesSpent::Request& req, KeyImagesSpent::Response& res);
+    void handle(const cryptonote::rpc::KeyImagesSpent::Request& req, cryptonote::rpc::KeyImagesSpent::Response& res);
 
-    void handle(const GetTxGlobalOutputIndices::Request& req, GetTxGlobalOutputIndices::Response& res);
+    void handle(const cryptonote::rpc::GetTxGlobalOutputIndices::Request& req, cryptonote::rpc::GetTxGlobalOutputIndices::Response& res);
 
-    void handle(const SendRawTx::Request& req, SendRawTx::Response& res);
+    void handle(const cryptonote::rpc::SendRawTx::Request& req, cryptonote::rpc::SendRawTx::Response& res);
 
-    void handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res);
+    void handle(const cryptonote::rpc::SendRawTxHex::Request& req, cryptonote::rpc::SendRawTxHex::Response& res);
 
-    void handle(const StartMining::Request& req, StartMining::Response& res);
+    void handle(const cryptonote::rpc::StartMining::Request& req, cryptonote::rpc::StartMining::Response& res);
 
-    void handle(const GetInfo::Request& req, GetInfo::Response& res);
+    void handle(const cryptonote::rpc::GetInfo::Request& req, cryptonote::rpc::GetInfo::Response& res);
 
-    void handle(const StopMining::Request& req, StopMining::Response& res);
+    void handle(const cryptonote::rpc::StopMining::Request& req, cryptonote::rpc::StopMining::Response& res);
 
-    void handle(const MiningStatus::Request& req, MiningStatus::Response& res);
+    void handle(const cryptonote::rpc::MiningStatus::Request& req, cryptonote::rpc::MiningStatus::Response& res);
 
-    void handle(const SaveBC::Request& req, SaveBC::Response& res);
+    void handle(const cryptonote::rpc::SaveBC::Request& req, cryptonote::rpc::SaveBC::Response& res);
 
-    void handle(const GetBlockHash::Request& req, GetBlockHash::Response& res);
+    void handle(const cryptonote::rpc::GetBlockHash::Request& req, cryptonote::rpc::GetBlockHash::Response& res);
 
-    void handle(const GetBlockTemplate::Request& req, GetBlockTemplate::Response& res);
+    void handle(const cryptonote::rpc::GetBlockTemplate::Request& req, cryptonote::rpc::GetBlockTemplate::Response& res);
 
-    void handle(const SubmitBlock::Request& req, SubmitBlock::Response& res);
+    void handle(const cryptonote::rpc::SubmitBlock::Request& req, cryptonote::rpc::SubmitBlock::Response& res);
 
-    void handle(const GetLastBlockHeader::Request& req, GetLastBlockHeader::Response& res);
+    void handle(const cryptonote::rpc::GetLastBlockHeader::Request& req, cryptonote::rpc::GetLastBlockHeader::Response& res);
 
-    void handle(const GetBlockHeaderByHash::Request& req, GetBlockHeaderByHash::Response& res);
+    void handle(const cryptonote::rpc::GetBlockHeaderByHash::Request& req, cryptonote::rpc::GetBlockHeaderByHash::Response& res);
 
-    void handle(const GetBlockHeaderByHeight::Request& req, GetBlockHeaderByHeight::Response& res);
+    void handle(const cryptonote::rpc::GetBlockHeaderByHeight::Request& req, cryptonote::rpc::GetBlockHeaderByHeight::Response& res);
 
-    void handle(const GetBlockHeadersByHeight::Request& req, GetBlockHeadersByHeight::Response& res);
+    void handle(const cryptonote::rpc::GetBlockHeadersByHeight::Request& req, cryptonote::rpc::GetBlockHeadersByHeight::Response& res);
 
-    void handle(const GetBlock::Request& req, GetBlock::Response& res);
+    void handle(const cryptonote::rpc::GetBlock::Request& req, cryptonote::rpc::GetBlock::Response& res);
 
-    void handle(const GetPeerList::Request& req, GetPeerList::Response& res);
+    void handle(const cryptonote::rpc::GetPeerList::Request& req, cryptonote::rpc::GetPeerList::Response& res);
 
-    void handle(const SetLogHashRate::Request& req, SetLogHashRate::Response& res);
+    void handle(const cryptonote::rpc::SetLogHashRate::Request& req, cryptonote::rpc::SetLogHashRate::Response& res);
 
-    void handle(const SetLogLevel::Request& req, SetLogLevel::Response& res);
+    void handle(const cryptonote::rpc::SetLogLevel::Request& req, cryptonote::rpc::SetLogLevel::Response& res);
 
-    void handle(const GetTransactionPool::Request& req, GetTransactionPool::Response& res);
+    void handle(const cryptonote::rpc::GetTransactionPool::Request& req, cryptonote::rpc::GetTransactionPool::Response& res);
 
-    void handle(const GetConnections::Request& req, GetConnections::Response& res);
+    void handle(const cryptonote::rpc::GetConnections::Request& req, cryptonote::rpc::GetConnections::Response& res);
 
-    void handle(const GetBlockHeadersRange::Request& req, GetBlockHeadersRange::Response& res);
+    void handle(const cryptonote::rpc::GetBlockHeadersRange::Request& req, cryptonote::rpc::GetBlockHeadersRange::Response& res);
 
-    void handle(const StopDaemon::Request& req, StopDaemon::Response& res);
+    void handle(const cryptonote::rpc::StopDaemon::Request& req, cryptonote::rpc::StopDaemon::Response& res);
 
-    void handle(const StartSaveGraph::Request& req, StartSaveGraph::Response& res);
+    void handle(const cryptonote::rpc::StartSaveGraph::Request& req, cryptonote::rpc::StartSaveGraph::Response& res);
 
-    void handle(const StopSaveGraph::Request& req, StopSaveGraph::Response& res);
+    void handle(const cryptonote::rpc::StopSaveGraph::Request& req, cryptonote::rpc::StopSaveGraph::Response& res);
 
-    void handle(const HardForkInfo::Request& req, HardForkInfo::Response& res);
+    void handle(const cryptonote::rpc::HardForkInfo::Request& req, cryptonote::rpc::HardForkInfo::Response& res);
 
-    void handle(const GetBans::Request& req, GetBans::Response& res);
+    void handle(const cryptonote::rpc::GetBans::Request& req, cryptonote::rpc::GetBans::Response& res);
 
-    void handle(const SetBans::Request& req, SetBans::Response& res);
+    void handle(const cryptonote::rpc::SetBans::Request& req, cryptonote::rpc::SetBans::Response& res);
 
-    void handle(const FlushTransactionPool::Request& req, FlushTransactionPool::Response& res);
+    void handle(const cryptonote::rpc::FlushTransactionPool::Request& req, cryptonote::rpc::FlushTransactionPool::Response& res);
 
-    void handle(const GetOutputHistogram::Request& req, GetOutputHistogram::Response& res);
+    void handle(const cryptonote::rpc::GetOutputHistogram::Request& req, cryptonote::rpc::GetOutputHistogram::Response& res);
 
-    void handle(const GetOutputKeys::Request& req, GetOutputKeys::Response& res);
+    void handle(const cryptonote::rpc::GetOutputKeys::Request& req, cryptonote::rpc::GetOutputKeys::Response& res);
 
-    void handle(const GetRPCVersion::Request& req, GetRPCVersion::Response& res);
+    void handle(const cryptonote::rpc::GetRPCVersion::Request& req, cryptonote::rpc::GetRPCVersion::Response& res);
 
-    void handle(const GetFeeEstimate::Request& req, GetFeeEstimate::Response& res);
+    void handle(const cryptonote::rpc::GetFeeEstimate::Request& req, cryptonote::rpc::GetFeeEstimate::Response& res);
 
-    void handle(const GetOutputDistribution::Request& req, GetOutputDistribution::Response& res);
+    void handle(const cryptonote::rpc::GetOutputDistribution::Request& req, cryptonote::rpc::GetOutputDistribution::Response& res);
 
     std::string handle(const std::string& request);
 
   private:
 
-    bool getBlockHeaderByHash(const crypto::hash& hash_in, BlockHeaderResponse& response);
+    bool getBlockHeaderByHash(const crypto::hash& hash_in, cryptonote::rpc::BlockHeaderResponse& response);
 
-    void handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res);
+    void handleTxBlob(const std::string& tx_blob, bool relay, cryptonote::rpc::SendRawTx::Response& res);
 
     cryptonote::network_type nettype() const { return m_core.get_nettype(); }
 
-    bool get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res);
+    bool get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, cryptonote::rpc::GetBlockTemplate::Response& res);
 
     bool check_core_ready();
 

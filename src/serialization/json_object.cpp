@@ -1225,7 +1225,7 @@ void toJsonValue(rapidjson::Document& doc, const cryptonote::rpc::BlockTemplateI
 
 }
 
-void fromJsonValue(const rapidjson::Value& val, cryptonote::rpc::BlockTemplateInfo info)
+void fromJsonValue(const rapidjson::Value& val, cryptonote::rpc::BlockTemplateInfo& info)
 {
   if (!val.IsObject())
   {

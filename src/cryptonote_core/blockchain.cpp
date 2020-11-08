@@ -487,7 +487,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
       return false;
   }
 
-  if (zmq_enabled)
+  if(zmq_enabled)
   {
     try
     {
@@ -4156,14 +4156,14 @@ leave:
   invalidate_block_template_cache();
 
 
-  if (zmq_enabled)
+  if(zmq_enabled)
   {
     try
     {
       std::string hex = epee::string_tools::pod_to_hex(id);
       LOG_PRINT_L1("blockchain sending hash: " <<  hex);
       producer.send(create_message(std::move("")), ZMQ_SNDMORE);
-  	  producer.send(create_message(std::move(hex)), 0);
+      producer.send(create_message(std::move(hex)), 0);
     }
     catch( const std::exception& e)
     {
