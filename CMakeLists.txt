@@ -573,7 +573,12 @@ pkg_check_modules(SODIUM libsodium>=1.0.16 REQUIRED IMPORTED_TARGET)
 add_library(sodium INTERFACE)
 target_link_libraries(sodium INTERFACE PkgConfig::SODIUM)
 
+add_library(libzmq INTERFACE)
+
 add_subdirectory(external)
+
+target_link_libraries(libzmq INTERFACE libzmq_vendor sodium libpgm_vendor libnorm_vendor)
+include_directories(${ZMQ_INCLUDE_DIRS})
 
 include_directories(${UNBOUND_INCLUDE})
 
@@ -584,11 +589,6 @@ include_directories(${LMDB_INCLUDE_DIRS})
 
 include_directories(${LIBUNWIND_INCLUDE})
 link_directories(${LIBUNWIND_LIBRARY_DIRS})
-
-add_library(libzmq INTERFACE)
-include(DownloadLibZmq)
-target_link_libraries(libzmq INTERFACE libzmq_vendor sodium)
-include_directories(${ZMQ_INCLUDE_DIRS})
 
 if(HIDAPI_FOUND)
   statusinfo("Using HIDAPI include dir at ${HIDAPI_INCLUDE_DIR}")

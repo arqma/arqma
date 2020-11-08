@@ -62,7 +62,7 @@ arqma_add_library(arqma_mq
   ${arqma_mq_private_headers})
 
 target_link_libraries(arqma_mq
-  PRIVATE
+  PUBLIC
     common
     epee
     libunbound
@@ -75,6 +75,7 @@ target_link_libraries(arqma_mq
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     libzmq
+  PRIVATE
     ${EXTRA_LIBRARIES})
 
 add_dependencies(arqma_mq
