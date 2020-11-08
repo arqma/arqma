@@ -89,6 +89,7 @@ if(NOT IOS)
   target_link_libraries(wallet_rpc_server
     PRIVATE
       wallet
+      arqma_mq
       rpc_base
       rpc_sig
       cryptonote_core

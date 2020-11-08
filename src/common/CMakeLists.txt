@@ -27,7 +27,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+include_directories(${OPENSSL_INCLUDE_DIR})
 
 set(common_sources
   base58.cpp
@@ -98,7 +98,7 @@ target_link_libraries(common
   PUBLIC
     cncrypto
     libunbound
-    miniupnpc
+    ${Libunwind_LIBRARIES}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}

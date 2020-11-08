@@ -71,7 +71,7 @@
 
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
 
-#define MIN_WANTED_SEED_NODES 8
+//#define MIN_WANTED_SEED_NODES 8
 
 using namespace boost::placeholders;
 
@@ -331,7 +331,7 @@ namespace nodetool
 
     if (command_line::has_arg(vm, arg_p2p_seed_node))
     {
-      boost::unique_lock<boost::shared_mutex> lock(m_seed_nodes_lock);
+//      boost::unique_lock<boost::shared_mutex> lock(m_seed_nodes_lock);
 
       if (!parse_peers_and_add_to_container(vm, arg_p2p_seed_node, m_seed_nodes))
         return false;
@@ -484,6 +484,7 @@ namespace nodetool
     return full_addrs;
   }
   //-----------------------------------------------------------------------------------
+/*
   template<class t_payload_net_handler>
   std::set<std::string> node_server<t_payload_net_handler>::get_seed_nodes()
   {
@@ -592,6 +593,7 @@ namespace nodetool
 
     return full_addrs;
   }
+*/
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
   typename node_server<t_payload_net_handler>::network_zone& node_server<t_payload_net_handler>::add_zone(const epee::net_utils::zone zone)
@@ -607,21 +609,39 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::init(const boost::program_options::variables_map& vm)
   {
+    std::set<std::string> full_addrs;
+
     bool res = handle_command_line(vm);
     CHECK_AND_ASSERT_MES(res, false, "Failed to handle command line");
 
+    m_fallback_seed_nodes_added = false;
     if (m_nettype == cryptonote::TESTNET)
     {
       memcpy(&m_network_id, &::config::testnet::NETWORK_ID, 16);
+      full_addrs = get_seed_nodes(cryptonote::TESTNET);
     }
     else if (m_nettype == cryptonote::STAGENET)
     {
       memcpy(&m_network_id, &::config::stagenet::NETWORK_ID, 16);
+      full_addrs = get_seed_nodes(cryptonote::STAGENET);
     }
     else
     {
       memcpy(&m_network_id, &::config::NETWORK_ID, 16);
+//      if(m_exclusive_peers.empty() && !m_offline)
+//      {
+      for(const auto &peer : get_seed_nodes(cryptonote::MAINNET))
+        full_addrs.insert(peer);
+      m_fallback_seed_nodes_added = true;
+//      }
     }
+
+    for(const auto& full_addr : full_addrs)
+    {
+      MDEBUG("Seed node: " << full_addr);
+      append_net_address(m_seed_nodes, full_addr, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
+    }
+    MDEBUG("Number of seed nodes: " << m_seed_nodes.size());
 
     m_config_folder = command_line::get_arg(vm, cryptonote::arg_data_dir);
     network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
@@ -755,7 +775,7 @@ namespace nodetool
     public_zone.m_net_server.add_idle_handler(std::bind(&t_payload_net_handler::on_idle, &m_payload_handler), 1000);
 
     //here you can set worker threads count
-    int thrds_count = 16;
+    int thrds_count = 10;
 
     boost::thread::attributes attrs;
     attrs.set_stack_size(THREAD_STACK_SIZE);
@@ -1327,19 +1347,19 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::connect_to_seed()
   {
-    boost::upgrade_lock<boost::shared_mutex> seed_nodes_upgrade_lock(m_seed_nodes_lock);
-
-    if (!m_seed_nodes_initialized)
-    {
-      boost::upgrade_to_unique_lock<boost::shared_mutex> seed_nodes_lock(seed_nodes_upgrade_lock);
-      m_seed_nodes_initialized = true;
-      for (const auto& full_addr : get_seed_nodes())
-      {
-        MDEBUG("Seed node: " << full_addr);
-        append_net_address(m_seed_nodes, full_addr, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
-      }
-      MDEBUG("Number of seed nodes: " << m_seed_nodes.size());
-      }
+//    boost::upgrade_lock<boost::shared_mutex> seed_nodes_upgrade_lock(m_seed_nodes_lock);
+//
+//    if (!m_seed_nodes_initialized)
+//    {
+//      boost::upgrade_to_unique_lock<boost::shared_mutex> seed_nodes_lock(seed_nodes_upgrade_lock);
+//      m_seed_nodes_initialized = true;
+//      for (const auto& full_addr : get_seed_nodes())
+//      {
+//        MDEBUG("Seed node: " << full_addr);
+//        append_net_address(m_seed_nodes, full_addr, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
+//      }
+//      MDEBUG("Number of seed nodes: " << m_seed_nodes.size());
+//      }
 
       if (m_seed_nodes.empty() || m_offline || !m_exclusive_peers.empty())
         return true;
@@ -1356,20 +1376,22 @@ namespace nodetool
           break;
         if(++try_count > m_seed_nodes.size())
         {
-          if (!m_fallback_seed_nodes_added.test_and_set())
+          //if (!m_fallback_seed_nodes_added.test_and_set())
+          if(!m_fallback_seed_nodes_added)
           {
             MWARNING("Failed to connect to any of seed peers, trying fallback seeds");
-            current_index = m_seed_nodes.size();
-            {
-              boost::upgrade_to_unique_lock<boost::shared_mutex> seed_nodes_lock(seed_nodes_upgrade_lock);
-
+            current_index = m_seed_nodes.size() - 1;
+//            {
+//              boost::upgrade_to_unique_lock<boost::shared_mutex> seed_nodes_lock(seed_nodes_upgrade_lock);
+//
               for(const auto &peer: get_seed_nodes(m_nettype))
               {
                 MDEBUG("Fallback seed Node: " << peer);
                 append_net_address(m_seed_nodes, peer, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
               }
-            }
-            if (current_index == m_seed_nodes.size())
+//            }
+            m_fallback_seed_nodes_added = true;
+            if (current_index == m_seed_nodes.size() - 1)
             {
               MWARNING("No fallback seeds, continuing without seeds");
               break;
@@ -1401,9 +1423,10 @@ namespace nodetool
     // ONLY have seeds in the public zone at the moment!
 
     size_t start_conn_count = get_public_outgoing_connections_count();
-    if(!get_public_white_peers_count() && !connect_to_seed())
+    if(!get_public_white_peers_count() && m_seed_nodes.size()) // !connect_to_seed())
     {
-      return false;
+      if(!connect_to_seed())
+        return false;
     }
 
     if (!connect_to_peerlist(m_priority_peers)) return false;
@@ -2144,7 +2167,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::set_max_out_peers(network_zone& zone, int64_t max)
   {
     if(max == -1) {
-      zone.m_config.m_net_config.max_out_connection_count = P2P_DEFAULT_CONNECTIONS_COUNT;
+      zone.m_config.m_net_config.max_out_connection_count = P2P_DEFAULT_CONNECTIONS_COUNT_OUT;
       return true;
     }
     zone.m_config.m_net_config.max_out_connection_count = max;
@@ -2154,6 +2177,11 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::set_max_in_peers(network_zone& zone, int64_t max)
   {
+    if(max == -1)
+    {
+      zone.m_config.m_net_config.max_in_connection_count = P2P_DEFAULT_CONNECTIONS_COUNT_IN;
+      return true;
+    }
     zone.m_config.m_net_config.max_in_connection_count = max;
     return true;
   }

@@ -577,8 +577,7 @@ include_directories(${LIBUNWIND_INCLUDE})
 link_directories(${LIBUNWIND_LIBRARY_DIRS})
 
 add_library(libzmq INTERFACE)
-include(DownloadLibZmq)
-target_link_libraries(libzmq INTERFACE libzmq_vendor sodium)
+target_link_libraries(libzmq INTERFACE libzmq_vendor sodium libpgm_vendor libnorm_vendor)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
 if(HIDAPI_FOUND)
