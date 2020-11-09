@@ -36,6 +36,43 @@
 # ...except for FreeBSD, because FreeBSD is a special case that doesn't play well with
 # others.
 
+if(DEPENDS)
+  add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
+  set_target_properties(libzmq_vendor PROPERTIES IMPORTED_LOCATION ${ZMQ_LIBRARIES})
+  target_include_directories(libzmq_vendor INTERFACE ${ZMQ_INCLUDE_DIRS})
+  statusinfo("${ZMQ_INCLUDE_DIRS} ${ZMQ_LIBRARIES}")
+else()
+  include(ExternalProject)
+  include(ProcessorCount)
+
+  set(zmq_prefix ${CMAKE_BINARY_DIR}/external/libzmq)
+  set(zmq_patch patch -p1 src/thread.cpp < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
+  set(zmq_autogen ./autogen.sh)
+  set(zmq_configure ./configure --prefix=${zmq_prefix})
+  if(APPLE OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    set(zmq_configure ${zmq_configure} --host=x86_64-apple-darwin)
+  endif()
+
+  set(zmq_configure ${zmq_configure} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
+
+  ExternalProject_add(libzmq_external
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libzmq
+    PREFIX ${zmq_prefix}
+    PATCH_COMMAND ${zmq_patch}
+    CONFIGURE_COMMAND ${zmq_autogen} && ${zmq_configure}
+    BUILD_COMMAND make -j${PROCESSOR_COUNT}
+    INSTALL_COMMAND ${MAKE}
+    BUILD_IN_SOURCE ON
+    BUILD_BY_PRODUCTS ${zmq_prefix}/lib/libzmq.a ${zmq_prefix}/include
+  )
+  add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
+  add_dependencies(libzmq_vendor libzmq_external)
+  set_property(TARGET libzmq_vendor PROPERTY IMPORTED_LOCATION ${zmq_prefix}/lib/libzmq.a)
+  target_include_directories(libzmq_vendor INTERFACE ${zmq_prefix}/include)
+
+  set(ZMQ_INCLUDE_DIRS ${zmq_prefix}/include CACHE STRING "ZMQ Include path")
+endif()
+
 statusinfo("Using in-tree miniupnpc")
 add_subdirectory(miniupnp/miniupnpc)
 if(MSVC)

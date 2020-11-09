@@ -290,6 +290,7 @@ if(NOT MANUAL_SUBMODULES)
     check_submodule(external/unbound)
     check_submodule(external/rapidjson)
     check_submodule(external/randomarq)
+    check_submodule(external/libzmq)
   endif()
 endif()
 
@@ -565,6 +566,8 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/translations")
 if(POLICY CMP0079)
   cmake_policy(SET CMP0079 NEW)
 endif()
+
+add_library(libzmq INTERFACE)
 add_library(libunbound INTERFACE)
 add_library(miniupnpc INTERFACE)
 
@@ -573,11 +576,8 @@ pkg_check_modules(SODIUM libsodium>=1.0.16 REQUIRED IMPORTED_TARGET)
 add_library(sodium INTERFACE)
 target_link_libraries(sodium INTERFACE PkgConfig::SODIUM)
 
-add_library(libzmq INTERFACE)
-
 add_subdirectory(external)
 
-include(DownloadLibZmq)
 target_link_libraries(libzmq INTERFACE libzmq_vendor sodium)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
