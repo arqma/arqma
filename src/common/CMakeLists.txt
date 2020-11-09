@@ -98,7 +98,7 @@ target_link_libraries(common
   PUBLIC
     cncrypto
     libunbound
-    ${Libunwind_LIBRARIES}
+    ${LIBUNWIND_LIBRARIES}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
