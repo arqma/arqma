@@ -577,7 +577,8 @@ add_library(libzmq INTERFACE)
 
 add_subdirectory(external)
 
-target_link_libraries(libzmq INTERFACE libzmq_vendor sodium libpgm_vendor libnorm_vendor)
+include(DownloadLibZmq)
+target_link_libraries(libzmq INTERFACE libzmq_vendor sodium)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
 include_directories(${UNBOUND_INCLUDE})
