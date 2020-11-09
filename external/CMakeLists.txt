@@ -40,7 +40,7 @@ if(DEPENDS)
   add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
   set_target_properties(libzmq_vendor PROPERTIES IMPORTED_LOCATION ${ZMQ_LIBRARIES})
   target_include_directories(libzmq_vendor INTERFACE ${ZMQ_INCLUDE_DIRS})
-  statiusinfo("${ZMQ_INCLUDE_DIRS} ${ZMQ_LIBRARIES}")
+  statusinfo("${ZMQ_INCLUDE_DIRS} ${ZMQ_LIBRARIES}")
 else()
   include(ExternalProject)
   include(ProcessorCount)
@@ -53,13 +53,13 @@ else()
     set(zmq_configure ${zmq_configure} --host=x86_64-apple-darwin)
   endif()
 
-  set(zmq_options --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
+  set(zmq_configure ${zmq_configure} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
 
   ExternalProject_add(libzmq_external
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libzmq
     PREFIX ${zmq_prefix}
     PATCH_COMMAND ${zmq_patch}
-    CONFIGURE_COMMAND ${zmq_autogen} && ${zmq_configure} ${zmq_options}
+    CONFIGURE_COMMAND ${zmq_autogen} && ${zmq_configure}
     BUILD_COMMAND make -j${PROCESSOR_COUNT}
     INSTALL_COMMAND ${MAKE}
     BUILD_IN_SOURCE ON
