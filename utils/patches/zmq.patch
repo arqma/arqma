@@ -1,5 +1,21 @@
---- zeromq-4.3.2/src/thread.cpp	2019-07-08 16:19:27.000000000 +0000
-+++ libzmq/src/thread.cpp	2020-06-18 09:20:42.875166670 +0000
+--- configure.ac      2019-07-08 16:19:27.000000000 +0000
++++ configure.ac      2020-06-18 09:20:42.875166670 +0000
+@@ -935,11 +935,6 @@ AC_ARG_WITH([pkgconfigdir],
+     [pkgconfigdir='${libdir}/pkgconfig'])
+ AC_SUBST([pkgconfigdir])
+
+-AC_CONFIG_FILES([ \
+-    Makefile \
+-    src/libzmq.pc \
+-    doc/Makefile \
+-    builds/Makefile \
+-    builds/deprecated-msvc/Makefile])
++AC_CONFIG_FILES([Makefile src/libzmq.pc doc/Makefile builds/Makefile builds/deprecated-msvc/Makefile])
+
+ AC_OUTPUT
+
+--- src/thread.cpp	2019-07-08 16:19:27.000000000 +0000
++++ src/thread.cpp	2020-06-18 09:20:42.875166670 +0000
 @@ -32,6 +32,10 @@
  #include "thread.hpp"
  #include "err.hpp"

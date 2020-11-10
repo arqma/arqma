@@ -25,14 +25,13 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       with:
         submodules: recursive
-    - uses: eine/setup-msys2@v2
+    - uses: msys2/setup-msys2@v2
       with:
-        path-type: inherit
         update: true
-        install: mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-libusb mingw-w64-x86_64-libtool mingw-w64-x86_64-icu git automake autoconf patch
+        install: mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-libusb mingw-w64-x86_64-libtool binutils git automake autoconf patch
     - name: boost
       run: pacman --noconfirm -U https://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-boost-1.71.0-3-any.pkg.tar.xz
     - name: icu version

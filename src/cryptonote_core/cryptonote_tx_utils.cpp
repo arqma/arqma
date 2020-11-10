@@ -78,80 +78,80 @@ namespace cryptonote
   }
   //---------------------------------------------------------------
   // Governance code credit to Loki project https://github.com/loki-project/loki
-keypair get_deterministic_keypair_from_height(uint64_t height)
-{
-  keypair k;
-
-  ec_scalar& sec = k.sec;
-
-  for (int i=0; i < 8; i++)
+  keypair get_deterministic_keypair_from_height(uint64_t height)
   {
-    uint64_t height_byte = height & ((uint64_t)0xFF << (i*8));
-    uint8_t byte = height_byte >> i*8;
-    sec.data[i] = byte;
+    keypair k;
+
+    ec_scalar& sec = k.sec;
+
+    for (int i=0; i < 8; i++)
+    {
+      uint64_t height_byte = height & ((uint64_t)0xFF << (i*8));
+      uint8_t byte = height_byte >> i*8;
+      sec.data[i] = byte;
+    }
+    for (int i=8; i < 32; i++)
+    {
+      sec.data[i] = 0x00;
+    }
+
+    generate_keys(k.pub, k.sec, k.sec, true);
+
+    return k;
   }
-  for (int i=8; i < 32; i++)
+
+  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hf_version)
   {
-    sec.data[i] = 0x00;
+    if(hf_version >= 16)
+      return base_reward * 10 / 100;
+    return 0;
   }
 
-  generate_keys(k.pub, k.sec, k.sec, true);
-
-  return k;
-}
-
-uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hf_version)
-{
-  if(hf_version >= 16)
-   return base_reward * 10 / 100;
-  return 0;
-}
-
-bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
-{
-
-  crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
-  bool r = crypto::generate_key_derivation(address.m_view_public_key, tx_key.sec, derivation);
-  CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << address.m_view_public_key << ", " << tx_key.sec << ")");
-
-  r = crypto::derive_public_key(derivation, output_index, address.m_spend_public_key, output_key);
-  CHECK_AND_ASSERT_MES(r, false, "failed to derive_public_key(" << derivation << ", "<< address.m_spend_public_key << ")");
-
-  return true;
-}
-
-bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
-{
-  keypair gov_key = get_deterministic_keypair_from_height(height);
-
-  cryptonote::address_parse_info governance_wallet_address;
-  switch(nettype)
+  bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
   {
-    case STAGENET:
-      cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::STAGENET, governance_wallet_address_str);
-      break;
-    case TESTNET:
-      cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, governance_wallet_address_str);
-      break;
-    case MAINNET:
-      cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, governance_wallet_address_str);
-      break;
-    default:
+
+    crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
+    bool r = crypto::generate_key_derivation(address.m_view_public_key, tx_key.sec, derivation);
+    CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << address.m_view_public_key << ", " << tx_key.sec << ")");
+
+    r = crypto::derive_public_key(derivation, output_index, address.m_spend_public_key, output_key);
+    CHECK_AND_ASSERT_MES(r, false, "failed to derive_public_key(" << derivation << ", "<< address.m_spend_public_key << ")");
+
+    return true;
+  }
+
+  bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
+  {
+    keypair gov_key = get_deterministic_keypair_from_height(height);
+
+    cryptonote::address_parse_info governance_wallet_address;
+    switch(nettype)
+    {
+      case STAGENET:
+        cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::STAGENET, governance_wallet_address_str);
+        break;
+      case TESTNET:
+        cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, governance_wallet_address_str);
+        break;
+      case MAINNET:
+        cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, governance_wallet_address_str);
+        break;
+      default:
+        return false;
+    }
+
+    crypto::public_key correct_key;
+
+    if (!get_deterministic_output_key(governance_wallet_address.address, gov_key, output_index, correct_key))
+    {
+      MERROR("Failed to generate deterministic output key for governance wallet output validation");
       return false;
+    }
+
+    return correct_key == output_key;
   }
-
-  crypto::public_key correct_key;
-
-  if (!get_deterministic_output_key(governance_wallet_address.address, gov_key, output_index, correct_key))
-  {
-    MERROR("Failed to generate deterministic output key for governance wallet output validation");
-    return false;
-  }
-
-  return correct_key == output_key;
-}
-//---------------------------------------------------------------
-bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, size_t max_outs, uint8_t hard_fork_version, network_type nettype) {
+  //---------------------------------------------------------------
+  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t hard_fork_version, network_type nettype) {
     tx.vin.clear();
     tx.vout.clear();
     tx.extra.clear();
@@ -282,7 +282,7 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     return addr.m_view_public_key;
   }
   //---------------------------------------------------------------
-  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, bool rct, rct::RangeProofType range_proof_type, rct::multisig_out *msout, bool shuffle_outs)
+  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, rct::RangeProofType range_proof_type, rct::multisig_out *msout)
   {
     hw::device &hwdev = sender_account_keys.get_device();
 
@@ -301,6 +301,13 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     }
 
     tx.version = config::tx_settings::ARQMA_TX_VERSION;
+
+    if(range_proof_type == rct::RangeProofPaddedBulletproof && destinations.size() > BULLETPROOF_MAX_OUTPUTS)
+    {
+      LOG_ERROR("It is allowed to use max 15 outputs (1 needed for change) with current Bulletproofs.");
+      return false;
+    }
+
     tx.unlock_time = unlock_time;
 
     tx.extra = extra;
@@ -400,11 +407,6 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
 
       input_to_key.key_offsets = absolute_output_offsets_to_relative(input_to_key.key_offsets);
       tx.vin.push_back(input_to_key);
-    }
-
-    if (shuffle_outs)
-    {
-      std::shuffle(destinations.begin(), destinations.end(), std::default_random_engine(crypto::rand<unsigned int>()));
     }
 
     // sort ins by their key image
@@ -696,10 +698,12 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     return true;
   }
   //---------------------------------------------------------------
-  bool construct_tx_and_get_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, bool rct, rct::RangeProofType range_proof_type, rct::multisig_out *msout)
+  bool construct_tx_and_get_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, rct::RangeProofType range_proof_type, rct::multisig_out *msout)
   {
     hw::device &hwdev = sender_account_keys.get_device();
     hwdev.open_tx(tx_key);
+
+    std::shuffle(destinations.begin(), destinations.end(), std::default_random_engine(crypto::rand<unsigned int>()));
 
     // figure out if we need to make additional tx pubkeys
     size_t num_stdaddresses = 0;
@@ -714,7 +718,7 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
         additional_tx_keys.push_back(keypair::generate(sender_account_keys.get_device()).sec);
     }
 
-    bool r = construct_tx_with_tx_key(sender_account_keys, subaddresses, sources, destinations, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, rct, range_proof_type, msout);
+    bool r = construct_tx_with_tx_key(sender_account_keys, subaddresses, sources, destinations, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, range_proof_type, msout);
     hwdev.close_tx();
     return r;
   }
@@ -726,7 +730,7 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
      crypto::secret_key tx_key;
      std::vector<crypto::secret_key> additional_tx_keys;
      std::vector<tx_destination_entry> destinations_copy = destinations;
-     return construct_tx_and_get_tx_key(sender_account_keys, subaddresses, sources, destinations_copy, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, false, rct::RangeProofBorromean, NULL);
+     return construct_tx_and_get_tx_key(sender_account_keys, subaddresses, sources, destinations_copy, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, rct::RangeProofBorromean, NULL);
   }
   //---------------------------------------------------------------
   bool generate_genesis_block(block& bl)
