@@ -1307,8 +1307,9 @@ namespace nodetool
         if(conn_count < expected_white_connections)
         {
           //start from anchor list
-          while (get_outgoing_connections_count(zone.second) < P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT
-            && make_expected_connections_count(zone.second, anchor, P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT));
+          size_t anchor_connections = m_nettype == cryptonote::MAINNET ? P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT : P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST;
+          while (get_outgoing_connections_count(zone.second) < anchor_connections
+            && make_expected_connections_count(zone.second, anchor, anchor_connections));
           //then do white list
           while (get_outgoing_connections_count(zone.second) < expected_white_connections
             && make_expected_connections_count(zone.second, white, expected_white_connections));
@@ -1505,7 +1506,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::peer_sync_idle_maker()
   {
     MDEBUG("STARTED PEERLIST IDLE HANDSHAKE");
-    typedef std::list<std::pair<epee::net_utils::connection_context_base, peerid_type> > local_connects_type;
+    typedef std::list<std::pair<epee::net_utils::connection_context_base, peerid_type>> local_connects_type;
     local_connects_type cncts;
     for(auto& zone : m_network_zones)
     {
@@ -2002,7 +2003,7 @@ namespace nodetool
   }
 
   template<class t_payload_net_handler> template <class Container>
-  bool node_server<t_payload_net_handler>::parse_peers_and_add_to_container(const boost::program_options::variables_map& vm, const command_line::arg_descriptor<std::vector<std::string> > & arg, Container& container)
+  bool node_server<t_payload_net_handler>::parse_peers_and_add_to_container(const boost::program_options::variables_map& vm, const command_line::arg_descriptor<std::vector<std::string>> & arg, Container& container)
   {
     std::vector<std::string> perrs = command_line::get_arg(vm, arg);
 
@@ -2101,7 +2102,7 @@ namespace nodetool
     if(flag == -1){
       return true;
     }
-    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_tos_flag(flag);
+    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_tos_flag(flag);
     _dbg1("Set ToS flag  " << flag);
     return true;
   }
@@ -2115,7 +2116,7 @@ namespace nodetool
       limit = default_limit_up;
     }
 
-    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_up_limit( limit );
+    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_rate_up_limit( limit );
     MINFO("Set limit-up to " << limit << " kB/s");
     return true;
   }
@@ -2127,7 +2128,7 @@ namespace nodetool
     if(limit == -1) {
       limit = default_limit_down;
     }
-    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_down_limit( limit );
+    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_rate_down_limit( limit );
     MINFO("Set limit-down to " << limit << " kB/s");
     return true;
   }
@@ -2149,11 +2150,11 @@ namespace nodetool
       limit_down = limit;
     }
     if(!this->islimitup) {
-      epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_up_limit(limit_up);
+      epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_rate_up_limit(limit_up);
       MINFO("Set limit-up to " << limit_up << " kB/s");
     }
     if(!this->islimitdown) {
-      epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_down_limit(limit_down);
+      epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_rate_down_limit(limit_down);
       MINFO("Set limit-down to " << limit_down << " kB/s");
     }
 

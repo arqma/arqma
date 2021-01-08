@@ -208,7 +208,7 @@ namespace tools
       struct output {
         uint64_t amount;
         std::string public_key;
-        uint64_t  index;
+        uint64_t index;
         uint64_t global_index;
         std::string rct;
         std::string tx_hash;

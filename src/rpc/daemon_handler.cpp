@@ -338,6 +338,11 @@ namespace rpc
         if (!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "fee too low";
       }
+      if(tvc.m_invalid_version)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx version below 2 is invalid and forbidden";
+      }
       if (res.error_details.empty())
       {
         res.error_details = "an unknown issue was found with the transaction";
@@ -845,7 +850,7 @@ namespace rpc
 
   void DaemonHandler::handle(const GetOutputHistogram::Request& req, GetOutputHistogram::Response& res)
   {
-    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t> > histogram;
+    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> histogram;
     try
     {
       histogram = m_core.get_blockchain_storage().get_output_histogram(req.amounts, req.unlocked, req.recent_cutoff);

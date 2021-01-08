@@ -29,6 +29,8 @@
 
 include_directories(${OPENSSL_INCLUDE_DIR})
 
+## exp2 + round <-- if somebody would like to do some precise equations near future :)
+
 set(common_sources
   base58.cpp
   command_line.cpp
@@ -38,9 +40,12 @@ set(common_sources
   expect.cpp
   util.cpp
   i18n.cpp
+  exp2.cpp
+  round.cpp
   notify.cpp
   password.cpp
   perf_timer.cpp
+  rules.cpp
   pruning.cpp
   spawn.cpp
   threadpool.cpp
@@ -48,11 +53,11 @@ set(common_sources
   aligned.c
   combinator.cpp)
 
-if (STACK_TRACE)
+if(STACK_TRACE)
   list(APPEND common_sources stack_trace.cpp)
 endif()
 
-if (BACKCOMPAT)
+if(BACKCOMPAT)
   list(APPEND common_sources compat/glibc_compat.cpp)
 endif()
 
@@ -66,6 +71,8 @@ set(common_private_headers
   common_fwd.h
   dns_utils.h
   download.h
+  exp2.h
+  round.h
   error.h
   expect.h
   http_connection.h
@@ -80,6 +87,7 @@ set(common_private_headers
   i18n.h
   password.h
   perf_timer.h
+  rules.h
   spawn.h
   stack_trace.h
   threadpool.h

@@ -36,6 +36,7 @@
 #include "cryptonote_core/blockchain.h"
 #include "blockchain_db/blockchain_db.h"
 #include "blockchain_db/lmdb/db_lmdb.h"
+#include "blockchain_objects.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -95,8 +96,7 @@ static void add_size(MDB_env *env, uint64_t bytes)
     boost::filesystem::space_info si = boost::filesystem::space(path);
     if(si.available < bytes)
     {
-      MERROR("!! WARNING: Insufficient free space to extend database !!: " <<
-          (si.available >> 20L) << " MB available, " << (bytes >> 20L) << " MB needed");
+      MERROR("!! WARNING: Insufficient free space to extend database !!: " << (si.available >> 20L) << " MB available, " << (bytes >> 20L) << " MB needed");
       return;
     }
   }
@@ -455,7 +455,7 @@ int main(int argc, char* argv[])
   , "Specify sync option, using format [safe|fast|fastest]:[nrecords_per_sync]."
   , "fast:1000"
   };
-  const command_line::arg_descriptor<bool> arg_copy_pruned_database  = {"copy-pruned-database",  "Copy database anyway if already pruned"};
+  const command_line::arg_descriptor<bool> arg_copy_pruned_database = {"copy-pruned-database",  "Copy database anyway if already pruned"};
 
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_data_dir);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_testnet_on);
@@ -522,14 +522,13 @@ int main(int argc, char* argv[])
   // because unlike blockchain_storage constructor, which takes a pointer to
   // tx_memory_pool, Blockchain's constructor takes tx_memory_pool object.
   MINFO("Initializing source blockchain (BlockchainDB)");
-  std::array<std::unique_ptr<Blockchain>, 2> core_storage;
-  Blockchain *blockchain = NULL;
-  tx_memory_pool m_mempool(*blockchain);
+  std::array<Blockchain *, 2> core_storage;
   boost::filesystem::path paths[2];
   bool already_pruned = false;
   for (size_t n = 0; n < core_storage.size(); ++n)
   {
-    core_storage[n].reset(new Blockchain(m_mempool));
+    blockchain_objects_t *blockchain_objects = new blockchain_objects_t();
+    core_storage[n] = &(blockchain_objects->m_blockchain);
 
     BlockchainDB* db = new_db();
     if (db == NULL)
@@ -591,9 +590,9 @@ int main(int argc, char* argv[])
     }
   }
   core_storage[0]->deinit();
-  core_storage[0].reset(NULL);
+  delete core_storage[0];
   core_storage[1]->deinit();
-  core_storage[1].reset(NULL);
+  delete core_storage[1];
 
   MINFO("Pruning...");
   MDB_env *env0 = NULL, *env1 = NULL;

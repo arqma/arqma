@@ -374,7 +374,9 @@ namespace cryptonote {
     }
     return  next_D;
   }
-//v16 diffculty algo 
+
+//v16 diffculty algo
+
   difficulty_type next_difficulty_v16(std::vector<uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties) {
 
     uint64_t  T = DIFFICULTY_TARGET_V16;
@@ -403,11 +405,11 @@ namespace cryptonote {
 
     for ( i = 1; i <= N; i++) {
       // Temper long solvetime drops if they were preceded by 3 or 6 fast solves.
-      if ( i > 4 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-4] < (14*T)/10 ) {   ST = 2*T; }
-      else if ( i > 7 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-7] < 4*T ) {   ST = 2*T; }
+      if ( i > 4 && TS[i]-TS[i-1] > 3*T  && TS[i-1] - TS[i-4] < (14*T)/10 ) {   ST = 2*T; }
+      else if ( i > 7 && TS[i]-TS[i-1] > 3*T  && TS[i-1] - TS[i-7] < 4*T ) {   ST = 2*T; }
       else { // Assume normal conditions, so get ST.
-        // LWMA drops too much from long ST, so limit drops with a 5*T limit
-        ST = std::min(5*T ,TS[i] - TS[i-1]);
+        // LWMA drops too much from long ST, so limit drops with a 3*T limit
+        ST = std::min(3*T ,TS[i] - TS[i-1]);
       }
       L +=  ST * i ;
     }

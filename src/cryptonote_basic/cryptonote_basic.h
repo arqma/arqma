@@ -162,8 +162,17 @@ namespace cryptonote
   {
 
   public:
+    enum version
+    {
+      version_0 = 0,
+      version_1,
+      version_2,
+      version_3,
+    };
+
     // tx information
     size_t   version;
+
     uint64_t unlock_time;  //number of block (or time), used as a limitation like: spend this tx not early then block/time
 
     std::vector<txin_v> vin;
@@ -171,12 +180,21 @@ namespace cryptonote
     //extra
     std::vector<uint8_t> extra;
 
+    std::vector<uint64_t> output_unlock_times;
+    bool is_deregister; //service node deregister tx
+
     BEGIN_SERIALIZE()
       VARINT_FIELD(version)
-      if(version == 0 || config::tx_settings::ARQMA_TX_VERSION < version) return false;
+      if(version > 2)
+      {
+        FIELD(output_unlock_times)
+        FIELD(is_deregister)
+      }
+      if(version == 0 || config::tx_settings::CURRENT_TX_VERSION < version) return false;
       VARINT_FIELD(unlock_time)
       FIELD(vin)
       FIELD(vout)
+      if(version >= 3 && vout.size() != output_unlock_times.size()) return false;
       FIELD(extra)
     END_SERIALIZE()
 
@@ -186,9 +204,25 @@ namespace cryptonote
     {
       version = 1;
       unlock_time = 0;
+      output_unlock_times.clear();
+      is_deregister = false;
       vin.clear();
       vout.clear();
       extra.clear();
+    }
+
+    uint64_t get_unlock_time(size_t out_index) const
+    {
+      if(version >= version_3)
+      {
+        if(out_index >= output_unlock_times.size())
+        {
+          LOG_ERROR("Tried to get unlock time of a v3 transaction with missing output unlock time");
+          return unlock_time;
+        }
+        return output_unlock_times[out_index];
+      }
+      return unlock_time;
     }
   };
 
@@ -201,7 +235,7 @@ namespace cryptonote
     mutable std::atomic<bool> blob_size_valid;
 
   public:
-    std::vector<std::vector<crypto::signature> > signatures; //count signatures  always the same as inputs count
+    std::vector<std::vector<crypto::signature>> signatures; //count signatures  always the same as inputs count
     rct::rctSig rct_signatures;
 
     // hash cash
@@ -229,6 +263,7 @@ namespace cryptonote
     void set_hash(const crypto::hash &h) const { hash = h; set_hash_valid(true); }
     void set_prunable_hash(const crypto::hash &h) const { prunable_hash = h; set_prunable_hash_valid(true); }
     void set_blob_size(size_t sz) const { blob_size = sz; set_blob_size_valid(true); }
+    bool is_deregister_tx() const { return (version == version_3) && is_deregister; }
 
     BEGIN_SERIALIZE_OBJECT()
       if (!typename Archive<W>::is_saving())

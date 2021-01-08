@@ -351,7 +351,7 @@ namespace cryptonote
       uint64_t max_block_height = std::max(hshd.current_height,m_core.get_current_blockchain_height());
       // Need to be fill in when we will know correct fork values
       uint64_t last_block_v10 = m_core.get_nettype() == TESTNET ? 30 : m_core.get_nettype() == MAINNET ? 61250 : 500;
-      uint64_t last_block_v15 = m_core.get_nettype() == TESTNET ? 90 : m_core.get_nettype() == MAINNET ? (uint64_t)-1 : 52000;
+      uint64_t last_block_v15 = m_core.get_nettype() == TESTNET ? 90 : m_core.get_nettype() == MAINNET ? (uint64_t)-1 : 12800;
       uint64_t diff_v11 = max_block_height > last_block_v10 ? std::min(abs_diff, max_block_height - last_block_v10) : 0;
       uint64_t diff_v16 = max_block_height > last_block_v15 ? std::min(abs_diff, max_block_height - last_block_v15) : 0;
 
@@ -773,6 +773,17 @@ namespace cryptonote
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
+  int t_cryptonote_protocol_handler<t_core>::handle_uptime_proof(int command, NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& context)
+  {
+    MLOG_P2P_MESSAGE("Received NOTIFY_UPTIME_PROOF");
+    if(context.m_state != cryptonote_connection_context::state_normal)
+      return 1;
+    if (m_core.handle_uptime_proof(arg.timestamp, arg.pubkey, arg.sig))
+      relay_uptime_proof(arg, context);
+    return 1;
+  }
+  //------------------------------------------------------------------------------------------------------------------------
+  template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::handle_request_fluffy_missing_tx(int command, NOTIFY_REQUEST_FLUFFY_MISSING_TX::request& arg, cryptonote_connection_context& context)
   {
     MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_FLUFFY_MISSING_TX (" << arg.missing_tx_indices.size() << " txes), block hash " << arg.block_hash);
@@ -851,6 +862,50 @@ namespace cryptonote
     );
 
     post_notify<NOTIFY_NEW_FLUFFY_BLOCK>(fluffy_response, context);
+    return 1;
+  }
+  //------------------------------------------------------------------------------------------------------------------------
+  template<class t_core>
+  int t_cryptonote_protocol_handler<t_core>::handle_notify_new_deregister_vote(int command, NOTIFY_NEW_DEREGISTER_VOTE::request& arg, cryptonote_connection_context& context)
+  {
+    MLOG_P2P_MESSAGE("Received NOTIFY_NEW_DEREGISTER_VOTE (" << arg.votes.size() << " txes)");
+
+    if(context.m_state != cryptonote_connection_context::state_normal)
+      return 1;
+
+    if(!is_synchronized())
+    {
+      LOG_DEBUG_CC(context, "Received new deregister vote while syncing, ignored");
+      return 1;
+    }
+
+    for(auto it = arg.votes.begin(); it != arg.votes.end();)
+    {
+      cryptonote::vote_verification_context vvc = {};
+      m_core.add_deregister_vote(*it, vvc);
+
+      if(vvc.m_verification_failed)
+      {
+        LOG_PRINT_CCONTEXT_L1("Deregister vote verification failed, dropping connection");
+        drop_connection(context, true /*add_fail*/, false /*flush_all_spans i.e. delete cached block data from this peer*/);
+        return 1;
+      }
+
+      if(vvc.m_added_to_pool)
+      {
+        it++;
+      }
+      else
+      {
+        it = arg.votes.erase(it);
+      }
+    }
+
+    if(arg.votes.size())
+    {
+      relay_deregister_votes(arg, context);
+    }
+
     return 1;
   }
   //------------------------------------------------------------------------------------------------------------------------
@@ -2349,7 +2404,7 @@ skip:
     fluffy_arg.b.txs = fluffy_txs;
 
     // sort peers between fluffy ones and others
-    std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid> > fullConnections, fluffyConnections;
+    std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> fullConnections, fluffyConnections;
     m_p2p->for_each_connection([this, &exclude_context, &fullConnections, &fluffyConnections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
     {
       if (peer_id && exclude_context.m_connection_id != context.m_connection_id && context.m_remote_address.get_zone() == epee::net_utils::zone::public_)
@@ -2383,6 +2438,14 @@ skip:
     }
 
     return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------
+  template<class t_core>
+  bool t_cryptonote_protocol_handler<t_core>::relay_deregister_votes(NOTIFY_NEW_DEREGISTER_VOTE::request& arg, cryptonote_connection_context& context)
+  {
+    bool result = post_notify<NOTIFY_NEW_DEREGISTER_VOTE>(arg, context);
+    m_core.set_deregister_votes_relayed(arg.votes);
+    return result;
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
@@ -2426,7 +2489,7 @@ skip:
         arg._.resize(arg._.size() - remove);
       // if the size of _ moved enough, we might lose byte in size encoding, we don't care
     }
-    std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid> > connections;
+    std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections;
     m_p2p->for_each_connection([hide_tx_broadcast, &exclude_context, &connections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
     {
       const epee::net_utils::zone current_zone = context.m_remote_address.get_zone();
@@ -2521,6 +2584,12 @@ skip:
     if (n_out_peers >= m_max_out_peers)
       return false;
     return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------
+  template<class t_core>
+  bool t_cryptonote_protocol_handler<t_core>::relay_uptime_proof(NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& context)
+  {
+    return post_notify<NOTIFY_UPTIME_PROOF>(arg, context);
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>

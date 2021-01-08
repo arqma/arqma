@@ -51,7 +51,6 @@
 
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define MONEY_PREMINE                                   ((uint64_t)7500000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define EMISSION_FACTOR_V16                             (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
@@ -65,8 +64,6 @@
 #define CRYPTONOTE_SHORT_TERM_BLOCK_WEIGHT_SURGE_FACTOR 50
 #define CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE          600
 #define CRYPTONOTE_DISPLAY_DECIMAL_POINT                9
-// COIN - number of smallest units in one coin
-#define COIN                                            ((uint64_t)1000000000)
 
 #define FEE_PER_KB_OLD                                  ((uint64_t)10000000)
 #define FEE_PER_KB                                      ((uint64_t)20000)
@@ -78,7 +75,6 @@
 #define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)750)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
-
 
 #define DIFFICULTY_TARGET_V3                            DIFFICULTY_TARGET_V2
 #define DIFFICULTY_TARGET_V2                            240  // seconds
@@ -130,6 +126,7 @@
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT_OUT               4
 #define P2P_DEFAULT_CONNECTIONS_COUNT_IN                12
+
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  150
@@ -195,6 +192,22 @@ static constexpr uint64_t POISSON_CHECK_DEPTH = 128;  // Main-chain depth of the
 static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the probablity that the timestamps are genuine is below e^x, -75 = 10^-33
 
 // New constants are intended to go here
+#define STAKING_REQUIREMENT_LOCK_BLOCKS                 21600
+#define STAKING_RELOCK_WINDOW_BLOCKS                    180
+#define STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS          20
+#define STAKING_SHARE_PARTS                             0xfffffffc // Use a multiple of four, so that it divides easily by max number of contributors.
+#define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (86400 * 14) // (seconds_per_day times days)
+#define MAX_NUMBER_OF_CONTRIBUTORS                      4
+#define MIN_STAKE_SHARE                                 (STAKING_SHARE_PARTS / MAX_NUMBER_OF_CONTRIBUTORS)
+
+static_assert(STAKING_SHARE_PARTS % MAX_NUMBER_OF_CONTRIBUTORS == 0, "Use a multiple of four, so that it divides easily by max number of contributors.");
+static_assert(STAKING_SHARE_PARTS % 2 == 0, "Use a multiple of two, so that it divides easily by two contributors.");
+static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it divides easily by three contributors.");
+
+#define UPTIME_PROOF_BUFFER_IN_SECONDS                  (300)
+#define UPTIME_PROOF_FREQUENCY_IN_SECONDS               (3600)
+#define UPTIME_PROOF_MAX_TIME_IN_SECONDS                (UPTIME_PROOF_FREQUENCY_IN_SECONDS + (2 * UPTIME_PROOF_BUFFER_IN_SECONDS))
+
 namespace config
 {
    uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
@@ -241,22 +254,24 @@ namespace config
 
    namespace blockchain_settings
    {
-     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
-     const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
-     const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
-     const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     const uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+     static constexpr uint64_t ARQMA = 1000000000; // Atomic representation of a value 1 ARQMA
+     static constexpr uint64_t PREMINE = 7500000000000000; // Premine Reward (already burned).
+     static constexpr uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+     static constexpr uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
+     static constexpr uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
+     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
+     static constexpr uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
    }
 
    namespace tx_settings
    {
-     const size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     const size_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
-     const uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
-     const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
+     static constexpr uint8_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     static constexpr uint64_t ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
+     static constexpr uint8_t CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
+     static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
+     static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
-
 
    namespace sync
    {
@@ -268,10 +283,9 @@ namespace config
    namespace governance
    {
     static constexpr const char* MAINNET_WALLET_ADDRESS = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
-    static constexpr const char* TESTNET_WALLET_ADDRESS = "";
+    static constexpr const char* TESTNET_WALLET_ADDRESS = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkY4zCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
     static constexpr const char* STAGENET_WALLET_ADDRESS = "as2RzktNfxR8y3RgoDmoRFCGez6393Rd97e8c3ctupJu5i3CirGA4MVFzT7fwcSjxn8bV1orETq4eVQzkY2VTjox2TFnGUhgn";
    }
-
 }
 
 namespace arqma_nodes

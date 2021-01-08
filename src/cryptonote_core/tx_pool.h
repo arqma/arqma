@@ -461,6 +461,13 @@ namespace cryptonote
     bool have_tx_keyimg_as_spent(const crypto::key_image& key_im) const;
 
     /**
+     * @brief check if the deregistration tx already exists in the pool.
+     * @return true if it already exists
+     *
+     */
+    bool have_deregister_tx_already(transaction const &tx) const;
+
+    /**
      * @brief check if any spent key image in a transaction is in the pool
      *
      * Checks if any of the spent key images in a given transaction are present
@@ -541,7 +548,7 @@ namespace cryptonote
      *  transaction on the assumption that the original will not be in a
      *  block again.
      */
-    typedef std::unordered_map<crypto::key_image, std::unordered_set<crypto::hash> > key_images_container;
+    typedef std::unordered_map<crypto::key_image, std::unordered_set<crypto::hash>> key_images_container;
 
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
 public:
