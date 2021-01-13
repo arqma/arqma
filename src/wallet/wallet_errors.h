@@ -125,14 +125,16 @@ namespace tools
       "failed to get blocks",
       "failed to get hashes",
       "failed to get out indices",
-      "failed to get random outs"
+      "failed to get random outs",
+      "failed to get service_node_list"
     };
     enum failed_rpc_request_message_indices
     {
       get_blocks_error_message_index,
       get_hashes_error_message_index,
       get_out_indices_error_message_index,
-      get_outs_error_message_index
+      get_outs_error_message_index,
+      get_service_node_list_error_message_index
     };
 
     template<typename Base, int msg_index>
@@ -381,6 +383,8 @@ namespace tools
     };
     //----------------------------------------------------------------------------------------------------
     typedef failed_rpc_request<refresh_error, get_blocks_error_message_index> get_blocks_error;
+    //----------------------------------------------------------------------------------------------------
+    typedef failed_rpc_request<refresh_error, get_service_node_list_error_message_index> get_service_node_list_error;
     //----------------------------------------------------------------------------------------------------
     typedef failed_rpc_request<refresh_error, get_hashes_error_message_index> get_hashes_error;
     //----------------------------------------------------------------------------------------------------

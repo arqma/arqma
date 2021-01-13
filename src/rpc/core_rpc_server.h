@@ -173,13 +173,15 @@ namespace cryptonote
         MAP_JON_RPC_WE("get_output_distribution", on_get_output_distribution,   COMMAND_RPC_GET_OUTPUT_DISTRIBUTION)
         MAP_JON_RPC_WE("get_quorum_state",        on_get_quorum_state_json,     COMMAND_RPC_GET_QUORUM_STATE)
         MAP_JON_RPC_WE("get_service_node_registration_cmd", on_get_service_node_registration_cmd, COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD)
-        MAP_JON_RPC_WE_IF("prune_blockchain",    on_prune_blockchain,           COMMAND_RPC_PRUNE_BLOCKCHAIN, !m_restricted)
-        MAP_JON_RPC_WE("rpc_access_info",        on_rpc_access_info,            COMMAND_RPC_ACCESS_INFO)
-        MAP_JON_RPC_WE("rpc_access_submit_nonce",on_rpc_access_submit_nonce,    COMMAND_RPC_ACCESS_SUBMIT_NONCE)
-        MAP_JON_RPC_WE("rpc_access_pay",         on_rpc_access_pay,             COMMAND_RPC_ACCESS_PAY)
-        MAP_JON_RPC_WE_IF("rpc_access_tracking", on_rpc_access_tracking,        COMMAND_RPC_ACCESS_TRACKING, !m_restricted)
-        MAP_JON_RPC_WE_IF("rpc_access_data",     on_rpc_access_data,            COMMAND_RPC_ACCESS_DATA, !m_restricted)
-        MAP_JON_RPC_WE_IF("rpc_access_account",  on_rpc_access_account,         COMMAND_RPC_ACCESS_ACCOUNT, !m_restricted)
+        MAP_JON_RPC_WE("get_service_node_key",              on_get_service_node_key,            COMMAND_RPC_GET_SERVICE_NODE_KEY)
+        MAP_JON_RPC_WE("get_service_node",                  on_get_service_node,                COMMAND_RPC_GET_SERVICE_NODE)
+        MAP_JON_RPC_WE_IF("prune_blockchain",               on_prune_blockchain,                COMMAND_RPC_PRUNE_BLOCKCHAIN, !m_restricted)
+        MAP_JON_RPC_WE("rpc_access_info",                   on_rpc_access_info,                 COMMAND_RPC_ACCESS_INFO)
+        MAP_JON_RPC_WE("rpc_access_submit_nonce",           on_rpc_access_submit_nonce,         COMMAND_RPC_ACCESS_SUBMIT_NONCE)
+        MAP_JON_RPC_WE("rpc_access_pay",                    on_rpc_access_pay,                  COMMAND_RPC_ACCESS_PAY)
+        MAP_JON_RPC_WE_IF("rpc_access_tracking",            on_rpc_access_tracking,             COMMAND_RPC_ACCESS_TRACKING, !m_restricted)
+        MAP_JON_RPC_WE_IF("rpc_access_data",                on_rpc_access_data,                 COMMAND_RPC_ACCESS_DATA, !m_restricted)
+        MAP_JON_RPC_WE_IF("rpc_access_account",             on_rpc_access_account,              COMMAND_RPC_ACCESS_ACCOUNT, !m_restricted)
       END_JSON_RPC_MAP()
     END_URI_MAP2()
 
@@ -251,6 +253,8 @@ namespace cryptonote
     bool on_get_output_distribution(const COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request& req, COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_quorum_state_json(const COMMAND_RPC_GET_QUORUM_STATE::request& req, COMMAND_RPC_GET_QUORUM_STATE::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_service_node_registration_cmd(const COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD::request& req, COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
+    bool on_get_service_node_key(const COMMAND_RPC_GET_SERVICE_NODE_KEY::request& req, COMMAND_RPC_GET_SERVICE_NODE_KEY::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
+    bool on_get_service_node(const COMMAND_RPC_GET_SERVICE_NODE::request& req, COMMAND_RPC_GET_SERVICE_NODE::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_prune_blockchain(const COMMAND_RPC_PRUNE_BLOCKCHAIN::request& req, COMMAND_RPC_PRUNE_BLOCKCHAIN::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_rpc_access_info(const COMMAND_RPC_ACCESS_INFO::request& req, COMMAND_RPC_ACCESS_INFO::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_rpc_access_submit_nonce(const COMMAND_RPC_ACCESS_SUBMIT_NONCE::request& req, COMMAND_RPC_ACCESS_SUBMIT_NONCE::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);

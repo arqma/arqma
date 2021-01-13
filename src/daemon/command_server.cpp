@@ -115,6 +115,24 @@ t_command_server::t_command_server(
     , "Generate the required registration command"
     );
   m_command_lookup.set_handler(
+      "get_service_node_key"
+    , std::bind(&t_command_parser_executor::get_service_node_key, &m_parser, p::_1)
+    , "get_service_node_key"
+    , "Get this daemon's service_node key, if launched in service_node_mode and is service_node."
+    );
+  m_command_lookup.set_handler(
+      "prepare_registration"
+    , std::bind(&t_command_parser_executor::prepare_registration, &m_parser)
+    , "prepare_registration"
+    , "Interactive prompt to prepare registration, Registration data is saved to disk then."
+    );
+  m_command_lookup.set_handler(
+      "print_sn"
+    , std::bind(&t_command_parser_executor::print_sn, &m_parser, p::_1)
+    , "print_sn [<pubkey> [...]]"
+    , "Print Service_node registration info for the current height"
+    );
+  m_command_lookup.set_handler(
       "is_key_image_spent"
     , std::bind(&t_command_parser_executor::is_key_image_spent, &m_parser, p::_1)
     , "is_key_image_spent <key_image>"

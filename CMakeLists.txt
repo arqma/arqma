@@ -96,6 +96,10 @@ if(NOT CMAKE_BUILD_TYPE)
   statusinfo("Setting default build type: ${CMAKE_BUILD_TYPE}")
 endif()
 
+# On Darwin, ensure the user-defined paths are used to find libs
+# before falling back to the system-defined.
+set(CMAKE_FIND_FRAMEWORK "LAST")
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(NOT WIN32)
@@ -542,8 +546,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "(SunOS|Solaris)")
 endif()
 
 if(APPLE AND NOT IOS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -std=c++11")
-  if(NOT OpenSSL_DIR)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=x86-64 -fvisibility=default")
+  if(NOT OpenSSL_DIR AND NOT DEFINED ENV{OpenSSL_DIR})
       EXECUTE_PROCESS(COMMAND brew --prefix openssl
         OUTPUT_VARIABLE OPENSSL_ROOT_DIR
         OUTPUT_STRIP_TRAILING_WHITESPACE)

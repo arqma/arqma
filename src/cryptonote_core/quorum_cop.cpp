@@ -32,6 +32,9 @@
 #include "cryptonote_core.h"
 #include "quorum_cop.h"
 
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "quorum_cop"
+
 namespace service_nodes
 {
   quorum_cop::quorum_cop(cryptonote::core& core, service_nodes::service_node_list& service_node_list)
@@ -65,7 +68,7 @@ namespace service_nodes
     }
 
     uint64_t const height        = cryptonote::get_block_height(block);
-    uint64_t const latest_height = m_core.get_current_blockchain_height();
+    uint64_t const latest_height = std::max(m_core.get_current_blockchain_height(), m_core.get_target_blockchain_height());
 
     if(latest_height < arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
       return;
@@ -97,7 +100,7 @@ namespace service_nodes
         const crypto::public_key &node_key = state->nodes_to_test[node_index];
 
         CRITICAL_REGION_LOCAL(m_lock);
-        bool vote_off_node = (m_uptime_proof_seen.find(node_key) != m_uptime_proof_seen.end());
+        bool vote_off_node = (m_uptime_proof_seen.find(node_key) == m_uptime_proof_seen.end());
 
         if(!vote_off_node)
           continue;
@@ -184,5 +187,16 @@ namespace service_nodes
     }
 
     return true;
+  }
+
+  uint64_t quorum_cop::get_uptime_proof(const crypto::public_key &pubkey) const
+  {
+    const auto& it = m_uptime_proof_seen.find(pubkey);
+    if(it == m_uptime_proof_seen.end())
+    {
+      return 0;
+    }
+
+    return (*it).second;
   }
 }

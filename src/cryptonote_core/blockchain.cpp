@@ -510,11 +510,11 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
       producer.connect(bind_address);
       MINFO("Blockchain zmq producer binding");
     }
-    catch( const std::exception& e)
+    catch(const std::exception& e)
     {
       MERROR(std::string("Failed to construct Arqma notifier ") + e.what());
     }
- }
+  }
 
   for(InitHook* hook : m_init_hooks)
     hook->init();
@@ -567,9 +567,6 @@ bool Blockchain::deinit()
   LOG_PRINT_L3("Blockchain::" << __func__);
 
   MTRACE("Stopping blockchain read/write activity");
-
-  m_service_node_list.store();
-  m_service_node_list.set_db_pointer(nullptr);
 
  // stop async service
   m_async_work_idle.reset();
@@ -1011,11 +1008,6 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
     return next_difficulty(timestamps, difficulties, DIFFICULTY_TARGET_V2);
   }
 
-}
-//------------------------------------------------------------------
-uint64_t Blockchain::get_staking_requirement(uint64_t height) const
-{
-  return arqma_bc::ARQMA * 1000; // We do need some equation for staking calculations
 }
 //------------------------------------------------------------------
 // This function removes blocks from the blockchain until it gets to the
