@@ -2727,7 +2727,7 @@ struct request_t: public rpc_access_request_base
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
-  struct COMMAND_RPC_GET_SERVICE_NODE
+  struct COMMAND_RPC_GET_SERVICE_NODES
   {
     struct request_t: public rpc_request_base
     {
