@@ -1822,6 +1822,10 @@ public:
    */
   virtual void fixup();
 
+  virtual void set_service_node_data(const std::string &data) = 0;
+  virtual void get_service_node_data(std::string &data) = 0;
+  virtual void clear_service_node_data() = 0;
+
   /**
    * @brief set whether or not to automatically remove logs
    *
