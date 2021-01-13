@@ -59,15 +59,15 @@ namespace service_nodes
     if(!m_core.get_service_node_keys(my_pubkey, my_seckey))
       return;
 
-    time_t const now          = time(nullptr);
+    time_t const now = time(nullptr);
     time_t const min_lifetime = 60 * 60 * 2;
-    bool alive_for_min_time   = (now - m_core.get_start_time()) >= min_lifetime;
+    bool alive_for_min_time = (now - m_core.get_start_time()) >= min_lifetime;
     if(!alive_for_min_time)
     {
       return;
     }
 
-    uint64_t const height        = cryptonote::get_block_height(block);
+    uint64_t const height = cryptonote::get_block_height(block);
     uint64_t const latest_height = std::max(m_core.get_current_blockchain_height(), m_core.get_target_blockchain_height());
 
     if(latest_height < arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
@@ -118,7 +118,10 @@ namespace service_nodes
             LOG_ERROR("block height was invalid: " << vote.block_height);
 
           if(vvc.m_voters_quorum_index_out_of_bounds)
-            LOG_ERROR("voters quorum index specified out of bounds: " << vote.voters_quorum_index);
+            LOG_ERROR("voters quorum index specified was out of bounds: " << vote.voters_quorum_index);
+
+          if(vvc.m_duplicate_voters)
+            LOG_ERROR("voters index was duplicated: " << vote.voters_quorum_index);
 
           if(vvc.m_service_node_index_out_of_bounds)
             LOG_ERROR("service node index specified out of bounds: " << vote.service_node_index);
