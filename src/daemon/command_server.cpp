@@ -115,10 +115,10 @@ t_command_server::t_command_server(
     , "Generate the required registration command"
     );
   m_command_lookup.set_handler(
-      "get_service_node_key"
-    , std::bind(&t_command_parser_executor::get_service_node_key, &m_parser, p::_1)
-    , "get_service_node_key"
-    , "Get this daemon's service_node key, if launched in service_node_mode and is service_node."
+      "print_sn_key"
+    , std::bind(&t_command_parser_executor::print_sn_key, &m_parser, p::_1)
+    , "print_sn_key"
+    , "Print this daemon's service_node key, if launched in service_node_mode and is service_node."
     );
   m_command_lookup.set_handler(
       "prepare_registration"
