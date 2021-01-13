@@ -200,6 +200,11 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define MAX_NUMBER_OF_CONTRIBUTORS                      4
 #define MIN_STAKE_SHARE                                 (STAKING_SHARE_PARTS / MAX_NUMBER_OF_CONTRIBUTORS)
 
+// testing constants
+// TODO: To be removed after successful tests.
+
+#define STAKING_REQUIREMENT_LOCK_BLOCKS_TEST            100
+
 static_assert(STAKING_SHARE_PARTS % MAX_NUMBER_OF_CONTRIBUTORS == 0, "Use a multiple of four, so that it divides easily by max number of contributors.");
 static_assert(STAKING_SHARE_PARTS % 2 == 0, "Use a multiple of two, so that it divides easily by two contributors.");
 static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it divides easily by three contributors.");
@@ -288,9 +293,9 @@ namespace config
    }
 }
 
-namespace arqma_nodes
+namespace arqma
 {
-  const char *const MAINNET_NODES[] =
+  const char *const mainnet_core_nodes[] =
   {
     "144.217.242.16",
     "161.97.102.172",
@@ -300,7 +305,7 @@ namespace arqma_nodes
     "164.68.123.118"
   };
 
-  const char *const TESTNET_NODES[] =
+  const char *const testnet_core_nodes[] =
   {
     "161.97.102.172",
     "139.99.106.122",
@@ -308,7 +313,7 @@ namespace arqma_nodes
     "86.24.233.79"
   };
 
-  const char *const STAGENET_NODES[] =
+  const char *const stagenet_core_nodes[] =
   {
     "161.97.102.172",
     "139.99.106.122",

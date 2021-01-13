@@ -114,7 +114,7 @@ namespace cryptonote {
   {
     static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
     static_assert(DIFFICULTY_TARGET_V16 % 30 == 0,"After HF-16 we are changing Rules");
-    const int target_minutes = hard_fork_version < 16 ? DIFFICULTY_TARGET_V2 / 60: DIFFICULTY_TARGET_V16 / 30;
+    const int target_minutes = hard_fork_version < 16 ? DIFFICULTY_TARGET_V2 / 60 : DIFFICULTY_TARGET_V16 / 30;
     const int emission_speed_factor = hard_fork_version >= 16 ? EMISSION_FACTOR_V16 : (EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes - 3));
 
     uint64_t full_reward_zone = get_min_block_weight(hard_fork_version);

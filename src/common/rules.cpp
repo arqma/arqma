@@ -33,10 +33,8 @@
 
 namespace cryptonote
 {
-
   namespace rules
   {
-
     bool is_output_unlocked(uint64_t unlock_time, uint64_t height)
     {
       if(unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER)

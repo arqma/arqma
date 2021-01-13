@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2020, The Arqma Network
 // Copyright (c)      2018, The Loki Project
 //
 // All rights reserved.
@@ -37,11 +38,14 @@
 #include "common/scoped_message_writer.h"
 #include "common/i18n.h"
 #include "quorum_cop.h"
+#include "common/exp2.h"
 
 #include "service_node_list.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "service_nodes"
+
+namespace arqma_bc = config::blockchain_settings;
 
 namespace service_nodes
 {
@@ -68,26 +72,20 @@ namespace service_nodes
   void service_node_list::init()
   {
     // TODO: Save this calculation, only do it if it's not here.
-    LOG_PRINT_L0("Recalculating service nodes list, scanning last 30 days");
+    LOG_PRINT_L0("Recalculating service nodes list, scanning blockchain");
+
+    m_height = 0;
+    m_service_nodes_infos.clear();
+
+    while(!m_rollback_events.empty())
+      m_rollback_events.pop_front();
 
     uint64_t current_height = m_blockchain.get_current_blockchain_height();
 
-    bool loaded = load();
-
-    if(loaded && m_height == current_height)
-      return;
-
-    if(!loaded || m_height > current_height)
-      clear(true);
-
-    uint64_t start_height = m_height;
-    if(current_height >= STAKING_REQUIREMENT_LOCK_BLOCKS + STAKING_RELOCK_WINDOW_BLOCKS)
-      start_height = std::max(start_height, current_height - STAKING_REQUIREMENT_LOCK_BLOCKS - STAKING_RELOCK_WINDOW_BLOCKS);
-
-    for(uint64_t height = start_height; height < current_height; height += 1000)
+    while(m_height < current_height)
     {
       std::vector<std::pair<cryptonote::blobdata, cryptonote::block>> blocks;
-      if(!m_blockchain.get_blocks(height, 1000, blocks))
+      if(!m_blockchain.get_blocks(m_height, 1000, blocks))
       {
         LOG_ERROR("Unable to initialize service nodes list");
         return;
@@ -141,6 +139,41 @@ namespace service_nodes
     return result;
   }
   //----------------------------------------------------------------------------
+  std::vector<service_node_pubkey_info> service_node_list::get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const
+  {
+    std::vector<service_node_pubkey_info> result;
+
+    if(service_node_pubkeys.empty())
+    {
+      result.reserve(m_service_nodes_infos.size());
+
+      for(const auto& it : m_service_nodes_infos)
+      {
+        service_node_pubkey_info entry = {};
+        entry.pubkey = it.first;
+        entry.info = it.second;
+        result.push_back(entry);
+      }
+    }
+    else
+    {
+      result.reserve(service_node_pubkeys.size());
+      for(const auto& it : service_node_pubkeys)
+      {
+        const auto& find_it = m_service_nodes_infos.find(it);
+        if(find_it == m_service_nodes_infos.end())
+          continue;
+
+        service_node_pubkey_info entry = {};
+        entry.pubkey = (*find_it).first;
+        entry.info = (*find_it).second;
+        result.push_back(entry);
+      }
+    }
+
+    return result;
+  }
+  //----------------------------------------------------------------------------
   bool service_node_list::is_service_node(const crypto::public_key& pubkey) const
   {
     return m_service_nodes_infos.find(pubkey) != m_service_nodes_infos.end();
@@ -153,7 +186,7 @@ namespace service_nodes
     if(tx.version >= cryptonote::transaction::version_3)
       unlock_time = tx.output_unlock_times[i];
 
-    return unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER && unlock_time >= block_height + STAKING_REQUIREMENT_LOCK_BLOCKS;
+    return unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER && unlock_time >= block_height + get_staking_requirement_lock_blocks();
   }
   //----------------------------------------------------------------------------
   bool service_node_list::reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, uint32_t& portions_for_operator, std::vector<uint32_t>& portions, uint64_t& expiration_timestamp, crypto::public_key& service_node_key, crypto::signature& signature, crypto::public_key& tx_pub_key) const
@@ -268,15 +301,14 @@ namespace service_nodes
     if(service_node_portions.size() != service_node_addresses.size() || service_node_portions.empty())
       return false;
 
-    uint64_t total = 0;
+    uint64_t portions_left = STAKING_SHARE_PARTS;
     for(size_t i = 0; i < service_node_portions.size(); i++)
     {
-      if(service_node_portions[i] < MIN_STAKE_SHARE)
+      uint64_t min_portions = std::min(portions_left, (uint64_t)MIN_STAKE_SHARE);
+      if(service_node_portions[i] < min_portions || service_node_portions[i] > portions_left)
         return false;
-      total += service_node_portions[i];
+      portions_left -= service_node_portions[i];
     }
-    if(total > STAKING_SHARE_PARTS)
-      return false;
 
     if(portions_for_operator > STAKING_SHARE_PARTS)
       return false;
@@ -284,12 +316,12 @@ namespace service_nodes
     crypto::hash hash;
     if(!get_registration_hash(service_node_addresses, portions_for_operator, service_node_portions, expiration_timestamp, hash))
       return false;
-    if(!crypto::check_signature(hash, service_node_key, signature))
+    if(!crypto::check_key(service_node_key) || !crypto::check_signature(hash, service_node_key, signature))
       return false;
     if(expiration_timestamp < block_timestamp)
       return false;
 
-    info.staking_requirement = m_blockchain.get_staking_requirement(block_height);
+    info.staking_requirement = get_staking_requirement(m_blockchain.nettype(), block_height);
 
     cryptonote::account_public_address address;
     uint64_t transferred = 0;
@@ -322,6 +354,7 @@ namespace service_nodes
       lo = mul128(info.staking_requirement, service_node_portions[i], &hi);
       div128_32(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
       info.contributors.push_back(service_node_info::contribution(resultlo, service_node_addresses[i]));
+      info.total_reserved += resultlo;
     }
 
     return true;
@@ -430,7 +463,6 @@ namespace service_nodes
   void service_node_list::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)
   {
     block_added_generic(block, txs);
-    store();
   }
 
   template<typename T>
@@ -486,26 +518,19 @@ namespace service_nodes
       index++;
     }
 
-    const uint64_t curr_height = m_blockchain.get_current_blockchain_height();
-
     const size_t QUORUM_LIFETIME = arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT;
-    const size_t cache_state_from_height = (curr_height < QUORUM_LIFETIME) ? 0 : curr_height - QUORUM_LIFETIME;
+    const size_t cache_state_from_height = (block_height < QUORUM_LIFETIME) ? 0 : block_height - QUORUM_LIFETIME;
 
-    if(block_height >= cache_state_from_height)
+    store_quorum_state_from_rewards_list(block_height);
+
+    while(!m_quorum_states.empty() && m_quorum_states.begin()->first < cache_state_from_height)
     {
-      store_quorum_state_from_rewards_list(block_height);
-
-      while(!m_quorum_states.empty() && m_quorum_states.begin()->first < cache_state_from_height)
-      {
-        m_quorum_states.erase(m_quorum_states.begin());
-      }
+      m_quorum_states.erase(m_quorum_states.begin());
     }
   }
   //----------------------------------------------------------------------------
   void service_node_list::blockchain_detached(uint64_t height)
   {
-    m_height = height;
-
     while(!m_rollback_events.empty() && m_rollback_events.back()->m_block_height >= height)
     {
       if(!m_rollback_events.back()->apply(m_service_nodes_infos))
@@ -520,17 +545,20 @@ namespace service_nodes
     {
       m_quorum_states.erase(--m_quorum_states.end());
     }
-    store();
+
+    m_height = height;
   }
   //----------------------------------------------------------------------------
   std::vector<crypto::public_key> service_node_list::get_expired_nodes(uint64_t block_height) const
   {
     std::vector<crypto::public_key> expired_nodes;
 
-    if(block_height < STAKING_REQUIREMENT_LOCK_BLOCKS + STAKING_RELOCK_WINDOW_BLOCKS)
+    const uint64_t lock_blocks = get_staking_requirement_lock_blocks();
+
+    if(block_height < lock_blocks)
       return expired_nodes;
 
-    const uint64_t expired_nodes_block_height = block_height - STAKING_REQUIREMENT_LOCK_BLOCKS - STAKING_RELOCK_WINDOW_BLOCKS;
+    const uint64_t expired_nodes_block_height = block_height - lock_blocks;
 
     std::vector<std::pair<cryptonote::blobdata, cryptonote::block>> blocks;
     if(!m_blockchain.get_blocks(expired_nodes_block_height, 1, blocks))
@@ -663,6 +691,27 @@ namespace service_nodes
     return true;
   }
   //----------------------------------------------------------------------------
+  static uint64_t uniform_distribution_portable(std::mt19937_64& marsenne_twister, uint64_t n)
+  {
+    uint64_t secureMax = marsenne_twister.max() - marsenne_twister.max() % n;
+    uint64_t x;
+    do x = marsenne_twister(); while(x >= secureMax);
+    return x / (secureMax / n);
+  }
+  //----------------------------------------------------------------------------
+  static void arqma_shuffle(std::vector<size_t>& a, uint64_t seed)
+  {
+    if(a.size() <= 1)
+      return;
+    std::mt19937_64 marsenne_twister(seed);
+    for(size_t i = 1; i < a.size(); i++)
+    {
+      size_t j = (size_t)uniform_distribution_portable(marsenne_twister, i+1);
+      if(i != j)
+        std::swap(a[i], a[j]);
+    }
+  }
+  //----------------------------------------------------------------------------
   void service_node_list::store_quorum_state_from_rewards_list(uint64_t height)
   {
     const crypto::hash block_hash = m_blockchain.get_block_id_by_height(height);
@@ -682,8 +731,7 @@ namespace service_nodes
       uint64_t seed = 0;
       std::memcpy(&seed, block_hash.data, std::min(sizeof(seed), sizeof(block_hash.data)));
 
-      std::mt19937_64 mersenne_twister(seed);
-      std::shuffle(pub_keys_indexes.begin(), pub_keys_indexes.end(), mersenne_twister);
+      arqma_shuffle(pub_keys_indexes, seed);
     }
 
     // Assign indexes from shuffled list into quorum and list of nodes to test
@@ -722,6 +770,11 @@ namespace service_nodes
         }
       }
     }
+  }
+
+  uint64_t service_node_list::get_staking_requirement_lock_blocks() const
+  {
+    return m_blockchain.nettype() == cryptonote::MAINNET ? STAKING_REQUIREMENT_LOCK_BLOCKS : STAKING_REQUIREMENT_LOCK_BLOCKS_TEST;
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -768,145 +821,6 @@ namespace service_nodes
     return false;
   }
   //----------------------------------------------------------------------------
-  bool service_node_list::store()
-  {
-    if(!m_db)
-    {
-      return false;
-    }
-    data_members_for_serialization data_to_store;
-
-    node_info_for_serialization info;
-    for(const auto& kv_pair : m_service_nodes_infos)
-    {
-      info.key = kv_pair.first;
-      info.info = kv_pair.second;
-      data_to_store.infos.push_back(info);
-    }
-
-    rollback_event_variant event;
-    for(const auto& event_ptr : m_rollback_events)
-    {
-      switch(event_ptr->type)
-      {
-        case rollback_event::change_type:
-          event = *reinterpret_cast<rollback_change *>(event_ptr.get());
-          data_to_store.events.push_back(*reinterpret_cast<rollback_change *>(event_ptr.get()));
-          break;
-        case rollback_event::new_type:
-          event = *reinterpret_cast<rollback_new *>(event_ptr.get());
-          data_to_store.events.push_back(*reinterpret_cast<rollback_new *>(event_ptr.get()));
-          break;
-        case rollback_event::prevent_type:
-          event = *reinterpret_cast<prevent_rollback *>(event_ptr.get());
-          data_to_store.events.push_back(*reinterpret_cast<prevent_rollback *>(event_ptr.get()));
-          break;
-        default:
-          return false;
-      }
-    }
-
-    data_to_store.height = m_height;
-
-    std::stringstream ss;
-    binary_archive<true> ba(ss);
-    bool r = ::serialization::serialize(ba, data_to_store);
-    if(!r) return false;
-
-    std::string blob = ss.str();
-    cryptonote::db_wtxn_guard txn_guard(m_db);
-    m_db->set_service_node_data(blob);
-
-    return true;
-  }
-  //----------------------------------------------------------------------------
-  bool service_node_list::load()
-  {
-    clear(false);
-    if(!m_db)
-    {
-      return false;
-    }
-    std::stringstream ss;
-
-    data_members_for_serialization data_in;
-    std::string blob;
-
-    cryptonote::db_rtxn_guard txn_guard(m_db);
-    if(!m_db->get_service_node_data(blob))
-    {
-      return false;
-    }
-
-    ss << blob;
-    binary_archive<false> ba(ss);
-    bool r = ::serialization::serialize(ba, data_in);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to parse service node data from blob");
-
-    m_height = data_in.height;
-
-    for(const auto& info : data_in.infos)
-    {
-      m_service_nodes_infos[info.key] = info.info;
-    }
-
-    for(const auto& event : data_in.events)
-    {
-      if(event.type() == typeid(rollback_change))
-      {
-        rollback_change *i = new rollback_change();
-        const rollback_change& from = boost::get<rollback_change>(event);
-        i->m_block_height = from.m_block_height;
-        i->m_key = from.m_key;
-        i->m_info = from.m_info;
-        i->type = rollback_event::change_type;
-        m_rollback_events.push_back(std::unique_ptr<rollback_event>(i));
-        break;
-      }
-      else if(event.type() == typeid(rollback_new))
-      {
-        rollback_new *i = new rollback_new();
-        const rollback_new& from = boost::get<rollback_new>(event);
-        i->m_block_height = from.m_block_height;
-        i->m_key = from.m_key;
-        i->type = rollback_event::change_type;
-        m_rollback_events.push_back(std::unique_ptr<rollback_event>(i));
-        break;
-      }
-      else if(event.type() == typeid(prevent_rollback))
-      {
-        prevent_rollback *i = new prevent_rollback();
-        const prevent_rollback& from = boost::get<prevent_rollback>(event);
-        i->m_block_height = from.m_block_height;
-        i->type = rollback_event::change_type;
-        m_rollback_events.push_back(std::unique_ptr<rollback_event>(i));
-        break;
-      }
-      else
-      {
-        return false;
-      }
-    }
-
-    return true;
-  }
-  //----------------------------------------------------------------------------
-  void service_node_list::clear(bool delete_db_entry)
-  {
-    m_service_nodes_infos.clear();
-    m_rollback_events.clear();
-
-    if(m_db && delete_db_entry)
-    {
-      cryptonote::db_wtxn_guard txn_guard(m_db);
-      m_db->clear_service_node_data();
-    }
-
-    // not currently done in init(), so maybe don't?
-    m_quorum_states.clear();
-    m_height = 0;
-  }
-  //----------------------------------------------------------------------------
   bool convert_registration_args(cryptonote::network_type nettype, const std::vector<std::string>& args, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint32_t>& portions, uint32_t& portions_for_operator, uint64_t& initial_contribution)
   {
     if(args.size() % 2 == 1)
@@ -927,20 +841,19 @@ namespace service_nodes
     portions.clear();
     try
     {
-      double portion_fraction = boost::lexical_cast<double>(args[0]);
-      if(portion_fraction < 0 || portion_fraction > 1)
+      portions_for_operator = boost::lexical_cast<uint64_t>(args[0]);
+      if(portions_for_operator > STAKING_SHARE_PARTS)
       {
-        MERROR(tr("Invalid contribution % amount: ") << args[0] << tr(". ") << tr("Must be between 0 (0%) and 1 (100%)"));
+        MERROR(tr("Invalid contribution % amount: ") << args[0] << tr(". ") << tr("Must be between 0 (0%) and ") << STAKING_SHARE_PARTS);
         return false;
       }
-      portions_for_operator = STAKING_SHARE_PARTS * portion_fraction;
     }
     catch(const std::exception &e)
     {
-      MERROR(tr("Invalid contribution % amount: ") << args[0] << tr(". ") << tr("Must be between 0 (0%) and 1 (100%)"));
+      MERROR(tr("Invalid contribution % amount: ") << args[0] << tr(". ") << tr("Must be between 0 (0%) and ") << STAKING_SHARE_PARTS);
       return false;
     }
-    uint64_t total_portions = 0;
+    uint64_t portions_left = STAKING_SHARE_PARTS;
     for (size_t i = 1; i < args.size()-1; i += 2)
     {
       cryptonote::address_parse_info info;
@@ -966,19 +879,19 @@ namespace service_nodes
 
       try
       {
-        double portion_fraction = boost::lexical_cast<double>(args[i+1]);
-        if(portion_fraction < 1.0 / MAX_NUMBER_OF_CONTRIBUTORS || portion_fraction > 1)
+        uint32_t num_portions = boost::lexical_cast<uint64_t>(args[i+1]);
+        uint64_t min_portions = std::min(portions_left, (uint64_t)MIN_STAKE_SHARE);
+        if(num_portions < min_portions || num_portions > portions_left)
         {
-          MERROR(tr("Invalid contribution percentage: ") << args[i+1] << tr(". ") << tr("Must be minimum ") << (1.0 / MAX_NUMBER_OF_CONTRIBUTORS) << " and no more than 1 (100%)");
+          MERROR(tr("Invalid contribution percentage: ") << args[i+1] << tr(". ") << tr("Each contributor must have minimum 25%, except for the last one which may have remaining amount"));
           return false;
         }
-        uint32_t num_portions = STAKING_SHARE_PARTS * portion_fraction;
+        portions_left -= num_portions;
         portions.push_back(num_portions);
-        total_portions += num_portions;
       }
       catch (const std::exception &e)
       {
-        MERROR(tr("Invalid contribution percentage: ") << args[i+1] << tr(". ") << tr("Must be minimum ") << (1.0 / MAX_NUMBER_OF_CONTRIBUTORS) << " and no more than 1 (100%)");
+        MERROR(tr("Invalid contribution percentage: ") << args[i+1] << tr(". ") << tr("Each contributor must have minimum 25%, except for the last one which may have remaining amount"));
         return false;
       }
     }
@@ -986,12 +899,6 @@ namespace service_nodes
     {
       MERROR(tr("amount is wrong: ") << args.back() << ", " << tr("expected number from ") << cryptonote::print_money(1) << " to " << cryptonote::print_money(std::numeric_limits<uint64_t>::max()));
       return true;
-    }
-    if(total_portions > (uint64_t)STAKING_SHARE_PARTS)
-    {
-      MERROR(tr("Invalid share percentage values, sum must be equal to 1"));
-      MERROR(tr("If it looks correct,  this may be because of rounding. Try reducing one of the contributors share by a very tiny percent points"));
-      return false;
     }
 
     return true;
@@ -1059,4 +966,11 @@ namespace service_nodes
     return true;
   }
 
+  uint64_t get_staking_requirement(cryptonote::network_type m_nettype, uint64_t height)
+  {
+    if(m_nettype != cryptonote::MAINNET)
+      return arqma_bc::ARQMA * 1000;
+    // We will need to work at some equation
+    return arqma_bc::ARQMA * 10000;
+  }
 }

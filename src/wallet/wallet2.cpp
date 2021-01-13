@@ -12611,9 +12611,9 @@ std::vector<cryptonote::public_node> wallet2::get_public_nodes(bool white_only)
   req.gray = !white_only;
 
   {
-	const boost::lock_guard<boost::recursive_mutex> lock{m_daemon_rpc_mutex};
-	bool r = epee::net_utils::invoke_http_json("/get_public_nodes", req, res, m_http_client, rpc_timeout);
-	THROW_ON_RPC_RESPONSE_ERROR_GENERIC(r, {}, res, "/get_public_nodes");
+    const boost::lock_guard<boost::recursive_mutex> lock{m_daemon_rpc_mutex};
+    bool r = epee::net_utils::invoke_http_json("/get_public_nodes", req, res, m_http_client, rpc_timeout);
+    THROW_ON_RPC_RESPONSE_ERROR_GENERIC(r, {}, res, "/get_public_nodes");
   }
 
   std::vector<cryptonote::public_node> nodes;
@@ -12641,8 +12641,21 @@ bool wallet2::contains_address(const cryptonote::account_public_address& address
     size_t subaddresses = get_num_subaddresses(i) + m_subaddress_lookahead_minor;
     for(uint32_t j = 0; j < subaddresses; j++)
       if(get_subaddress({i, j}) == address)
-        return free;
+        return true;
   }
+  return false;
 }
-
+//----------------------------------------------------------------------------------------------------
+cryptonote::COMMAND_RPC_GET_SERVICE_NODE_LIST_STATE::response wallet2::get_service_node_list()
+{
+  cryptonote::COMMAND_RPC_GET_SERVICE_NODE_LIST_STATE::response res;
+  cryptonote::COMMAND_RPC_GET_SERVICE_NODE_LIST_STATE::request req;
+  m_daemon_rpc_mutex.lock();
+  bool r = epee::net_utils::invoke_http_json_rpc("/json_rpc", "get_service_node_list_state", req, res, m_http_client, rpc_timeout);
+  m_daemon_rpc_mutex.unlock();
+  THROW_WALLET_EXCEPTION_IF(!r, error::no_connection_to_daemon, "get_service_node_list_state");
+  THROW_WALLET_EXCEPTION_IF(res.status == CORE_RPC_STATUS_BUSY, error::daemon_busy, "get_service_node_list_state");
+  THROW_WALLET_EXCEPTION_IF(res.status != CORE_RPC_STATUS_OK, error::get_service_node_list_error, res.status);
+  return res;
+}
 }
