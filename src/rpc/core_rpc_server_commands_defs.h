@@ -2757,6 +2757,7 @@ struct request_t: public rpc_access_request_base
       struct entry
       {
         std::string service_node_pubkey;
+        uint64_t registration_height;
         uint64_t last_reward_block_height;
         uint32_t last_reward_transaction_index;
         uint64_t last_uptime_proof;
@@ -2768,6 +2769,7 @@ struct request_t: public rpc_access_request_base
         std::string operator_address;
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(service_node_pubkey)
+          KV_SERIALIZE(registration_height)
           KV_SERIALIZE(last_reward_block_height)
           KV_SERIALIZE(last_reward_transaction_index)
           KV_SERIALIZE(last_uptime_proof)
