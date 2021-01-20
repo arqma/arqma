@@ -132,7 +132,6 @@ int main(int argc, char const * argv[])
       command_line::add_arg(visible_options, command_line::arg_version);
       command_line::add_arg(visible_options, daemon_args::arg_os_version);
       command_line::add_arg(visible_options, daemon_args::arg_config_file);
-      command_line::add_arg(visible_options, daemon_args::arg_prepare_registration);
 
       // Settings
       command_line::add_arg(core_settings, daemon_args::arg_log_file);
