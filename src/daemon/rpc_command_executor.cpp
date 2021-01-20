@@ -2496,21 +2496,34 @@ bool t_rpc_command_executor::print_sn_key()
 }
 
 // Returns lowest x such: (STAKING_SHARE_PARTS * x / amount) >= portions
-static uint64_t get_amount_to_make_portions(uint64_t amount, uint32_t portions)
+static uint64_t get_amount_to_make_portions(uint64_t amount, uint64_t portions)
 {
   uint64_t lo, hi, resulthi, resultlo;
   lo = mul128(amount, portions, &hi);
   if(lo > UINT64_MAX - (STAKING_SHARE_PARTS - 1))
     hi++;
   lo += STAKING_SHARE_PARTS-1;
-  div128_32(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
+  div128_64(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
   return resultlo;
 }
-static uint64_t get_actual_amount(uint64_t amount, uint32_t portions)
+
+// Returns lowest x such that (staking_requirement + x/STAKING_SHARE_PARTS) >= amount
+static uint64_t get_portions_to_make_amount(uint64_t staking_requirement, uint64_t amount)
+{
+  uint64_t lo, hi, resulthi, resultlo;
+  lo = mul128(amount, STAKING_SHARE_PARTS, &hi);
+  if(lo > UINT64_MAX - (staking_requirement - 1))
+    hi++;
+  lo += staking_requirement-1;
+  div128_64(hi, lo, staking_requirement, &resulthi, &resultlo);
+  return resultlo;
+}
+
+static uint64_t get_actual_amount(uint64_t amount, uint64_t portions)
 {
   uint64_t lo, hi, resulthi, resultlo;
   lo = mul128(amount, portions, &hi);
-  div128_32(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
+  div128_64(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
   return resultlo;
 }
 
@@ -2551,19 +2564,19 @@ bool t_rpc_command_executor::prepare_registration()
 #endif
 
   size_t number_participants = 1;
-  uint32_t operating_cost_portions = STAKING_SHARE_PARTS;
+  uint64_t operating_cost_portions = STAKING_SHARE_PARTS;
   bool is_solo_stake = false;
 
   std::vector<std::string> addresses;
-  std::vector<uint32_t> contributions;
+  std::vector<uint64_t> contributions;
 
   const uint64_t block_height = std::max(res.height, res.target_height);
   const uint64_t staking_requirement = std::max(service_nodes::get_statking_requirement(block_height), service_nodes::get_staking_requirement(block_height + 40 * 24)); // allow 1 day
-  uint32_t portions_remaining = STAKING_SHARE_PARTS;
+  uint64_t portions_remaining = STAKING_SHARE_PARTS;
   uint64_t total_reserved_contributions = 0;
 
   // anythong less than DUST will be added to operator stake
-  const uint64_t DUST = (staking_requirement / STAKING_SHARE_PARTS + 1) * (MAX_NUMBER_OF_CONTRIBUTORS - 1);
+  const uint64_t DUST = MAX_NUMBER_OF_CONTRIBUTORS;
 
   std::cout << "Current staking requirement: " << cryptonote::print_money(staking_requirement) << " " << cryptonote::get_unit() << std::endl;
 
@@ -2623,7 +2636,7 @@ bool t_rpc_command_executor::prepare_registration()
     }
 
     operating_cost_portions = (operating_cost_percent / 100.0) * STAKING_SHARE_PARTS;
-    const uint32_t min_contribution_portions = std::min(portions_remaining, MIN_STAKE_SHARE);
+    const uint64_t min_contribution_portions = std::min(portions_remaining, MIN_STAKE_SHARE);
     const uint64_t min_contribution = get_amount_to_make_portions(staking_requirement, min_contribution_portions);
     std::cout << "Minimum amount that can be reserved: " << cryptonote::print_money(min_contribution) << " " << cryptonote::get_unit() << std::endl;
 
@@ -2637,10 +2650,7 @@ bool t_rpc_command_executor::prepare_registration()
       mlog_set_categories(categories.c_str());
       return true;
     }
-    uint64_t lo, hi, resultlo, resulthi;
-    lo = mul128(operator_cut, STAKING_SHARE_PARTS, &hi);
-    div128_64(hi, lo, staking_requirement, &resulthi, &resultlo);
-    uint32_t portions = resultlo;
+    uint64_t portions = get_portions_to_make_amount(staking_requirement, operator_cut);
     if(portions < min_contribution_portions)
     {
       std::cout << "The operator needs to contribute at least 25% of the stake requirement (" << cryptonote::print_money(min_contribution) << " " << cryptonote::get_unit() << "). Aborted." << std::endl;
@@ -2698,10 +2708,7 @@ bool t_rpc_command_executor::prepare_registration()
         mlog_set_categories(categories.c_str());
         return true;
       }
-      uint64_t lo, hi, resultlo, resulthi;
-      lo = mul128(contribution_amount, STAKING_SHARE_PARTS, &hi);
-      div128_64(hi, lo, staking_requirement, &resulthi, &resultlo);
-      uint32_t portions = resultlo;
+      uint64_t portions = get_portions_to_make_amount(staking_requirement, contribution_amount);
       if (portions < min_contribution_portions)
       {
         std::cout << "Invalid amount. Aborted." << std::endl;
@@ -2780,17 +2787,24 @@ bool t_rpc_command_executor::prepare_registration()
   printf("%-16s%-9s%-19s%-s\n", "Contributor", "Address", "Contribution", "Contribution(%)");
   printf("%-16s%-9s%-19s%-s\n", "___________", "_______", "____________", "_______________");
 
-  for (size_t i = 0; i < number_participants; ++i)
+  for(size_t i = 0; i < number_participants; ++i)
   {
     const std::string participant_name = (i==0) ? "Operator" : "Contributor " + std::to_string(i);
     uint64_t amount = get_actual_amount(staking_requirement, contributions[i]);
     if (amount_left <= DUST && i == 0)
       amount += amount_left; // add dust to the operator.
-    printf("%-16s%-9s%-19s%-.2f\n", participant_name.c_str(), addresses[i].substr(0,6).c_str(), cryptonote::print_money(amount).c_str(), (double)contributions[i] * 100 / STAKING_SHARE_PARTS);
+    printf("%-16s%-9s%-19s%-.9f\n", participant_name.c_str(), addresses[i].substr(0,6).c_str(), cryptonote::print_money(amount).c_str(), (double)contributions[i] * 100 / STAKING_SHARE_PARTS);
   }
 
-  if (amount_left > DUST)
+  if(amount_left > DUST)
+  {
     printf("%-16s%-9s%-19s%-.2f\n", "(open)", "", cryptonote::print_money(amount_left).c_str(), amount_left * 100.0 / staking_requirement);
+  }
+  else if(amount_left > 0)
+  {
+    std::cout << "\nActual amounts may be differ slightly against specification. This is due to\n" << std::endl;
+    std::cout << "limitations on the way share_parts are represented internally.\n" << std::endl;
+  }
 
   std::cout << "\nBecause the actual requirement will depend on the time that you register, the\n";
   std::cout << "amounts shown here are used as a guide only, and the percentages will remain\n";

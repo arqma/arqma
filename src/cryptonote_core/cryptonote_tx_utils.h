@@ -38,12 +38,12 @@
 namespace cryptonote
 {
   //---------------------------------------------------------------
-  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce = blobdata(), uint8_t hard_fork_version = 1, network_type nettype = MAINNET, const crypto::public_key& service_node_key = crypto::null_pkey, const std::vector<std::pair<account_public_address, uint32_t>>& service_node_info={ std::pair<account_public_address, uint32_t>({ crypto::null_pkey, crypto::null_pkey }, STAKING_SHARE_PARTS) });
+  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce = blobdata(), uint8_t hard_fork_version = 1, network_type nettype = MAINNET, const crypto::public_key& service_node_key = crypto::null_pkey, const std::vector<std::pair<account_public_address, uint64_t>>& service_node_info={ std::pair<account_public_address, uint64_t>({ crypto::null_pkey, crypto::null_pkey }, STAKING_SHARE_PARTS) });
 
   keypair get_deterministic_keypair_from_height(uint64_t height);
-  uint64_t get_portion_of_reward(uint32_t portions, uint64_t total_service_node_reward);
-  uint64_t get_governance_reward(uint64_t height, uint64_t block_reward, uint8_t hard_fork_version);
-  uint64_t get_service_node_reward(uint64_t height, uint64_t block_reward, uint8_t hard_fork_version);
+  uint64_t get_portion_of_reward(uint64_t portions, uint64_t total_service_node_reward);
+  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hard_fork_version);
+  uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, uint8_t hard_fork_version);
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key);
   bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
 
