@@ -111,13 +111,15 @@
 #define CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_SECONDS_V2   DIFFICULTY_TARGET_V2 * CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_BLOCKS
 #define CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_BLOCKS       1
 
-#define DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN             DIFFICULTY_TARGET_V2 //just alias; used by tests
+#define DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN             DIFFICULTY_TARGET_V2 // just alias; used by tests
 
-#define BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT          10000  //by default, blocks ids count in synchronizing
-#define BLOCKS_SYNCHRONIZING_MAX_COUNT                  2048   //must be a power of 2, greater than 128, equal to SEEDHASH_EPOCH_BLOCKS
+#define BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT          10000  // by default, blocks ids count in synchronizing
+#define BLOCKS_SYNCHRONIZING_MAX_COUNT                  2048   // must be a power of 2, greater than 128, equal to SEEDHASH_EPOCH_BLOCKS
 
-#define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
-#define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 //seconds, one week
+#define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) // seconds, three days
+#define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 // seconds, one week
+
+#define MEMPOOL_PRUNE_DEREGISTER_LIFETIME               7200 // seconds, 2 hours
 
 #define COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT           10000
 
@@ -127,7 +129,7 @@
 #define P2P_DEFAULT_CONNECTIONS_COUNT_OUT               4
 #define P2P_DEFAULT_CONNECTIONS_COUNT_IN                12
 
-#define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
+#define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // seconds
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  150
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
