@@ -121,15 +121,15 @@ namespace cryptonote
     return 0;
   }
   //---------------------------------------------------------------
-  uint64_t get_portion_of_reward(uint32_t portions, uint64_t total_service_node_reward)
+  uint64_t get_portion_of_reward(uint64_t portions, uint64_t total_service_node_reward)
   {
     uint64_t hi, lo, rewardhi, rewardlo;
     lo = mul128(total_service_node_reward, portions, &hi);
-    div128_32(hi, lo, STAKING_SHARE_PARTS, &rewardhi, &rewardlo);
+    div128_64(hi, lo, STAKING_SHARE_PARTS, &rewardhi, &rewardlo);
     return rewardlo;
   }
   //---------------------------------------------------------------
-  static uint64_t calculate_sum_of_portions(const std::vector<std::pair<cryptonote::account_public_address, uint32_t>>& portions, uint64_t total_service_node_reward)
+  static uint64_t calculate_sum_of_portions(const std::vector<std::pair<cryptonote::account_public_address, uint64_t>>& portions, uint64_t total_service_node_reward)
   {
     uint64_t reward = 0;
     for(size_t i = 0; i < portions.size(); i++)
@@ -180,7 +180,7 @@ namespace cryptonote
     return correct_key == output_key;
   }
   //---------------------------------------------------------------
-  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t hard_fork_version, network_type nettype, const crypto::public_key& service_node_key, const std::vector<std::pair<account_public_address, uint32_t>>& service_node_info) {
+  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t hard_fork_version, network_type nettype, const crypto::public_key& service_node_key, const std::vector<std::pair<account_public_address, uint64_t>>& service_node_info) {
     tx.vin.clear();
     tx.vout.clear();
     tx.extra.clear();

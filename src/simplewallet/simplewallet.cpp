@@ -5720,7 +5720,7 @@ static cryptonote::account_public_address string_to_address(const std::string& s
   return address;
 }
 //----------------------------------------------------------------------------------------------------
-bool simple_wallet::register_service_node_main(const std::vector<std::string>& service_node_key_as_str, uint64_t expiration_timestamp, const cryptonote::account_public_address& address, uint64_t priority, const std::vector<uint32_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indicies, bool autostake)
+bool simple_wallet::register_service_node_main(const std::vector<std::string>& service_node_key_as_str, uint64_t expiration_timestamp, const cryptonote::account_public_address& address, uint64_t priority, const std::vector<uint64_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indicies, bool autostake)
 {
   LOCK_IDLE_SCOPE();
 
@@ -5728,10 +5728,10 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
   {
     if(!try_connect_to_daemon(true))
       return true;
-
-    uint64_t fetched_blocks;
-    m_wallet->refresh(0, fetched_blocks);
   }
+
+  uint64_t fetched_blocks;
+  m_wallet->refresh(0, fetched_blocks);
 
   if(expiration_timestamp <= (uint64_t)time(nullptr) + 600 /* 10 minutes */)
   {
@@ -5798,7 +5798,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
 
   uint64_t expected_staking_requirement = std::max(service_nodes::get_staking_requirement(m_wallet->nettype(), bc_height), service_nodes::get_staking_requirement(m_wallet->nettype(), bc_height + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS));
 
-  const uint64_t DUST = (expected_staking_requirement / STAKING_SHARE_PARTS + 1) * (MAX_NUMBER_OF_CONTRIBUTORS - 1);
+  const uint64_t DUST = MAX_NUMBER_OF_CONTRIBUTORS;
 
   uint64_t amount_left = expected_staking_requirement;
   uint64_t amount_payable_by_operator = 0;
@@ -5806,7 +5806,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
   {
     uint64_t hi, lo, resulthi, resultlo;
     lo = mul128(expected_staking_requirement, portions[i], &hi);
-    div128_32(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
+    div128_64(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
     if(i == 0)
       amount_payable_by_operator += resultlo;
     amount_left -+ resultlo;
@@ -5980,8 +5980,8 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
   std::vector<std::string> address_portions_args(local_args.begin(), local_args.begin() + local_args.size() - 3);
   std::vector<cryptonote::account_public_address> addresses;
-  std::vector<uint32_t> portions;
-  uint32_t portions_for_operator;
+  std::vector<uint64_t> portions;
+  uint64_t portions_for_operator;
   bool autostake;
   if(!service_nodes::convert_registration_args(m_wallet->nettype(), address_portions_args, addresses, portions, portions_for_operator, autostake))
   {
@@ -6084,10 +6084,10 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
   {
     if(!try_connect_to_daemon(true))
       return true;
-
-    uint64_t fetched_blocks;
-    m_wallet->refresh(0, fetched_blocks);
   }
+
+  uint64_t fetched_blocks;
+  m_wallet->refresh(0, fetched_blocks);
 
   uint64_t staking_requirement_lock_blocks = (m_wallet->nettype() != cryptonote::MAINNET ? STAKING_REQUIREMENT_LOCK_BLOCKS : STAKING_REQUIREMENT_LOCK_BLOCKS_TEST);
   uint64_t locked_blocks = staking_requirement_lock_blocks + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
@@ -6143,7 +6143,7 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
     const auto& snode_info = response.service_node_states.front();
     bool full = false;
 
-    const uint64_t DUST = (snode_info.staking_requirement / STAKING_SHARE_PARTS + 1) * (MAX_NUMBER_OF_CONTRIBUTORS - 1);
+    const uint64_t DUST = MAX_NUMBER_OF_CONTRIBUTORS;
 
     if(amount == 0)
       amount = snode_info.staking_requirement * amount_fraction;
@@ -6188,18 +6188,22 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
     if(amount < must_contrib_total)
     {
       success_msg_writer() << tr("Warning: You must contribute ") << print_money(must_contrib_total) << tr(" ArQmA to meet your registration requirements for this service node");
-      success_msg_writer() << tr("You have only specified ") << print_money(amount);
-      if(must_contrib_total - amount <= DUST)
+      if(amount == 0)
       {
-        success_msg_writer() << tr("Seeing as this is only a little bit, amount was increased automatically");
         amount = must_contrib_total;
       }
-      else if(autostake)
+      else
       {
-        if(amount == 0)
+        success_msg_writer() << tr("You have only specified ") << print_money(amount);
+        if(must_contrib_total - amount <= DUST)
+        {
+          success_msg_writer() << tr("Seeing as this is only a little bit, amount was increased automatically");
           amount = must_contrib_total;
-        else
+        }
+        else if(autostake)
+        {
           return true;
+        }
       }
     }
   }

@@ -119,7 +119,7 @@
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 //seconds, one week
 
-#define COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT           1000
+#define COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT           10000
 
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
@@ -195,7 +195,7 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define STAKING_REQUIREMENT_LOCK_BLOCKS                 21600
 #define STAKING_RELOCK_WINDOW_BLOCKS                    180
 #define STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS          20
-#define STAKING_SHARE_PARTS                             0xfffffffc // Use a multiple of four, so that it divides easily by max number of contributors.
+#define STAKING_SHARE_PARTS                             UINT64_C(0xfffffffffffffffc) // Use a multiple of four, so that it divides easily by max number of contributors.
 #define MAX_NUMBER_OF_CONTRIBUTORS                      4
 #define MIN_STAKE_SHARE                                 (STAKING_SHARE_PARTS / MAX_NUMBER_OF_CONTRIBUTORS)
 
