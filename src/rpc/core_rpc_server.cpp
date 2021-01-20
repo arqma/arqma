@@ -109,13 +109,6 @@ namespace
   };
   boost::mutex RPCTracker::mutex;
   std::unordered_map<std::string, RPCTracker::entry_t> RPCTracker::tracker;
-
-  void add_reason(std::string &reasons, const char *reason)
-  {
-    if (!reasons.empty())
-      reasons += ", ";
-    reasons += reason;
-  }
 }
 
 namespace cryptonote
@@ -995,36 +988,24 @@ namespace cryptonote
     tx_verification_context tvc = AUTO_VAL_INIT(tvc);
     if(!m_core.handle_incoming_tx({tx_blob, crypto::null_hash}, tvc, false, false, req.do_not_relay) || tvc.m_verifivation_failed)
     {
-      res.status = "Failed";
-      std::string reason = "";
-      if ((res.low_mixin = tvc.m_low_mixin))
-        add_reason(reason, "bad ring size");
-      if ((res.double_spend = tvc.m_double_spend))
-        add_reason(reason, "double spend");
-      if ((res.invalid_input = tvc.m_invalid_input))
-        add_reason(reason, "invalid input");
-      if ((res.invalid_output = tvc.m_invalid_output))
-        add_reason(reason, "invalid output");
-      if ((res.too_big = tvc.m_too_big))
-        add_reason(reason, "too big");
-      if ((res.overspend = tvc.m_overspend))
-        add_reason(reason, "overspend");
-      if ((res.fee_too_low = tvc.m_fee_too_low))
-        add_reason(reason, "fee too low");
-
       const vote_verification_context &vvc = tvc.m_vote_ctx;
-      if((res.invalid_block_height = vvc.m_invalid_block_height))
-        add_reason(res.reason, "block height was invalid");
-      if((res.duplicate_voters = vvc.m_duplicate_voters))
-        add_reason(res.reason, "voters index was duplicated");
-      if((res.voters_quorum_index_out_of_bounds = vvc.m_voters_quorum_index_out_of_bounds))
-        add_reason(res.reason, "voters quorum index specified out of bounds");
-      if((res.service_node_index_out_of_bounds = vvc.m_service_node_index_out_of_bounds))
-        add_reason(res.reason, "service node index specified out of bounds");
-      if((res.signature_not_valid = vvc.m_signature_not_valid))
-        add_reason(res.reason, "signature was not valid");
-      if((res.not_enough_votes = vvc.m_not_enough_votes))
-        add_reason(res.reason, "not enough votes");
+      res.status = "Failed";
+      res.reason = print_tx_verification_context(tvc);
+      res.reason += print_vote_verification_context(vvc);
+
+      res.low_mixin = tvc.m_low_mixin;
+      res.double_spend = tvc.m_double_spend;
+      res.invalid_input = tvc.m_invalid_input;
+      res.invalid_output = tvc.m_invalid_output;
+      res.too_big = tvc.m_too_big;
+      res.overspend = tvc.m_overspend;
+      res.fee_too_low = tvc.m_fee_too_low;
+      res.invalid_block_height = vvc.m_invalid_block_height;
+      res.duplicate_voters = vvc.m_duplicate_voters;
+      res.voters_quorum_index_out_of_bounds = vvc.m_voters_quorum_index_out_of_bounds;
+      res.service_node_index_out_of_bounds = vvc.m_service_node_index_out_of_bounds;
+      res.signature_not_valid = vvc.m_signature_not_valid;
+      res.not_enough_votes = vvc.m_not_enough_votes;
 
       const std::string punctuation = reason.empty() ? "" : ": ";
       if (tvc.m_verifivation_failed)
