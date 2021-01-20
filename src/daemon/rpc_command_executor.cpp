@@ -2760,6 +2760,21 @@ bool t_rpc_command_executor::prepare_registration()
     }
   }
 
+  bool autostaking = false;
+  std::cout << "Do you wish to enable autostaking (automatic re-stake)? [Y/N]: ";
+  std::string autostake_str;
+  std::cin >> autostake_str;
+  if(command_line::is_yes(autostake_str))
+    autostaking = true;
+  else if(command_line::is_no(autostake_str))
+    autostaking = false;
+  else
+  {
+    std::cout << "Invalid answer. Abosted." << std::endl;
+    mlog_set_categories(categories.c_str());
+    return true;
+  }
+
   std::cout << "Summary:" << std::endl;
   std::cout << "Operating costs as % of reward: " << (operating_cost_portions * 100.0 / STAKING_SHARE_PARTS) << "%" << std::endl;
   printf("%-16s%-9s%-19s%-s\n", "Contributor", "Address", "Contribution", "Contribution(%)");
@@ -2801,21 +2816,17 @@ bool t_rpc_command_executor::prepare_registration()
     return true;
   }
 
-  // <operator cut> <address> <fraction> [<address> <fraction> [...]]] <initial contribution>
-  std::vector<std::string> args = {
-    std::to_string(operating_cost_portions),
-  };
+  // [auto] <operator cut> <address> <share %> [<address> <share %> [...]]
+  std::vector<std::string> args;
+  if(autostaking)
+    args.push_back("auto");
+
+  args.push_back(std::to_string(operating_cost_portions));
 
   for (size_t i = 0; i < number_participants; ++i)
   {
     args.push_back(addresses[i]);
     args.push_back(std::to_string(contributions[i]));
-  }
-  {
-    uint64_t amount = get_actual_amount(staking_requirement, contributions[0]);
-    if (amount_left <= DUST)
-      amount += amount_left; // add dust to operator
-    args.push_back(cryptonote::print_money(amount));
   }
 
   for (size_t i = 0; i < addresses.size(); i++)

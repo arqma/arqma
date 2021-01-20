@@ -197,9 +197,11 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define STAKING_RELOCK_WINDOW_BLOCKS                    180
 #define STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS          20
 #define STAKING_SHARE_PARTS                             0xfffffffc // Use a multiple of four, so that it divides easily by max number of contributors.
-#define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (86400 * 14) // (seconds_per_day times days)
 #define MAX_NUMBER_OF_CONTRIBUTORS                      4
 #define MIN_STAKE_SHARE                                 (STAKING_SHARE_PARTS / MAX_NUMBER_OF_CONTRIBUTORS)
+
+#define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (86400*14) // (seconds_per_day times days)
+#define STAKING_AUTHORIZATION_EXPIRATION_AUTOSTAKE      (86400*7*365*2) // 2 years
 
 // testing constants
 // TODO: To be removed after successful tests.

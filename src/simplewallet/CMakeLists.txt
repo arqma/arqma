@@ -44,6 +44,7 @@ arqma_add_executable(simplewallet
 target_link_libraries(simplewallet
   PRIVATE
     wallet
+    daemonizer
     rpc_base
     rpc_sig
     cryptonote_core

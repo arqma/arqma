@@ -268,4 +268,12 @@ namespace command_helper
   const char* STOP_MINING_FOR_RPC("Stop mining to pay for RPC access");
   const char* SHOW_QR_CODE("Show address as QR code.");
   const char* HELP("Show the help section or the documentation about a <command>.");
+
+  // Service-Nodes
+
+  const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <address> <amount>");
+  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] [auto] <operator cut> <address1> <contribution %> [<address2> <contribution %> [...]] <expiration timestamp> <pubkey> <signature>");
+
+  const char* STAKE("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
+  const char* REGISTER_SN("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
 }

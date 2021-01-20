@@ -75,10 +75,12 @@ class threadpool
 
   unsigned int get_max_concurrency() const;
 
-  ~threadpool();
+  void stop();
+  void start();
 
   private:
     threadpool(unsigned int max_threads = 0);
+    ~threadpool();
     typedef struct entry
     {
       waiter *wo;
