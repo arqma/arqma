@@ -5722,8 +5722,6 @@ static cryptonote::account_public_address string_to_address(const std::string& s
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::register_service_node_main(const std::vector<std::string>& service_node_key_as_str, uint64_t expiration_timestamp, const cryptonote::account_public_address& address, uint64_t priority, const std::vector<uint64_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indicies, bool autostake)
 {
-  LOCK_IDLE_SCOPE();
-
   if(autostake)
   {
     if(!try_connect_to_daemon(true))
@@ -6048,38 +6046,42 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
   if(autostake)
   {
+    stop();
+    m_idle_thread.join();
     success_msg_writer(false) << please_wait_to_be_included_in_block_msg;
 #ifndef WIN32
     success_msg_writer() << tr("Entering autostaking mode, forking to background...");
-    stop();
-    m_idle_thread.join();
     tools::threadpool::getInstance().stop();
     posix::fork("");
     tools::threadpool::getInstance().start();
 #else
     success_msg_writer() << tr("Entering autostaking mode, please leave this wallet running.");
 #endif
+    m_idle_run.store(true, std::memory_order_relaxed);
+    while(true)
+    {
+      boost::unique_lock<boost::mutex> lock(m_idle_mutex);
+      if(!m_idle_run.load(std::memory_order_relaxed))
+        break;
+      if(!register_service_node_main(service_node_key_as_str, expiration_timestamp, address, priority, portions, extra, subaddr_indices, autostake))
+        break;
+      if(!m_idle_run.load(std::memory_order_relaxed))
+        break;
+      m_idle_cond.wait_for(lock, boost::chrono::seconds(120));
+    }
   }
-
-  bool ret;
-  do
+  else
   {
-    ret = register_service_node_main(service_node_key_as_str, expiration_timestamp, address, priority, portions, extra, subaddr_indices, autostake);
-    if(autostake)
-      sleep(120);
-  }
-  while(autostake && ret);
-
-  if(!autostake)
+    LOCK_IDLE_SCOPE();
+    register_service_node_main(service_node_key_as_str, expiration_timestamp, address, priority, portions, extra, subaddr_indices, autostake);
     success_msg_writer(false) << please_wait_to_be_included_in_block_msg;
+  }
 
   return true;
 }
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const cryptonote::account_public_address& address, uint32_t priority, std::set<uint32_t>& subaddr_indices, uint64_t amount, double amount_fraction, bool autostake)
 {
-  LOCK_IDLE_SCOPE();
-
   if(autostake)
   {
     if(!try_connect_to_daemon(true))
@@ -6441,26 +6443,34 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
 
   if(autostake)
   {
-#ifndef WIN32
-    success_msg_writer() << tr("Entering autostaking mode, forking to background...");
     stop();
     m_idle_thread.join();
+#ifndef WIN32
+    success_msg_writer() << tr("Entering autostaking mode, forking to background...");
     tools::threadpool::getInstance().stop();
     posix::fork("");
     tools::threadpool::getInstance().start();
 #else
     success_msg_writer() << tr("Entering autostaking mode, please leave this wallet running.");
 #endif
+    m_idle_run.store(true, std::memory_order_relaxed);
+    while(true)
+    {
+      boost::unique_lock<boost::mutex> lock(m_idle_mutex);
+      if(!m_idle_run.load(std::memory_order_relaxed))
+        break;
+      if(!stake_main(service_node_key, info.address, priority, subaddr_indices, amount, amount_fraction, autostake))
+        break;
+      if(!m_idle_run.load(std::memory_order_relaxed))
+        break;
+      m_idle_cond.wait_for(lock, boost::chrono::seconds(120));
+    }
   }
-
-  bool ret;
-  do
+  else
   {
-    ret = stake_main(service_node_key, info.address, priority, subaddr_indices, amount, amount_fraction, autostake);
-    if(autostake)
-      sleep(120);
+    LOCK_IDLE_SCOPE();
+    stake_main(service_node_key, info.address, priority, subaddr_indices, amount, amount_fraction, autostake);
   }
-  while(autostake && ret);
 
   return true;
 }
