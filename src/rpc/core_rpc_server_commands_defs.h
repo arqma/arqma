@@ -38,6 +38,7 @@
 #include "cryptonote_basic/verification_context.h"
 #include "cryptonote_basic/difficulty.h"
 #include "crypto/hash.h"
+#include "cryptonote_config.h"
 #include "cryptonote_core/service_node_deregister.h"
 #include "rpc/rpc_handler.h"
 #include "common/varint.h"
@@ -2736,6 +2737,29 @@ struct request_t: public rpc_access_request_base
       std::string status;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(service_node_states)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_STAKING_REQUIREMENT
+  {
+    struct request_t: public rpc_request_base
+    {
+      uint64_t height;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(height)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t: public rpc_response_base
+    {
+      uint64_t staking_requirement;
+      std::string status;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(staking_requirement)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };

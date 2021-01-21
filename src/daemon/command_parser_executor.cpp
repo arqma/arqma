@@ -184,6 +184,25 @@ bool t_command_parser_executor::print_sn_key(const std::vector<std::string>& arg
   return result;
 }
 
+bool t_command_parser_executor::print_sr(const std::vector<std::string>& args)
+{
+  if(args.size() != 1)
+  {
+    std::cout << "Expected 1 argument, <height>, received: " << args.size() << std::endl;
+    return false;
+  }
+
+  uint64_t height = 0;
+  if(!epee::string_tools::get_xtype_from_string(height, args[0]))
+  {
+    std::cout << "Wrong height given" << std::endl;
+    return false;
+  }
+
+  bool result = m_executor.print_sr(height);
+  return result;
+}
+
 bool t_command_parser_executor::prepare_registration()
 {
   bool result = m_executor.prepare_registration();
