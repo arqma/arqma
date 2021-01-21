@@ -5712,14 +5712,6 @@ bool simple_wallet::locked_sweep_all(const std::vector<std::string> &args_)
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-static cryptonote::account_public_address string_to_address(const std::string& s)
-{
-  cryptonote::account_public_address address;
-  if(!epee::string_tools::hex_to_pod(s, address))
-    return service_nodes::null_address;
-  return address;
-}
-//----------------------------------------------------------------------------------------------------
 bool simple_wallet::register_service_node_main(const std::vector<std::string>& service_node_key_as_str, uint64_t expiration_timestamp, const cryptonote::account_public_address& address, uint64_t priority, const std::vector<uint64_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indicies, bool autostake)
 {
   if(autostake)
@@ -6160,7 +6152,11 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
 
     for(const auto& contributor : snode_info.contributors)
     {
-      if(string_to_address(contributor.address) == address)
+      address_parse_info info;
+      if(!cryptonote::get_account_address_from_str(info, m_wallet->nettype(), contributor.address))
+        info.address = service_nodes::null_address;
+
+      if(info.address == address)
       {
         uint64_t max_increase_reserve = snode_info.staking_requirement - snode_info.total_reserved;
         uint64_t max_increase_amount_to = contributor.reserved + max_increase_reserve;
@@ -6184,7 +6180,7 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
     if(amount > can_contrib_total)
     {
       success_msg_writer() << tr("You may only contribute up to ") << print_money(can_contrib_total) << tr(" more ArQmA to this service node");
-      success_msg_writer() << tr("Auto-staking ") << print_money(can_contrib_total);
+      success_msg_writer() << tr("Reducing your stake from ") << print_money(amount) << tr(" to ") << print_money(can_contrib_total);
       amount = can_contrib_total;
     }
     if(amount < must_contrib_total)
