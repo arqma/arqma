@@ -1035,6 +1035,10 @@ bool Blockchain::rollback_blockchain_switching(std::list<block>& original_chain,
     pop_block_from_blockchain();
   }
 
+  // Revert all changes made from switching to alt_chain before adding the original chain back in
+  for(BlockchainDetachedHook* hook : m_blockchain_detached_hooks)
+    hook->blockchain_detached(rollback_height);
+
   // make sure the hard fork object updates its current version
   m_hardfork->reorganize_from_chain_height(rollback_height);
 
@@ -1364,6 +1368,12 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
   for (auto& o: b.miner_tx.vout)
     money_in_use += o.amount;
   partial_block_reward = false;
+
+  if(b.miner_tx.vout.size() == 0)
+  {
+    MERROR_VER("miner tx has no outputs");
+    return false;
+  }
 
   uint64_t height = m_db->height();
 
@@ -3462,6 +3472,14 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
 
   if(tx.is_deregister_tx())
   {
+    if(tx.rct_signatures.txnFee != 0)
+    {
+      tvc.m_invalid_input = true;
+      tvc.m_verification_failed = true;
+      MERROR_VER("TX version deregister should have NO fee!");
+      return false;
+    }
+
     // Check the inputs (votes) of the transaction have not been already been
     // submitted to the blockchain under another transaction using a different
     // combination of votes.
@@ -3484,6 +3502,33 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
       tvc.m_verifivation_failed = true;
       MERROR_VER("tx " << get_transaction_hash(tx) << ": version 3 deregister_tx could not be completely verified, reason: " << print_vote_verification_context(tvc.m_vote_ctx));
       return false;
+    }
+
+    // Check if deregister is too old or too new to hold onto
+    {
+      const uint64_t curr_height = get_current_blockchain_height();
+      if(deregister.block_height >= curr_height)
+      {
+        LOG_PRINT_L1("Received deregister tx for height: " << deregister.block_height
+                     << " and service node: " << deregister.service_node_index
+                     << ", is newer than current height: " << curr_height
+                     << " blocks and has been rejected.");
+        tvc.m_vote_ctx.m_invalid_block_height = true;
+        tvc.m_verifivation_failed = true;
+        return false;
+      }
+
+      uint64_t delta_height = curr_height - deregister.block_height;
+      if(delta_height > arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT)
+      {
+        LOG_PRINT_L1("Received deregister tx for height: " << deregister.block_height
+                     << " and service node: " << deregister.service_node_index
+                     << ", is older than: " << arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT
+                     << " blocks and has been rejected. The current height is: " << curr_height);
+        tvc.m_vote_ctx.m_invalid_block_height = true;
+        tvc.m_verifivation_failed = true;
+        return false;
+      }
     }
 
     const uint64_t height = deregister.block_height;

@@ -115,6 +115,12 @@ t_command_server::t_command_server(
     , "Print this daemon's service_node key, if launched in service_node_mode and is service_node."
     );
   m_command_lookup.set_handler(
+      "print_sr"
+    , std::bind(&t_command_parser_executor::print_sr, &m_parser, p::_1)
+    , "print_sr"
+    , "Print staking requirement for height given."
+    );
+  m_command_lookup.set_handler(
       "prepare_registration"
     , std::bind(&t_command_parser_executor::prepare_registration, &m_parser)
     , "prepare_registration"

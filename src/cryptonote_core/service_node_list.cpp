@@ -481,9 +481,14 @@ namespace service_nodes
     if(hard_fork_version < 16)
       return;
 
-    while(!m_rollback_events.empty() && m_rollback_events.front()->m_block_height < block_height - ROLLBACK_EVENT_EXPIRATION_BLOCKS)
     {
-      m_rollback_events.pop_front();
+      const size_t ROLLBACK_EVENT_EXPIRATION_BLOCKS = 30;
+      uint64_t cull_height = (block_height < ROLLBACK_EVENT_EXPIRATION_BLOCKS) ? block_height : block_height - ROLLBACK_EVENT_EXPIRATION_BLOCKS;
+
+      while(!m_rollback_events.empty() && m_rollback_events.front()->m_block_height < cull_height
+      {
+        m_rollback_events.pop_front();
+      }
     }
 
     for(const crypto::public_key& pubkey : get_expired_nodes(block_height))
@@ -522,9 +527,9 @@ namespace service_nodes
       index++;
     }
 
-    const size_t QUORUM_LIFETIME = arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT;
+    const size_t QUORUM_LIFETIME = (6 * arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT);
     // save six times the quorum lifetime to be sure. also to help with debug.
-    const size_t cache_state_from_height = (block_height < 6 * QUORUM_LIFETIME) ? 0 : block_height - 6 * QUORUM_LIFETIME;
+    const size_t cache_state_from_height = (block_height < QUORUM_LIFETIME) ? 0 : block_height - QUORUM_LIFETIME;
 
     store_quorum_state_from_rewards_list(block_height);
 
@@ -1137,5 +1142,13 @@ namespace service_nodes
       return arqma_bc::ARQMA * 1000;
     // We will need to work at some equation
     return arqma_bc::ARQMA * 10000;
+  }
+
+  uint64_t portions_to_amount(uint64_t portions, uint64_t staking_requirement)
+  {
+    uint64_t hi, lo, resulthi, resultlo;
+    lo = mul128(staking_requirement, portions, &hi);
+    div128_64(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
+    return resultlo;
   }
 }

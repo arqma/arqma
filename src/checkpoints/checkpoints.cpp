@@ -38,6 +38,7 @@
 #include <functional>
 #include <vector>
 
+namespace sp = std::placeholders;
 using namespace epee;
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -136,9 +137,11 @@ namespace cryptonote
   //---------------------------------------------------------------------------
   uint64_t checkpoints::get_max_height() const
   {
-    if(m_points.empty())
-      return 0;
-    return m_points.rbegin()->first;
+    std::map<uint64_t, crypto::hash>::const_iterator highest = std::max_element(m_points.begin(), m_points.end(),
+             (std::bind(&std::map<uint64_t, crypto::hash>::value_type::first, sp::_1) <
+              std::bind(&std::map<uint64_t, crypto::hash>::value_type::first, sp::_2)));
+
+    return highest->first;
   }
   //---------------------------------------------------------------------------
   const std::map<uint64_t, crypto::hash>& checkpoints::get_points() const
@@ -168,6 +171,15 @@ namespace cryptonote
     if (nettype == STAGENET)
     {
       ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
+      ADD_CHECKPOINT(1, "9398b5cc30d28d282316e70e98efab2c569e9fac8c88ca5dad4a58555401b3da");
+      ADD_CHECKPOINT(100, "b952cbb04a707c131d74eb6fdfe8d770725b374772f4ff60df833a2de7a2f3c4");
+      ADD_CHECKPOINT(500, "f30d831bc53e7374a965c9c56fae2e1e7688274a886df4d6e620685dc8eb7718");
+      ADD_CHECKPOINT(2500, "7f6e020feb4b9e8ed73dd72b3e6afa18e24f287cac806899ecf7eb89fb30d12f");
+      ADD_CHECKPOINT(5000, "7ff3892689915ab95b9df3500bf8df6b3bed30559b5f906f82edc77e46f34765");
+      ADD_CHECKPOINT(10000, "d727a7f8e4aed80fe4b7c0ee2f6b740a0a967ea222b6a7496ff20f5b418b2240");
+      ADD_CHECKPOINT(20000, "0cfa0586a638a1a1f849cdb9468e34e2b2ff15ded174402e9f7d760063a078c4");
+      ADD_CHECKPOINT(25000, "f1cf73184dafa8dda16f1bc55513638fb882a0452c70605be6e5fe18a50e6a77");
+      ADD_CHECKPOINT(29500, "2ba630e6221d00ef1d2fa1aa1a039d894467ec881670353cd60af0ec9f570f04");
       return true;
     }
     ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
