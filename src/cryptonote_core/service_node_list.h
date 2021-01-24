@@ -85,7 +85,7 @@ namespace service_nodes
 
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
     // the minimum contribution to start a new contributor
-    uint64_t get_min_contribution() const { return std::min(staking_requirement - total_reserved, staking_requirement / MAX_NUMBER_OF_CONTRIBUTORS); }
+    uint64_t get_min_contribution() const;
 
     service_node_info() : version(0) {}
 
@@ -133,6 +133,7 @@ namespace service_nodes
     std::vector<service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const;
 
     void set_db_pointer(cryptonote::BlockchainDB* db) { m_db = db; }
+    void set_my_service_node_key(crypto::public_key const *pub_key) { m_service_node_pubkey = pub_key; }
     bool store();
 
     bool is_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index, crypto::public_key& key, service_node_info& info) const;
@@ -143,8 +144,6 @@ namespace service_nodes
     void process_deregistration_tx(const cryptonote::transaction& tx, uint64_t block_height);
 
     std::vector<crypto::public_key> get_service_nodes_pubkeys() const;
-
-    uint64_t get_staking_requirement_lock_blocks() const;
 
     template<typename T>
     void block_added_generic(const cryptonote::block& block, const T& txs);
@@ -272,6 +271,7 @@ namespace service_nodes
     bool m_hooks_registered;
     block_height m_height;
 
+    crypto::public_key const *m_service_node_pubkey;
     cryptonote::BlockchainDB* m_db;
 
     std::map<block_height, std::shared_ptr<quorum_state>> m_quorum_states;
@@ -281,10 +281,13 @@ namespace service_nodes
   bool convert_registration_args(cryptonote::network_type nettype, std::vector<std::string> args, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint64_t>& portions, uint64_t& portions_for_operator, bool& autostake);
   bool make_registration_cmd(cryptonote::network_type nettype, const std::vector<std::string> args, const crypto::public_key& service_node_pubkey, const crypto::secret_key service_node_key, std::string &cmd, bool make_friendly);
 
+  uint64_t get_staking_requirement_lock_blocks(cryptonote::network_type m_nettype);
+
   uint64_t get_staking_requirement(cryptonote::network_type nettype, uint64_t height);
 
   uint64_t portions_to_amount(uint64_t portions, uint64_t staking_requirement);
 
+  inline uint64_t get_min_node_contribution(uint64_t staking_requirement, uint64_t total_reserved) { return std::min(staking_requirement - total_reserved, staking_requirement / MAX_NUMBER_OF_CONTRIBUTORS); }
   const static cryptonote::account_public_address null_address{ crypto::null_pkey, crypto::null_pkey };
 }
 

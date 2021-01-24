@@ -78,7 +78,7 @@ namespace cryptonote
 
     uint64_t template_accept_threshold(uint64_t amount)
     {
-      return amount * ACCEPT_THRESHOLD;
+      return amount;
     }
 
     uint64_t get_transaction_weight_limit(uint8_t version)
@@ -694,7 +694,7 @@ namespace cryptonote
         // mentioned by smooth where nodes would flush txes at slightly different times, causing
         // flushed txes to be re-added when received from a node which was just about to flush it
         uint64_t max_age = meta.kept_by_block ? CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME : CRYPTONOTE_MEMPOOL_TX_LIVETIME;
-        if (now - meta.receive_time <= max_age / 2)
+        if(now - meta.receive_time <= max_age / 2)
         {
           try
           {
@@ -702,8 +702,21 @@ namespace cryptonote
             if(meta.fee == 0)
             {
               cryptonote::transaction tx;
-              if(cryptonote::parse_and_validate_tx_from_blob(bd, tx) && !tx.is_deregister_tx())
+              if(!cryptonote::parse_and_validate_tx_from_blob(bd, tx))
               {
+                LOG_PRINT_L1("TX in pool could not be parsed from blob, txid: " << txid);
+                return true;
+              }
+
+              if(!tx.is_deregister_tx())
+                return true;
+
+              tx_verification_context tvc;
+              uint64_t max_used_block_height = 0;
+              crypto::hash max_used_block_id = null_hash;
+              if(!m_blockchain.check_tx_inputs(tx, max_used_block_height, max_used_block_id, tvc, /*kept_by_block*/false))
+              {
+                LOG_PRINT_L1("TX deregister considered for relaying failed tx inputs check, txid: " << txid << ", reason: " << print_tx_verification_context(tvc, &tx));
                 return true;
               }
             }
@@ -719,6 +732,7 @@ namespace cryptonote
       }
       return true;
     }, false);
+
     return true;
   }
   //---------------------------------------------------------------------------------

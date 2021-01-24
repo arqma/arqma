@@ -5720,9 +5720,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
       return true;
   }
 
-  uint64_t fetched_blocks;
-  m_wallet->refresh(0, fetched_blocks);
-
+  m_wallet->refresh(false);
   if(expiration_timestamp <= (uint64_t)time(nullptr) + 600 /* 10 minutes */)
   {
     fail_msg_writer() << tr("This registration has expired.");
@@ -5745,7 +5743,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
     return true;
   }
 
-  uint64_t staking_requirement_lock_blocks = (m_wallet->nettype() != cryptonote::MAINNET ? STAKING_REQUIREMENT_LOCK_BLOCKS : STAKING_REQUIREMENT_LOCK_BLOCKS_TEST);
+  uint64_t staking_requirement_lock_blocks = service_nodes::get_staking_requirement_lock_blocks(m_wallet->nettype());
   uint64_t locked_blocks = staking_requirement_lock_blocks + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
 
   std::string err, err2;
@@ -5842,6 +5840,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
     uint64_t total_fee = 0, total_sent = 0, change = 0;
     for (size_t n = 0; n < ptx_vector.size(); ++n)
     {
+      ptx_vector[n].tx.version = std::max((size_t)transaction::version_3, ptx_vector[n].tx.version);
       total_fee += ptx_vector[n].fee;
       for (auto i: ptx_vector[n].selected_transfers)
         total_sent += m_wallet->get_transfer_details(i).amount();
@@ -6059,7 +6058,7 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
         break;
       if(!m_idle_run.load(std::memory_order_relaxed))
         break;
-      m_idle_cond.wait_for(lock, boost::chrono::seconds(120));
+      m_idle_cond.wait_for(lock, boost::chrono::seconds(AUTOSTAKE_INTERVAL));
     }
   }
   else
@@ -6080,10 +6079,8 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
       return true;
   }
 
-  uint64_t fetched_blocks;
-  m_wallet->refresh(0, fetched_blocks);
-
-  uint64_t staking_requirement_lock_blocks = (m_wallet->nettype() != cryptonote::MAINNET ? STAKING_REQUIREMENT_LOCK_BLOCKS : STAKING_REQUIREMENT_LOCK_BLOCKS_TEST);
+  m_wallet->refresh(false);
+  uint64_t staking_requirement_lock_blocks = service_nodes::staking_requirement_lock_blocks(m_wallet->nettype());
   uint64_t locked_blocks = staking_requirement_lock_blocks + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
 
   std::string err, err2;
@@ -6146,10 +6143,14 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
     uint64_t must_contrib_total = 0;
 
     if(snode_info.contributors.size() < MAX_NUMBER_OF_CONTRIBUTORS)
+    {
       can_contrib_total = snode_info.staking_requirement - snode_info.total_reserved;
+      must_contrib_total = service_nodes::get_min_node_contribution(snode_info.staking_requirement, snode_info.total_reserved);
+    }
     else
       full = true;
 
+    bool is_preexisting_contributor = false;
     for(const auto& contributor : snode_info.contributors)
     {
       address_parse_info info;
@@ -6162,11 +6163,11 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
         uint64_t max_increase_amount_to = contributor.reserved + max_increase_reserve;
         can_contrib_total = max_increase_amount_to - contributor.amount;
         must_contrib_total = contributor.reserved - contributor.amount;
-        full = false;
+        is_preexisting_contributor = true;
       }
     }
 
-    if(full)
+    if(full && !is_preexisting_contributor)
     {
       fail_msg_writer() << tr("This service node already has the maximum number of participants, and the specified address is not one of them");
       return true;
@@ -6185,8 +6186,10 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
     }
     if(amount < must_contrib_total)
     {
-      success_msg_writer() << tr("Warning: You must contribute ") << print_money(must_contrib_total) << tr(" ArQmA to meet your registration requirements for this service node");
-      if(amount == 0)
+      if(is_preexisting_contributor)
+        success_msg_writer() << tr("Warning: You must contribute ") << print_money(must_contrib_total) << tr(" ArQmA to meet your registration requirements for this service node");
+
+    if(amount == 0)
       {
         amount = must_contrib_total;
       }
@@ -6195,11 +6198,14 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
         success_msg_writer() << tr("You have only specified ") << print_money(amount);
         if(must_contrib_total - amount <= DUST)
         {
-          success_msg_writer() << tr("Seeing as this is only a little bit, amount was increased automatically");
           amount = must_contrib_total;
+          success_msg_writer() << tr("Seeing as this is insufficient by dust amount, amount was increased automatically to: ") << print_money(must_contrib_total);
         }
-        else if(autostake)
+        else if(!is_preexisting_contributor || autostake)
         {
+          if(!is_preexisting_contributor)
+            fail_msg_writer() << tr("You must contribute minimum sum of: ") << print_money(must_contrib_total) << tr(" ArQmA to become this Service Node Contributor");
+
           return true;
         }
       }
@@ -6245,6 +6251,7 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
     uint64_t total_fee = 0, total_sent = 0, change = 0;
     for (size_t n = 0; n < ptx_vector.size(); ++n)
     {
+      ptx_vector[n].tx.version = std::max((size_t)transaction::version_3, ptx_vector[n].tx.version);
       total_fee += ptx_vector[n].fee;
       for (auto i: ptx_vector[n].selected_transfers)
         total_sent += m_wallet->get_transfer_details(i).amount();
@@ -6340,7 +6347,7 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::stake(const std::vector<std::string> &args_)
 {
-  // stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey>
+  // stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <contributor address> <amount|percent%>
 
   SCOPED_WALLET_UNLOCK();
   if (!try_connect_to_daemon())
@@ -6425,6 +6432,12 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
     return true;
   }
 
+  if(info.is_subaddress)
+  {
+    fail_msg_writer() << tr("Service nodes doesn't support rewards to subaddresses, can not stake for address: ") << local_args[1] << tr("Use index=[...] if you want to stake funds from particular subaddress.");
+    return true;
+  }
+
   if(info.has_payment_id)
   {
     fail_msg_writer() << tr("Do not use payment ids for staking");
@@ -6459,7 +6472,7 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
         break;
       if(!m_idle_run.load(std::memory_order_relaxed))
         break;
-      m_idle_cond.wait_for(lock, boost::chrono::seconds(120));
+      m_idle_cond.wait_for(lock, boost::chrono::seconds(AUTOSTAKE_INTERVAL));
     }
   }
   else

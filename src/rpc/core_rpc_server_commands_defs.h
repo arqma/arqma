@@ -2557,22 +2557,20 @@ struct request_t: public rpc_access_request_base
   {
     struct request_t: public rpc_request_base
     {
-      uint64_t nblocks;
-
+      size_t num_blocks_to_pop;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_request_base)
-        KV_SERIALIZE(nblocks)
+        KV_SERIALIZE(num_blocks_to_pop)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
 
     struct response_t: public rpc_response_base
     {
-      uint64_t height;
-
+      std::string status;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_response_base)
-        KV_SERIALIZE(height)
+        KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -2611,6 +2609,7 @@ struct request_t: public rpc_access_request_base
     {
       uint64_t height;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE(height)
       END_KV_SERIALIZE_MAP()
     };
@@ -2624,6 +2623,7 @@ struct request_t: public rpc_access_request_base
       bool untrusted;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
         KV_SERIALIZE(status)
         KV_SERIALIZE(quorum_nodes)
         KV_SERIALIZE(nodes_to_test)
@@ -2640,6 +2640,7 @@ struct request_t: public rpc_access_request_base
       std::vector<std::string> args;
       bool make_friendly;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE(args)
         KV_SERIALIZE(make_friendly)
       END_KV_SERIALIZE_MAP()
@@ -2652,6 +2653,7 @@ struct request_t: public rpc_access_request_base
       std::string registration_cmd;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
         KV_SERIALIZE(status)
         KV_SERIALIZE(registration_cmd)
       END_KV_SERIALIZE_MAP()
@@ -2664,6 +2666,7 @@ struct request_t: public rpc_access_request_base
     struct request_t: public rpc_request_base
     {
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_request_base)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -2673,6 +2676,7 @@ struct request_t: public rpc_access_request_base
       std::string service_node_pubkey;
       std::string status;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
         KV_SERIALIZE(service_node_pubkey)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
@@ -2686,6 +2690,7 @@ struct request_t: public rpc_access_request_base
     {
       std::vector<std::string> service_node_pubkeys;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE(service_node_pubkeys)
       END_KV_SERIALIZE_MAP()
     };
@@ -2736,6 +2741,7 @@ struct request_t: public rpc_access_request_base
       std::vector<entry> service_node_states;
       std::string status;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
         KV_SERIALIZE(service_node_states)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
@@ -2749,6 +2755,7 @@ struct request_t: public rpc_access_request_base
     {
       uint64_t height;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE(height)
       END_KV_SERIALIZE_MAP()
     };
@@ -2759,6 +2766,7 @@ struct request_t: public rpc_access_request_base
       uint64_t staking_requirement;
       std::string status;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
         KV_SERIALIZE(staking_requirement)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()

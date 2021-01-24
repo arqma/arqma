@@ -357,7 +357,7 @@ namespace cryptonote
 
     auto data_dir = boost::filesystem::path(m_config_folder);
 
-    if (m_nettype == MAINNET || m_nettype == STAGENET)
+    if (m_nettype == MAINNET)
     {
       cryptonote::checkpoints checkpoints;
       if (!checkpoints.init_default_checkpoints(m_nettype))
@@ -477,6 +477,7 @@ namespace cryptonote
     {
       r = init_service_node_key();
       CHECK_AND_ASSERT_MES(r, false, "Failed to create or load service node key");
+      m_service_node_list.set_my_service_node_keys(&m_service_node_pubkey);
     }
 
     boost::filesystem::path folder(m_config_folder);
@@ -1403,7 +1404,10 @@ namespace cryptonote
       cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
       NOTIFY_UPTIME_PROOF::request r;
       m_quorum_cop.generate_uptime_proof_request(m_service_node_pubkey, m_service_node_key, r);
-      get_protocol()->relay_uptime_proof(r, fake_context);
+      bool relayed = get_protocol()->relay_uptime_proof(r, fake_context);
+
+      if(relayed)
+        MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_pubkey);
     }
     return true;
   }
@@ -1412,6 +1416,18 @@ namespace cryptonote
   {
     uint64_t result = m_quorum_cop.get_uptime_proof(key);
     return result;
+  }
+  //-----------------------------------------------------------------------------------------------
+  void core::pop_blocks(size_t num_blocks_to_pop)
+  {
+    m_blockchain_storege.det_db().batch_start();
+    for(size_t i = 0; i < num_blocks_to_pop; i++)
+    {
+      block blk;
+      std::vector<transaction> txs;
+      m_blockchain_storage.get_db().pop_block(blk, txs);
+    }
+    m_blockchain_storage.get_db().batch_stop();
   }
   //-----------------------------------------------------------------------------------------------
   bool core::handle_uptime_proof(uint64_t timestamp, const crypto::public_key& pubkey, const crypto::signature& sig)
@@ -1766,17 +1782,23 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   void core::do_uptime_proof_call()
   {
-    std::vector<service_nodes::service_node_pubkey_info> states = get_service_node_list_state({ m_service_node_pubkey });
-
+    std::vector<service_nodes::service_node_pubkey_info> const states = get_service_node_list_state({ m_service_node_pubkey });
     // wait one block before starting uptime proofs.
     if(!states.empty() && states[0].info.registration_height + 1 < get_current_blockchain_height())
     {
-      m_submit_uptime_proof_interval.do_call(boost::bind(&core::submit_uptime_proof, this));
+      m_check_uptime_proof_interval.do_call([&states, this]()
+      {
+        uint64_t last_uptime = m_quorum_cop.get_uptime_proof(states[0].pubkey);
+        if(last_uptime <= static_cast(uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
+          this->submit_uptime_proof();
+
+        return true;
+      ]);
     }
     else
     {
       // reset the interval so that we're ready when we register.
-      m_submit_uptime_proof_interval = epee::math_helper::once_a_time_seconds<UPTIME_PROOF_FREQUENCY_IN_SECONDS, true>();
+      m_check_uptime_proof_interval = epee::math_helper::once_a_time_seconds<UPTIME_PROOF_BUFFER_IN_SECONDS, true>();
     }
   }
   //-----------------------------------------------------------------------------------------------
@@ -1801,8 +1823,13 @@ namespace cryptonote
     m_check_updates_interval.do_call(boost::bind(&core::check_updates, this));
     m_check_disk_space_interval.do_call(boost::bind(&core::check_disk_space, this));
     m_blockchain_pruning_interval.do_call(boost::bind(&core::update_blockchain_pruning, this));
-    if(m_service_node)
+
+    time_t const lifetime = time(nullptr) - get_start_time();
+    if(m_service_node && lifetime > DIFFICULTY_TARGET_V16)
+    {
       do_uptime_proof_call();
+    }
+
     m_uptime_proof_pruner.do_call(boost::bind(&service_nodes::quorum_cop::prune_uptime_proof, &m_quorum_cop));
 
     m_miner.on_idle();
@@ -2041,7 +2068,7 @@ namespace cryptonote
     uint64_t latest_block_height = std::max(get_current_blockchain_height(), get_target_blockchain_height());
     uint64_t delta_height = latest_block_height - vote.block_height;
 
-    if(vote.block_height < latest_block_height && delta_height > arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
+    if(vote.block_height < latest_block_height && delta_height >= arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
     {
       LOG_PRINT_L1("Received vote for height: " << vote.block_height
                 << " and service node: "     << vote.service_node_index

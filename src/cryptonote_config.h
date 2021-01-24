@@ -31,9 +31,9 @@
 
 #pragma once
 
-#include <stdexcept>
 #include <string>
 #include <boost/uuid/uuid.hpp>
+#include <stdexcept>
 
 #define CRYPTONOTE_DNS_TIMEOUT_MS                       20000
 
@@ -194,7 +194,6 @@ static constexpr uint64_t POISSON_CHECK_DEPTH = 128;  // Main-chain depth of the
 static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the probablity that the timestamps are genuine is below e^x, -75 = 10^-33
 
 // New constants are intended to go here
-#define STAKING_REQUIREMENT_LOCK_BLOCKS                 21600
 #define STAKING_RELOCK_WINDOW_BLOCKS                    180
 #define STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS          20
 #define STAKING_SHARE_PARTS                             UINT64_C(0xfffffffffffffffc) // Use a multiple of four, so that it divides easily by max number of contributors.
@@ -207,7 +206,6 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 // testing constants
 // TODO: To be removed after successful tests.
 
-#define STAKING_REQUIREMENT_LOCK_BLOCKS_TEST            100
 
 static_assert(STAKING_SHARE_PARTS % MAX_NUMBER_OF_CONTRIBUTORS == 0, "Use a multiple of four, so that it divides easily by max number of contributors.");
 static_assert(STAKING_SHARE_PARTS % 2 == 0, "Use a multiple of two, so that it divides easily by two contributors.");
