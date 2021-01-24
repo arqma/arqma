@@ -1692,9 +1692,10 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
   uint64_t total_received_1 = 0;
   using unlock_time_t = uint64_t;
   std::unordered_map<crypto::public_key, unlock_time_t> pk_to_unlock_times;
-  std::vector<size_t> outs;
+  // std::vector<size_t> outs;
   while (!tx.vout.empty())
   {
+    std::vector<size_t> outs;
     // if tx.vout is not empty, we loop through all tx pubkeys
     outs.clear();
 

@@ -276,4 +276,7 @@ namespace command_helper
 
   const char* STAKE("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
   const char* REGISTER_SN("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
+
+  const char* AUTOSTAKE_PWD("Can not autostake with ask-password set to true.\nPassword are scrubbed from memory after use.\n\nYou must switch idle password OFF with command \"set ask-password 0\" to allow autostake to work.");
+  const char* AUTOSTAKE_WARN("Auto staking with non-trusted contributors may lock your ArQmA for staking duration if they do not restake after Service Node expiration.\n\nIf this behaviour is not desirable, please reuse stakin command without auto command"); 
 }

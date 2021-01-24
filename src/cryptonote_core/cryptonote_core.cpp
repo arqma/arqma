@@ -812,7 +812,7 @@ namespace cryptonote
     if(tx_blob.blob.size() > max_tx_size)
     {
       LOG_PRINT_L1("WRONG TRANSACTION BLOB, too big size " << tx_blob.blob.size() << ", rejected");
-      tvc.m_verifivation_failed = true;
+      tvc.m_verification_failed = true;
       tvc.m_too_big = true;
       return false;
     }
@@ -838,7 +838,7 @@ namespace cryptonote
     if(!r)
     {
       LOG_PRINT_L1("WRONG TRANSACTION BLOB, Failed to parse, rejected");
-      tvc.m_verifivation_failed = true;
+      tvc.m_verification_failed = true;
       return false;
     }
     //std::cout << "!"<< tx.vin.size() << std::endl;
@@ -850,7 +850,7 @@ namespace cryptonote
       {
         bad_semantics_txes_lock.unlock();
         LOG_PRINT_L1("Transaction already seen with bad semantics, rejected");
-        tvc.m_verifivation_failed = true;
+        tvc.m_verification_failed = true;
         return false;
       }
     }
@@ -860,7 +860,7 @@ namespace cryptonote
     const size_t max_tx_version = (version == 1) ? 1 : (version < 16) ? transaction::version_2 : transaction::version_3;
     if (tx.version == 0 || tx.version > max_tx_version)
     {
-      tvc.m_verifivation_failed = true;
+      tvc.m_verification_failed = true;
       return false;
     }
 
@@ -872,7 +872,7 @@ namespace cryptonote
     if(!check_tx_syntax(tx))
     {
       LOG_PRINT_L1("WRONG TRANSACTION BLOB, Failed to check tx " << tx_hash << " syntax, rejected");
-      tvc.m_verifivation_failed = true;
+      tvc.m_verification_failed = true;
       return false;
     }
     // resolve outPk references in rct txes
@@ -887,7 +887,7 @@ namespace cryptonote
         if(rv.outPk.size() != tx.vout.size())
         {
           LOG_PRINT_L1("WRONG TRANSACTION BLOB, Bad outPk size in tx " << tx_hash << ", rejected");
-          tvc.m_verifivation_failed = true;
+          tvc.m_verification_failed = true;
           return false;
         }
         for (size_t n = 0; n < tx.rct_signatures.outPk.size(); ++n)
@@ -898,7 +898,7 @@ namespace cryptonote
           if(rv.p.bulletproofs.size() != tx.vout.size())
           {
             LOG_PRINT_L1("WRONG TRANSACTION BLOB, Bad bulletproofs size in tx " << tx_hash << ", rejected");
-            tvc.m_verifivation_failed = true;
+            tvc.m_verification_failed = true;
             return false;
           }
           for (size_t n = 0; n < rv.p.bulletproofs.size(); ++n)
@@ -952,7 +952,7 @@ namespace cryptonote
       if (!check_tx_semantic(*tx_info[n].tx, keeped_by_block))
       {
         set_semantics_failed(tx_info[n].tx_hash);
-        tx_info[n].tvc.m_verifivation_failed = true;
+        tx_info[n].tvc.m_verification_failed = true;
         tx_info[n].result = false;
         continue;
       }
@@ -965,7 +965,7 @@ namespace cryptonote
           // coinbase should not come here, so we reject for all other types
           MERROR_VER("Unexpected Null rctSig type");
           set_semantics_failed(tx_info[n].tx_hash);
-          tx_info[n].tvc.m_verifivation_failed = true;
+          tx_info[n].tvc.m_verification_failed = true;
           tx_info[n].result = false;
           break;
         case rct::RCTTypeSimpleBulletproof:
@@ -973,7 +973,7 @@ namespace cryptonote
           {
             MERROR_VER("rct signature semantics check failed");
             set_semantics_failed(tx_info[n].tx_hash);
-            tx_info[n].tvc.m_verifivation_failed = true;
+            tx_info[n].tvc.m_verification_failed = true;
             tx_info[n].result = false;
             break;
           }
@@ -983,7 +983,7 @@ namespace cryptonote
           {
             MERROR_VER("rct signature semantics check failed");
             set_semantics_failed(tx_info[n].tx_hash);
-            tx_info[n].tvc.m_verifivation_failed = true;
+            tx_info[n].tvc.m_verification_failed = true;
             tx_info[n].result = false;
             break;
           }
@@ -994,7 +994,7 @@ namespace cryptonote
           {
             MERROR_VER("rct signature semantics check failed");
             set_semantics_failed(tx_info[n].tx_hash);
-            tx_info[n].tvc.m_verifivation_failed = true;
+            tx_info[n].tvc.m_verification_failed = true;
             tx_info[n].result = false;
             break;
           }
@@ -1004,7 +1004,7 @@ namespace cryptonote
           {
             MERROR_VER("Bulletproof does not have canonical form");
             set_semantics_failed(tx_info[n].tx_hash);
-            tx_info[n].tvc.m_verifivation_failed = true;
+            tx_info[n].tvc.m_verification_failed = true;
             tx_info[n].result = false;
             break;
           }
@@ -1013,7 +1013,7 @@ namespace cryptonote
         default:
           MERROR_VER("Unknown rct type: " << rv.type);
           set_semantics_failed(tx_info[n].tx_hash);
-          tx_info[n].tvc.m_verifivation_failed = true;
+          tx_info[n].tvc.m_verification_failed = true;
           tx_info[n].result = false;
           break;
       }
@@ -1032,7 +1032,7 @@ namespace cryptonote
         if(assumed_bad || !rct::verRctSemanticsSimple(tx_info[n].tx->rct_signatures))
         {
           set_semantics_failed(tx_info[n].tx_hash);
-          tx_info[n].tvc.m_verifivation_failed = true;
+          tx_info[n].tvc.m_verification_failed = true;
           tx_info[n].result = false;
         }
       }
@@ -1062,7 +1062,7 @@ namespace cryptonote
         catch (const std::exception& e)
         {
           MERROR_VER("Exception in handle_incoming_tx_pre: " << e.what());
-          tvc[i].m_verifivation_failed = true;
+          tvc[i].m_verification_failed = true;
           results[i].res = false;
         }
       });
@@ -1093,7 +1093,7 @@ namespace cryptonote
           catch (const std::exception& e)
           {
             MERROR_VER("Exception in handle_incoming_tx_post: " << e.what());
-            tvc[i].m_verifivation_failed = true;
+            tvc[i].m_verification_failed = true;
             results[i].res = false;
           }
         });
@@ -1130,7 +1130,7 @@ namespace cryptonote
       // keeping the txpool size constrained
       const uint64_t weight = results[i].tx.pruned ? get_pruned_transaction_weight(results[i].tx) : get_transaction_weight(results[i].tx, it->blob.size());
       ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i].blob, weight, tvc[i], keeped_by_block, relayed, do_not_relay);
-      if(tvc[i].m_verifivation_failed)
+      if(tvc[i].m_verification_failed)
       {MERROR_VER("Transaction verification failed: " << results[i].hash);}
       else if(tvc[i].m_verifivation_impossible)
       {MERROR_VER("Transaction verification impossible: " << results[i].hash);}
@@ -1589,7 +1589,7 @@ namespace cryptonote
     m_miner.resume();
 
 
-    CHECK_AND_ASSERT_MES(!bvc.m_verifivation_failed, false, "mined block failed verification");
+    CHECK_AND_ASSERT_MES(!bvc.m_verification_failed, false, "mined block failed verification");
     if(bvc.m_added_to_main_chain)
     {
       cryptonote_connection_context exclude_context = {};
@@ -1664,7 +1664,7 @@ namespace cryptonote
 
     if(!check_incoming_block_size(block_blob))
     {
-      bvc.m_verifivation_failed = true;
+      bvc.m_verification_failed = true;
       return false;
     }
 
@@ -1682,7 +1682,7 @@ namespace cryptonote
       if(!parse_and_validate_block_from_blob(block_blob, lb, block_hash))
       {
         LOG_PRINT_L1("Failed to parse and validate new block");
-        bvc.m_verifivation_failed = true;
+        bvc.m_verification_failed = true;
         return false;
       }
       b = &lb;
@@ -2138,7 +2138,7 @@ namespace cryptonote
       blobdata const tx_blob = tx_to_blob(deregister_tx);
 
       result = handle_incoming_tx(tx_blob, tvc, false /*keeped_by_block*/, false /*relayed*/, false /*do_not_relay*/);
-      if(!result || tvc.m_verifivation_failed)
+      if(!result || tvc.m_verification_failed)
       {
         LOG_ERROR("A full deregister tx for height: " << vote.block_height << " and service node: "
                   << vote.service_node_index << " could not be verified and was not added to the memory pool, reason: "
