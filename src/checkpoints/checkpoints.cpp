@@ -36,7 +36,9 @@
 #include "storages/portable_storage_template_helper.h" // epee json include
 #include "serialization/keyvalue_serialization.h"
 
-namespace sp = std::placeholders;
+#include <boost/bind/bind.hpp>
+
+namespace sp = boost::placeholders;
 using namespace epee;
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -136,8 +138,8 @@ namespace cryptonote
   uint64_t checkpoints::get_max_height() const
   {
     std::map<uint64_t, crypto::hash>::const_iterator highest = std::max_element(m_points.begin(), m_points.end(),
-             (std::bind(&std::map<uint64_t, crypto::hash>::value_type::first, sp::_1) <
-              std::bind(&std::map<uint64_t, crypto::hash>::value_type::first, sp::_2)));
+             (boost::bind(&std::map<uint64_t, crypto::hash>::value_type::first, sp::_1) <
+              boost::bind(&std::map<uint64_t, crypto::hash>::value_type::first, sp::_2)));
 
     return highest->first;
   }

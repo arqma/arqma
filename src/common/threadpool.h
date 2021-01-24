@@ -42,15 +42,11 @@ namespace tools
 //! A global thread pool
 class threadpool
 {
- public:
+public:
   static threadpool& getInstance()
   {
     static threadpool instance;
     return instance;
-  }
-  static threadpool *getNewForUnitTests(unsigned max_threads = 0)
-  {
-    return new threadpool(max_threads);
   }
 
   // The waiter lets the caller know when all of its
@@ -73,13 +69,13 @@ class threadpool
   // task to finish.
   void submit(waiter *waiter, std::function<void()> f, bool leaf = false);
 
-  unsigned int get_max_concurrency() const;
+  int get_max_concurrency();
 
   void stop();
   void start();
 
   private:
-    threadpool(unsigned int max_threads = 0);
+    threadpool();
     ~threadpool();
     typedef struct entry
     {
@@ -91,8 +87,8 @@ class threadpool
     boost::condition_variable has_work;
     boost::mutex mutex;
     std::vector<boost::thread> threads;
-    unsigned int active;
-    unsigned int max;
+    int active;
+    int max;
     bool running;
     void run(bool flush = false);
 };
