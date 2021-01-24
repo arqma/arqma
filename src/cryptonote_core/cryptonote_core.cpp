@@ -1823,7 +1823,7 @@ namespace cryptonote
           this->submit_uptime_proof();
 
         return true;
-      ]);
+      });
     }
     else
     {
