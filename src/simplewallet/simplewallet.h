@@ -55,6 +55,7 @@
 
 constexpr const char ARQMA_DONATION_ADDR[] = "ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3";
 
+const int AUTOSTAKE_INTERVAL = 3600; // 1 hour
 /*!
  * \namespace cryptonote
  * \brief Holds cryptonote related classes and helpers.

@@ -3111,7 +3111,12 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
 
   const uint8_t hf_version = m_hardfork->get_current_version();
 
-  if(hf_version >= 16 && tx.version < 2)
+  if(hf_version >= 16 && tx.version < 3)
+  {
+    tvc.m_invalid_version = true;
+    return false;
+  }
+  else if(hf_version < 16 && tx.version > 2)
   {
     tvc.m_invalid_version = true;
     return false;
@@ -3519,7 +3524,7 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
       }
 
       uint64_t delta_height = curr_height - deregister.block_height;
-      if(delta_height > arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT)
+      if(delta_height >= arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT)
       {
         LOG_PRINT_L1("Received deregister tx for height: " << deregister.block_height
                      << " and service node: " << deregister.service_node_index
@@ -4322,9 +4327,15 @@ leave:
   bvc.m_added_to_main_chain = true;
   ++m_sync_counter;
 
-  // appears to be a NOP *and* is called elsewhere.  wat?
   m_tx_pool.on_blockchain_inc(new_height, id);
-  m_deregister_vote_pool.remove_expired_votes(new_height);
+
+  // New height is the height of the block we just mined. We want (new_height
+  // + 1) because our age checks for deregister votes is now (age >=
+  // DEREGISTER_VOTE_LIFETIME_BY_HEIGHT) where age is derived from
+  // get_current_blockchain_height() which gives you the height that you are
+  // currently mining for, i.e. (new_height + 1). Otherwise peers will silently
+  // drop connection from each other when they go around P2Ping votes.
+  m_deregister_vote_pool.remove_expired_votes(new_height + 1);
   m_deregister_vote_pool.remove_used_votes(txs);
   get_difficulty_for_next_block(); // just to cache it
   invalidate_block_template_cache();

@@ -691,7 +691,7 @@ bool t_rpc_command_executor::print_quorum_state(uint64_t height)
   }
   else
   {
-    if(!m_rpc_server->on_get_quorum_state_json(req, res, error_resp) || res.status != CORE_RPC_STATUS_OK)
+    if(!m_rpc_server->on_get_quorum_state(req, res, error_resp) || res.status != CORE_RPC_STATUS_OK)
     {
       tools::fail_msg_writer() << make_error(fail_message, res.status);
       return true;
@@ -2377,8 +2377,7 @@ static void print_service_node_list_state(cryptonote::network_type nettype, uint
     // Print Expiry Info
     {
       uint64_t expiry_height = entry.registration_height;
-
-      expiry_height += (nettype != cryptonote::MAINNET) ? STAKING_REQUIREMENT_LOCK_BLOCKS_TEST : STAKING_REQUIREMENT_LOCK_BLOCKS;
+      expiry_height += service_nodes::get_staking_requirement_lock_blocks(nettype);
 
       if(curr_height)
       {
@@ -2999,6 +2998,62 @@ bool t_rpc_command_executor::prepare_registration()
 
   bool result = get_service_node_registration_cmd(args);
 
+  return true;
+}
+
+bool t_rpc_command_executor::pop_blocks(size_t num_blocks_to_pop)
+{
+  if(m_is_rpc)
+  {
+    std::cout << "Cannot pop_blocks over RPC as this will shut your daemon down." << std::endl;
+    return true;
+  }
+
+#ifdef HAVE_READLINE
+  rdln::suspend_readline pause_readline;
+#endif
+  std::string confirmation;
+  confirmation.reserve(8);
+  std::cout << "This is an advanced command for modifying your blockchain.\n"
+               "This command will only work in offline mode.\n"
+               "Executing this command will shut your daemon down. Please restart it afterwards.\n"
+               "Are you sure you wish to continue? (Y/Yes/N/No): ";
+  std::cin >> confirmation;
+
+  if(!command_line::is_yes(confirmation))
+  {
+    std::cout << "Aborted." << std::endl;
+    return true;
+  }
+
+  // Get Height
+  cryptonote::COMMAND_RPC_GET_HEIGHT::request height_req;
+  cryptonote::COMMAND_RPC_GET_HEIGHT::response height_res;
+  std::string fail_message = "Unsuccessful";
+
+  if(!m_rpc_server->on_get_height(height_req, height_res) || height_res.status != CORE_RPC_STATUS_OK)
+  {
+    tools::fail_msg_writer() << make_error(fail_message, height_res.status);
+    return true;
+  }
+
+  if(num_blocks_to_pop >= height_res.height)
+  {
+    tools::fail_msg_writer() << "Requested to pop too many blocks. Requested: " << num_blocks_to_pop << ", current height: " << height_res.height;
+    return true;
+  }
+
+  // Pop Block
+  cryptonote::COMMAND_RPC_POP_BLOCKS::request req = {};
+  cryptonote::COMMAND_RPC_POP_BLOCKS::response res = {};
+  req.num_blocks_to_pop = num_blocks_to_pop;
+  if(!m_rpc_server->on_pop_blocks(req, res) || res.status != CORE_RPC_STATUS_OK)
+  {
+    tools::fail_msg_writer() << make_error(fail_message, res.status);
+    return true;
+  }
+
+  tools::success_msg_writer() << "Popped: " << num_blocks_to_pop << " blocks";
   return true;
 }
 

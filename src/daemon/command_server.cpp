@@ -342,6 +342,12 @@ t_command_server::t_command_server(
     , "Print version information."
     );
     m_command_lookup.set_handler(
+      "pop_blocks"
+    , std::bind(&t_command_parser_executor::pop_blocks, &m_parser, p::_1)
+    , "pop_blocks <num_blocks_to_pop>"
+    , "Remove a number of blocks from the top of the chain"
+    );
+    m_command_lookup.set_handler(
       "prune_blockchain"
     , std::bind(&t_command_parser_executor::prune_blockchain, &m_parser, p::_1)
     , "Prune the blockchain."

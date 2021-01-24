@@ -849,6 +849,14 @@ namespace cryptonote
      uint64_t get_uptime_proof(const crypto::public_key &key) const;
 
      /**
+      * @brief Pop 'n' block(s) from the chain
+      *
+      * @param num_blocks_to_pop <- numbers of blocks to pop
+      *
+      */
+     void pop_blocks(size_t num_blocks_to_pop);
+
+     /**
       * @brief get the blockchain pruning seed
       *
       * @return the blockchain pruning seed
@@ -1106,7 +1114,7 @@ namespace cryptonote
      epee::math_helper::once_a_time_seconds<60*60*12, true> m_check_updates_interval; //!< interval for checking for new versions
      epee::math_helper::once_a_time_seconds<60*10, true> m_check_disk_space_interval; //!< interval for checking for disk space
      epee::math_helper::once_a_time_seconds<60*60*5, true> m_blockchain_pruning_interval; //!< interval for incremental blockchain pruning
-     epee::math_helper::once_a_time_seconds<UPTIME_PROOF_FREQUENCY_IN_SECONDS, true> m_submit_uptime_proof_interval; //!< interval for submitting uptime proof
+     epee::math_helper::once_a_time_seconds<UPTIME_PROOF_BUFFER_IN_SECONDS, true> m_check_uptime_proof_interval; //!< interval for submitting uptime proof
      epee::math_helper::once_a_time_seconds<30, true> m_uptime_proof_pruner;
 
      std::atomic<bool> m_starter_message_showed; //!< has the "daemon will sync now" message been shown?

@@ -218,11 +218,16 @@ namespace cryptonote
     uint64_t total_paid_service_node_reward = 0;
     if(hard_fork_version >= 16)
     {
+      tx.version = transaction_prefix::version_3;
       governance_reward = get_governance_reward(height, block_reward, hard_fork_version);
       total_service_node_reward = get_service_node_reward(height, block_reward, hard_fork_version);
       total_paid_service_node_reward = calculate_sum_of_portions(service_node_info, total_service_node_reward);
       block_reward -= governance_reward;
       block_reward -= total_paid_service_node_reward;
+    }
+    else
+    {
+      tx.version = transaction_prefix::version_2;
     }
 
     uint64_t summary_amounts = 0;
@@ -309,8 +314,6 @@ namespace cryptonote
       CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward + total_paid_service_node_reward), false, "Failed to construct miner tx, summary_amounts: " << summary_amounts << " not equal total block_reward: " << (block_reward + governance_reward + total_service_node_reward)
                          << ". Where block_reward: " << block_reward << ", Governance Reward: " << governance_reward << ", Service-Nodes reward: " << total_service_node_reward << ".");
     }
-
-    tx.version = hard_fork_version >= 16 ? 3 : 2;
 
     //lock
     tx.unlock_time = height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
