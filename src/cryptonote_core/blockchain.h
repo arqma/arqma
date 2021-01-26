@@ -102,6 +102,20 @@ namespace cryptonote
   class Blockchain
   {
   public:
+
+    enum version
+    {
+      version_7 = 7,
+      version_8,
+      version_9,
+      version_10,
+      version_11,
+      version_12,
+      version_13,
+      version_14,
+      version_15,
+      version_16_sn,
+    };
     /**
      * @brief container for passing a block and metadata about it on the blockchain
      */
