@@ -309,6 +309,17 @@ namespace
     return password_prompter(verify ? sw::tr("Enter a new password for the wallet") : sw::tr("Wallet password"), verify);
   }
 
+  bool yes_no_parser(char const *prompt)
+  {
+    std::string y_n_parser = std::string(prompt) + " (Y/Yes/N/No): ";
+    std::string result = input_line(y_n_parser);
+
+    if(std::cin.eof())
+      return false;
+
+    return command_line::is_yes(result);
+  }
+
   inline std::string interpret_rpc_response(bool ok, const std::string& status)
   {
     std::string err;
@@ -5805,22 +5816,6 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
     return false;
   }
 
-  try
-  {
-    const auto& response = m_wallet->get_service_nodes(service_node_key_as_str);
-    if(response.service_node_states.size() >= 1)
-    {
-      if(!autostake)
-        fail_msg_writer() << tr("This service node is already registered");
-      return true;
-    }
-  }
-  catch(const std::exception &e)
-  {
-    fail_msg_writer() << e.what();
-    return true;
-  }
-
   uint64_t staking_requirement_lock_blocks = service_nodes::get_staking_requirement_lock_blocks(m_wallet->nettype());
   uint64_t locked_blocks = staking_requirement_lock_blocks + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
 
@@ -5860,6 +5855,34 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
     }
   }
 
+  try
+  (
+    const auto& response = m_wallet->get_service_nodes(service_node_key_as_str);
+    if(response.service_node_states.size() >= 1)
+    {
+      bool can_reregister = false;
+      if(m_wallet->use_fork_rules(cryptonote::Blockchain::version_16_sn, 0))
+      {
+        cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry const &node_info = response.service_node_states[0];
+        uint64_t expiry_height = node_info.registration_height + staking_requirement_lock_blocks;
+        if(bc_height >= expiry_height)
+          can_reregister = true;
+      }
+
+      if(!can_reregister)
+      {
+        if(!autostake)
+          fail_msg_writer() << tr("This service node is already registered");
+        return true;
+      }
+    }
+  }
+  catch(const std::exception& e)
+  {
+    fail_msg_writer() << e.what();
+    return true;
+  }
+
   uint64_t unlock_block = bc_height + locked_blocks;
 
   uint64_t expected_staking_requirement = std::max(service_nodes::get_staking_requirement(m_wallet->nettype(), bc_height), service_nodes::get_staking_requirement(m_wallet->nettype(), bc_height + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS));
@@ -5897,6 +5920,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
   de.amount = amount_payable_by_operator;
   dsts.push_back(de);
 
+  bool submitted_to_network = false;
   try
   {
     // figure out what tx will be necessary
@@ -5998,6 +6022,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
     else
     {
       commit_or_save(ptx_vector, m_do_not_relay);
+      submitted_to_network = true;
     }
   }
   catch (const std::exception& e)
@@ -6010,6 +6035,11 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
     fail_msg_writer() << tr("unknown error");
   }
 
+  if(submitted_to_network && !autostake)
+  {
+    success_msg_writer() << tr("Wait for the transaction to be included in block before registration is complete.\nTo check status use \"print_sn\" command in daemon.");
+  }
+
   return true;
 }
 //----------------------------------------------------------------------------------------------------
@@ -6017,19 +6047,7 @@ static bool autostaking_warning()
 {
   success_msg_writer(false/*color*/) << tr(command_helper::AUTOSTAKE_WARN);
 
-  std::string accepted = input_line("Accept Auto-Staking towards an reserved service node (Y/Yes/N/No): ");
-
-  if(std::cin.eof())
-    return false;
-
-  if(!command_line::is_yes(accepted))
-  {
-    fail_msg_writer() << tr("Auto-Staking transaction cancelled.");
-    return false;
-  }
-
-  success_msg_writer(false/*color*/) << "\n";
-  return true;
+  return yes_no_parser("Accept auto staking towards a reserved service node");
 }
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
@@ -6133,10 +6151,6 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
   add_service_node_contributor_to_tx_extra(extra, address);
 
-  std::string please_wait_to_be_included_in_block_msg = std::string() +
-      tr("Wait for transaction to be included in a block before registration is complete.\n") +
-      tr("Use the print_sn command in the daemon to check the status.");
-
   if(autostake)
   {
     bool is_open_service_node = portions_for_operator != STAKING_SHARE_PARTS;
@@ -6147,7 +6161,6 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
     }
 
     m_cmd_binder.stop_handling();
-    success_msg_writer(false) << please_wait_to_be_included_in_block_msg;
 #ifndef WIN32
     success_msg_writer() << tr("Entering autostaking mode, forking to background...");
     tools::threadpool::getInstance().stop();
@@ -6171,7 +6184,6 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
   else
   {
     register_service_node_main(service_node_key_as_str, expiration_timestamp, address, priority, portions, extra, subaddr_indices, autostake);
-    success_msg_writer(false) << please_wait_to_be_included_in_block_msg;
   }
 
   return true;
@@ -6608,12 +6620,7 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
                                          << tr("\nStaking a fixed amount may change your percentage of stake towards the service node and consequently your block reward allocation.")
                                          << tr("\n\nIf this behaviour is not desirable, please reuse the staking command with a percentage sign.");
 
-      std::string accepted = input_line("Accept staking with a fixed amount of ArQmA (Y/Yes/N/No): ");
-
-      if(std::cin.eof())
-        return true;
-
-      if(!command_line::is_yes(accepted))
+      if(!yes_no_parser("Accept staking with a fixed amount of ArQmA"));
       {
         fail_msg_writer() << tr("Staking transaction with fixed ArQmA amount cancelled.");
         return true;
