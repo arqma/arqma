@@ -369,11 +369,20 @@ namespace cryptonote
 
     struct request_t
     {
+      uint16_t arqma_ver_major;
+      uint16_t arqma_ver_minor;
+      uint16_t arqma_snode_major;
+      uint16_t arqma_snode_minor;
+
       uint64_t timestamp;
       crypto::public_key pubkey;
       crypto::signature sig;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(arqma_ver_major)
+        KV_SERIALIZE(arqma_ver_minor)
+        KV_SERIALIZE(arqma_snode_major)
+        KV_SERIALIZE(arqma_snode_minor)
         KV_SERIALIZE(timestamp)
         KV_SERIALIZE_VAL_POD_AS_BLOB(pubkey)
         KV_SERIALIZE_VAL_POD_AS_BLOB(sig)
