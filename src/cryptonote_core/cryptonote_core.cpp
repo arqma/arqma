@@ -1460,9 +1460,9 @@ namespace cryptonote
     m_blockchain_storage.get_db().batch_stop();
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_uptime_proof(uint64_t timestamp, const crypto::public_key& pubkey, const crypto::signature& sig)
+  bool core::handle_uptime_proof(const NOTIFY_UPTIME_PROOF::request &proof)
   {
-    return m_quorum_cop.handle_uptime_proof(timestamp, pubkey, sig);
+    return m_quorum_cop.handle_uptime_proof(proof);
   }
   //-----------------------------------------------------------------------------------------------
   void core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
