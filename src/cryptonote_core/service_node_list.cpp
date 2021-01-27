@@ -60,6 +60,7 @@ namespace service_nodes
 
   void service_node_list::register_hooks(service_nodes::quorum_cop &quorum_cop)
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     if(!m_hooks_registered)
     {
       m_hooks_registered = true;
@@ -69,6 +70,7 @@ namespace service_nodes
       m_blockchain.hook_validate_miner_tx(*this);
 
       // NOTE: There is an implicit dependency on service node lists hooks
+      m_blockchain.hook_init(quorum_cop);
       m_blockchain.hook_block_added(quorum_cop);
       m_blockchain.hook_blockchain_detached(quorum_cop);
     }
@@ -76,6 +78,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   void service_node_list::init()
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     if(m_blockchain.get_current_hard_fork_version() < 16)
     {
       clear(true);
@@ -133,9 +136,9 @@ namespace service_nodes
     return result;
   }
   //----------------------------------------------------------------------------
-  const std::shared_ptr<quorum_state> service_node_list::get_quorum_state(uint64_t height) const
+  const std::shared_ptr<const quorum_state> service_node_list::get_quorum_state(uint64_t height) const
   {
-    std::shared_ptr<service_nodes::quorum_state> result;
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     const auto &it = m_quorum_states.find(height);
     if(it == m_quorum_states.end())
     {
@@ -143,14 +146,15 @@ namespace service_nodes
     }
     else
     {
-      result = it->second;
+      return = it->second;
     }
 
-    return result;
+    return std::make_shared<quorum_state>();
   }
   //----------------------------------------------------------------------------
   std::vector<service_node_pubkey_info> service_node_list::get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     std::vector<service_node_pubkey_info> result;
 
     if(service_node_pubkeys.empty())
@@ -184,8 +188,21 @@ namespace service_nodes
     return result;
   }
   //----------------------------------------------------------------------------
+  void service_node_list::set_db_pointer(cryptonote::BlockchainDB* db)
+  {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    m_db = db;
+  }
+  //----------------------------------------------------------------------------
+  void service_node_list::set_my_service_node_keys(crypto::public_key const *pun_key)
+  {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    m_service_node_pubkey = pub_key;
+  }
+  //----------------------------------------------------------------------------
   bool service_node_list::is_service_node(const crypto::public_key& pubkey) const
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     return m_service_nodes_infos.find(pubkey) != m_service_nodes_infos.end();
   }
   //----------------------------------------------------------------------------
@@ -199,7 +216,7 @@ namespace service_nodes
     return unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER && unlock_time >= block_height + get_staking_requirement_lock_blocks(m_blockchain.nettype());
   }
   //----------------------------------------------------------------------------
-  bool service_node_list::reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, uint64_t& portions_for_operator, std::vector<uint64_t>& portions, uint64_t& expiration_timestamp, crypto::public_key& service_node_key, crypto::signature& signature, crypto::public_key& tx_pub_key) const
+  bool reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, uint64_t& portions_for_operator, std::vector<uint64_t>& portions, uint64_t& expiration_timestamp, crypto::public_key& service_node_key, crypto::signature& signature, crypto::public_key& tx_pub_key)
   {
     cryptonote::tx_extra_service_node_register registration;
     if(!get_service_node_register_from_tx_extra(tx.extra, registration))
@@ -221,7 +238,7 @@ namespace service_nodes
     return true;
   }
   //----------------------------------------------------------------------------
-  uint64_t service_node_list::get_reg_tx_staking_output_contribution(const cryptonote::transaction& tx, int i, crypto::key_derivation derivation, hw::device& hwdev) const
+  uint64_t get_reg_tx_staking_output_contribution(const cryptonote::transaction& tx, int i, crypto::key_derivation derivation, hw::device& hwdev)
   {
     if(tx.vout[i].target.type() != typeid(cryptonote::txout_to_key))
     {
@@ -266,7 +283,7 @@ namespace service_nodes
       return;
     }
 
-    const std::shared_ptr<quorum_state> state = get_quorum_state(deregister.block_height);
+    const auto state = get_quorum_state(deregister.block_height);
 
     if(!state)
     {
@@ -510,6 +527,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   void service_node_list::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     block_added_generic(block, txs);
     store();
   }
@@ -595,6 +613,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   void service_node_list::blockchain_detached(uint64_t height)
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     while(!m_rollback_events.empty() && m_rollback_events.back()->m_block_height >= height)
     {
       if(!m_rollback_events.back()->apply(m_service_nodes_infos))
@@ -678,6 +697,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   std::vector<std::pair<cryptonote::account_public_address, uint64_t>> service_node_list::get_winner_addresses_and_portions(const crypto::hash& prev_id) const
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     crypto::public_key key = select_winner(prev_id);
     if(key == crypto::null_pkey)
       return { std::make_pair(null_address, STAKING_SHARE_PARTS) };
@@ -704,6 +724,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   crypto::public_key service_node_list::select_winner(const crypto::hash& prev_id) const
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     auto oldest_waiting = std::pair<uint64_t, uint32_t>(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint32_t>::max());
     crypto::public_key key = crypto::null_pkey;
     for(const auto& info : m_service_nodes_infos)
@@ -721,8 +742,9 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   /// validates the miner TX for the next block
   //
-  bool service_node_list::validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, uint64_t base_reward)
+  bool service_node_list::validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, uint64_t base_reward) const
   {
+    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     if(hard_fork_version < 16)
       return true;
 
@@ -820,13 +842,10 @@ namespace service_nodes
     }
 
     // Assign indexes from shuffled list into quorum and list of nodes to test
-    if(!m_quorum_states[height])
-      m_quorum_states[height] = std::shared_ptr<quorum_state>(new quorum_state());
 
-    std::shared_ptr<quorum_state> state = m_quorum_states[height];
-    state->clear();
+    auto new_state = std::make_shared<quorum_state>();
     {
-      std::vector<crypto::public_key>& quorum = state->quorum_nodes;
+      std::vector<crypto::public_key>& quorum = new_state->quorum_nodes;
       {
         quorum.clear();
         quorum.resize(std::min(full_node_list.size(), QUORUM_SIZE));
@@ -838,12 +857,11 @@ namespace service_nodes
         }
       }
 
-      std::vector<crypto::public_key>& nodes_to_test = state->nodes_to_test;
+      std::vector<crypto::public_key>& nodes_to_test = new_state->nodes_to_test;
       {
         size_t num_remaining_nodes = pub_keys_indexes.size() - quorum.size();
         size_t num_nodes_to_test = std::max(num_remaining_nodes/NTH_OF_THE_NETWORK_TO_TEST, std::min(MIN_NODES_TO_TEST, num_remaining_nodes));
 
-        nodes_to_test.clear();
         nodes_to_test.resize(num_nodes_to_test);
 
         const int pub_keys_offset = quorum.size();
@@ -855,6 +873,8 @@ namespace service_nodes
         }
       }
     }
+
+    m_quorum_state[height] = new_state;
   }
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -902,48 +922,52 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::store()
   {
+
     CHECK_AND_ASSERT_MES(m_db != nullptr, false, "Failed to store service node info, m_db == nullptr");
     data_members_for_serialization data_to_store;
-
-    quorum_state_for_serialization quorum;
-    for(const auto& kv_pair : m_quorum_states)
     {
-      quorum.height = kv_pair.first;
-      quorum.state = *kv_pair.second;
-      data_to_store.quorum_states.push_back(quorum);
-    }
+      std::lock_guard<boost_recursive_mutex> lock(m_sn_mutex);
 
-    node_info_for_serialization info;
-    for(const auto& kv_pair : m_service_nodes_infos)
-    {
-      info.key = kv_pair.first;
-      info.info = kv_pair.second;
-      data_to_store.infos.push_back(info);
-    }
-
-    rollback_event_variant event;
-    for(const auto& event_ptr : m_rollback_events)
-    {
-      switch(event_ptr->type)
+      quorum_state_for_serialization quorum;
+      for(const auto& kv_pair : m_quorum_states)
       {
-        case rollback_event::change_type:
-          event = *reinterpret_cast<rollback_change *>(event_ptr.get());
-          data_to_store.events.push_back(*reinterpret_cast<rollback_change *>(event_ptr.get()));
-          break;
-        case rollback_event::new_type:
-          event = *reinterpret_cast<rollback_new *>(event_ptr.get());
-          data_to_store.events.push_back(*reinterpret_cast<rollback_new *>(event_ptr.get()));
-          break;
-        case rollback_event::prevent_type:
-          event = *reinterpret_cast<prevent_rollback *>(event_ptr.get());
-          data_to_store.events.push_back(*reinterpret_cast<prevent_rollback *>(event_ptr.get()));
-          break;
-        default:
-          MERROR("On storing service node data, unknown rollback event type encountered");
-          return false;
+        quorum.height = kv_pair.first;
+        quorum.state = *kv_pair.second;
+        data_to_store.quorum_states.push_back(quorum);
       }
-    }
 
+      node_info_for_serialization info;
+      for(const auto& kv_pair : m_service_nodes_infos)
+      {
+        info.key = kv_pair.first;
+        info.info = kv_pair.second;
+        data_to_store.infos.push_back(info);
+      }
+
+      rollback_event_variant event;
+      for(const auto& event_ptr : m_rollback_events)
+      {
+        switch(event_ptr->type)
+        {
+          case rollback_event::change_type:
+            event = *reinterpret_cast<rollback_change *>(event_ptr.get());
+            data_to_store.events.push_back(*reinterpret_cast<rollback_change *>(event_ptr.get()));
+            break;
+          case rollback_event::new_type:
+            event = *reinterpret_cast<rollback_new *>(event_ptr.get());
+            data_to_store.events.push_back(*reinterpret_cast<rollback_new *>(event_ptr.get()));
+            break;
+          case rollback_event::prevent_type:
+            event = *reinterpret_cast<prevent_rollback *>(event_ptr.get());
+            data_to_store.events.push_back(*reinterpret_cast<prevent_rollback *>(event_ptr.get()));
+            break;
+          default:
+            MERROR("On storing service node data, unknown rollback event type encountered");
+            return false;
+        }
+      }
+
+    }
     data_to_store.height = m_height;
 
     std::stringstream ss;
@@ -990,8 +1014,7 @@ namespace service_nodes
 
     for(const auto& quorum : data_in.quorum_states)
     {
-      m_quorum_states[quorum.height] = std::shared_ptr<quorum_state>(new quorum_state());
-      *m_quorum_states[quorum.height] = quorum.state;
+      m_quorum_states[quorum.height] = std::make_shared<quorum_state>(quorum.state);
     }
 
     for(const auto& info : data_in.infos)

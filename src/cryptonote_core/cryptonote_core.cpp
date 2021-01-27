@@ -221,9 +221,9 @@ namespace cryptonote
               m_mempool(m_blockchain_storage),
               m_service_node_list(m_blockchain_storage),
               m_blockchain_storage(m_mempool, m_service_node_list, m_deregister_vote_pool),
-              m_quorum_cop(*this, m_service_node_list),
-              m_miner(this, [this](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash) {
-                return cryptonote::get_block_longhash(&m_blockchain_storage, b, hash, height, threads);
+              m_quorum_cop(*this),
+              m_miner(this, [this](const cryptonote::block &b, uint64_t height, const crypto::hash *seed_hash, unsigned int threads, crypto::hash &hash) {
+                return cryptonote::get_block_longhash(&m_blockchain_storage, b, hash, height, seed_hash, threads);
               }),
               m_miner_address(account_public_address{}),
               m_starter_message_showed(false),
@@ -721,7 +721,7 @@ namespace cryptonote
     {
       std::string keystr;
       bool r = epee::file_io_utils::load_file_to_string(keypath, keystr);
-      memcpy(&unwrap(m_service_node_key), keystr.data(), sizeof(m_service_node_key));
+      memcpy(&unwrap(unwrap(m_service_node_key)), keystr.data(), sizeof(m_service_node_key));
       wipeable_string wipe(keystr);
       CHECK_AND_ASSERT_MES(r, false, "failed to load service node key from file");
 
@@ -1433,7 +1433,7 @@ namespace cryptonote
     {
       cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
       NOTIFY_UPTIME_PROOF::request r;
-      m_quorum_cop.generate_uptime_proof_request(m_service_node_pubkey, m_service_node_key, r);
+      service_nodes::generate_uptime_proof_request(m_service_node_pubkey, m_service_node_key, r);
       bool relayed = get_protocol()->relay_uptime_proof(r, fake_context);
 
       if(relayed)
@@ -2081,10 +2081,14 @@ namespace cryptonote
     return get_blockchain_storage().has_block_weights(height, nblocks);
   }
   //-----------------------------------------------------------------------------------------------
-  const std::shared_ptr<service_nodes::quorum_state> core::get_quorum_state(uint64_t height) const
+  const std::shared_ptr<const service_nodes::quorum_state> core::get_quorum_state(uint64_t height) const
   {
-    const std::shared_ptr<service_nodes::quorum_state> result = m_service_node_list.get_quorum_state(height);
-    return result;
+    return m_service_node_list.get_quorum_state(height);
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::is_service_node(const crypto::public_key& pubkey) const
+  {
+    return m_service_node_list.is_service_node(pubkey);
   }
   //-----------------------------------------------------------------------------------------------
   std::vector<service_nodes::service_node_pubkey_info> core::get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const
@@ -2121,7 +2125,7 @@ namespace cryptonote
       return false;
     }
 
-    const std::shared_ptr<service_nodes::quorum_state> quorum_state = m_service_node_list.get_quorum_state(vote.block_height);
+    const auto quorum_state = m_service_node_list.get_quorum_state(vote.block_height);
     if(!quorum_state)
     {
       vvc.m_verification_failed  = true;

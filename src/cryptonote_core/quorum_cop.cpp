@@ -37,9 +37,16 @@
 
 namespace service_nodes
 {
-  quorum_cop::quorum_cop(cryptonote::core& core, service_nodes::service_node_list& service_node_list)
-    : m_core(core), m_service_node_list(service_node_list), m_last_height(0)
+  quorum_cop::quorum_cop(cryptonote::core& core)
+    : m_core(core), m_last_height(0)
   {
+    init();
+  }
+
+  void quorum_cop::init()
+  {
+    m_last_height = 0;
+    m_uptime_proof_seed.clear();
   }
 
   void quorum_cop::blockchain_detached(uint64_t height)
@@ -89,7 +96,7 @@ namespace service_nodes
       if(m_core.get_hard_fork_version(m_last_height) < 16)
         continue;
 
-      const std::shared_ptr<quorum_state> state = m_core.get_quorum_state(m_last_height);
+      const std::shared_ptr<const quorum_state> state = m_core.get_quorum_state(m_last_height);
       if(!state)
       {
         LOG_ERROR("Quorum state for height: " << m_last_height << "was not cached in daemon!");
@@ -144,7 +151,7 @@ namespace service_nodes
     if((timestamp < now - UPTIME_PROOF_BUFFER_IN_SECONDS) || (timestamp > now + UPTIME_PROOF_BUFFER_IN_SECONDS))
       return false;
 
-    if(!m_service_node_list.is_service_node(pubkey))
+    if(!m_core.is_service_node(pubkey))
       return false;
 
     CRITICAL_REGION_LOCAL(m_lock);
@@ -159,10 +166,10 @@ namespace service_nodes
     return true;
   }
 
-  void quorum_cop::generate_uptime_proof_request(const crypto::public_key& pubkey, const crypto::secret_key& seckey, cryptonote::NOTIFY_UPTIME_PROOF::request& req) const
+  void generate_uptime_proof_request(const crypto::public_key& pubkey, const crypto::secret_key& seckey, cryptonote::NOTIFY_UPTIME_PROOF::request& req)
   {
-    req.timestamp     = time(nullptr);
-    req.pubkey        = pubkey;
+    req.timestamp = time(nullptr);
+    req.pubkey = pubkey;
 
     crypto::hash hash = make_hash(req.pubkey, req.timestamp);
     crypto::generate_signature(hash, pubkey, seckey, req.sig);
@@ -187,6 +194,8 @@ namespace service_nodes
 
   uint64_t quorum_cop::get_uptime_proof(const crypto::public_key &pubkey) const
   {
+
+    CRITICAL_REGION_LOCAL(m_lock);
     const auto& it = m_uptime_proof_seen.find(pubkey);
     if(it == m_uptime_proof_seen.end())
     {
