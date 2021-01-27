@@ -2798,7 +2798,15 @@ bool t_rpc_command_executor::prepare_registration()
       return true;
     }
 
-    operating_cost_portions = (operating_cost_percent / 100.0) * STAKING_SHARE_PARTS;
+    if(operating_cost_percent == 100.0)
+    {
+      operating_cost_portions = STAKING_SHARE_PARTS;
+    }
+    else
+    {
+      operating_cost_portions = (operating_cost_percent / 100.0) * STAKING_SHARE_PARTS;
+    }
+
     const uint64_t min_contribution_portions = std::min(portions_remaining, MIN_STAKE_SHARE);
     const uint64_t min_contribution = get_amount_to_make_portions(staking_requirement, min_contribution_portions);
     std::cout << "Minimum amount that can be reserved: " << cryptonote::print_money(min_contribution) << " " << cryptonote::get_unit() << std::endl;
