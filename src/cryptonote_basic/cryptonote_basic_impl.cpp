@@ -83,39 +83,27 @@ namespace cryptonote {
     return arqma_tx::TRANSACTION_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
-  uint64_t get_penalized_amount(const uint64_t amount, const size_t median_weight, const size_t current_block_weight)
+  bool get_base_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t hard_fork_version, uint64_t height)
   {
-    assert(median_weight < std::numeric_limits<uint32_t>::max());
-    assert(current_block_weight < std:::numeric_limits<uint32_t>::max());
+    if(height == 1)
+    {
+      reward = arqma_bc::PREMINE;;
+      return true;
+    }
 
-    if(amount == 0)
-      return amount;
-
-    if(current_block_weight <= median_weight)
-      return amount;
-
-    uint64_t product_hi;
-    // BUGFIX: 32-bit saturation bug. The result was being treated as 32-bit by default.
-    uint64_t multiplicand = 2 * median_weight - current_block_weight;
-    multiplicand *= current_block_weight;
-    uint64_t product_lo = mul128(amount, multiplicand, &product_hi);
-
-    uint64_t amount_hi;
-    uint64_t amount_lo;
-    div128_32(product_hi, product_lo, static_cast<uint32_t>(median_weight), &amount_hi, &amount_lo);
-    div128_32(amount_hi, amount_lo, static_cast<uint32_t>(median_weight), &amount_hi, &amount_lo);
-    assert(0 == amount_hi);
-    assert(amount_lo < amount);
-
-    return amount_lo;
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t fee, uint64_t &reward, uint8_t hard_fork_version)
-  {
     static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
     static_assert(DIFFICULTY_TARGET_V16 % 30 == 0,"After HF-16 we are changing Rules");
     const int target_minutes = hard_fork_version < 16 ? DIFFICULTY_TARGET_V2 / 60 : DIFFICULTY_TARGET_V16 / 30;
     const int emission_speed_factor = hard_fork_version >= 16 ? EMISSION_FACTOR_V16 : (EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes - 3));
+
+    uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
+    if(base_reward < (FINAL_SUBSIDY_PER_MINUTE * target_minutes))
+    {
+      base_reward = (FINAL_SUBSIDY_PER_MINUTE * target_minutes);
+    }
+
+    if(hard_fork_version > 12)
+      already_generated_coins -= arqma_bc::PREMINE_BURN;
 
     uint64_t full_reward_zone = get_min_block_weight(hard_fork_version);
 
@@ -124,36 +112,33 @@ namespace cryptonote {
       median_weight = full_reward_zone;
     }
 
-    if(current_block_weight > (2 * median_weight)) {
+    if(current_block_weight <= median_weight)
+    {
+      reward = base_reward;
+      return true;
+    }
+
+    if(current_block_weight > (2 * median_weight))
+    {
       MERROR("Block cumulative weight is too big: " << current_block_weight << ", expected less than " << (2 * median_weight));
       return false;
     }
 
-    if(hard_fork_version > 12)
-    {
-      already_generated_coins -= arqma_bc::PREMINE_BURN;
-    }
+    assert(median_weight < std::numeric_limits<uint32_t>::max());
+    assert(current_block_weight < std::numeric_limits<uint32_t>::max());
 
-    uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
-    if(base_reward < (FINAL_SUBSIDY_PER_MINUTE * target_minutes))
-    {
-      base_reward = (FINAL_SUBSIDY_PER_MINUTE * target_minutes);
-    }
+    uint64_t product_hi;
+    uint64_t multiplicand = 2 * median_weight - current_block_weight;
+    multiplicand *= current_block_weight;
+    uint64_t product_lo = mul128(base_reward, multiplicand, &product_hi);
 
-    const uint64_t arqma_reward = arqma_bc::PREMINE;
+    uint64_t reward_hi, reward_lo;
+    div128_32(product_hi, product_lo, static_cast<uint32_t>(median_weight), &reward_hi, &reward_lo);
+    div128_32(reward_hi, reward_lo, static_cast<uint32_t>(median_weight), &reward_hi, &reward_lo);
+    assert(0 == reward_hi);
+    assert(reward_lo < base_reward);
 
-    reward = get_penalized_amount(base_reward, median_weight, current_block_weight);
-
-    if(median_weight >= 100 && already_generated_coins < 30000000000 && hard_fork_version == 7)
-    {
-      reward = arqma_reward;
-      return true;
-    }
-    else
-    {
-      reward += hard_fork_version < 16 ? get_penalized_amount(fee, median_weight, current_block_weight) : fee;
-    }
-
+    reward = reward_lo;
     return true;
   }
   //------------------------------------------------------------------------------------

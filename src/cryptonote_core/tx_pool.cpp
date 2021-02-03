@@ -1287,8 +1287,17 @@ namespace cryptonote
     fee = 0;
 
     //baseline empty block
-    get_block_reward(median_weight, total_weight, already_generated_coins, fee, best_coinbase, version);
+    arqma_block_reward_context block_reward_context = {};
+    block_reward_context.height = height;
+    if(!m_blockchain.calc_batched_governance_reward(height, block_reward_context.batched_governance))
+    {
+      MERROR("Failerd to calculate batched governance reward");
+      return false;
+    }
 
+    block_reward_parts reward_parts = {};
+    get_arqma_block_reward(median_weight, total_weight, already_generated_coins, version, reward_parts, block_reward_context);
+    best_coinbase = reward_parts.base_miner;
 
     size_t max_total_weight_pre_v5 = (130 * median_weight) / 100 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
     size_t max_total_weight_v5 = 2 * median_weight - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
@@ -1328,13 +1337,15 @@ namespace cryptonote
       {
         // If we're getting lower coinbase tx,
         // stop including more tx
-        uint64_t block_reward;
-        if(!get_block_reward(median_weight, total_weight + meta.weight, already_generated_coins, fee, block_reward, version))
+        block_reward_parts reward_parts_other = {};
+        if(!get_arqma_block_reward(median_weight, total_weight + meta.weight, already_generated_coins, version, reward_parts_other, block_reward_context))
         {
           LOG_PRINT_L2("  would exceed maximum block weight");
           continue;
         }
-        coinbase = block_reward + meta.fee;
+
+        uint64_t block_reward = reward_parts_other.base_miner;
+        coinbase = block_reward + fee + meta.fee;
         if (coinbase < template_accept_threshold(best_coinbase))
         {
           LOG_PRINT_L2("  would decrease coinbase to " << print_money(coinbase));

@@ -2354,7 +2354,7 @@ bool t_rpc_command_executor::get_service_node_registration_cmd(const std::vector
   return true;
 }
 
-static void print_service_node_list_state(cryptonote::network_type nettype, uint8_t hard_fork_version, uint64_t *curr_height, std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *> list)
+static void print_service_node_list_state(cryptonote::network_type nettype, int hard_fork_version, uint64_t *curr_height, std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *> list)
 {
   const char indent1[] = "    ";
   const char indent2[] = "        ";
@@ -2377,7 +2377,7 @@ static void print_service_node_list_state(cryptonote::network_type nettype, uint
     // Print Expiry Info
     {
       uint64_t expiry_height = entry.registration_height + service_nodes::get_staking_requirement_lock_blocks(nettype);
-      if(hard_fork_version >= cryptonote::Blockchain::version_16_sn)
+      if(hard_fork_version >= cryptonote::network_version_16_sn)
         expiry_height += STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
 
       if(curr_height)
@@ -2443,7 +2443,7 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
 
   cryptonote::network_type nettype = cryptonote::UNDEFINED;
   uint64_t *curr_height = nullptr;
-  uint6_t hard_fork_version = 7;
+  int hard_fork_version = 7;
   if(m_is_rpc)
   {
     if(!m_rpc_client->rpc_request(get_info_req, get_info_res, "/getinfo", fail_message.c_str()))

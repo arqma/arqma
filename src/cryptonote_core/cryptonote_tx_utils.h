@@ -38,14 +38,57 @@
 namespace cryptonote
 {
   //---------------------------------------------------------------
-  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce = blobdata(), uint8_t hard_fork_version = 1, network_type nettype = MAINNET, const crypto::public_key& service_node_key = crypto::null_pkey, const std::vector<std::pair<account_public_address, uint64_t>>& service_node_info={ std::pair<account_public_address, uint64_t>({ crypto::null_pkey, crypto::null_pkey }, STAKING_SHARE_PARTS) });
-
   keypair get_deterministic_keypair_from_height(uint64_t height);
-  uint64_t get_portion_of_reward(uint64_t portions, uint64_t total_service_node_reward);
-  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hard_fork_version);
-  uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, uint8_t hard_fork_version);
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key);
   bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
+
+  uint64_t governance_reward_formula(uint64_t height);
+  bool block_has_governance_output(network_type nettype, cryptonote::block const &block);
+  bool height_has_governance_output(network_type nettype, int hard_fork_version, uint64_t height);
+  uint64_t derive_governance_from_block_reward(network_type nettype, const cryptonote::block &block);
+  uint64_t get_portion_of_reward(uint64_t portions, uint64_t total_service_node_reward);
+  uint64_t service_node_reward_formula(uint64_t base_reward, int hard_fork_version);
+
+  struct arqma_miner_tx_context
+  {
+    using stage_portions = uint64_t;
+
+    arqma_miner_tx_context(network_type type = MAINNET, crypto::public_key winner = crypto::null_pkey, std::vector<std::pair<account_public_address, stake_portions>> winner_info = {});
+
+    network_type nettype;
+    crypto::public_key snode_winner_key;
+    std::vector<std::pair<account_public_address, stake_portions>> snode_winner_info;
+    uint64_t batched_governance;
+  };
+
+
+  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce = blobdata(), uint8_t hard_fork_version = 1, const arqma_miner_tx_context &miner_context = {});
+
+  struct block_reward_parts
+  {
+    uint64_t service_node_total;
+    uint64_t service_node_paid;
+    uint64_t governance;
+    uint64_t base_miner;
+    uint64_t mase_miner_fee;
+
+    uint64_t adjusted_base_reward;
+    uint64_t original_base_reward;
+
+    uint64_t miner_reward() { return base_miner + base_miner_fee; }
+  };
+
+  struct arqma_block_reward_context
+  {
+    using portions = uint64_t;
+
+    uint64_t height;
+    uint64_t fee;
+    uint64_t batched_governance;
+    std::vector<std::pair<account_public_address, portions>> snode_winner_info;
+  };
+
+  bool get_arqma_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, int hard_fork_version, block_reward_parts &result, const arqma_block_reward_context &arqma_context);
 
   struct tx_source_entry
   {
