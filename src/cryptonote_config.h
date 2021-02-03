@@ -379,7 +379,7 @@ namespace cryptonote
       uint64_t GOVERNANCE_REWARD_INTERVAL;
       std::string const *governance_wallet_address;
     };
-    inline const config_t& get_config(network_type nettype, uint8_t hard_fork_version = 7)
+    inline const config_t& get_config(network_type nettype, int hard_fork_version = 7)
     {
       static config_t mainnet = {
         ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,

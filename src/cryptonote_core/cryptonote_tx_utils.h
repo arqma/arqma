@@ -70,7 +70,7 @@ namespace cryptonote
     uint64_t service_node_paid;
     uint64_t governance;
     uint64_t base_miner;
-    uint64_t mase_miner_fee;
+    uint64_t base_miner_fee;
 
     uint64_t adjusted_base_reward;
     uint64_t original_base_reward;
