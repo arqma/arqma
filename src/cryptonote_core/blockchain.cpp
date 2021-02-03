@@ -4816,7 +4816,7 @@ bool Blockchain::has_block_weights(uint64_t height, uint64_t nblocks) const
 bool Blockchain::calc_batched_governance_reward(uint64_t height, uint64_t &reward) const
 {
   reward = 0;
-  uint8_t hard_fork_version = get_ideal_hard_fork_version(height);
+  int hard_fork_version = get_ideal_hard_fork_version(height);
 
   if(hard_fork_version < network_version_16_sn)
     return false;
