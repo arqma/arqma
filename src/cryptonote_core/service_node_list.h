@@ -81,7 +81,7 @@ namespace service_nodes
       END_SERIALIZE()
     };
 
-    uint8_t version = version::version_0;
+    uint8_t version = service_node_info::version_0;
     uint64_t registration_height;
 
     uint64_t last_reward_block_height;

@@ -55,7 +55,6 @@
 
 constexpr const char ARQMA_DONATION_ADDR[] = "ar46iCiw5uB7SjnYhL5EJLP1LpqGkZbCcWhWgdbLL1c4DicNuYi3ZeRJPi8FFmEhYnagbxRyaQKyTYBA95JqmPcr1XZytK9o3";
 
-const int AUTOSTAKE_INTERVAL = 3600; // 1 hour
 /*!
  * \namespace cryptonote
  * \brief Holds cryptonote related classes and helpers.
@@ -148,6 +147,7 @@ namespace cryptonote
     bool set_persistent_rpc_client_id(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_auto_mine_for_rpc_payment_threshold(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_credits_target(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_fork_on_autostake(const std::vector<std::string> &args = std::vector<std::string>());
     bool help(const std::vector<std::string> &args = std::vector<std::string>());
     bool start_mining(const std::vector<std::string> &args);
     bool stop_mining(const std::vector<std::string> &args);
@@ -279,7 +279,7 @@ namespace cryptonote
       std::vector<dest_output> outputs;
       std::set<uint32_t> index;
       std::string note;
-      std::string unlocked;
+      bool unlocked;
     };
     bool get_transfers(std::vector<std::string>& args_, std::vector<transfer_view>& transfers);
 

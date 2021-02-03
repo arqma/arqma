@@ -2602,6 +2602,15 @@ bool simple_wallet::set_track_uses(const std::vector<std::string> &args/* = std:
   return true;
 }
 
+bool simple_wallet::set_fork_on_autostake(const std::vector<std::string> &args)
+{
+  parse_bool_and_use(args[1], [&](bool r)
+  {
+    m_wallet->fork_on_autostake(r);
+  });
+  return true;
+}
+
 bool simple_wallet::help(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
 {
   if(args.empty())
@@ -3010,6 +3019,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     success_msg_writer() << "persistent-rpc-client-id = " << m_wallet->persistent_rpc_client_id();
     success_msg_writer() << "auto-mine-for-rpc-payment-threshold = " << m_wallet->auto_mine_for_rpc_payment_threshold();
     success_msg_writer() << "credits-target = " << m_wallet->credits_target();
+    success_msg_writer() << "fork-on-autostake = " << m_wallet->fork_on_autostake();
     return true;
   }
   else
@@ -3069,6 +3079,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     CHECK_SIMPLE_VARIABLE("persistent-rpc-client-id", set_persistent_rpc_client_id, tr("0 or 1"));
     CHECK_SIMPLE_VARIABLE("auto-mine-for-rpc-payment-threshold", set_auto_mine_for_rpc_payment_threshold, tr("floating point >= 0"));
     CHECK_SIMPLE_VARIABLE("credits-target", set_credits_target, tr("unsigned integer"));
+    CHECK_SIMPLE_VARIABLE("fork-on-autostake", set_fork_on_autostake, tr("0 or 1"));
   }
   fail_msg_writer() << tr("set: unrecognized argument(s)");
   return true;
@@ -5968,6 +5979,8 @@ static bool autostaking_warning()
   return yes_no_parser("Accept auto staking towards a reserved service node");
 }
 //----------------------------------------------------------------------------------------------------
+const int AUTOSTAKE_INTERVAL = 60 * 40;
+
 bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 {
   if(!try_connect_to_daemon())
@@ -6081,21 +6094,21 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
     m_cmd_binder.stop_handling();
 #ifndef WIN32
-    success_msg_writer() << tr("Entering autostaking mode, forking to background...");
-    tools::threadpool::getInstance().stop();
-    posix::fork("");
-    tools::threadpool::getInstance().start();
-#else
-    success_msg_writer() << tr("Entering autostaking mode, please leave this wallet running.");
+    if(m_wallet->fork_on_autostake())
+    {
+      success_msg_writer(true) << tr("Entering autostaking mode, forking to background...");
+      tools::threadpool::getInstance().stop();
+      posix::fork("");
+      tools::threadpool::getInstance().start();
+    }
+    else
 #endif
-    m_idle_run.store(true, std::memory_order_relaxed);
+    {
+      success_msg_writer(true) << tr("Entering autostaking mode, forking to background...");
+    }
     while(true)
     {
-      if(!m_idle_run.load(std::memory_order_relaxed))
-        break;
       if(!register_service_node_main(service_node_key_as_str, expiration_timestamp, address, priority, portions, extra, subaddr_indices, autostake))
-        break;
-      if(!m_idle_run.load(std::memory_order_relaxed))
         break;
       m_idle_cond.wait_for(lock, boost::chrono::seconds(AUTOSTAKE_INTERVAL));
     }
@@ -6562,21 +6575,22 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
     m_cmd_binder.stop_handling();
 
 #ifndef WIN32
-    success_msg_writer() << tr("Entering autostaking mode, forking to background...");
-    tools::threadpool::getInstance().stop();
-    posix::fork("");
-    tools::threadpool::getInstance().start();
-#else
-    success_msg_writer() << tr("Entering autostaking mode, please leave this wallet running.");
+    if(m_wallet->fork_on_autostake())
+    {
+      success_msg_writer(true) << tr("Entering autostaking mode, forking to background...");
+      tools::threadpool::getInstance().stop();
+      posix::fork("");
+      tools::threadpool::getInstance().start();
+    }
+    else
 #endif
-    m_idle_run.store(true, std::memory_order_relaxed);
+    {
+      success_msg_writer(true) << tr("Entering autostaking mode, forking to background...");
+    }
+
     while(true)
     {
-      if(!m_idle_run.load(std::memory_order_relaxed))
-        break;
       if(!stake_main(service_node_key, info, priority, subaddr_indices, amount, amount_fraction, autostake))
-        break;
-      if(!m_idle_run.load(std::memory_order_relaxed))
         break;
       m_idle_cond.wait_for(lock, boost::chrono::seconds(AUTOSTAKE_INTERVAL));
     }
@@ -8219,6 +8233,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
       }
 
       const uint64_t staking_duration = service_nodes::get_staking_requirement_lock_blocks(m_wallet->nettype());
+      bool locked = false;
 
       tools::pay_type type = tools::pay_type::out;
       for(size_t unlock_index = 0; unlock_index < pd.m_unlock_times.size() && type != tools::pay_type::stake; ++unlock_index)
@@ -8228,6 +8243,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
           continue;
 
         uint64_t lock_duration = unlock_time - pd.m_block_height;
+        locked |= (!m_wallet->is_tx_spendtime_unlocked(pd.m_unlock_time, pd.m_block_height));
         if(lock_duration >= staking_duration)
           type = tools::pay_type::stake;
       }
@@ -8247,7 +8263,8 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
         fee,
         destinations,
         pd.m_subaddr_indices,
-        note
+        note,
+        !locked
       });
     }
   }
@@ -8272,7 +8289,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
         if(i->second.m_double_spend_seen)
           double_spend_note = tr("[Double spend seen on the network: this transaction may or may not end up being mined] ");
         transfers.push_back({
-          tr("pool"),
+          "pool",
           pd.m_timestamp,
           tools::pay_type::in,
           false,
@@ -8283,7 +8300,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
           {{destination, pd.m_amount}},
           {pd.m_subaddr_index.minor},
           note + double_spend_note,
-          tr("locked")
+          false,
         });
       }
     }
@@ -8318,7 +8335,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
       bool is_failed = pd.m_state == tools::wallet2::unconfirmed_transfer_details::failed;
       if ((failed && is_failed) || (!is_failed && pending)) {
         transfers.push_back({
-          (is_failed ? tr("failed") : tr("pending")),
+          (is_failed ? "failed" : "pending"),
           pd.m_timestamp,
           tools::pay_type::out,
           false,
@@ -8328,7 +8345,8 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
           fee,
           destinations,
           pd.m_subaddr_indices,
-          note
+          note,
+          false,
         });
       }
     }
@@ -8413,10 +8431,11 @@ bool simple_wallet::show_transfers(const std::vector<std::string> &args_)
 
     auto formatter = boost::format("%8.8llu %6.6s %8.8s %25.25s %20.20s %s %s %14.14s %s %s - %s");
 
+    char const *lock_str = (transfer.unlocked) ? "unlocked" : "locked";
     message_writer(color, false) << formatter
       % transfer.block
       % tools::pay_type_string(transfer.type)
-      % transfer.unlocked
+      % lock_str
       % get_human_readable_timestamp(transfer.timestamp)
       % print_money(transfer.amount)
       % string_tools::pod_to_hex(transfer.hash)
