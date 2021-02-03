@@ -160,7 +160,10 @@ namespace service_nodes
       return false;
 
     // TODO: Will need to be set Valid Version Numbers after test and before Release to Public.
-    if(!(proof.arqma_ver_major == 7 && proof.arqma_ver_minor == 1 && proof.arqma_snode_major == 1 && proof.arqma_snode_minor == 0))
+    // if(!(proof.arqma_ver_major == 7 && proof.arqma_ver_minor == 1 && proof.arqma_snode_major == 1 && proof.arqma_snode_minor == 0))
+    uint64_t height = m_core.get_current_blockchain_height();
+    int hf_ver = m_core.get_hard_fork_version(height);
+    if(hf_ver >= cryptonote::network_version_16_sn && proof.arqma_snode_major != 1) // for tests
       return false;
 
     CRITICAL_REGION_LOCAL(m_lock);
