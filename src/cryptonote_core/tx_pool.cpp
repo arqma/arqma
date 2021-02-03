@@ -1291,7 +1291,7 @@ namespace cryptonote
     block_reward_context.height = height;
     if(!m_blockchain.calc_batched_governance_reward(height, block_reward_context.batched_governance))
     {
-      MERROR("Failerd to calculate batched governance reward");
+      MERROR("Failed to calculate batched governance reward");
       return false;
     }
 

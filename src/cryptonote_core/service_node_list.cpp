@@ -41,6 +41,7 @@
 #include "common/exp2.h"
 
 #include "service_node_list.h"
+#include "service_node_rules.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "service_nodes"
@@ -331,14 +332,8 @@ namespace service_nodes
     if(service_node_portions.size() != service_node_addresses.size() || service_node_portions.empty())
       return false;
 
-    uint64_t portions_left = STAKING_SHARE_PARTS;
-    for(size_t i = 0; i < service_node_portions.size(); i++)
-    {
-      uint64_t min_portions = std::min(portions_left, MIN_STAKE_SHARE);
-      if(service_node_portions[i] < min_portions || service_node_portions[i] > portions_left)
-        return false;
-      portions_left -= service_node_portions[i];
-    }
+    if(!check_service_node_portions(service_node_portions))
+      return false;
 
     if(portions_for_operator > STAKING_SHARE_PARTS)
       return false;
@@ -1230,36 +1225,5 @@ namespace service_nodes
 
     cmd = stream.str();
     return true;
-  }
-
-  uint64_t get_staking_requirement_lock_blocks(cryptonote::network_type nettype)
-  {
-    constexpr static uint32_t STAKING_REQUIREMENT_LOCK_BLOCKS = 21600;
-    constexpr static uint32_t STAKING_REQUIREMENT_LOCK_BLOCKS_TEST = 100;
-
-    switch(nettype)
-    {
-      case cryptonote::TESTNET:
-      case cryptonote::STAGENET:
-        return STAKING_REQUIREMENT_LOCK_BLOCKS_TEST;
-      default:
-        return STAKING_REQUIREMENT_LOCK_BLOCKS;
-    }
-  }
-
-  uint64_t get_staking_requirement(cryptonote::network_type m_nettype, uint64_t height)
-  {
-    if(m_nettype != cryptonote::MAINNET)
-      return arqma_bc::ARQMA * 1000;
-    // We will need to work at some equation
-    return arqma_bc::ARQMA * 10000;
-  }
-
-  uint64_t portions_to_amount(uint64_t portions, uint64_t staking_requirement)
-  {
-    uint64_t hi, lo, resulthi, resultlo;
-    lo = mul128(staking_requirement, portions, &hi);
-    div128_64(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
-    return resultlo;
   }
 }

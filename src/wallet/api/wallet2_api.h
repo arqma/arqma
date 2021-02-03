@@ -574,17 +574,17 @@ struct Wallet
     virtual uint64_t blockChainHeight() const = 0;
 
     /**
-    * @brief approximateBlockChainHeight - returns approximate blockchain height calculated from date/time
-    * @return
-    */
+     * @brief approximateBlockChainHeight - returns approximate blockchain height calculated from date/time
+     * @return
+     */
     virtual uint64_t approximateBlockChainHeight() const = 0;
 
     /**
-	* @brief estimateBlockChainHeight - returns estimate blockchain height. More accurate than approximateBlockChainHeight,
-	*                                   uses daemon height and falls back to calculation from date/time
-	* @return
-	**/
-	virtual uint64_t estimateBlockChainHeight() const = 0;
+     * @brief estimateBlockChainHeight - returns estimate blockchain height. More accurate than approximateBlockChainHeight,
+     *                                   uses daemon height and falls back to calculation from date/time
+     * @return
+     */
+    virtual uint64_t estimateBlockChainHeight() const = 0;
 
     /**
      * @brief daemonBlockChainHeight - returns daemon blockchain height
@@ -611,6 +611,7 @@ struct Wallet
     static uint64_t amountFromDouble(double amount);
     static std::string genPaymentId();
     static bool paymentIdValid(const std::string &paiment_id);
+    static bool serviceNodePubkeyValid(const std::string &str);
     static bool addressValid(const std::string &str, NetworkType nettype);
     static bool addressValid(const std::string &str, bool testnet)          // deprecated
     {
@@ -953,12 +954,14 @@ struct Wallet
      * \return Device they are on
      */
     virtual Device getDeviceType() const = 0;
+
+    virtual PendingTransaction* stakePending(const std::string& service_node_key, const std::string& address, const std::string& amount) = 0;
 };
 
 /**
  * @brief WalletManager - provides functions to manage wallets
  */
-struct WalletManager
+struct WalletManagerBase
 {
 
     /*!
@@ -1212,7 +1215,7 @@ struct WalletManagerFactory
         LogLevel_Max = LogLevel_4
     };
 
-    static WalletManager * getWalletManager();
+    static WalletManagerBase * getWalletManager();
     static void setLogLevel(int level);
     static void setLogCategories(const std::string &categories);
 };
