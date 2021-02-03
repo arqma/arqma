@@ -217,34 +217,34 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 
 namespace config
 {
-   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
-   uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)20000); // Deprecated
-   uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
+  uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
+  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)20000); // Deprecated
+  uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
 
-   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
-   uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
-   uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
-   uint16_t const P2P_DEFAULT_PORT = 19993;
-   uint16_t const RPC_DEFAULT_PORT = 19994;
-   uint16_t const ZMQ_DEFAULT_PORT = 19995;
-   boost::uuids::uuid const NETWORK_ID = { {
-       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
-     } }; // Bender's nightmare
-   std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
-   uint32_t const GENESIS_NONCE = 19993;
+  uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
+  uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
+  uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
+  uint16_t const P2P_DEFAULT_PORT = 19993;
+  uint16_t const RPC_DEFAULT_PORT = 19994;
+  uint16_t const ZMQ_DEFAULT_PORT = 19995;
+  boost::uuids::uuid const NETWORK_ID = { {
+      0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
+    } }; // Bender's nightmare
+  std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
+  uint32_t const GENESIS_NONCE = 19993;
 
-   namespace testnet
-   {
-     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x53ca; // Wallet prefix: at... // decimal prefix: 21450
-     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x504a; // Wallet prefix: ati... // decimal prefix: 20554
-     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x524a; // Wallet prefix: ats... // decimal prefix: 21066
-     uint16_t const P2P_DEFAULT_PORT = 29993;
-     uint16_t const RPC_DEFAULT_PORT = 29994;
-     uint16_t const ZMQ_DEFAULT_PORT = 29995;
-     boost::uuids::uuid const NETWORK_ID = { {
-         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
-       } }; // Bender's daydream
-   }
+  namespace testnet
+  {
+    uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x53ca; // Wallet prefix: at... // decimal prefix: 21450
+    uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x504a; // Wallet prefix: ati... // decimal prefix: 20554
+    uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x524a; // Wallet prefix: ats... // decimal prefix: 21066
+    uint16_t const P2P_DEFAULT_PORT = 29993;
+    uint16_t const RPC_DEFAULT_PORT = 29994;
+    uint16_t const ZMQ_DEFAULT_PORT = 29995;
+    boost::uuids::uuid const NETWORK_ID = { {
+        0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
+      } }; // Bender's daydream
+  }
 
    namespace stagenet
    {
@@ -261,37 +261,44 @@ namespace config
 
    namespace blockchain_settings
    {
-     static constexpr uint64_t ARQMA = 1000000000; // Atomic representation of a value 1 ARQMA
-     static constexpr uint64_t PREMINE = 7500000000000000; // Premine Reward (already burned).
-     static constexpr uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
-     static constexpr uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
-     static constexpr uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
-     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     static constexpr uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     static constexpr uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+     uint64_t const ARQMA = 1000000000; // Atomic representation of a value 1 ARQMA
+     uint64_t const PREMINE = 7500000000000000; // Premine Reward (already burned).
+     uint64_t const PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+     uint64_t const MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
+     uint64_t const MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
+     uint8_t const ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     uint8_t const ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
+     uint8_t const ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
    }
 
    namespace tx_settings
    {
-     static constexpr uint8_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     static constexpr uint64_t ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
-     static constexpr uint8_t CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
-     static constexpr uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
-     static constexpr uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
+     uint8_t const ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     uint64_t const ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
+     uint8_t const CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
+     uint64_t const TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
+     uint64_t const MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
 
    namespace sync
    {
-     const uint64_t HIGHEST_CHECKPOINT = 248920;
-     const size_t NORMAL_SYNC = 20;
-     const size_t FAST_SYNC = 100;
+     uint64_t const HIGHEST_CHECKPOINT = 248920;
+     size_t const NORMAL_SYNC = 20;
+     size_t const FAST_SYNC = 100;
    }
 
    namespace governance
    {
-    static constexpr const char* MAINNET_WALLET_ADDRESS = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
-    static constexpr const char* TESTNET_WALLET_ADDRESS = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkY4zCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
-    static constexpr const char* STAGENET_WALLET_ADDRESS = "as2RzktNfxR8y3RgoDmoRFCGez6393Rd97e8c3ctupJu5i3CirGA4MVFzT7fwcSjxn8bV1orETq4eVQzkY2VTjox2TFnGUhgn";
+     uint64_t const gov_reward_interval = 90;
+     std::string const mainnet_gov_wallet_address = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
+     std::string const testnet_gov_wallet_address = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkY4zCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
+     std::string const stagenet_gov_wallet_address = "as2RzktNfxR8y3RgoDmoRFCGez6393Rd97e8c3ctupJu5i3CirGA4MVFzT7fwcSjxn8bV1orETq4eVQzkY2VTjox2TFnGUhgn";
+   }
+
+   namespace base_reward_divisor
+   {
+     uint8_t const governance = 10;
+     uint8_t const service_node = 2;
    }
 }
 
@@ -328,6 +335,20 @@ namespace arqma
 
 namespace cryptonote
 {
+  enum network_version
+  {
+    network_version_7 = 7,
+    network_version_8,
+    network_version_9,
+    network_version_10,
+    network_version_11,
+    netwprk_version_12,
+    network_version_13,
+    network_version_14,
+    network_version_15,
+    network_version_16_sn,
+  };
+
   enum network_type : uint8_t
     {
       MAINNET = 0,
@@ -338,19 +359,21 @@ namespace cryptonote
     };
     struct config_t
     {
-      uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
-      uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX;
-      uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
-      uint16_t const P2P_DEFAULT_PORT;
-      uint16_t const RPC_DEFAULT_PORT;
-      uint16_t const ZMQ_DEFAULT_PORT;
-      boost::uuids::uuid const NETWORK_ID;
-      std::string const GENESIS_TX;
-      uint32_t const GENESIS_NONCE;
+      uint64_t CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
+      uint64_t CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX;
+      uint64_t CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
+      uint16_t P2P_DEFAULT_PORT;
+      uint16_t RPC_DEFAULT_PORT;
+      uint16_t ZMQ_DEFAULT_PORT;
+      boost::uuids::uuid NETWORK_ID;
+      std::string GENESIS_TX;
+      uint32_t GENESIS_NONCE;
+      uint64_t GOVERNANCE_REWARD_INTERVAL;
+      std::string const *governance_wallet_address;
     };
-    inline const config_t& get_config(network_type nettype)
+    inline const config_t& get_config(network_type nettype, uint8_t hard_fork_version = 7)
     {
-      static const config_t mainnet = {
+      static config_t mainnet = {
         ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
         ::config::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
         ::config::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
@@ -359,9 +382,12 @@ namespace cryptonote
         ::config::ZMQ_DEFAULT_PORT,
         ::config::NETWORK_ID,
         ::config::GENESIS_TX,
-        ::config::GENESIS_NONCE
+        ::config::GENESIS_NONCE,
+        ::config::governance::gov_reward_interval,
+        ::config::governance::mainnet_gov_wallet_address
       };
-      static const config_t testnet = {
+
+      static config_t testnet = {
         ::config::testnet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
         ::config::testnet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
         ::config::testnet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
@@ -370,9 +396,12 @@ namespace cryptonote
         ::config::testnet::ZMQ_DEFAULT_PORT,
         ::config::testnet::NETWORK_ID,
         ::config::GENESIS_TX,
-        ::config::GENESIS_NONCE
+        ::config::GENESIS_NONCE,
+        ::config::governance::gov_reward_interval,
+        ::config::governance::testnet_gov_wallet_address
       };
-      static const config_t stagenet = {
+
+      static config_t stagenet = {
         ::config::stagenet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
         ::config::stagenet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
         ::config::stagenet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
@@ -381,14 +410,30 @@ namespace cryptonote
         ::config::stagenet::ZMQ_DEFAULT_PORT,
         ::config::stagenet::NETWORK_ID,
         ::config::GENESIS_TX,
-        ::config::GENESIS_NONCE
+        ::config::GENESIS_NONCE,
+        ::config::governance::gov_reward_interval,
+        ::config::governance::stagenet_gov_wallet_address
       };
+
       switch (nettype)
       {
-        case MAINNET: return mainnet;
-        case TESTNET: return testnet;
-        case STAGENET: return stagenet;
-        case FAKECHAIN: return mainnet;
+        case MAINNET:
+          return mainnet;
+        case TESTNET:
+        {
+          testnet.GOVERNANCE_REWARD_INTERVAL = 5;
+          return testnet;
+        }
+
+        case STAGENET:
+        {
+          stagenet.GOVERNANCE_REWARD_IMTERVAL = 5;
+          return stagenet;
+        }
+
+        case FAKECHAIN:
+          return mainnet;
+
         default: throw std::runtime_error("Invalid network type");
       }
    };

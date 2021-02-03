@@ -46,6 +46,7 @@ using namespace epee;
 #include "ringct/rctSigs.h"
 #include "multisig/multisig.h"
 #include "int-util.h"
+#include "cryptonote_core/service_node_list.h"
 
 using namespace crypto;
 
@@ -54,7 +55,7 @@ namespace arqma = config::blockchain_settings;
 namespace cryptonote
 {
   //---------------------------------------------------------------
-  void classify_addresses(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, size_t &num_stdaddresses, size_t &num_subaddresses, account_public_address &single_dest_subaddress)
+  static void classify_addresses(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, size_t &num_stdaddresses, size_t &num_subaddresses, account_public_address &single_dest_subaddress)
   {
     num_stdaddresses = 0;
     num_subaddresses = 0;
@@ -107,17 +108,99 @@ namespace cryptonote
     return k;
   }
   //---------------------------------------------------------------
-  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hard_fork_version)
+  bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
   {
-    if(hard_fork_version >= 16)
-      return base_reward * 10 / 100; // 10 %
-    return 0;
+    crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
+    bool r = crypto::generate_key_derivation(address.m_view_public_key, tx_key.sec, derivation);
+    CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << address.m_view_public_key << ", " << tx_key.sec << ")");
+
+    r = crypto::derive_public_key(derivation, output_index, address.m_spend_public_key, output_key);
+    CHECK_AND_ASSERT_MES(r, false, "failed to derive_public_key(" << derivation << ", "<< address.m_spend_public_key << ")");
+
+    return true;
   }
   //---------------------------------------------------------------
-  uint64_t get_service_node_reward(uint64_t height, uint64_t base_reward, uint8_t hard_fork_version)
+  bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
   {
-    if(hard_fork_version >= 16)
-      return base_reward * 45 / 100; // 45%
+    keypair gov_key = get_deterministic_keypair_from_height(height);
+
+    cryptonote::address_parse_info governance_wallet_address;
+    cryptonote::get_account_address_from_str(governance_wallet_address, nettype, governance_wallet_address_str);
+    crypto::public_key correct_key;
+
+    if (!get_deterministic_output_key(governance_wallet_address.address, gov_key, output_index, correct_key))
+    {
+      MERROR("Failed to generate deterministic output key for governance wallet output validation");
+      return false;
+    }
+
+    return correct_key == output_key;
+  }
+  //---------------------------------------------------------------
+  uint64_t governance_reward_formula(uint64_t base_reward)
+  {
+    return base_reward * config::base_reward_divisor::governance / 100; // 10%
+  }
+  //---------------------------------------------------------------
+  bool block_has_governance_output(network_type nettype, cryptonote::block const &block)
+  {
+    bool result = height_has_governance_output(nettype, block.major_version, get_block_height(block));
+    return result;
+  }
+  //---------------------------------------------------------------
+  bool height_has_governance_output(network_type nettype, int hard_fork_version, uint64_t height)
+  {
+    if(hard_fork_version >= network_version_16_sn)
+      return true;
+
+    const cryptonote::config_t &network = cryptonote::get_config(nettype, hard_fork_version);
+    if(height % network.GOVERNANCE_REWARD_INTERVAL != 0
+     return false;
+
+    return true;
+  }
+  //---------------------------------------------------------------
+  uint64_t derive_governance_from_block_reward(network_type nettype, const ctyptonote::block &block)
+  {
+    uint64_t result = 0;
+    uint64_t height = get_block_height(block);
+    uint64_t snode_reward = 0;
+    uint64_t vout_end = block.miner_tx.vout.size();
+
+    if(block_has_governance_output(nettype, block))
+      --vout_end;
+
+    for(size_t vout_index = 1; vout_index < vout_end; ++vout_index)
+    {
+      tx_out const &output = block.miner_tx.vout[vout_index];
+      snode_reward += output.amount;
+    }
+
+    static_assert(config::base_reward_divisor::governance == 10 && config::base_reward_divisor::service_node == 2,
+                  "Service Node reward is 50% of a base_reward. Any changes made to base_divisors "
+                  "might affect assumption and should be checked for any miscalculations.");
+
+    uint64_t base_reward = snode_reward * config::base_reward_divisor::service_node;
+    uint64_t governance = governance_reward_formula(base_reward);
+    uint64_t block_reward = base_reward - governance;
+
+    uint64_t actual_reward = 0;
+    for(tx_out const &output : block.minet_tx.vout)
+      actual_reward += output.amount;
+
+    CHECK_AND_ASSERT_MES(block_reward <= actual_reward, false,
+                         "Rederiving base block reward based on service node reward "
+                         "exceeded an actual amount amount paid in block, "
+                         "derived block reward: " << block_reward << ", actual_reward: " << actual_reward);
+
+    result = governance;
+    return result;
+  }
+  //---------------------------------------------------------------
+  uint64_t service_node_reward_formula(uint64_t base_reward, int hard_fork_version)
+  {
+    if(hard_fork_version >= network_version_16_sn)
+      return base_reward / config::base_reward_divisor::service_node;
     return 0;
   }
   //---------------------------------------------------------------
@@ -137,57 +220,33 @@ namespace cryptonote
     return reward;
   }
   //---------------------------------------------------------------
-  bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
+  arqma_miner_tx_context::arqma_miner_tx_context(network_type type, crypto::public_key winner, std::vector<std::pair<account_public_address, stake_portions>> winner_info)
+    : nettype(type)
+    , snode_winner_key(winner)
+    , snode_winner_info(winner_info)
+    , batched_governance(0)
   {
-    crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
-    bool r = crypto::generate_key_derivation(address.m_view_public_key, tx_key.sec, derivation);
-    CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << address.m_view_public_key << ", " << tx_key.sec << ")");
-
-    r = crypto::derive_public_key(derivation, output_index, address.m_spend_public_key, output_key);
-    CHECK_AND_ASSERT_MES(r, false, "failed to derive_public_key(" << derivation << ", "<< address.m_spend_public_key << ")");
-
-    return true;
   }
   //---------------------------------------------------------------
-  bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
+  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, int hard_fork_version, const arqma_miner_tx_context &miner_tx_context)
   {
-    keypair gov_key = get_deterministic_keypair_from_height(height);
-
-    cryptonote::address_parse_info governance_wallet_address;
-    switch(nettype)
-    {
-      case STAGENET:
-        cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::STAGENET, governance_wallet_address_str);
-        break;
-      case TESTNET:
-        cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, governance_wallet_address_str);
-        break;
-      case MAINNET:
-        cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, governance_wallet_address_str);
-        break;
-      default:
-        return false;
-    }
-
-    crypto::public_key correct_key;
-
-    if (!get_deterministic_output_key(governance_wallet_address.address, gov_key, output_index, correct_key))
-    {
-      MERROR("Failed to generate deterministic output key for governance wallet output validation");
-      return false;
-    }
-
-    return correct_key == output_key;
-  }
-  //---------------------------------------------------------------
-  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce, uint8_t hard_fork_version, network_type nettype, const crypto::public_key& service_node_key, const std::vector<std::pair<account_public_address, uint64_t>>& service_node_info) {
     tx.vin.clear();
     tx.vout.clear();
     tx.extra.clear();
-    if(hard_fork_version >= 16)
-      tx.output_unlock_times.clear();
     tx.is_deregister = false;
+    if(hard_fork_version >= network_version_16_sn)
+    {
+      tx.output_unlock_times.clear();
+      tx.version = transaction::version_3;
+    }
+    else
+    {
+      tx.version = transaction::version_2;
+    }
 
+    const network_type nettype = miner_tx_context.nettype;
+    const crypto::public_key &service_node_key = miner_tx_context.snode_winner_key;
+    const std::vector<std::pair<account_public_address, uint64_t>> &service_node_info = miner_tx_context.snode_winner_info.empty() ? service_nodes::null_winner : miner_tx_context.snode_winner_info;
 
     keypair txkey = keypair::generate(hw::get_device("default"));
     add_tx_pub_key_to_extra(tx, txkey.pub);
@@ -202,11 +261,16 @@ namespace cryptonote
     txin_gen in;
     in.height = height;
 
-    uint64_t block_reward;
+    arqma_block_reward_context block_reward_context = {};
+    block_reward_context.fee = fee;
+    block_reward_context.height = height;
+    block_reward_context.snode_winner_info = miner_tx_context.snode_winner_info;
+    block_reward_context.batched_governance = miner_tx_context.batched_governance;
 
-    if(!get_block_reward(median_weight, current_block_weight, already_generated_coins, fee, block_reward, hard_fork_version))
+    block_reward_parts reward_parts;
+    if(!get_arqma_block_reward(median_weight, current_block_weight, already_generated_coins, hard_fork_version, reward_parts, block_reward_context))
     {
-      LOG_PRINT_L0("Block is too big");
+      LOG_PRINT_L0("Failed to calulate block reward");
       return false;
     }
 
@@ -214,25 +278,9 @@ namespace cryptonote
     LOG_PRINT_L1("Creating block template: reward " << block_reward << ", fee " << fee);
 #endif
 
-    uint64_t governance_reward = 0;
-    uint64_t total_service_node_reward = 0;
-    uint64_t total_paid_service_node_reward = 0;
-    if(hard_fork_version >= 16)
-    {
-      tx.version = transaction_prefix::version_3;
-      governance_reward = get_governance_reward(height, block_reward, hard_fork_version);
-      total_service_node_reward = get_service_node_reward(height, block_reward, hard_fork_version);
-      total_paid_service_node_reward = calculate_sum_of_portions(service_node_info, total_service_node_reward);
-      block_reward -= governance_reward;
-      block_reward -= total_paid_service_node_reward;
-    }
-    else
-    {
-      tx.version = transaction_prefix::version_2;
-    }
-
     uint64_t summary_amounts = 0;
 
+    // Miner Reward
     {
       crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
       crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
@@ -246,13 +294,13 @@ namespace cryptonote
       tk.key = out_eph_public_key;
 
       tx_out out;
-      summary_amounts += out.amount = block_reward;
+      summary_amounts += out.amount = reward_parts.miner_reward();
       out.target = tk;
       tx.vout.push_back(out);
       tx.output_unlock_times.push_back(height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
     }
 
-    if(hard_fork_version >= 16)
+    if(hard_fork_version >= network_version_16_sn)
     {
       keypair gov_key = get_deterministic_keypair_from_height(height);
       add_tx_pub_key_to_extra(tx, gov_key.pub);
@@ -270,58 +318,93 @@ namespace cryptonote
         tk.key = out_eph_public_key;
 
         tx_out out;
-        summary_amounts += out.amount = get_portion_of_reward(service_node_info[i].second, total_service_node_reward);
+        summary_amounts += out.amount = get_portion_of_reward(service_node_info[i].second, reward_parts.service_node_total);
         out.target = tk;
         tx.vout.push_back(out);
         tx.output_unlock_times.push_back(height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
       }
+
+      // Governance
       {
-        std::string governance_wallet_address_str;
-        cryptonote::address_parse_info governance_wallet_address;
-
-        switch(nettype)
+        if(reward_parts.governance == 0)
         {
-          case STAGENET:
-            cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::STAGENET, std::string(config::governance::STAGENET_WALLET_ADDRESS));
-            break;
-          case TESTNET:
-            cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::TESTNET, std::string(config::governance::TESTNET_WALLET_ADDRESS));
-            break;
-          case MAINNET:
-            cryptonote::get_account_address_from_str(governance_wallet_address, cryptonote::MAINNET, std::string(config::governance::MAINNET_WALLET_ADDRESS));
-            break;
-          default:
+          CHECK_AND_ASSERT_MES(hard_fork_version >= network_version_16_sn, false, "Governance reward can NOT be 0 after hardfork 16, hard_fork_version: " << hard_fork_version);
+        }
+        else
+        {
+          std::string governance_wallet_address_srt;
+
+          cryptonote::address_parse_info governance_wallet_address;
+          cryptonote::get_account_address_from_str(governance_wallet_address, nettype, *cryptonote::get_config(nettype, hard_fork_version).governance_wallet_address);
+          crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+
+          if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
+          {
+            MERROR("Failed to generate deterministic output key for governance wallet output creation");
             return false;
+          }
+
+          txout_to_key tk;
+          tk.key = out_eph_public_key;
+
+          tx_out out;
+          summary_amounts += out.amount = reward_parts.governance;
+          out.target = tk;
+          tx.vout.push_back(out);
+          tx.output_unlock_times.push_back(height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
         }
-
-        crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
-
-        if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
-        {
-          MERROR("Failed to generate deterministic output key for governance wallet output creation");
-          return false;
-        }
-
-        txout_to_key tk;
-        tk.key = out_eph_public_key;
-
-        tx_out out;
-        summary_amounts += out.amount = governance_reward;
-        out.target = tk;
-        tx.vout.push_back(out);
-        tx.output_unlock_times.push_back(height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
       }
 
-      CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward + total_paid_service_node_reward), false, "Failed to construct miner tx, summary_amounts: " << summary_amounts << " not equal total block_reward: " << (block_reward + governance_reward + total_service_node_reward)
-                         << ". Where block_reward: " << block_reward << ", Governance Reward: " << governance_reward << ", Service-Nodes reward: " << total_service_node_reward << ".");
+      uint64_t expected_amount = reward_parts.miner_reward() + reward_parts.governance + reward_parts.service_node_paid;
+      CHECK_AND_ASSERT_MES(summary_amounts == expected_amount, false, "Failed to construct miner tx, summary_amounts: " << summary_amounts << " not equal total block_reward = " << expected_amount);
     }
 
     //lock
     tx.unlock_time = height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
     tx.vin.push_back(in);
-
     tx.invalidate_hashes();
 
+    return true;
+  }
+  //---------------------------------------------------------------
+  bool get_arqma_block_reward(size_t median_weight, size_t current_blockchain_weight, uint64_t already_generated_coins, int hard_fork_version, block_reward_parts &result, const arqma_block_reward_context &arqma_context)
+  {
+    result = {};
+    uint64_t base_reward;
+    if(!get_base_block_reward(median_weight, current_block_weight, already_generated_coins, base_reward, hard_fork_version, arqma_context.height))
+    {
+      MERROR("Failed to calculate base block reward");
+      return false;
+    }
+
+    if(base_reward == 0)
+    {
+      MERROR("Unexpected base reward of 0");
+      return false;
+    }
+
+    if(already_generated_coins == 0)
+    {
+      result.original_base_reward = result.adjusted_base_reward = result.base_miner = base_reward;
+      return true;
+    }
+
+    result.original_base_reward = base_reward;
+    result.service_node_total = service_node_reward_formula(base_reward, hard_fork_version);
+    if(arqma_context.snode_winner_info.empty())
+      result.service_node_paid = calculate_sum_of_portions(service_nodes::null_winner, result.service_node_total);
+    else
+      result.service_node_paid = calculate_sum_of_portions(arqma_context.snode_winner_info, result.service_node_total);
+
+    result.adjusted_base_reward = result.original_base_reward;
+    result.governance = arqma_context.batched_governance;
+    result.adjusted_base_reward -= governance_reward_formula(result.original_base_reward);
+
+    if(result.governance > 0)
+      result.adjusted_base_reward += result.governance;
+
+    result.base_miner = result.adjusted_base_reward - (result.governance + result.service_node_paid);
+    result.base_miner_fee = arqma_context.fee;
     return true;
   }
   //---------------------------------------------------------------

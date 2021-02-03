@@ -102,20 +102,6 @@ namespace cryptonote
   class Blockchain
   {
   public:
-
-    enum version
-    {
-      version_7 = 7,
-      version_8,
-      version_9,
-      version_10,
-      version_11,
-      version_12,
-      version_13,
-      version_14,
-      version_15,
-      version_16_sn,
-    };
     /**
      * @brief container for passing a block and metadata about it on the blockchain
      */
@@ -149,7 +135,7 @@ namespace cryptonote
     class ValidateMinerTxHook
     {
     public:
-      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, uint64_t base_reward) const = 0;
+      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, block_reward_parts const &reward_parts) const = 0;
     };
 
     /**
@@ -1037,6 +1023,8 @@ namespace cryptonote
     bool prune_blockchain(uint32_t pruning_seed = 0);
     bool update_blockchain_pruning();
     bool check_blockchain_pruning();
+
+    bool calc_batched_governance_reward(uint64_t height, uint64_t &reward) const;
 
     void lock();
     void unlock();
