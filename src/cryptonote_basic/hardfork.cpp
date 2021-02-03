@@ -61,7 +61,6 @@ HardFork::HardFork(cryptonote::BlockchainDB &db, uint8_t original_version, time_
   window_size(window_size),
   default_threshold_percent(default_threshold_percent),
   original_version(original_version),
-  original_version_till_height(original_version_till_height),
   current_fork_index(0)
 {
   if (window_size == 0)
