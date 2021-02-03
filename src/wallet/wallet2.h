@@ -1322,6 +1322,10 @@ private:
 
     void set_offline(bool offline = true);
 
+    bool check_stake_allowed(const crypto::public_key& sn_key, const cryptonote::address_parse_info& addr_info, uint64_t& amount);
+
+    std::vector<wallet2::pending_tx> create_stake_tx(const crypto::public_key& service_node_key, const cryptonote::address_parse_info& addr_info, uint64_t amount);
+
     bool lock_keys_file();
     bool unlock_keys_file();
     bool is_keys_file_locked() const;

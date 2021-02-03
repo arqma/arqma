@@ -278,6 +278,8 @@ namespace config
      uint8_t const CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
      uint64_t const TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      uint64_t const MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
+     int const DEFAULT_MIX = 10;
+     int const MIN_RING_SIZE = DEFAULT_MIX + 1;
    }
 
    namespace sync
