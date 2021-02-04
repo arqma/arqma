@@ -51,7 +51,7 @@ namespace cryptonote
 
   struct arqma_miner_tx_context
   {
-    using stage_portions = uint64_t;
+    using stake_portions = uint64_t;
 
     arqma_miner_tx_context(network_type type = MAINNET, crypto::public_key winner = crypto::null_pkey, std::vector<std::pair<account_public_address, stake_portions>> winner_info = {});
 

@@ -352,7 +352,7 @@ namespace cryptonote
     network_version_9,
     network_version_10,
     network_version_11,
-    netwprk_version_12,
+    network_version_12,
     network_version_13,
     network_version_14,
     network_version_15,
@@ -379,7 +379,7 @@ namespace cryptonote
       std::string GENESIS_TX;
       uint32_t GENESIS_NONCE;
       uint64_t GOVERNANCE_REWARD_INTERVAL;
-      std::string const *governance_wallet_address;
+      std::string const governance_wallet_address;
     };
     inline const config_t& get_config(network_type nettype, int hard_fork_version = 7)
     {
@@ -437,7 +437,7 @@ namespace cryptonote
 
         case STAGENET:
         {
-          stagenet.GOVERNANCE_REWARD_IMTERVAL = 5;
+          stagenet.GOVERNANCE_REWARD_INTERVAL = 5;
           return stagenet;
         }
 

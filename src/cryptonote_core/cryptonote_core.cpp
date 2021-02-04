@@ -1479,7 +1479,7 @@ namespace cryptonote
     m_mempool.set_relayed(txs);
   }
   //-----------------------------------------------------------------------------------------------
-  void core::set_deregister_votes_relayed(const std::vector<arqma_sn::service_node_deregister::vote>& votes)
+  void core::set_deregister_votes_relayed(const std::vector<service_nodes::deregister_vote>& votes)
   {
     m_deregister_vote_pool.set_relayed(votes);
   }
@@ -2097,16 +2097,16 @@ namespace cryptonote
     return result;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::add_deregister_vote(const arqma_sn::service_node_deregister::vote& vote, vote_verification_context &vvc)
+  bool core::add_deregister_vote(const service_nodes::deregister_vote& vote, vote_verification_context &vvc)
   {
     uint64_t latest_block_height = std::max(get_current_blockchain_height(), get_target_blockchain_height());
     uint64_t delta_height = latest_block_height - vote.block_height;
 
-    if(vote.block_height < latest_block_height && delta_height >= arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT)
+    if(vote.block_height < latest_block_height && delta_height >= service_nodes::deregister_vote::VOTE_LIFETIME_BY_HEIGHT)
     {
       LOG_PRINT_L1("Received vote for height: " << vote.block_height
                 << " and service node: "     << vote.service_node_index
-                << ", is older than: "       << arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT
+                << ", is older than: "       << service_nodes::deregister_vote::VOTE_LIFETIME_BY_HEIGHT
                 << " blocks and has been rejected.");
       vvc.m_invalid_block_height = true;
     }

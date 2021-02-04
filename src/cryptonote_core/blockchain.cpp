@@ -103,7 +103,7 @@ static const struct {
  { network_version_12, 183700, 0, 1558656000 },
  { network_version_13, 248200, 0, 1566511680 },
  { network_version_14, 248920, 0, 1566598080 },
- { network_version_15, 303666, 0, 1573257000 },
+ { network_version_15, 303666, 0, 1573257000 }
 };
 
 static const struct {
@@ -122,7 +122,7 @@ static const struct {
  { network_version_13, 600, 0, 1566511680 },
  { network_version_14, 700, 0, 1566598080 },
  { network_version_15, 800, 0, 1566598080 },
- { network_version_16_sn, 900, 0, 1566598280 },
+ { network_version_16_sn, 900, 0, 1566598280 }
 };
 
 static const struct {
@@ -141,11 +141,11 @@ static const struct {
  { network_version_13, 2000, 0, 1560348000 },
  { network_version_14, 2720, 0, 1560351600 },
  { network_version_15, 12100, 0, 1570414500 },
- { network_version_16_sn, 12800, 0, 1570414510 },
+ { network_version_16_sn, 12800, 0, 1570414510 }
 };
 
 //------------------------------------------------------------------
-Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list, arqma_sn::deregister_vote_pool& deregister_vote_pool) :
+Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list, service_nodes::deregister_vote_pool& deregister_vote_pool) :
   m_db(), m_tx_pool(tx_pool), m_hardfork(NULL), m_timestamps_and_difficulties_height(0), m_current_block_cumul_weight_limit(0), m_current_block_cumul_weight_median(0),
   m_enforce_dns_checkpoints(true), m_max_prepare_blocks_threads(8), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false),
   m_fast_sync(true), m_show_time_stats(false), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
@@ -1418,7 +1418,7 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
       return false;
     }
 
-    if(!validate_governance_reward_key(height, *cryptonote::get_config(m_nettype, hard_fork_version).governance_wallet_address, b.miner_tx.vout.size() - 1, boost::get<txout_to_key>(b.miner_tx.vout.back().target).key, m_nettype))
+    if(!validate_governance_reward_key(height, cryptonote::get_config(m_nettype, hard_fork_version).governance_wallet_address, b.miner_tx.vout.size() - 1, boost::get<txout_to_key>(b.miner_tx.vout.back().target).key, m_nettype))
     {
       MERROR("Governance reward public key incorrect.");
       return false;
@@ -1434,7 +1434,7 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
 
   CHECK_AND_ASSERT_MES(money_in_use - fee <= base_reward, false, "base reward calculation bug");
   if(base_reward != money_in_use)
-    partial_lock_reward = true;
+    partial_block_reward = true;
   base_reward = money_in_use - fee;
 
   return true;
@@ -1748,7 +1748,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
 
   if(!calc_batched_governance_reward(height, miner_tx_context.batched_governance))
   {
-    LOG_ERROR("Failed to calculate batched governance reward);
+    LOG_ERROR("Failed to calculate batched governance reward");
     return false;
   }
 
@@ -3509,7 +3509,7 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
       return false;
     }
 
-    if(!arqma_sn::service_node_deregister::verify_deregister(nettype(), deregister, tvc.m_vote_ctx, *quorum_state))
+    if(!service_nodes::deregister_vote::verify_deregister(nettype(), deregister, tvc.m_vote_ctx, *quorum_state))
     {
       tvc.m_verification_failed = true;
       MERROR_VER("tx " << get_transaction_hash(tx) << ": version 3 deregister_tx could not be completely verified, reason: " << print_vote_verification_context(tvc.m_vote_ctx));
@@ -3531,11 +3531,11 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
       }
 
       uint64_t delta_height = curr_height - deregister.block_height;
-      if(delta_height >= arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT)
+      if(delta_height >= service_nodes::deregister_vote::DEREGISTER_LIFETIME_BY_HEIGHT)
       {
         LOG_PRINT_L1("Received deregister tx for height: " << deregister.block_height
                      << " and service node: " << deregister.service_node_index
-                     << ", is older than: " << arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT
+                     << ", is older than: " << service_nodes::deregister_vote::DEREGISTER_LIFETIME_BY_HEIGHT
                      << " blocks and has been rejected. The current height is: " << curr_height);
         tvc.m_vote_ctx.m_invalid_block_height = true;
         tvc.m_verification_failed = true;
@@ -3544,7 +3544,7 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
     }
 
     const uint64_t height = deregister.block_height;
-    const size_t num_blocks_to_check = arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT;
+    const size_t num_blocks_to_check = service_nodes::deregister_vote::DEREGISTER_LIFETIME_BY_HEIGHT;
 
     std::vector<std::pair<cryptonote::blobdata,block>> blocks;
     std::vector<cryptonote::blobdata> txs;

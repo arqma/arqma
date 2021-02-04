@@ -46,7 +46,7 @@ else()
   include(ProcessorCount)
 
   set(zmq_prefix ${CMAKE_BINARY_DIR}/external/libzmq)
-  set(zmq_patch patch -f -p0 -i ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
+  set(zmq_patch patch -R -f -p0 -i ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
   set(zmq_autogen ./autogen.sh)
   set(zmq_configure ./configure --prefix=${zmq_prefix})
   if(APPLE OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")

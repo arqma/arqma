@@ -29,8 +29,7 @@
 
 #include <functional>
 #include <random>
-
-#include <algoriyhm>
+#include <algorithm>
 
 #include "ringct/rctSigs.h"
 #include "wallet/wallet2.h"
@@ -39,7 +38,7 @@
 #include "int-util.h"
 #include "common/scoped_message_writer.h"
 #include "common/i18n.h"
-#include "quorum_cop.h"
+#include "service_node_quorum_cop.h"
 #include "common/exp2.h"
 
 #include "service_node_list.h"
@@ -152,16 +151,12 @@ namespace service_nodes
   {
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     const auto &it = m_quorum_states.find(height);
-    if(it == m_quorum_states.end())
-    {
-
-    }
-    else
+    if(it != m_quorum_states.end())
     {
       return = it->second;
     }
 
-    return std::make_shared<quorum_state>();
+    return nullptr;
   }
   //----------------------------------------------------------------------------
   std::vector<service_node_pubkey_info> service_node_list::get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const
@@ -838,7 +833,6 @@ namespace service_nodes
     if(registrations || deregistrations || expired_count)
       update_swarms(block_height);
 
-    const size_t QUORUM_LIFETIME = (6 * arqma_sn::service_node_deregister::DEREGISTER_LIFETIME_BY_HEIGHT);
     // save six times the quorum lifetime to be sure. also to help with debug.
     const size_t cache_state_from_height = (block_height < QUORUM_LIFETIME) ? 0 : block_height - QUORUM_LIFETIME;
 
@@ -1445,12 +1439,9 @@ namespace service_nodes
     {
       stream << "\n\n";
       time_t tt = exp_timestamp;
+
       struct tm tm;
-#ifdef WIN32
-      gmtime_s(&tm, &tt);
-#else
-      gmtime_r(&tt, &tm);
-#endif
+      epee::misc_utils::get_gmt_time(tt, tm);
 
       char buffer[128];
       strftime(buffer, sizeof(buffer), "%Y-%m-%d %I:%M:%S %p", &tm);
