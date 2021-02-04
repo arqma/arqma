@@ -273,13 +273,14 @@ namespace config
 
    namespace tx_settings
    {
-     uint8_t const ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     uint64_t const ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
-     uint8_t const CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
+     uint_fast8_t const ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     uint_fast8_t const ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
+     uint_fast8_t const CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
      uint64_t const TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      uint64_t const MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
-     int const DEFAULT_MIX = 10;
-     int const MIN_RING_SIZE = DEFAULT_MIX + 1;
+
+     static uint_fast8_t const tx_mixin = 10;
+     static uint_fast8_t const tx_ring_size = tx_mixin + 1;
    }
 
    namespace sync
