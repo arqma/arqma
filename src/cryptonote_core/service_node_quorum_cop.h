@@ -38,11 +38,10 @@ namespace cryptonote
 
 namespace service_nodes
 {
-  class deregister_vote_pool;
   class quorum_cop
     : public cryptonote::Blockchain::BlockAddedHook,
       public cryptonote::Blockchain::BlockchainDetachedHook,
-      public crypyonote::Blockchain::InitHook
+      public cryptonote::Blockchain::InitHook
   {
   public:
     explicit quorum_cop(cryptonote::core& core);
@@ -54,7 +53,7 @@ namespace service_nodes
     bool handle_uptime_proof(const cryptonote::NOTIFY_UPTIME_PROOF::request &proof);
 
     static const uint64_t REORG_SAFETY_BUFFER_IN_BLOCKS = 20;
-    static_assert(REORG_SAFETY_BUFFER_IN_BLOCKS < arqma_sn::service_node_deregister::VOTE_LIFETIME_BY_HEIGHT,
+    static_assert(REORG_SAFETY_BUFFER_IN_BLOCKS < deregister_vote::VOTE_LIFETIME_BY_HEIGHT,
                   "Safety buffer should always be less than the vote lifetime");
     bool prune_uptime_proof();
 

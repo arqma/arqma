@@ -1019,6 +1019,7 @@ namespace cryptonote
       difficulty_type difficulty;
       difficulty_type cumulative_difficulty;
       uint64_t reward;
+      uint64_t miner_reward;
       uint64_t block_size;
       uint64_t block_weight;
       uint64_t num_txes;
@@ -1038,6 +1039,7 @@ namespace cryptonote
         KV_SERIALIZE(difficulty)
         KV_SERIALIZE(cumulative_difficulty)
         KV_SERIALIZE(reward)
+        KV_SERIALIZE(miner_reward)
         KV_SERIALIZE(block_size)
         KV_SERIALIZE_OPT(block_weight, (uint64_t)0)
         KV_SERIALIZE(num_txes)
@@ -2627,6 +2629,47 @@ struct request_t: public rpc_access_request_base
         KV_SERIALIZE(status)
         KV_SERIALIZE(quorum_nodes)
         KV_SERIALIZE(nodes_to_test)
+        KV_SERIALIZE(untrusted)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_QUORUM_STATE_BATCHED
+  {
+    struct request_t: public rpc_request_base
+    {
+      uint64_t height_begin;
+      uint64_t height_end;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_request_base)
+        KV_SERIALIZE(height_begin)
+        KV_SERIALIZE(height_end)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_entry
+    {
+      uint64_t height;
+      std::vector<std::string> quorum_nodes;
+      std::vector<std::string> nodes_to_test;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(height)
+        KV_SERIALIZE(quorum_nodes)
+        KV_SERIALIZE(nodes_to_test)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response_t: public rpc_response_base
+    {
+      std::string status;
+      std::vector<response_entry> quorum_entries;
+      bool untrusted;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(quorum_entries)
         KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()
     };
