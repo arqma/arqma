@@ -6774,7 +6774,7 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
   uint64_t adjusted_fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
   if (adjusted_fake_outs_count > fake_outs_count)
   {
-    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
+    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count + 1) % (adjusted_fake_outs_count + 1)).str();
     return true;
   }
 
@@ -8243,7 +8243,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
           continue;
 
         uint64_t lock_duration = unlock_time - pd.m_block_height;
-        locked |= (!m_wallet->is_tx_spendtime_unlocked(pd.m_unlock_time, pd.m_block_height));
+        locked |= (!m_wallet->is_transfer_unlocked(unlock_time, pd.m_block_height));
         if(lock_duration >= staking_duration)
           type = tools::pay_type::stake;
       }
