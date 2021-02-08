@@ -6576,8 +6576,6 @@ uint64_t wallet2::get_fee_multiplier(uint32_t priority, int fee_algorithm)
   }
   multipliers[] =
   {
-    { 3, {1, 2, 3} },
-    { 3, {1, 20, 166} },
     { 4, {1, 4, 20, 166} },
     { 4, {1, 5, 25, 1000} },
   };
@@ -6596,7 +6594,7 @@ uint64_t wallet2::get_fee_multiplier(uint32_t priority, int fee_algorithm)
       priority = 1;
   }
 
-  THROW_WALLET_EXCEPTION_IF(fee_algorithm < 0 || fee_algorithm > 3, error::invalid_priority);
+  THROW_WALLET_EXCEPTION_IF(fee_algorithm < 0 || fee_algorithm > 1, error::invalid_priority);
 
   // 1 to 3/4 are allowed as priorities
   const uint32_t max_priority = multipliers[fee_algorithm].count;
@@ -6655,24 +6653,20 @@ uint64_t wallet2::get_fee_quantization_mask()
 //----------------------------------------------------------------------------------------------------
 int wallet2::get_fee_algorithm()
 {
-  // changes at v3 and v5 and v9
-  if (use_fork_rules(13, 0))
-    return 3;
-  if (use_fork_rules(7, 0))
-    return 2;
+  if(use_fork_rules(HF_VERSION_PER_BYTE_FEE, 0))
+    return 1;
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::adjust_mixin(uint64_t mixin)
 {
-  if(use_fork_rules(13, 10))
+  if(use_fork_rules(HF_VERSION_MIN_MIXIN_10, 10) && mixin != config::tx_settings::tx_mixin)
   {
-    MINFO("From Hard-Fork v13 ring size is 11");
-    mixin = 10;
+    MWARNING("Requested ring size: " << (mixin + 1) << " is incorrect for ArQmA. Auto-Adjusting to: " << config::tx_setting::tx_ring_size);
+    mixin = config::tx_settings::tx_mixin;
   }
-  else if(mixin < 6 && use_fork_rules(7, 10))
+  else
   {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low, using 7");
     mixin = 6;
   }
   return mixin;
@@ -6688,7 +6682,7 @@ uint32_t wallet2::adjust_priority(uint32_t priority)
       const bool use_per_byte_fee = use_fork_rules(HF_VERSION_PER_BYTE_FEE, 0);
       const uint64_t base_fee = get_base_fee();
       const uint64_t fee_multiplier = get_fee_multiplier(1);
-      const double fee_level = fee_multiplier * base_fee * (use_per_byte_fee ? 1 : (12 / 13 / 1024));
+      const double fee_level = fee_multiplier * base_fee * (use_per_byte_fee ? 1 : (12/(double)13 / (double)1024));
       const std::vector<std::pair<uint64_t, uint64_t>> blocks = estimate_backlog({std::make_pair(fee_level, fee_level)});
       if (blocks.size() != 1)
       {
@@ -7095,7 +7089,7 @@ std::vector<wallet2::pending_tx> wallet2::create_stake_tx(const crypto::public_k
 
   try
   {
-    auto ptx_vector = create_transactions_2(dsts, config::tx_settings::DEFAULT_MIX, unlock_at_block, priority, extra, m_current_subaddress_account, subaddr_indices, true);
+    auto ptx_vector = create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_at_block, priority, extra, m_current_subaddress_account, subaddr_indices, true);
     if (ptx_vector.size() == 1) { return ptx_vector; }
   }
   catch(const std::exception& e)
@@ -10009,13 +10003,13 @@ const wallet2::transfer_details &wallet2::get_transfer_details(size_t idx) const
 //----------------------------------------------------------------------------------------------------
 std::vector<size_t> wallet2::select_available_unmixable_outputs()
 {
-  const size_t min_mixin = use_fork_rules(13, 10) ? 10 : use_fork_rules(7, 10) ? 6 : 6; // v13 increases min mixin from 6 to 10, v7 to 6
+  const size_t min_mixin = use_fork_rules(13, 10) ? 10 : 6; // v13 increases min mixin from 6 to 10.
   return select_available_outputs_from_histogram(min_mixin + 1, false, true, false);
 }
 //----------------------------------------------------------------------------------------------------
 std::vector<size_t> wallet2::select_available_mixable_outputs()
 {
-  const size_t min_mixin = use_fork_rules(13, 10) ? 10 : use_fork_rules(7, 10) ? 6 : 6; // v13 increases min mixin from 6 to 10, v7 to 6
+  const size_t min_mixin = use_fork_rules(13, 10) ? 10 : 6; // v13 increases min mixin from 6 to 10.
   return select_available_outputs_from_histogram(min_mixin + 1, true, true, true);
 }
 //----------------------------------------------------------------------------------------------------
