@@ -6210,16 +6210,7 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
       return true;
   }
 
-  // sanity check address is not subaddress in case this gets called somewhere else that assumes it can be
-  if(parse_info.is_subaddress)
-  {
-    fail_msg_writer() << tr("Can not stake from subaddress");
-    return false;
-  }
-
   m_wallet->refresh(false);
-  uint64_t staking_requirement_lock_blocks = service_nodes::staking_requirement_lock_blocks(m_wallet->nettype());
-  uint64_t locked_blocks = staking_requirement_lock_blocks + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
 
   time_t begin_construct_time = time(nullptr);
   std::string err, err2;
@@ -6259,96 +6250,23 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
     }
   }
 
+  uint64_t staking_requirement_lock_blocks = service_nodes::get_staking_requirement_lock_blocks(m_wallet->nettype());
+  uint64_t locked_blocks = staking_requirement_lock_blocks + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
   uint64_t unlock_block = bc_height + locked_blocks;
 
   try
   {
-    const auto& response = m_wallet->get_service_nodes({ epee::string_tools::pod_to_hex(service_node_key) });
-    if(response.service_node_states.size() != 1)
+    const tools::stake_check_result res = m_wallet->check_stake_allowed(service_node_key, parse_info, amount, amount_fraction);
+    if(res == tools::stake_check_result::try_later)
     {
-      fail_msg_writer() << tr("Could not find service node in service node list, please make sure it is registered first.");
       return true;
     }
-
-    const auto& snode_info = response.service_node_states.front();
-
-    const uint64_t DUST = MAX_NUMBER_OF_CONTRIBUTORS;
-
-    if(amount == 0)
-      amount = snode_info.staking_requirement * amount_fraction;
-
-    const bool full = snode_info.contributors.size() >= MAX_NUMBER_OF_CONTRIBUTORS;
-    uint64_t can_contrib_total = 0;
-    uint64_t must_contrib_total = 0;
-
-    if(!full)
+    else if(res == tools::stake_check_result::not_allowed)
     {
-      can_contrib_total = snode_info.staking_requirement - snode_info.total_reserved;
-      must_contrib_total = service_nodes::get_min_node_contribution(snode_info.staking_requirement, snode_info.total_reserved);
-    }
-
-    bool is_preexisting_contributor = false;
-    for(const auto& contributor : snode_info.contributors)
-    {
-      address_parse_info info;
-      if(!cryptonote::get_account_address_from_str(info, m_wallet->nettype(), contributor.address))
-        info.address = service_nodes::null_address;
-
-      if(info.address == parse_info.address)
-      {
-        uint64_t max_increase_reserve = snode_info.staking_requirement - snode_info.total_reserved;
-        uint64_t max_increase_amount_to = contributor.reserved + max_increase_reserve;
-        can_contrib_total = max_increase_amount_to - contributor.amount;
-        must_contrib_total = contributor.reserved - contributor.amount;
-        is_preexisting_contributor = true;
-      }
-    }
-
-    if(full && !is_preexisting_contributor)
-    {
-      fail_msg_writer() << tr("This service node already has the maximum number of participants, and the specified address is not one of them");
-      return true;
-    }
-    if(can_contrib_total == 0)
-    {
-      if(!autostake)
-        fail_msg_writer() << tr("You may not contribute any more to this service node");
-      return true;
-    }
-    if(amount > can_contrib_total)
-    {
-      success_msg_writer() << tr("You may only contribute up to ") << print_money(can_contrib_total) << tr(" more ArQmA to this service node");
-      success_msg_writer() << tr("Reducing your stake from ") << print_money(amount) << tr(" to ") << print_money(can_contrib_total);
-      amount = can_contrib_total;
-    }
-    if(amount < must_contrib_total)
-    {
-      if(is_preexisting_contributor)
-        success_msg_writer() << tr("Warning: You must contribute ") << print_money(must_contrib_total) << tr(" ArQmA to meet your registration requirements for this service node");
-
-      if(amount == 0)
-      {
-        amount = must_contrib_total;
-      }
-      else
-      {
-        success_msg_writer() << tr("You have only specified ") << print_money(amount);
-        if(must_contrib_total - amount <= DUST)
-        {
-          amount = must_contrib_total;
-          success_msg_writer() << tr("Seeing as this is insufficient by dust amount, amount was increased automatically to: ") << print_money(must_contrib_total);
-        }
-        else if(!is_preexisting_contributor || autostake)
-        {
-          if(!is_preexisting_contributor)
-            fail_msg_writer() << tr("You must contribute minimum sum of: ") << print_money(must_contrib_total) << tr(" ArQmA to become this Service Node Contributor");
-
-          return true;
-        }
-      }
+      return false;
     }
   }
-  catch(const std::exception &e)
+  catch(const std::exception& e)
   {
     fail_msg_writer() << e.what();
     return true;
@@ -6589,18 +6507,6 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
   if(info.is_subaddress)
   {
     fail_msg_writer() << tr("Service nodes doesn't support rewards to subaddresses, can not stake for address: ") << local_args[1] << tr("Use index=[...] if you want to stake funds from particular subaddress.");
-    return true;
-  }
-
-  if(info.has_payment_id)
-  {
-    fail_msg_writer() << tr("Do not use payment ids for staking");
-    return true;
-  }
-
-  if(!m_wallet->contains_address(info.address))
-  {
-    fail_msg_writer() << tr("The specified address is not owned by this wallet.");
     return true;
   }
 
@@ -8489,8 +8395,12 @@ bool simple_wallet::show_transfers(const std::vector<std::string> &args_)
       }
     }
 
-    if(!transfer.confirmed)
-      color = console_color_white;
+    if(transfer.block.type() == typeid(std::string))
+    {
+      const std::string& block_str = boost::get<std::string>(transfer.block);
+      if(block_str == "failed")
+        color = console_color_red;
+    }
 
     std::string destinations = "-";
     if(!transfer.outputs.empty())

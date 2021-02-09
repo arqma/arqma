@@ -761,6 +761,8 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::deinit()
   {
+    m_service_node_list.store();
+    m_service_node_list.set_db_pointer(nullptr);
     m_miner.stop();
     m_mempool.deinit();
     m_blockchain_storage.deinit();
