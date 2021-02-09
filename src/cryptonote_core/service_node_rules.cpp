@@ -26,17 +26,32 @@ namespace service_nodes
 
   bool check_service_node_portions(const std::vector<uint64_t>& portions)
   {
-    uint64_t portions_left = STAKING_SHARE_PARTS;
+    if(portions.size() > MAX_NUMBER_OF_CONTRIBUTORS)
+      return false;
 
-    for(const auto portion : portions)
+    uint64_t reserved = 0;
+    for(auto i = 0u; i < portions.size(); ++i)
     {
-      const uint64_t min_portions = std::min(portions_left, STAKING_SHARE_PARTS);
-      if(portion < min_portions || portion > portions_left)
+      const uint64_t min_portions = get_min_node_contribution(STAKING_SHARE_PARTS, reserved, i);
+      if(portions[i] < min_portions)
         return false;
-      portions_left -= portion;
+      reserved += portions[i];
     }
 
-    return true;
+    return reserved <= STAKING_SHARE_PARTS;
+  }
+
+  uint64_t get_min_node_contribution(uint64_t staking_requirement, uint64_t total_reserved, size_t contrib_count)
+  {
+    const uint64_t needed = staking_requirement - total_reserved;
+    const size_t vacant = MAX_NUMBER_OF_CONTRIBUTORS - contrib_count;
+
+    assert(contrib_count < MAX_NUMBER_OF_CONTRIBUTORS);
+
+    if(vacant == 0)
+      return 0;
+
+    return needed / vacant;
   }
 
   uint64_t get_portions_to_make_amount(uint64_t staking_requirement, uint64_t amount)

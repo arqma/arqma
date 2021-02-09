@@ -60,13 +60,13 @@ namespace service_nodes
     return x / (secureMax / n);
   }
 
-  uint64_t service_node_info::get_min_contribution() const
-  {
-    return (uint64_t)get_min_node_contribution(staking_requirement, total_reserved);
-  }
-
   service_node_list::service_node_list(cryptonote::Blockchain& blockchain) : m_blockchain(blockchain), m_hooks_registered(false), m_height(0), m_db(nullptr), m_service_node_pubkey(nullptr)
   {
+  }
+
+  service_node_list::~service_node_list()
+  {
+    store();
   }
 
   void service_node_list::register_hooks(service_nodes::quorum_cop &quorum_cop)
@@ -588,6 +588,7 @@ namespace service_nodes
     info.total_reserved = 0;
 
     const auto hf_ver = m_blockchain.get_hard_fork_version(block_height);
+
     if(hf_ver >= cryptonote::network_version_16_sn)
     {
       info.version = service_node_info::version_1_swarms;
@@ -710,15 +711,22 @@ namespace service_nodes
     auto& contributors = info.contributors;
 
     auto contrib_iter = std::find_if(contributors.begin(), contributors.end(), [&address](const service_node_info::contribution& contributor) { return contributor.address == address; });
-    if(contrib_iter == contributors.end())
+
+    const bool new_contributor = (contrib_iter == contributors.end());
+
+    if(new_contributor)
     {
-      if(contributors.size() >= MAX_NUMBER_OF_CONTRIBUTORS || transferred < info.get_min_contribution())
+      if(contributors.size() >= MAX_NUMBER_OF_CONTRIBUTORS)
+        return;
+
+      const uint64_t min_contribution = get_min_node_contribution(info.staking_requirement, info.total_reserved, contributors.size());
+      if(transferred < min_contribution)
         return;
     }
 
     m_rollback_events.push_back(std::unique_ptr<rollback_event>(new rollback_change(block_height, pubkey, info)));
 
-    if(contrib_iter == contributors.end())
+    if(new_contributor)
     {
       contributors.push_back(service_node_info::contribution(0, address));
       contrib_iter = --contributors.end();

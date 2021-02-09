@@ -238,6 +238,8 @@ private:
     std::deque<crypto::hash> m_blockchain;
   };
 
+  enum class stake_check_result { allowed, not_allowed, try_later };
+
   class wallet_keys_unlocker;
   class wallet2
   {
@@ -1327,7 +1329,7 @@ private:
 
     void set_offline(bool offline = true);
 
-    bool check_stake_allowed(const crypto::public_key& sn_key, const cryptonote::address_parse_info& addr_info, uint64_t& amount);
+    stake_check_result check_stake_allowed(const crypto::public_key& sn_key, const cryptonote::address_parse_info& addr_info, uint64_t& amount, double fraction = 0);
 
     std::vector<wallet2::pending_tx> create_stake_tx(const crypto::public_key& service_node_key, const cryptonote::address_parse_info& addr_info, uint64_t amount);
 
