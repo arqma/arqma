@@ -1,5 +1,5 @@
 #include "cryptonote_config.h"
-#include "common/exp2.h"
+//#include "common/arqma.h"
 #include "common/int-util.h"
 #include <vector>
 #include <boost/lexical_cast.hpp>

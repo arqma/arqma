@@ -28,6 +28,16 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pragma once
+#ifndef ARQMA_H
+#define ARQMA_H
 
-double arqma_round(double);
+#include <string>
+
+namespace arqma
+{
+  double round(double);
+  double exp2(double);
+  std::string hex64_to_base32z(std::string const& src);
+}; // namespace arqma
+
+#endif // ARQMA_H
