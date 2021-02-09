@@ -812,6 +812,29 @@ namespace cryptonote
   };
 
   //-----------------------------------------------
+  struct COMMAND_RPC_GET_ALL_SERVICE_NODES_KEYS
+  {
+    struct request_t: public rpc_request_base
+    {
+      bool fully_funded_nodes_only;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_request_base)
+        KV_SERIALIZE_OPT(fully_funded_nodes_only, (bool)true)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t: public rpc_response_base
+    {
+      std::vector<std::string> keys; // NOTE: Future reference.
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
+        KV_SERIALIZE(keys)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+  //-----------------------------------------------
   struct COMMAND_RPC_STOP_MINING
   {
     struct request_t: public rpc_request_base
@@ -2706,21 +2729,21 @@ struct request_t: public rpc_access_request_base
 
   struct COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD
   {
-    struct contribution_t
-    {
-      std::string address;
-      uint64_t amount;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(address)
-        KV_SERIALIZE(amount)
-      END_KV_SERIALIZE_MAP()
-    };
-
     struct request_t: public rpc_request_base
     {
+      struct contribs
+      {
+        std::string address;
+        uint64_t amount;
+        BEGIN_KV_SERIALIZE_MAP()
+          KV_SERIALIZE(address)
+          KV_SERIALIZE(amount)
+        END_KV_SERIALIZE_MAP()
+      };
+
       bool autostake;
       std::string operator_cut;
-      std::vector<contribution_t> contributions;
+      std::vector<contribs> contributions;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_request_base)
         KV_SERIALIZE(autostake)
@@ -2730,7 +2753,7 @@ struct request_t: public rpc_access_request_base
     };
     typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t: public rpc_reponse_base
+    struct response_t: public rpc_response_base
     {
       std::string status;
       std::string registration_cmd;

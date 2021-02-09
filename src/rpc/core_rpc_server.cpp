@@ -38,6 +38,7 @@ using namespace epee;
 #include "common/command_line.h"
 #include "common/updates.h"
 #include "common/download.h"
+#include "common/arqma.h"
 #include "common/util.h"
 #include "common/perf_timer.h"
 #include "int-util.h"
@@ -354,6 +355,22 @@ namespace cryptonote
     res.update_available = m_core.is_update_available();
 
     res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_get_all_service_nodes_keys(const COMMAND_RPC_GET_ALL_SERVICE_NODES_KEYS::request& req, COMMAND_RPC_GET_ALL_SERVICE_NODES_KEYS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
+  {
+    std::vector<crypto::public_key> keys;
+    m_core.get_all_service_nodes_public_keys(keys, req.fully_funded_nodes_only);
+
+    res.keys.clear();
+    res.keys.resize(keys.size());
+    size_t i = 0;
+    for(const auto& key : keys)
+    {
+      std::string const hex64 = string_tools::pod_to_hex(key);
+      res.keys[i++] = arqma::hex64_to_base32z(hex64);
+    }
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
