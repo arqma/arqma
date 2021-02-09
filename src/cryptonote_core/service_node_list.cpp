@@ -1315,7 +1315,7 @@ namespace service_nodes
     m_height = hardfork_16_from_height;;
   }
   //----------------------------------------------------------------------------
-  bool convert_registration_args(cryptonote::network_type nettype, std::vector<std::string> args, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint64_t>& portions, uint64_t& portions_for_operator, bool& autostake)
+  bool convert_registration_args(cryptonote::network_type nettype, std::vector<std::string> args, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint64_t>& portions, uint64_t& portions_for_operator, bool& autostake, boost::optional<std::string&> err_msg)
   {
     autostake = false;
     if(!args.emoty() && args[0] == "auto")
@@ -1330,6 +1330,9 @@ namespace service_nodes
     }
     if((args.size()-1) / 2 > MAX_NUMBER_OF_CONTRIBUTORS)
     {
+      std::string msg = tr("Exceeds the maximum number of contributors, which is: ") + std::to_string(MAX_NUMBER_OF_CONTRIBUTORS);
+      if(err_msg)
+        *err_msg = msg;
       MERROR(tr("Exceeds the maximum of allowed contributors, which is: ") << MAX_NUMBER_OF_CONTRIBUTORS);
     }
     addresses.clear();
@@ -1354,7 +1357,10 @@ namespace service_nodes
       cryptonote::address_parse_info info;
       if(!cryptonote::get_account_address_from_str(info, nettype, args[i]))
       {
-        MERROR(tr("failed to parse address"));
+        std::string msg = tr("Failed to parse address: ") + args[i];
+        if(err_msg)
+          *err_msg = msg;
+        MERROR(msg);
         return false;
       }
 
@@ -1366,7 +1372,10 @@ namespace service_nodes
 
       if(info.is_subaddress)
       {
-        MERROR(tr("can't use a subaddress for staking tx"));
+        std::string msg = tr("Can't use subaddress for staking tx");
+        if(err_msg)
+          *err_msg = msg;
+        MERROR(msg);
         return false;
       }
 
@@ -1378,6 +1387,8 @@ namespace service_nodes
         uint64_t min_portions = std::min(portions_left, MIN_STAKE_SHARE);
         if(num_portions < min_portions || num_portions > portions_left)
         {
+          if(err_msg)
+            *err_msg = "Invalid amount for contributor" + args[i];
           MERROR(tr("Invalid contribution percentage: ") << args[i+1] << tr(". ") << tr("Each contributor must have minimum 25%, except for the last one which may have remaining amount"));
           return false;
         }
@@ -1386,6 +1397,8 @@ namespace service_nodes
       }
       catch (const std::exception &e)
       {
+        if(err_msg)
+          *err_msg = "Invalid amount for contributor" + args[i];
         MERROR(tr("Invalid contribution percentage: ") << args[i+1] << tr(". ") << tr("Each contributor must have minimum 25%, except for the last one which may have remaining amount"));
         return false;
       }
@@ -1394,13 +1407,13 @@ namespace service_nodes
     return true;
   }
   //----------------------------------------------------------------------------
-  bool make_registration_cmd(cryptonote::network_type nettype, const std::vector<std::string> args, const crypto::public_key& service_node_pubkey, const crypto::secret_key service_node_key, std::string &cmd, bool make_friendly)
+  bool make_registration_cmd(cryptonote::network_type nettype, const std::vector<std::string> args, const crypto::public_key& service_node_pubkey, const crypto::secret_key service_node_key, std::string &cmd, bool make_friendly, boost::optional<std::string&> err_msg)
   {
     std::vector<cryptonote::account_public_address> addresses;
     std::vector<uint64_t> portions;
     uint64_t operator_portions;
     bool autostake;
-    if(!convert_registration_args(nettype, args, addresses, portions, operator_portions, autostake))
+    if(!convert_registration_args(nettype, args, addresses, portions, operator_portions, autostake, err_msg))
     {
       MERROR(tr("Could not convert registration args"));
       return false;

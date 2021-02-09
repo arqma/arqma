@@ -124,7 +124,7 @@ t_command_server::t_command_server(
       "prepare_registration"
     , std::bind(&t_command_parser_executor::prepare_registration, &m_parser)
     , "prepare_registration"
-    , "Interactive prompt to prepare registration, Registration data is saved to disk then."
+    , "Interactive prompt to prepare Service Node registration command, Resulting registration command can be run in command-line wallet to send the registration to the blockchain."
     );
   m_command_lookup.set_handler(
       "print_sn"
