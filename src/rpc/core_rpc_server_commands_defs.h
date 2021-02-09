@@ -2726,7 +2726,7 @@ struct request_t: public rpc_access_request_base
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
-  struct COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD
+  struct COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW
   {
     struct request_t: public rpc_request_base
     {
@@ -2745,6 +2745,45 @@ struct request_t: public rpc_access_request_base
       std::string status;
       std::string registration_cmd;
 
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_response_base)
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(registration_cmd)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD
+  {
+    struct contribution_t
+    {
+      std::string address;
+      uint64_t amount;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(address)
+        KV_SERIALIZE(amount)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct request_t: public rpc_request_base
+    {
+      bool autostake;
+      std::string operator_cut;
+      std::vector<contribution_t> contributions;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_PARENT(rpc_request_base)
+        KV_SERIALIZE(autostake)
+        KV_SERIALIZE(operator_cut)
+        KV_SERIALIZE(contributions)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t: public rpc_reponse_base
+    {
+      std::string status;
+      std::string registration_cmd;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_response_base)
         KV_SERIALIZE(status)

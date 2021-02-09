@@ -27,5 +27,10 @@ namespace service_nodes
   uint64_t portions_to_amount(uint64_t portions, uint64_t staking_requirement);
 
   bool check_service_node_portions(const std::vector<uint64_t>& portions);
+
+  uint64_t get_portions_to_make_amount(uint64_t staking_requirement, uint64_t amount);
+
+  bool get_portions_from_percent_str(std::string cut_str, uint64_t& portions);
+
 }
 
