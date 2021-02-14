@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <type_traits>
 #include <boost/utility/value_init.hpp>
 #include <boost/foreach.hpp>
 #include "misc_log_ex.h"
@@ -46,14 +45,12 @@ public: \
   template<class t_storage> \
   bool store( t_storage& st, typename t_storage::hsection hparent_section = nullptr) const\
   {\
-    using type = typename std::remove_const<typename std::remove_reference<decltype(*this)>::type>::type; \
-    auto &self = const_cast<type&>(*this); \
-    return self.template serialize_map<true>(st, hparent_section); \
+    return serialize_map<true>(*this, st, hparent_section);\
   }\
   template<class t_storage> \
   bool _load( t_storage& stg, typename t_storage::hsection hparent_section = nullptr)\
   {\
-    return serialize_map<false>(stg, hparent_section);\
+    return serialize_map<false>(*this, stg, hparent_section);\
   }\
   template<class t_storage> \
   bool load( t_storage& stg, typename t_storage::hsection hparent_section = nullptr)\
@@ -68,21 +65,12 @@ public: \
       return false; \
     }\
   }\
-  /*template<typename T> T& this_type_resolver() { return *this; }*/ \
-  /*using this_type = std::result_of<decltype(this_type_resolver)>::type;*/ \
-  template<bool is_store, class t_storage> \
-  bool serialize_map(t_storage& stg, typename t_storage::hsection hparent_section) \
-  { \
-    decltype(*this) &this_ref = *this;
+  template<bool is_store, class this_type, class t_storage> \
+  static bool serialize_map(this_type& this_ref, t_storage& stg, typename t_storage::hsection hparent_section) \
+  {
 
 #define KV_SERIALIZE_N(varialble, val_name) \
   epee::serialization::selector<is_store>::serialize(this_ref.varialble, stg, hparent_section, val_name);
-
-#define KV_SERIALIZE_PARENT(type) \
-  do { \
-    if (!((type*)this)->serialize_map<is_store, t_storage>(stg, hparent_section)) \
-      return false; \
-  } while(0);
 
   template<typename T> inline void serialize_default(const T &t, T v) { }
   template<typename T> inline void serialize_default(T &t, T v) { t = v; }

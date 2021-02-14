@@ -164,8 +164,6 @@ public:
 
   bool check_blockchain_pruning();
 
-  bool rpc_payments();
-
   bool print_net_stats();
 
   bool print_sn_key();
