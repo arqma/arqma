@@ -40,6 +40,7 @@
 #include "common_defines.h"
 #include "common/util.h"
 
+#include "cryptonote_config.h"
 #include "cryptonote_core/service_node_rules.h"
 
 #include "mnemonics/electrum-words.h"
@@ -63,7 +64,6 @@ namespace Monero {
 
 namespace {
     // copy-pasted from simplewallet
-    static const size_t DEFAULT_MIXIN = 10;
     static const int    DEFAULT_REFRESH_INTERVAL_MILLIS = 1000 * 10;
     // limit maximum refresh interval as one minute
     static const int    MAX_REFRESH_INTERVAL_MILLIS = 1000 * 60 * 1;
@@ -1375,7 +1375,7 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
     // TODO:  (https://bitcointalk.org/index.php?topic=753252.msg9985441#msg9985441)
     size_t fake_outs_count = mixin_count > 0 ? mixin_count : m_wallet->default_mixin();
     if (fake_outs_count == 0)
-        fake_outs_count = DEFAULT_MIXIN;
+        fake_outs_count = config::tx_settings::tx_mixin;;
 
     uint32_t adjusted_priority = m_wallet->adjust_priority(static_cast<uint32_t>(priority));
 

@@ -32,8 +32,7 @@ set(wallet_sources
   wallet2.cpp
   wallet_args.cpp
   ringdb.cpp
-  node_rpc_proxy.cpp
-  wallet_rpc_payments.cpp)
+  node_rpc_proxy.cpp)
 
 set(wallet_private_headers
   wallet2.h
@@ -43,8 +42,7 @@ set(wallet_private_headers
   wallet_rpc_server_commands_defs.h
   wallet_rpc_server_error_codes.h
   ringdb.h
-  node_rpc_proxy.h
-  wallet_rpc_helpers.h)
+  node_rpc_proxy.h)
 
 arqma_private_headers(wallet
   ${wallet_private_headers})
@@ -53,8 +51,6 @@ arqma_add_library(wallet
   ${wallet_private_headers})
 target_link_libraries(wallet
   PUBLIC
-    rpc_base
-    rpc_sig
     multisig
     common
     cryptonote_core
@@ -91,7 +87,6 @@ if(NOT IOS)
       wallet
       arqma_mq
       rpc_base
-      rpc_sig
       cryptonote_core
       cncrypto
       common
@@ -117,8 +112,6 @@ if(BUILD_GUI_DEPS)
     set(libs_to_merge
             wallet_api
             wallet
-            rpc_base
-            rpc_sig
             multisig
             blockchain_db
             cryptonote_core
@@ -136,7 +129,6 @@ if(BUILD_GUI_DEPS)
     set(libs_to_merge
             wallet_api
             wallet
-            rpc_sig
             multisig
             blockchain_db
             cryptonote_core

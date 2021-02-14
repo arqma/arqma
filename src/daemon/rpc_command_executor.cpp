@@ -39,7 +39,6 @@
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/service_node_rules.h"
 #include "cryptonote_basic/hardfork.h"
-#include "rpc_sig/rpc_payment_signature.h"
 #include <boost/format.hpp>
 
 #include <fstream>
@@ -53,12 +52,6 @@
 namespace daemonize {
 
 namespace {
-  std::string print_float(float f, int prec)
-  {
-	char buf[16];
-	snprintf(buf, sizeof(buf), "%*.*f", prec, prec, f);
-	return buf;
-  }
 
   void print_peer(std::string const & prefix, cryptonote::peer const & peer)
   {
@@ -76,9 +69,8 @@ namespace {
     epee::string_tools::xtype_to_string(peer.port, port_str);
     std::string addr_str = ip_str + ":" + port_str;
     std::string rpc_port = peer.rpc_port ? std::to_string(peer.rpc_port) : "-";
-    std::string rpc_credits_per_hash = peer.rpc_credits_per_hash ? print_float(peer.rpc_credits_per_hash / RPC_CREDITS_PER_HASH_SCALE, 2) : "-";
     std::string pruning_seed = epee::string_tools::to_string_hex(peer.pruning_seed);
-    tools::msg_writer() << boost::format("%-10s %-25s %-25s %-5s %-5s %-4s %s") % prefix % id_str % addr_str % rpc_port % rpc_credits_per_hash % pruning_seed % elapsed;
+    tools::msg_writer() << boost::format("%-10s %-25s %-25s %-5s %-4s %s") % prefix % id_str % addr_str % rpc_port % pruning_seed % elapsed;
   }
 
   void print_block_header(cryptonote::block_header_response const & header)
@@ -2276,47 +2268,6 @@ bool t_rpc_command_executor::pop_blocks(uint64_t num_blocks)
   tools::success_msg_writer() << "new height: " << res.height;
 
   return true;
-}
-
-bool t_rpc_command_executor::rpc_payments()
-{
-    cryptonote::COMMAND_RPC_ACCESS_DATA::request req;
-    cryptonote::COMMAND_RPC_ACCESS_DATA::response res;
-    std::string fail_message = "Unsuccessful";
-    epee::json_rpc::error error_resp;
-
-    if (m_is_rpc)
-    {
-        if (!m_rpc_client->json_rpc_request(req, res, "rpc_access_data", fail_message.c_str()))
-        {
-            return true;
-        }
-    }
-    else
-    {
-        if (!m_rpc_server->on_rpc_access_data(req, res, error_resp) || res.status != CORE_RPC_STATUS_OK)
-        {
-            tools::fail_msg_writer() << make_error(fail_message, res.status);
-            return true;
-        }
-    }
-
-    const uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    uint64_t balance = 0;
-    tools::msg_writer() << boost::format("%64s %16u %16u %8u %8u %8u %8u %s")
-        % "Client ID" % "Balance" % "Total mined" % "Good" % "Stale" % "Bad" % "Dupes" % "Last update";
-    for (const auto &entry: res.entries)
-    {
-      tools::msg_writer() << boost::format("%64s %16u %16u %8u %8u %8u %8u %s")
-          % entry.client % entry.balance % entry.credits_total
-          % entry.nonces_good % entry.nonces_stale % entry.nonces_bad % entry.nonces_dupe
-          % (entry.last_update_time == 0 ? "never" : get_human_time_ago(entry.last_update_time, now).c_str());
-      balance += entry.balance;
-    }
-    tools::msg_writer() << res.entries.size() << " clients with a total of " << balance << " credits";
-    tools::msg_writer() << "Aggregated client hash rate: " << get_mining_speed(res.hashrate);
-
-    return true;
 }
 
 static std::string make_printable_service_node_list_state(cryptonote::network_type nettype, int hard_fork_version, uint64_t *curr_height, std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *> list)

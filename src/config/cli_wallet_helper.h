@@ -102,9 +102,6 @@ namespace command_helper
   const char* USAGE_MARK_OUTPUT_UNSPENT("mark_output_unspent <amount>/<offset>");
   const char* USAGE_IS_OUTPUT_SPENT("is_output_spent <amount>/<offset>");
   const char* USAGE_PUBLIC_NODES("public_nodes");
-  const char* USAGE_RPC_PAYMENT_INFO("rpc_payment_info");
-  const char* USAGE_START_MINING_FOR_RPC("start_mining_for_rpc");
-  const char* USAGE_STOP_MINING_FOR_RPC("stop_mining_for_rpc");
   const char* USAGE_SHOW_QR_CODE("show_qr_code [<subaddress_index>]");
   const char* USAGE_NET_STATS("net_stats");
   const char* USAGE_WELCOME("welcome");
@@ -263,9 +260,6 @@ namespace command_helper
   const char* NET_STATS("Prints simple network stats.");
   const char* WELCOME("Prints basic info about Arqma for first time users");
   const char* VERSION("Returns version information.");
-  const char* RPC_PAYMENT_INFO("Get info about RPC payments to current node");
-  const char* START_MINING_FOR_RPC("Start mining to pay for RPC access");
-  const char* STOP_MINING_FOR_RPC("Stop mining to pay for RPC access");
   const char* SHOW_QR_CODE("Show address as QR code.");
   const char* HELP("Show the help section or the documentation about a <command>.");
 
