@@ -52,7 +52,7 @@
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
 #define MONEY_PREMINE                                   ((uint64_t)30)
-#define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
+#define EMISSION_SPEED_FACTOR_PER_MINUTE                (21)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
 
@@ -121,7 +121,7 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT		        32
+#define P2P_DEFAULT_CONNECTIONS_COUNT		                32
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -233,7 +233,7 @@ namespace config
 
    namespace blockchain_settings
    {
-     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+     const uint64_t PREMINE_BURN = 30; // Will need to be set after knowing exact amount.
      const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
      const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
      const uint8_t GNTL_GENESIS_BLOCK_MAJOR_VERSION = 1;
