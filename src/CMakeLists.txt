@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2020, The Gntl Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -29,13 +29,13 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-function(arqma_private_headers group)
+function(gntl_private_headers group)
   source_group("${group}\\Private"
     FILES
       ${ARGN})
 endfunction()
 
-function(arqma_install_headers subdir)
+function(gntl_install_headers subdir)
   install(
     FILES       ${ARGN}
     DESTINATION "include/${subdir}"
@@ -53,7 +53,7 @@ function(enable_stack_trace target)
   endif()
 endfunction()
 
-function(arqma_add_executable name)
+function(gntl_add_executable name)
   source_group("${name}"
     FILES
       ${ARGN})
@@ -72,11 +72,11 @@ function(arqma_add_executable name)
   enable_stack_trace("${name}")
 endfunction()
 
-function(arqma_add_library name)
-    arqma_add_library_with_deps(NAME "${name}" SOURCES ${ARGN})
+function(gntl_add_library name)
+    gntl_add_library_with_deps(NAME "${name}" SOURCES ${ARGN})
 endfunction()
 
-function(arqma_add_library_with_deps)
+function(gntl_add_library_with_deps)
   cmake_parse_arguments(ARQMA_ADD_LIBRARY "" "NAME" "DEPENDS;SOURCES" ${ARGN})
   source_group("${ARQMA_ADD_LIBRARY_NAME}" FILES ${ARQMA_ADD_LIBRARY_SOURCES})
 
@@ -96,14 +96,14 @@ function(arqma_add_library_with_deps)
 endfunction()
 
 include(Version)
-arqma_add_library(version SOURCES ${CMAKE_BINARY_DIR}/version.cpp DEPENDS genversion)
+gntl_add_library(version SOURCES ${CMAKE_BINARY_DIR}/version.cpp DEPENDS genversion)
 
 add_subdirectory(common)
 add_subdirectory(crypto)
 add_subdirectory(ringct)
 add_subdirectory(checkpoints)
 add_subdirectory(cryptonote_basic)
-add_subdirectory(arqma_mq)
+add_subdirectory(gntl_mq)
 add_subdirectory(cryptonote_core)
 add_subdirectory(lmdb)
 add_subdirectory(multisig)

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2018-2020, The Gntl Network
 // Copyright (c)2020, Gary Rusher
 // Copyright (c) 2017-2018, The Monero Project
 //
@@ -48,7 +48,7 @@ namespace
 }  // anonymous namespace
 
 
-namespace arqmaMQ
+namespace gntlMQ
 {
 
 class ZmqHandler : public cryptonote::rpc::RpcHandler
@@ -156,4 +156,4 @@ class ZmqHandler : public cryptonote::rpc::RpcHandler
 
 };
 
-}  // namespace arqmaMQ
+}  // namespace gntlMQ

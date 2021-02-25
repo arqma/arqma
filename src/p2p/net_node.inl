@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2018-2020, The Gntl Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -65,8 +65,8 @@
 #include <miniupnp/miniupnpc/upnpcommands.h>
 #include <miniupnp/miniupnpc/upnperrors.h>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net.p2p"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "net.p2p"
 
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
 
@@ -464,31 +464,21 @@ namespace nodetool
     std::set<std::string> full_addrs;
     if (nettype == cryptonote::TESTNET)
     {
-      full_addrs.insert("139.99.106.122:29993");
-      full_addrs.insert("77.93.206.172:29993");
-      full_addrs.insert("86.24.233.79:29993");
+    
     }
     else if (nettype == cryptonote::STAGENET)
     {
-      full_addrs.insert("161.97.102.172:39993");
-      full_addrs.insert("164.68.123.118:39993");
-      full_addrs.insert("86.24.233.79:39993");
-      full_addrs.insert("139.99.106.122:39993");
-      full_addrs.insert("144.217.242.16:39993");
+
     }
     else if (nettype == cryptonote::FAKECHAIN)
     {
     }
     else
     {
-      full_addrs.insert("144.217.242.16:19993");
-      full_addrs.insert("161.97.102.172:19993");
-      full_addrs.insert("92.222.70.207:19993");
-      full_addrs.insert("86.24.233.79:19993");
-      full_addrs.insert("139.99.106.122:19993");
-      full_addrs.insert("51.15.50.83:19993");
-      full_addrs.insert("164.68.123.118:19993");
-      full_addrs.insert("51.15.253.177:19993");
+      full_addrs.insert("83.151.238.35:16661"); //Node1
+      full_addrs.insert("83.151.238.36:16661"); //Node2
+      full_addrs.insert("83.151.238.37:16661"); //Node3
+      full_addrs.insert("83.151.238.38:16661"); //Node4
     }
     return full_addrs;
   }

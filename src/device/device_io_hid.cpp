@@ -7,8 +7,8 @@
 namespace hw {
   namespace io {
 
-    #undef ARQMA_DEFAULT_LOG_CATEGORY
-    #define ARQMA_DEFAULT_LOG_CATEGORY "device.io"
+    #undef GNTL_DEFAULT_LOG_CATEGORY
+    #define GNTL_DEFAULT_LOG_CATEGORY "device.io"
 
     #define ASSERT_X(exp,msg)    CHECK_AND_ASSERT_THROW_MES(exp, msg);
 

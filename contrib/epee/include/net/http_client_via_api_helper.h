@@ -32,8 +32,8 @@
 #include <atlutil.h>
 #pragma comment(lib, "Wininet.lib")
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net.http"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "net.http"
 
 namespace epee
 {

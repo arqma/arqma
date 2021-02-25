@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2020, The Gntl Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -87,9 +87,9 @@ set(common_private_headers
   aligned.h
   combinator.h)
 
-arqma_private_headers(common
+gntl_private_headers(common
   ${common_private_headers})
-arqma_add_library(common
+gntl_add_library(common
   ${common_sources}
   ${common_headers}
   ${common_private_headers}

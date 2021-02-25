@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2020, The Gntl Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -54,10 +54,10 @@ endif()
 
 set(device_private_headers)
 
-arqma_private_headers(device
+gntl_private_headers(device
   ${device_private_headers})
 
-arqma_add_library(device
+gntl_add_library(device
   ${device_sources}
   ${device_headers}
   ${device_private_headers})

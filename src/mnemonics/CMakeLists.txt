@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2020, The Gntl Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -50,9 +50,9 @@ set(mnemonics_private_headers
   esperanto.h
   lojban.h)
 
-arqma_private_headers(mnemonics
+gntl_private_headers(mnemonics
   ${mnemonics_private_headers})
-arqma_add_library(mnemonics
+gntl_add_library(mnemonics
   ${mnemonics_sources}
   ${mnemonics_headers}
   ${mnemonics_private_headers})

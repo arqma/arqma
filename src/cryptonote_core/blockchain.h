@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2019, The Gntl Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -45,7 +45,7 @@
 #include <unordered_set>
 
 
-#include "arqma_mq/zmq_addon.hpp"
+#include "gntl_mq/zmq_addon.hpp"
 
 #include "span.h"
 #include "syncobj.h"
@@ -1488,7 +1488,7 @@ namespace cryptonote
      * @brief loads block hashes from compiled-in data set
      *
      * A (possibly empty) set of block hashes can be compiled into the
-     * Arqma daemon binary.  This function loads those hashes into
+     * Gntl daemon binary.  This function loads those hashes into
      * a useful state.
      *
      * @param get_checkpoints if set, will be called to get checkpoints data

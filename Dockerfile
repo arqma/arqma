@@ -182,24 +182,24 @@ RUN set -ex && \
     rm -rf /var/lib/apt
 COPY --from=builder /src/build/release/bin /usr/local/bin/
 
-# Below command is creating Arqma user to do not run daemon as a root
-RUN adduser --system --group --disabled-password arqma && \
-	mkdir -p /wallet /home/arqma/.arqma && \
-	chown -R arqma:arqma /home/arqma/.arqma && \
-	chown -R arqma:arqma /wallet
+# Below command is creating Gntl user to do not run daemon as a root
+RUN adduser --system --group --disabled-password gntl && \
+	mkdir -p /wallet /home/gntl/.gntl && \
+	chown -R gntl:gntl /home/gntl/.gntl && \
+	chown -R gntl:gntl /wallet
 
 # Contains the blockchain
-VOLUME /home/arqma/.arqma
+VOLUME /home/gntl/.gntl
 
 # Generate your wallet via accessing the container and run:
 # cd /wallet
-# arqma-wallet-cli
+# gntl-wallet-cli
 VOLUME /wallet
 
-EXPOSE 19993
-EXPOSE 19994
+EXPOSE 16661
+EXPOSE 16662
 
-# switch to user arqma
-USER arqma
+# switch to user gntl
+USER gntl
 
-ENTRYPOINT ["arqmad", "--p2p-bind-ip=0.0.0.0", "--p2p-bind-port=19993", "--rpc-bind-ip=0.0.0.0", "--rpc-bind-port=19994", "--non-interactive", "--confirm-external-bind"]
+ENTRYPOINT ["gntld", "--p2p-bind-ip=0.0.0.0", "--p2p-bind-port=16661", "--rpc-bind-ip=0.0.0.0", "--rpc-bind-port=16662", "--non-interactive", "--confirm-external-bind"]

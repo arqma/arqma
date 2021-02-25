@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2018-2020, The Gntl Network
 // Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
@@ -38,8 +38,8 @@
 
 using namespace epee;
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "checkpoints"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "checkpoints"
 
 namespace cryptonote
 {
@@ -162,26 +162,16 @@ namespace cryptonote
   {
     if (nettype == TESTNET)
     {
-      ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
+//      ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
       return true;
     }
     if (nettype == STAGENET)
     {
-      ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
+//      ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
       return true;
     }
-    ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
-    ADD_CHECKPOINT(1, "6115a8e9902af15d31d14c698621d54e9bb594b0da053591ec5d1ceb537960ea");
-    ADD_CHECKPOINT(2500, "a44c8ba7f0f7d8b6c389a441854b35f0181b7a003ff863c7443a77def997e668");
-    ADD_CHECKPOINT(10000, "1a35ebbe820d2cad63112750d602817c00ce1e11e48fce302a9edb697f635533");
-    ADD_CHECKPOINT(50000, "c356f107ab8a85a9fb0a8b99f6ead7493d650acb1ec30a3c4b6d82171ce50cc5");
-    ADD_CHECKPOINT(100000, "8d7251c892a048740b0dbb4da24f44a9e5433b04e61426eb1a9671ea7ad69639");
-    ADD_CHECKPOINT(150000, "fdb9d4132ccc0904dc9dc8f4746b6efe3e33d9c6051b5907d21b2005fc2dce29");
-    ADD_CHECKPOINT(200000, "c6ef0e39741b42c2cb4644988d31c2743a6ddefc5495a773cc8c807513d818c3");
-    ADD_CHECKPOINT(300000, "1cd8edefb47332b6d5afc1b161a8f1845aff817988763b5dc2094762b5bc5551");
-    ADD_CHECKPOINT(400000, "c43ff8acd01aef5f22a1a875e167d9b28b3c703110255bdd6faf010fad5b2efa");
-    ADD_CHECKPOINT(480000, "616bdd82bbeb6ac46228c277d7fadb90ff2ba624ce088bb2c0970f7a1b2bdc69");
-    ADD_CHECKPOINT(491520, "ac93c7e4759b54aac4055316e4eab841d82c47e478edfd6c8f6c363c36572e18");
+//    ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
+  
     return true;
   }
 
@@ -226,10 +216,10 @@ namespace cryptonote
     std::vector<std::string> records;
 
     // All four ArQ-Net domains have DNSSEC on and valid
-    static const std::vector<std::string> dns_urls = { "checkpoints.arqma.com"
-                                                     , "checkpoints.myarqma.com"
-                                                     , "checkpoints.supportarqma.com"
-                                                     , "checkpoints.supportarqma.eu"
+    static const std::vector<std::string> dns_urls = { "checkpoints.gntl.com"
+                                                     , "checkpoints.mygntl.com"
+                                                     , "checkpoints.supportgntl.com"
+                                                     , "checkpoints.supportgntl.eu"
 	};
 
     static const std::vector<std::string> testnet_dns_urls = {

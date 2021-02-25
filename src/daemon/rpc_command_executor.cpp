@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2019, The Gntl Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -42,8 +42,8 @@
 #include <ctime>
 #include <string>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace daemonize {
 
@@ -1217,8 +1217,8 @@ bool t_rpc_command_executor::stop_daemon()
 //# ifdef WIN32
 //    // Stop via service API
 //    // TODO - this is only temporary!  Get rid of hard-coded constants!
-//    bool ok = windows::stop_service("Arqma Daemon");
-//    ok = windows::uninstall_service("Arqma Daemon");
+//    bool ok = windows::stop_service("Gntl Daemon");
+//    ok = windows::uninstall_service("Gntl Daemon");
 //    //bool ok = windows::stop_service(SERVICE_NAME);
 //    //ok = windows::uninstall_service(SERVICE_NAME);
 //    if (ok)
@@ -1262,10 +1262,10 @@ bool t_rpc_command_executor::print_status()
   bool daemon_is_alive = m_rpc_client->check_connection();
 
   if(daemon_is_alive) {
-    tools::success_msg_writer() << "arqmad is running";
+    tools::success_msg_writer() << "gntld is running";
   }
   else {
-    tools::fail_msg_writer() << "arqmad is NOT running";
+    tools::fail_msg_writer() << "gntld is NOT running";
   }
 
   return true;

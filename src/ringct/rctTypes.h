@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2019, The Gntl Network
 // Copyright (c) 2016, Monero Research Labs
 //
 // Author: Shen Noether <shen.noether@gmx.com>
@@ -62,7 +62,7 @@ extern "C" {
 #define DP(x)
 #endif
 
-//atomic units of Arqma
+//atomic units of Gntl
 #define ATOMS 64
 
 //for printing large ints
@@ -131,7 +131,7 @@ namespace rct {
         BEGIN_SERIALIZE_OBJECT()
           FIELD(mask)
           FIELD(amount)
-          // FIELD(senderPk) // not serialized, as we do not use it in Arqma currently
+          // FIELD(senderPk) // not serialized, as we do not use it in Gntl currently
         END_SERIALIZE()
     };
 

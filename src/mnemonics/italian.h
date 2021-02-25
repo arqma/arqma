@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2019, The Gntl Network
 // Word list created by Monero contributor Shrikez
 //
 // Copyright (c) 2014-2018, The Monero Project

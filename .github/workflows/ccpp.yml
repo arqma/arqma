@@ -17,7 +17,7 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: macos
-        path: 'build/**/**/arqma*'
+        path: 'build/**/**/gntl*'
 
   build-windows:
     runs-on: windows-latest
@@ -38,7 +38,7 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: windows
-        path: 'build/**/**/arqma*'
+        path: 'build/**/**/gntl*'
 
   build-ubuntu:
     runs-on: ubuntu-latest
@@ -55,7 +55,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install ArQmA dependencies
+    - name: install GnTl dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev
     - name: build
       run: make release -j2
@@ -63,7 +63,7 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: linux
-        path: 'build/**/**/arqma*'
+        path: 'build/**/**/gntl*'
 
   build-ubuntu-depends:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install ArQmA dependencies
+    - name: install GnTl dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev
     - name: build
       run: make depends target=x86_64-linux-gnu -j2
@@ -86,7 +86,7 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: linux-static
-        path: 'build/x86_64-linux-gnu/release/bin/arqma*'
+        path: 'build/x86_64-linux-gnu/release/bin/gntl*'
 
   build-dpends-compat:
     runs-on: ubuntu-latest
@@ -101,7 +101,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install ArQmA dependencies
+    - name: install GnTl dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev
     - name: build
       run: make depends-compat target=x86_64-linux-gnu -j2
@@ -109,7 +109,7 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: linux-compat
-        path: 'build/x86_64-linux-gnu-compat/release/bin/arqma*'
+        path: 'build/x86_64-linux-gnu-compat/release/bin/gntl*'
 
   build-depends-armv7:
     runs-on: ubuntu-latest
@@ -124,7 +124,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install ArQmA dependencies
+    - name: install GnTl dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev g++-arm-linux-gnueabihf
     - name: build
       run: make depends target=arm-linux-gnueabihf -j2
@@ -132,7 +132,7 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: linux-armv7
-        path: 'build/arm-linux-gnueabihf/release/bin/arqma*'
+        path: 'build/arm-linux-gnueabihf/release/bin/gntl*'
 
   build-depends-armv8:
     runs-on: ubuntu-latest
@@ -147,7 +147,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install ArQmA dependencies
+    - name: install GnTl dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev g++-aarch64-linux-gnu
     - name: build
       run: make depends target=aarch64-linux-gnu -j2
@@ -155,4 +155,4 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: linux-armv8
-        path: 'build/aarch64-linux-gnu/release/bin/arqma*'
+        path: 'build/aarch64-linux-gnu/release/bin/gntl*'

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2020, The Gntl Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -42,7 +42,7 @@ set(lmdb_headers
   util.h
   value_stream.h)
 
-arqma_add_library(lmdb_lib
+gntl_add_library(lmdb_lib
   ${lmdb_sources}
   ${lmdb_headers})
 

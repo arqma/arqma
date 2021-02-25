@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2020, The Gntl Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -72,9 +72,9 @@ set(crypto_private_headers
   skein.h
   skein_port.h)
 
-arqma_private_headers(cncrypto
+gntl_private_headers(cncrypto
   ${crypto_private_headers})
-arqma_add_library(cncrypto
+gntl_add_library(cncrypto
   ${crypto_sources}
   ${crypto_headers}
   ${crypto_private_headers})

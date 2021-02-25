@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The ArQmA Network
+// Copyright (c) 2018-2019, The GnTl Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -40,8 +40,8 @@
 #include <boost/optional.hpp>
 using namespace epee;
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net.dns"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "net.dns"
 
 static const char *DEFAULT_DNS_PUBLIC_ADDR[] =
 {
@@ -285,7 +285,7 @@ DNSResolver::DNSResolver() : m_data(new DNSResolverData())
     // should be a valid DNSSEC record, and switch to known good
 	// DNSSEC resolvers if verification fails
 	bool available, valid;
-	static const char *probe_hostname = "updates.arqma.com";
+	static const char *probe_hostname = "updates.gntl.com";
 	auto records = get_txt_record(probe_hostname, available, valid);
 	if (!valid)
 	{
@@ -433,9 +433,9 @@ std::string address_from_txt_record(const std::string& s)
   return {};
 }
 /**
- * @brief gets a Arqma address from the TXT record of a DNS entry
+ * @brief gets a Gntl address from the TXT record of a DNS entry
  *
- * gets the Arqma address from the TXT record of the DNS entry associated
+ * gets the Gntl address from the TXT record of the DNS entry associated
  * with <url>.  If this lookup fails, or the TXT record does not contain an
  * XMR address in the correct format, returns an empty string.  <dnssec_valid>
  * will be set true or false according to whether or not the DNS query passes
@@ -444,7 +444,7 @@ std::string address_from_txt_record(const std::string& s)
  * @param url the url to look up
  * @param dnssec_valid return-by-reference for DNSSEC status of query
  *
- * @return a Arqma address (as a string) or an empty string
+ * @return a Gntl address (as a string) or an empty string
  */
 std::vector<std::string> addresses_from_url(const std::string& url, bool& dnssec_valid)
 {
@@ -461,7 +461,7 @@ std::vector<std::string> addresses_from_url(const std::string& url, bool& dnssec
   }
   else dnssec_valid = false;
 
-  // for each txt record, try to find a Arqma address in it.
+  // for each txt record, try to find a Gntl address in it.
   for (auto& rec : records)
   {
     std::string addr = address_from_txt_record(rec);

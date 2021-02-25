@@ -1,4 +1,4 @@
-// Copyrught (c) 2018-2019, The Arqma Network
+// Copyrught (c) 2018-2019, The Gntl Network
 // Copyright (c) 2014-2018, The Monero Project
 // 
 // All rights reserved.
@@ -76,11 +76,11 @@ namespace crypto {
     return h;
   }
 
-  inline void cn_arqma_hash_v0(const void *data, std::size_t length, hash &hash) {
+  inline void cn_gntl_hash_v0(const void *data, std::size_t length, hash &hash) {
     cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 0, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
   }
 
-  inline void cn_arqma_hash_v1(const void *data, std::size_t length, hash &hash) {
+  inline void cn_gntl_hash_v1(const void *data, std::size_t length, hash &hash) {
     cn_slow_hash(data, length, reinterpret_cast<char *>(&hash), 0, 1, 0, CN_ARQMA_PAGE_SIZE, CN_ARQMA_SCRATCHPAD, CN_ARQMA_ITERATIONS);
   }
 

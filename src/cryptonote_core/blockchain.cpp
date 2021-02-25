@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2019, The Gntl Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -57,8 +57,8 @@
 #include "common/varint.h"
 #include "common/pruning.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "blockchain"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "blockchain"
 
 #define FIND_BLOCKCHAIN_SUPPLEMENT_MAX_SIZE (100*1024*1024) // 100 MB
 
@@ -90,16 +90,8 @@ static const struct {
  time_t time;
 } mainnet_hard_forks[] = {
  // version 1 from the start of the blockchain
- { 1, 0, 0, 1341378000 },
- { 7, 1, 0, 1528750800 },
- { 8, 100, 0, 1528751200 },
- { 9, 7000, 0, 1530320400 },
- { 10, 61250, 0, 1543615200 },
- { 11, 131650, 0, 1552424400 },
- { 12, 183700, 0, 1558656000 },
- { 13, 248200, 0, 1566511680 },
- { 14, 248920, 0, 1566598080 },
- { 15, 303666, 0, 1573257000 },
+ { 1, 0, 0, 1614248955 },
+ { 16, 1, 0, 1614249955 },
 };
 
 static const struct {
@@ -109,15 +101,8 @@ static const struct {
  time_t time;
 } testnet_hard_forks[] = {
  // version 1 from the start of the blockchain
- { 1, 0, 0, 1341378000 },
- { 7, 1, 0, 1528750800 },
- { 8, 10, 0, 1528751200 },
- { 9, 20, 0, 1530248400 },
- { 10, 100, 0, 1538352000 },
- { 11, 800, 0, 1552424400 },
- { 12, 1000, 0, 1552824400 },
- { 13, 2000, 0, 1566511680 },
- { 14, 3000, 0, 1566598080 },
+ { 1, 0, 0, 1614248955 },
+ { 16, 1, 0, 1614249955 },
 };
 
 static const struct {
@@ -127,17 +112,8 @@ static const struct {
  time_t time;
 } stagenet_hard_forks[] = {
  // version 1 from the start of the blockchain
- { 1, 0, 0, 1341378000 },
- { 7, 1, 0, 1528750800 },
- { 8, 100, 0, 1528751200 },
- { 9, 200, 0, 1530248400 },
- { 10, 500, 0, 1538352000 },
- { 11, 800, 0, 1552424400 },
- { 12, 1500, 0, 1554336000 },
- { 13, 2000, 0, 1560348000 },
- { 14, 2720, 0, 1560351600 },
- { 15, 12100, 0, 1570414500 },
- { 16, 12800, 0, 1570414510 },
+ { 1, 0, 0, 1614248955 },
+ { 16, 1, 0, 1614249955 },
 };
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool) :
@@ -410,9 +386,9 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   uint64_t top_block_timestamp = m_db->get_top_block_timestamp();
   uint64_t timestamp_diff = time(NULL) - top_block_timestamp;
 
-  // genesis block has no timestamp, could probably change it to have timestamp of 1341378000...
+  // genesis block has no timestamp, could probably change it to have timestamp of 1614248955...
   if(!top_block_timestamp)
-    timestamp_diff = time(NULL) - 1523689524;
+    timestamp_diff = time(NULL) - 1614248955;
 
   // create general purpose async service queue
 
@@ -500,7 +476,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     }
     catch( const std::exception& e)
     {
-      MERROR(std::string("Failed to construct Arqma notifier ") + e.what());
+      MERROR(std::string("Failed to construct Gntl notifier ") + e.what());
     }
  }
 
@@ -646,7 +622,7 @@ block Blockchain::pop_block_from_blockchain()
   block popped_block;
   std::vector<transaction> popped_txs;
 
-  CHECK_AND_ASSERT_THROW_MES(m_db->height() > 1, "It is forbidden to remove ArQmA Genesis Block.");
+  CHECK_AND_ASSERT_THROW_MES(m_db->height() > 1, "It is forbidden to remove GnTl Genesis Block.");
 
   try
   {
@@ -2156,7 +2132,7 @@ void Blockchain::get_output_key_mask_unlocked(const uint64_t& amount, const uint
 bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, uint64_t &start_height, std::vector<uint64_t> &distribution, uint64_t &base) const
 {
   // rct outputs don't exist before v4
-  // Arqma did start from v7 at blockheight 1 so our start is always 0
+  // Gntl did start from v7 at blockheight 1 so our start is always 0
 
   start_height = 0;
   base = 0;
@@ -3753,7 +3729,7 @@ leave:
     const el::Level level = el::Level::Warning;
     MCLOG_RED(level, "global", "**********************************************************************");
     MCLOG_RED(level, "global", "A block was seen on the network with a version higher than the last");
-    MCLOG_RED(level, "global", "known one. This may be an old version of the Arqma daemon, and a software");
+    MCLOG_RED(level, "global", "known one. This may be an old version of the Gntl daemon, and a software");
     MCLOG_RED(level, "global", "update may be required to sync further. ");
     MCLOG_RED(level, "global", "**********************************************************************");
   }
@@ -4114,7 +4090,7 @@ leave:
     }
     catch( const std::exception& e)
     {
-      MERROR(std::string("Failed to construct arqma block producer") + e.what());
+      MERROR(std::string("Failed to construct gntl block producer") + e.what());
     }
   }
 

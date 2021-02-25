@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2019, The Gntl Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -34,7 +34,7 @@
 #include "string_tools.h"
 using namespace epee;
 
-#include "arqma_mq/arqmaMQ.h"
+#include "gntl_mq/gntlMQ.h"
 
 #include <unordered_set>
 #include "cryptonote_core.h"
@@ -57,8 +57,8 @@ using namespace epee;
 #include "common/notify.h"
 #include "version.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "cn"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "cn"
 
 DISABLE_VS_WARNINGS(4355)
 
@@ -69,7 +69,7 @@ DISABLE_VS_WARNINGS(4355)
 // basically at least how many bytes the block itself serializes to without the miner tx
 #define BLOCK_SIZE_SANITY_LEEWAY 100
 
-using namespace arqmaMQ;
+using namespace gntlMQ;
 
 namespace cryptonote
 {
@@ -164,7 +164,7 @@ namespace cryptonote
   };
   static const command_line::arg_descriptor<std::string> arg_check_updates = {
     "check-updates"
-  , "Check for new versions of arqma: [disabled|notify|download|update]"
+  , "Check for new versions of gntl: [disabled|notify|download|update]"
   , "notify"
   };
   static const command_line::arg_descriptor<bool> arg_fluffy_blocks = {
@@ -474,8 +474,8 @@ namespace cryptonote
       if (boost::filesystem::exists(old_files / "blockchain.bin"))
       {
         MWARNING("Found old-style blockchain.bin in " << old_files.string());
-        MWARNING("ArQmA now uses a new format. You can either remove blockchain.bin to start syncing");
-        MWARNING("the blockchain anew, or use arqma-blockchain-export and arqma-blockchain-import to");
+        MWARNING("GnTl now uses a new format. You can either remove blockchain.bin to start syncing");
+        MWARNING("the blockchain anew, or use gntl-blockchain-export and gntl-blockchain-import to");
         MWARNING("convert your existing blockchain.bin to the new format. See README.md for instructions.");
         return false;
       }
@@ -1731,7 +1731,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::check_updates()
   {
-    static const char software[] = "arqma";
+    static const char software[] = "gntl";
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
 //    static const char subdir[] = "cli"; // because it can never be simple

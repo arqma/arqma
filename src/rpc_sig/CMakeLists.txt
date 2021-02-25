@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, The Arqma Network
+# Copyright (c) 2019-2020, The Gntl Network
 #
 # All rights reserved.
 #
@@ -34,9 +34,9 @@ set(rpc_sig_headers
 
 set(rpc_sig_private_headers)
 
-arqma_private_headers(rpc_sig
+gntl_private_headers(rpc_sig
   ${rpc_sig_private_headers})
-arqma_add_library(rpc_sig
+gntl_add_library(rpc_sig
   ${rpc_sig_sources}
   ${rpc_sig_headers}
   ${rpc_sig_private_headers})

@@ -1,4 +1,4 @@
-// Copyright (c)2020, The Arqma Network
+// Copyright (c)2020, The Gntl Network
 // Copyright (c)2020, Gary Rusher
 // Portions of this software are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
 
@@ -73,7 +73,7 @@ using namespace rpc;
 using namespace boost::placeholders;
 
 
-namespace arqmaMQ {
+namespace gntlMQ {
 
     constexpr auto QUIT = "QUIT";
     constexpr auto EVICT = "EVICT";
@@ -125,14 +125,14 @@ namespace arqmaMQ {
     };
 
 
-    class ArqmaNotifier: public INotifier {
+    class GntlNotifier: public INotifier {
         public:
-            ArqmaNotifier(ZmqHandler& h);
-            ~ArqmaNotifier();
-            ArqmaNotifier(const ArqmaNotifier&) = delete;
-            ArqmaNotifier& operator=(const ArqmaNotifier&) = delete;
-            ArqmaNotifier(ArqmaNotifier&&) = delete;
-            ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
+            GntlNotifier(ZmqHandler& h);
+            ~GntlNotifier();
+            GntlNotifier(const GntlNotifier&) = delete;
+            GntlNotifier& operator=(const GntlNotifier&) = delete;
+            GntlNotifier(GntlNotifier&&) = delete;
+            GntlNotifier& operator=(GntlNotifier&&) = delete;
             bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t max_clients);
             void run();
 			void stop();

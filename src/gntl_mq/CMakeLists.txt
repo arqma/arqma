@@ -1,4 +1,4 @@
-# Copyright (c)2020, The Arqma Network
+# Copyright (c)2020, The Gntl Network
 # Copyright (c)2020, Gary Rusher
 # Portions of this software are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
 
@@ -42,26 +42,26 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(arqma_mq_sources
-  arqmaMQ.cpp
+set(gntl_mq_sources
+  gntlMQ.cpp
   zmq_handler.cpp)
 
-set(arqma_mq_headers)
+set(gntl_mq_headers)
 
-set(arqma_mq_private_headers
-  arqmaMQ.h
+set(gntl_mq_private_headers
+  gntlMQ.h
   INotifier.h
   zmq_handler.h)
 
-arqma_private_headers(arqma_mq
-  ${arqma_mq_private_headers})
+gntl_private_headers(gntl_mq
+  ${gntl_mq_private_headers})
 
-arqma_add_library(arqma_mq
-  ${arqma_mq_sources}
-  ${arqma_mq_headers}
-  ${arqma_mq_private_headers})
+gntl_add_library(gntl_mq
+  ${gntl_mq_sources}
+  ${gntl_mq_headers}
+  ${gntl_mq_private_headers})
 
-target_link_libraries(arqma_mq
+target_link_libraries(gntl_mq
   PRIVATE
     common
     epee
@@ -74,5 +74,5 @@ target_link_libraries(arqma_mq
     libzmq
     ${EXTRA_LIBRARIES})
 
-add_dependencies(arqma_mq
+add_dependencies(gntl_mq
   version)

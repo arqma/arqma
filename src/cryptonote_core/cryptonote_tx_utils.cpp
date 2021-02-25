@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2019, The Gntl Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -783,11 +783,11 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     }
     else if(b.major_version >= 7)
     {
-      crypto::cn_arqma_hash_v1(bd.data(), bd.size(), res);
+      crypto::cn_gntl_hash_v1(bd.data(), bd.size(), res);
     }
     else
     {
-      crypto::cn_arqma_hash_v0(bd.data(), bd.size(), res);
+      crypto::cn_gntl_hash_v0(bd.data(), bd.size(), res);
     }
     return true;
   }

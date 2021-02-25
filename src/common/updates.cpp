@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2019, The Gntl Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -33,8 +33,8 @@
 #include "dns_utils.h"
 #include "updates.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "updates"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "updates"
 
 namespace tools
 {
@@ -47,10 +47,10 @@ namespace tools
 
     // All four ArQ-Net domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
-      "updates.arqma.com",
-      "updates.myarqma.com",
-      "updates.supportarqma.eu",
-      "updates.supportarqma.com"
+      "updates.gntl.com",
+      "updates.mygntl.com",
+      "updates.supportgntl.eu",
+      "updates.supportgntl.com"
     };
 
     if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls))
@@ -100,7 +100,7 @@ namespace tools
 
   std::string get_update_url(const std::string &software, const std::string &buildtag, const std::string &version, bool user)
   {
-    const char *base = user ? "https://downloads.arqma.com" : "https://get.arqma.com";
+    const char *base = user ? "https://downloads.gntl.com" : "https://get.gntl.com";
 #ifdef _WIN32
     static const char *extension = strncmp(buildtag.c_str(), "install-", 8) ? ".zip" : ".exe";
 #else

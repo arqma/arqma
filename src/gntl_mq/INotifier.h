@@ -1,4 +1,4 @@
-// Copyright (c)2020, The Arqma Network
+// Copyright (c)2020, The Gntl Network
 // Copyright (c)2020, Gary Rusher
 // Portions of this software are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
 
@@ -51,7 +51,7 @@
 using namespace cryptonote;
 
 
-namespace arqmaMQ {
+namespace gntlMQ {
 
     class INotifier {
         public:

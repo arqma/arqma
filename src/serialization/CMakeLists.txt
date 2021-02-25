@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2020, The Gntl Network
 # Copyright (c) 2016-2020, The Monero Project
 #
 # All rights reserved.
@@ -35,9 +35,9 @@ set(serialization_headers)
 set(serialization_private_headers
   json_object.h)
 
-arqma_private_headers(serialization
+gntl_private_headers(serialization
   ${serialization_private_headers})
-arqma_add_library(serialization
+gntl_add_library(serialization
   ${serialization_sources}
   ${serialization_headers}
   ${serialization_private_headers})
