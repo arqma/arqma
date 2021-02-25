@@ -261,7 +261,7 @@ namespace config
    {
     static constexpr const char* MAINNET_WALLET_ADDRESS = "";
     static constexpr const char* TESTNET_WALLET_ADDRESS = "";
-    static constexpr const char* STAGENET_WALLET_ADDRESS = "";
+    static constexpr const char* STAGENET_WALLET_ADDRESS = "gn3QKCfjtTFPRDW29g3rpQFR9bvEY57WDRXE7r1jnZdcPrBFARK9NuGZ6GpBihSJjiBxVxC1A6c57Li26M2fPNg82JFpFaj9r4";
    }
 
 }
