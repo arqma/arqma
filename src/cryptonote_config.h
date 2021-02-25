@@ -236,15 +236,15 @@ namespace config
      const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
      const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
      const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
-     const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     const uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+     const uint8_t GNTL_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     const uint8_t GNTL_GENESIS_BLOCK_MINOR_VERSION = 1;
+     const uint8_t GNTL_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
    }
 
    namespace tx_settings
    {
-     const size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     const size_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
+     const size_t GNTL_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     const size_t GNTL_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
      const uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }

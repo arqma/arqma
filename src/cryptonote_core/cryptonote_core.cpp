@@ -787,9 +787,9 @@ namespace cryptonote
     }
     bad_semantics_txes_lock.unlock();
 
-    if (tx.version == 0 || tx.version > config::tx_settings::ARQMA_TX_VERSION)
+    if (tx.version == 0 || tx.version > config::tx_settings::GNTL_TX_VERSION)
     {
-      MERROR_VER("Bad tx version (" << tx.version << ", max is " << config::tx_settings::ARQMA_TX_VERSION << ")");
+      MERROR_VER("Bad tx version (" << tx.version << ", max is " << config::tx_settings::GNTL_TX_VERSION << ")");
       tvc.m_verifivation_failed = true;
       return false;
     }

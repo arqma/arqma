@@ -172,7 +172,7 @@ namespace cryptonote
 
     BEGIN_SERIALIZE()
       VARINT_FIELD(version)
-      if(version == 0 || config::tx_settings::ARQMA_TX_VERSION < version) return false;
+      if(version == 0 || config::tx_settings::GNTL_TX_VERSION < version) return false;
       VARINT_FIELD(unlock_time)
       FIELD(vin)
       FIELD(vout)

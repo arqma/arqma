@@ -249,10 +249,10 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward));
     }
 
-    tx.version = config::tx_settings::ARQMA_TX_VERSION;
+    tx.version = config::tx_settings::GNTL_TX_VERSION;
 
     //lock
-    tx.unlock_time = height + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
+    tx.unlock_time = height + config::blockchain_settings::GNTL_BLOCK_UNLOCK_CONFIRMATIONS;
     tx.vin.push_back(in);
 
     tx.invalidate_hashes();
@@ -300,7 +300,7 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
       msout->c.clear();
     }
 
-    tx.version = config::tx_settings::ARQMA_TX_VERSION;
+    tx.version = config::tx_settings::GNTL_TX_VERSION;
     tx.unlock_time = unlock_time;
 
     tx.extra = extra;
@@ -739,8 +739,8 @@ bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_ge
     CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
     r = parse_and_validate_tx_from_blob(tx_bl, bl.miner_tx);
     CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
-    bl.major_version = config::blockchain_settings::ARQMA_GENESIS_BLOCK_MAJOR_VERSION;
-    bl.minor_version = config::blockchain_settings::ARQMA_GENESIS_BLOCK_MINOR_VERSION;
+    bl.major_version = config::blockchain_settings::GNTL_GENESIS_BLOCK_MAJOR_VERSION;
+    bl.minor_version = config::blockchain_settings::GNTL_GENESIS_BLOCK_MINOR_VERSION;
     bl.timestamp = 0;
     bl.nonce = config::GENESIS_NONCE;
     miner::find_nonce_for_given_block([](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash){
