@@ -3,11 +3,11 @@
 	url = https://github.com/Tencent/rapidjson
 [submodule "external/unbound"]
 	path = external/unbound
-	url = https://github.com/gntl/unbound
+	url = https://github.com/arqma/unbound
 	branch = gntl
 [submodule "external/miniupnp"]
 	path = external/miniupnp
-	url = https://github.com/gntl/miniupnp
+	url = https://github.com/arqma/miniupnp
 [submodule "external/randomarq"]
 	path = external/randomarq
-	url = https://github.com/gntl/randomarq
+	url = https://github.com/arqma/randomarq
