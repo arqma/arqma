@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -110,7 +110,7 @@ public:
    * @brief Gets a DNS address from OpenAlias format
    *
    * If the address looks good, but contains one @ symbol, replace that with a .
-   * e.g. donations@gntl.com becomes donations.gntl.com
+   * e.g. donations@gntl.co.uk becomes donations.gntl.co.uk
    *
    * @param oa_addr  OpenAlias address
    *

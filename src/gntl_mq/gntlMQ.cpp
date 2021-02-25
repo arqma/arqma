@@ -1,4 +1,4 @@
-// Copyright (c)2020, The Gntl Network
+// Copyright (c)2020, The GNTL Project
 // Copyright (c)2020, Gary Rusher
 // Portions of this software are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
 
@@ -98,19 +98,19 @@ namespace gntlMQ
  		delete reinterpret_cast<std::string*>(hint);
 	}
 
-	zmq::message_t GntlNotifier::create_message(std::string &&data)
+	zmq::message_t GNTLNotifier::create_message(std::string &&data)
 	{
 		auto *buffer = new std::string(std::move(data));
 		return zmq::message_t(&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer);
 	}
 
-    GntlNotifier::GntlNotifier(ZmqHandler& h): handler(h)
+    GNTLNotifier::GNTLNotifier(ZmqHandler& h): handler(h)
     {}
 
-    GntlNotifier::~GntlNotifier()
+    GNTLNotifier::~GNTLNotifier()
     {}
 
-	void GntlNotifier::stop()
+	void GNTLNotifier::stop()
 	{
 		producer.send(create_message(std::move("QUIT")), 0);
 		proxy_thread.join();
@@ -119,13 +119,13 @@ namespace gntlMQ
         zmq_term(&context);
 	}
 
-    void GntlNotifier::run()
+    void GNTLNotifier::run()
     {
         producer.bind("inproc://backend");
-        proxy_thread = std::thread{&GntlNotifier::proxy_loop, this};
+        proxy_thread = std::thread{&GNTLNotifier::proxy_loop, this};
     }
 
-    bool GntlNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t clients)
+    bool GNTLNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t clients)
     {
         if(address.empty())
             address = "*";
@@ -140,7 +140,7 @@ namespace gntlMQ
 		remotes.max_size = clients;
         return true;
     }
-    void GntlNotifier::proxy_loop()
+    void GNTLNotifier::proxy_loop()
     {
         subscriber.connect("inproc://backend");
         listener.setsockopt<int>(ZMQ_ROUTER_HANDOVER, 1);

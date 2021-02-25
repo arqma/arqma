@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -213,12 +213,12 @@ t_command_server::t_command_server(
     m_command_lookup.set_handler(
       "start_save_graph"
     , std::bind(&t_command_parser_executor::start_save_graph, &m_parser, p::_1)
-    , "Start saving data for dr Gntl."
+    , "Start saving data for dr GNTL."
     );
     m_command_lookup.set_handler(
       "stop_save_graph"
     , std::bind(&t_command_parser_executor::stop_save_graph, &m_parser, p::_1)
-    , "Stop saving data for dr Gntl."
+    , "Stop saving data for dr GNTL."
     );
     m_command_lookup.set_handler(
       "hard_fork_info"

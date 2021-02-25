@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -1108,7 +1108,7 @@ void closefrom(int fd)
   std::string get_human_readable_bytes(uint64_t bytes)
   {
     // Use 1024 for "kilo", 1024*1024 for "mega" and so on instead of the more modern and standard-conforming
-    // 1000, 1000*1000 and so on, to be consistent with other Gntl code that also uses base 2 units
+    // 1000, 1000*1000 and so on, to be consistent with other GNTL code that also uses base 2 units
     struct byte_map
     {
         const char* const format;

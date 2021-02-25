@@ -1,5 +1,5 @@
 // Copyright (c) 2013, Sergey Lyubka
-// Copyright (c) 2018-2020, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2020, The Monero Project
 // All rights reserved.
 // Released under the MIT license.

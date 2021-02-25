@@ -1,6 +1,6 @@
-# Anonymity Networks with Gntl
+# Anonymity Networks with GNTL
 
-Currently only Tor and I2P have been integrated into Gntl. The usage of
+Currently only Tor and I2P have been integrated into GNTL. The usage of
 these networks is still considered experimental - there are a few pessimistic
 cases where privacy is leaked. The design is intended to maximize privacy of
 the source of a transaction by broadcasting it over an anonymity network, while
@@ -146,7 +146,7 @@ sees a transaction over Tor, it could _assume_ (possibly incorrectly) that the
 transaction originated from the peer. If both the Tor connection and an
 IPv4/IPv6 connection have timestamps that are approximately close in value they
 could be used to link the two connections. This is less likely to happen if the
-system clock is fairly accurate - many peers on the Gntl-Network should have
+system clock is fairly accurate - many peers on the GNTL-Network should have
 similar timestamps.
 
 #### Mitigation
@@ -163,20 +163,20 @@ An ISP can passively monitor `gntld` connections from a node and observe when
 a transaction is sent over a Tor/I2P connection via timing analysis + size of
 data sent during that timeframe. I2P should provide better protection against
 this attack - its connections are not circuit based. However, if a node is
-only using I2P for broadcasting Gntl transactions, the total aggregate of
+only using I2P for broadcasting GNTL transactions, the total aggregate of
 I2P data would also leak information.
 
 #### Mitigation
 
 There is no current mitigation for the user right now. This attack is fairly
-sophisticated, and likely requires support from the internet host of an Gntl
+sophisticated, and likely requires support from the internet host of an GNTL
 user.
 
 In the near future, "whitening" the amount of data sent over anonymity network
 connections will be performed. An attempt will be made to make a transaction
 broadcast indistinguishable from a peer timed sync command.
 
-### Intermittent Gntl Syncing
+### Intermittent GNTL Syncing
 
 If a user only runs `gntld` to send a transaction then quit, this can also
 be used by an ISP to link a user to a transaction.

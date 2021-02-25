@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -41,7 +41,7 @@
 
 namespace daemonize
 {
-  std::string const t_executor::NAME = "Gntl Daemon";
+  std::string const t_executor::NAME = "GNTL Daemon";
 
   void t_executor::init_options(
       boost::program_options::options_description & configurable_options

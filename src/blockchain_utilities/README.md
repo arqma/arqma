@@ -1,6 +1,6 @@
-# Gntl Blockchain Utilities
+# GNTL Blockchain Utilities
 
-Copyright (c) 2018-2020, The Gntl Project
+Copyright (c) 2021-2021, The GNTL Project
 Copyright (c) 2014-2020, The Monero Project
 
 ## Introduction

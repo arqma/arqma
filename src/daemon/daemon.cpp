@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -167,7 +167,7 @@ bool t_daemon::run(bool interactive)
     }
 
     gntlMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
-    gntlMQ::GntlNotifier gntlNotifier{zmq_daemon_handler};
+    gntlMQ::GNTLNotifier gntlNotifier{zmq_daemon_handler};
 
     if(zmq_enabled)
     {
@@ -187,20 +187,20 @@ bool t_daemon::run(bool interactive)
         return false;
       }
 
-      MINFO("Starting Gntl ZMQ server...");
+      MINFO("Starting GNTL ZMQ server...");
 
       if(!gntlNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
       {
-        LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to Gntl ZMQ Server");
+        LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to GNTL ZMQ Server");
         return false;
       }
 
       gntlNotifier.run();
 
-      MGINFO_GREEN(std::string("Gntl ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
+      MGINFO_GREEN(std::string("GNTL ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
     }
     else
-      MGINFO_GREEN(std::string("Gntl ZMQ Server Disabled"));
+      MGINFO_GREEN(std::string("GNTL ZMQ Server Disabled"));
 
     if (public_rpc_port > 0)
     {
@@ -215,7 +215,7 @@ bool t_daemon::run(bool interactive)
 
     if(zmq_enabled)
     {
-      MGINFO_GREEN(std::string("Stopping Gntl ZMQ Server."));
+      MGINFO_GREEN(std::string("Stopping GNTL ZMQ Server."));
       gntlNotifier.stop();
     }
 

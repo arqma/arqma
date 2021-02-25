@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -99,13 +99,13 @@ namespace daemon_args
   
   const command_line::arg_descriptor<bool> arg_public_node = {
     "public-node"
-  , "Allow Arq-Net Users to use this Gntl Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
+  , "Allow Arq-Net Users to use this GNTL Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
   , false
   };
 
   const command_line::arg_descriptor<bool> arg_zmq_enabled = {
     "zmq-enabled"
-  , "Enable Gntl ZMQ server"
+  , "Enable GNTL ZMQ server"
   , false
   };
 
@@ -117,7 +117,7 @@ namespace daemon_args
 
   const command_line::arg_descriptor<std::string> arg_zmq_bind_ip = {
     "zmq-bind-ip"
-  , "IP Address for Gntl ZMQ server to bind on"
+  , "IP Address for GNTL ZMQ server to bind on"
   , "127.0.0.1"
   };
 

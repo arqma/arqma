@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -1217,8 +1217,8 @@ bool t_rpc_command_executor::stop_daemon()
 //# ifdef WIN32
 //    // Stop via service API
 //    // TODO - this is only temporary!  Get rid of hard-coded constants!
-//    bool ok = windows::stop_service("Gntl Daemon");
-//    ok = windows::uninstall_service("Gntl Daemon");
+//    bool ok = windows::stop_service("GNTL Daemon");
+//    ok = windows::uninstall_service("GNTL Daemon");
 //    //bool ok = windows::stop_service(SERVICE_NAME);
 //    //ok = windows::uninstall_service(SERVICE_NAME);
 //    if (ok)

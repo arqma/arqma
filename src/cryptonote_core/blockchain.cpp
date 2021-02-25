@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -479,7 +479,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     }
     catch( const std::exception& e)
     {
-      MERROR(std::string("Failed to construct Gntl notifier ") + e.what());
+      MERROR(std::string("Failed to construct GNTL notifier ") + e.what());
     }
  }
 
@@ -2135,7 +2135,7 @@ void Blockchain::get_output_key_mask_unlocked(const uint64_t& amount, const uint
 bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, uint64_t &start_height, std::vector<uint64_t> &distribution, uint64_t &base) const
 {
   // rct outputs don't exist before v4
-  // Gntl did start from v7 at blockheight 1 so our start is always 0
+  // GNTL did start from v7 at blockheight 1 so our start is always 0
 
   start_height = 0;
   base = 0;
@@ -3732,7 +3732,7 @@ leave:
     const el::Level level = el::Level::Warning;
     MCLOG_RED(level, "global", "**********************************************************************");
     MCLOG_RED(level, "global", "A block was seen on the network with a version higher than the last");
-    MCLOG_RED(level, "global", "known one. This may be an old version of the Gntl daemon, and a software");
+    MCLOG_RED(level, "global", "known one. This may be an old version of the GNTL daemon, and a software");
     MCLOG_RED(level, "global", "update may be required to sync further. ");
     MCLOG_RED(level, "global", "**********************************************************************");
   }

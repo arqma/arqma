@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
@@ -44,7 +44,7 @@ using namespace epee;
 namespace
 {
   // This number was picked by taking the leading 4 bytes from this output:
-  // echo Gntl bootstrap file | sha1sum
+  // echo GNTL bootstrap file | sha1sum
   const uint32_t blockchain_raw_magic = 0x17e66914;
   const uint32_t header_size = 1024;
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -97,7 +97,7 @@ namespace tools
 
   std::string get_update_url(const std::string &software, const std::string &buildtag, const std::string &version, bool user)
   {
-    const char *base = user ? "https://downloads.gntl.com" : "https://get.gntl.com";
+    const char *base = user ? "https://downloads.gntl.co.uk" : "https://get.gntl.co.uk";
 #ifdef _WIN32
     static const char *extension = strncmp(buildtag.c_str(), "install-", 8) ? ".zip" : ".exe";
 #else

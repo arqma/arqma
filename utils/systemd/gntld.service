@@ -1,5 +1,5 @@
 [Unit]
-Description=Gntl Full Node
+Description=GNTL Full Node
 After=network.target
 
 [Service]

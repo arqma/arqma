@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -4021,7 +4021,7 @@ namespace tools
             }
             if (addresses.empty())
             {
-              er.message = std::string("No Gntl Wallet Address found at: ") + url;
+              er.message = std::string("No GNTL Wallet Address found at: ") + url;
               return {};
             }
             address = addresses[0];
@@ -4324,7 +4324,7 @@ public:
   }
 };
 
-std::string const t_executor::NAME = "Gntl Wallet RPC Daemon";
+std::string const t_executor::NAME = "GNTL Wallet RPC Daemon";
 
 int main(int argc, char** argv) {
 
@@ -4357,7 +4357,7 @@ int main(int argc, char** argv) {
   std::tie(vm, should_terminate) = wallet_args::main(
     argc, argv,
     "gntl-wallet-rpc [--wallet-file=<file>|--generate-from-json=<file>|--wallet-dir=<directory>] [--rpc-bind-port=<port>]",
-    tools::wallet_rpc_server::tr("This is the RPC Gntl wallet. It needs to connect to a Gntl\ndaemon to work correctly."),
+    tools::wallet_rpc_server::tr("This is the RPC GNTL wallet. It needs to connect to a GNTL\ndaemon to work correctly."),
     desc_params,
     po::positional_options_description(),
     [](const std::string &s, bool emphasis){ epee::set_console_color(emphasis ? epee::console_color_white : epee::console_color_default, true); std::cout << s << std::endl; if (emphasis) epee::reset_console_color(); },

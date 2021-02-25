@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -271,7 +271,7 @@ struct options {
   const command_line::arg_descriptor<uint64_t> kdf_rounds = {"kdf-rounds", tools::wallet2::tr("Number of rounds for the key derivation function"), 1};
   const command_line::arg_descriptor<std::string> hw_device = {"hw-device", tools::wallet2::tr("HW device to use"), ""};
   const command_line::arg_descriptor<std::string> tx_notify = { "tx-notify" , "Run a program for each new incoming transaction, '%s' will be replaced by the transaction hash" , "" };
-  const command_line::arg_descriptor<bool> offline = {"offline", tools::wallet2::tr("Do not connect to Gntl Daemon, not use DNS"), false};
+  const command_line::arg_descriptor<bool> offline = {"offline", tools::wallet2::tr("Do not connect to GNTL Daemon, not use DNS"), false};
 };
 
 void do_prepare_file_names(const std::string& file_path, std::string& keys_file, std::string& wallet_file)
@@ -1592,8 +1592,8 @@ void wallet2::scan_output(const cryptonote::transaction &tx, bool miner_tx, cons
     if (!m_encrypt_keys_after_refresh)
     {
       boost::optional<epee::wipeable_string> pwd = m_callback->on_get_password(pool ? "output found in pool" : "output received");
-      THROW_WALLET_EXCEPTION_IF(!pwd, error::password_needed, tr("Password is needed to compute key image for incoming Gntl"));
-      THROW_WALLET_EXCEPTION_IF(!verify_password(*pwd), error::password_needed, tr("Invalid password: password is needed to compute key image for incoming Gntl"));
+      THROW_WALLET_EXCEPTION_IF(!pwd, error::password_needed, tr("Password is needed to compute key image for incoming GNTL"));
+      THROW_WALLET_EXCEPTION_IF(!verify_password(*pwd), error::password_needed, tr("Invalid password: password is needed to compute key image for incoming GNTL"));
       decrypt_keys(*pwd);
       m_encrypt_keys_after_refresh = *pwd;
     }

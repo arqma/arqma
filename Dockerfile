@@ -182,7 +182,7 @@ RUN set -ex && \
     rm -rf /var/lib/apt
 COPY --from=builder /src/build/release/bin /usr/local/bin/
 
-# Below command is creating Gntl user to do not run daemon as a root
+# Below command is creating GNTL user to do not run daemon as a root
 RUN adduser --system --group --disabled-password gntl && \
 	mkdir -p /wallet /home/gntl/.gntl && \
 	chown -R gntl:gntl /home/gntl/.gntl && \

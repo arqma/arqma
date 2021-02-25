@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, The Gntl Network
+# Copyright (c) 2019-2020, The GNTL Project
 #
 # All rights reserved.
 #

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -175,16 +175,16 @@ int main(int argc, char const * argv[])
 
     if (command_line::get_arg(vm, command_line::arg_help))
     {
-      std::cout << "Gntl '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")" << ENDL << ENDL;
+      std::cout << "GNTL '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")" << ENDL << ENDL;
       std::cout << "Usage: " + std::string{argv[0]} + " [options|settings] [daemon_command...]" << std::endl << std::endl;
       std::cout << visible_options << std::endl;
       return 0;
     }
 
-    // Gntl Version
+    // GNTL Version
     if (command_line::get_arg(vm, command_line::arg_version))
     {
-      std::cout << "Gntl '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")" << ENDL;
+      std::cout << "GNTL '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")" << ENDL;
       return 0;
     }
 
@@ -270,7 +270,7 @@ int main(int argc, char const * argv[])
 	  tools::set_max_concurrency(command_line::get_arg(vm, daemon_args::arg_max_concurrency));
 
 	// logging is now set up
-	MGINFO("Gntl '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")");
+	MGINFO("GNTL '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")");
 
 
     // If there are positional options, we're running a daemon command

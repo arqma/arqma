@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -248,7 +248,7 @@ namespace boost
   {
     a & x.mask;
     a & x.amount;
-    // a & x.senderPk; // not serialized, as we do not use it in Gntl currently
+    // a & x.senderPk; // not serialized, as we do not use it in GNTL currently
   }
 
   template <class Archive>

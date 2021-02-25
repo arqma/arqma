@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -2031,19 +2031,19 @@ bool simple_wallet::public_nodes(const std::vector<std::string> &args)
 
 bool simple_wallet::welcome(const std::vector<std::string> &args)
 {
-  message_writer() << tr("Welcome to Gntl, the private cryptocurrency.");
+  message_writer() << tr("Welcome to GNTL, the private cryptocurrency.");
   message_writer() << "";
-  message_writer() << tr("Gntl, like Bitcoin, is a cryptocurrency. That is, it is digital money.");
-  message_writer() << tr("Unlike Bitcoin, your Gntl transactions and balance stay private, and not visible to the world by default.");
+  message_writer() << tr("GNTL, like Bitcoin, is a cryptocurrency. That is, it is digital money.");
+  message_writer() << tr("Unlike Bitcoin, your GNTL transactions and balance stay private, and not visible to the world by default.");
   message_writer() << tr("However, you have the option of making those available to select parties, if you choose to.");
   message_writer() << "";
-  message_writer() << tr("Gntl protects your privacy on the blockchain, and while Gntl strives to improve all the time,");
-  message_writer() << tr("no privacy technology can be 100% perfect, Gntl included.");
-  message_writer() << tr("Gntl cannot protect you from malware, and it may not be as effective as we hope against powerful adversaries.");
-  message_writer() << tr("Flaws in Gntl may be discovered in the future, and attacks may be developed to peek under some");
-  message_writer() << tr("of the layers of privacy Gntl provides. Be safe and practice defense in depth.");
+  message_writer() << tr("GNTL protects your privacy on the blockchain, and while GNTL strives to improve all the time,");
+  message_writer() << tr("no privacy technology can be 100% perfect, GNTL included.");
+  message_writer() << tr("GNTL cannot protect you from malware, and it may not be as effective as we hope against powerful adversaries.");
+  message_writer() << tr("Flaws in GNTL may be discovered in the future, and attacks may be developed to peek under some");
+  message_writer() << tr("of the layers of privacy GNTL provides. Be safe and practice defense in depth.");
   message_writer() << "";
-  message_writer() << tr("Welcome to Gntl and financial privacy. For more information, see https://gntl.com/");
+  message_writer() << tr("Welcome to GNTL and financial privacy. For more information, see https://gntl.co.uk/");
   return true;
 }
 
@@ -2749,7 +2749,7 @@ simple_wallet::simple_wallet()
   m_cmd_binder.set_handler("donate",
                            boost::bind(&simple_wallet::donate, this, _1),
                            tr(USAGE_DONATE),
-                           tr("Donate <amount> to the development team (donations.gntl.com)."));
+                           tr("Donate <amount> to the development team (donations.gntl.co.uk)."));
   m_cmd_binder.set_handler("sign_transfer",
                            boost::bind(&simple_wallet::sign_transfer, this, _1),
                            tr(USAGE_SIGN_TRANSFER),
@@ -2821,7 +2821,7 @@ simple_wallet::simple_wallet()
                                   "confirm-missing-payment-id <1|0>\n "
                                   "ask-password <0|1|2   (or never|action|decrypt)>\n "
                                   "unit <gntl|millignt|micrognt|nanognt>\n "
-                                  "  Set the default Gntl (sub-)unit.\n "
+                                  "  Set the default GNTL (sub-)unit.\n "
                                   "min-outputs-count [n]\n "
                                   "  Try to keep at least that many outputs of value at least min-outputs-value.\n "
                                   "min-outputs-value [n]\n "
@@ -3053,7 +3053,7 @@ simple_wallet::simple_wallet()
   m_cmd_binder.set_handler("welcome",
                            boost::bind(&simple_wallet::welcome, this, _1),
                            tr(USAGE_WELCOME),
-                           tr("Prints basic info about Gntl for first time users"));
+                           tr("Prints basic info about GNTL for first time users"));
   m_cmd_binder.set_handler("version",
                            boost::bind(&simple_wallet::version, this, _1),
                            tr(USAGE_VERSION),
@@ -3936,7 +3936,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
   m_wallet->callback(this);
 
   if (welcome)
-    message_writer(console_color_yellow, true) << tr("If you are new to Gntl, type \"welcome\" for a brief overview.");
+    message_writer(console_color_yellow, true) << tr("If you are new to GNTL, type \"welcome\" for a brief overview.");
 
   return true;
 }
@@ -6519,7 +6519,7 @@ bool simple_wallet::donate(const std::vector<std::string> &args_)
   local_args.push_back(amount_str);
   if (!payment_id_str.empty())
     local_args.push_back(payment_id_str);
-  message_writer() << (boost::format(tr("Donating %s %s to The Gntl Network (donations.gntl.com or %s).")) % amount_str % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % ARQMA_DONATION_ADDR).str();
+  message_writer() << (boost::format(tr("Donating %s %s to The GNTL Project (donations.gntl.co.uk or %s).")) % amount_str % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % ARQMA_DONATION_ADDR).str();
   transfer(local_args);
   return true;
 }

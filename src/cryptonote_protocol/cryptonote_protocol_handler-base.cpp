@@ -2,7 +2,7 @@
 /// @author rfree (current maintainer in monero.cc project)
 /// @brief This is the place to implement our handlers for protocol network actions, e.g. for ratelimit for download-requests
 
-// Copyright (c) 2018-2019, The Gntl Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.

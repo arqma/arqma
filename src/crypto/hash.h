@@ -1,4 +1,4 @@
-// Copyrught (c) 2018-2019, The Gntl Network
+// Copyrught (c) 2018-2019, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 // 
 // All rights reserved.

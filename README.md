@@ -1,63 +1,40 @@
-## Gntl Network
+## GNTL Network
 
-Copyright (c) 2018-2020, The Gntl Network    
+Copyright (c) 2021-2021, The GNTL Project    
 Copyright (c) 2014-2020, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
 
-- Web: [gntl.com](https://gntl.com)
-- Mail: [support@gntl.com](mailto:support@gntl.com)
-- GitHub: [https://github.com/gntl/gntl](https://github.com/gntl/gntl)
-- Discord: [https://chat.gntl.com](https://chat.gntl.com)
-- Telegram: [https://telegram.gntl.com](https://telegram.gntl.com)
+- Web: [gntl.co.uk](https://gntl.co.uk)
+- Mail: [support@gntl.co.uk](mailto:support@gntl.co.uk)
+- GitHub: [https://github.com/GNTLMiningPools/gntl](https://github.com/GNTLMiningPools/gntl)
+- Discord: [https://discord.gg/4HyVA2A](https://discord.gg/4HyVA2A)
 
-## Other Gntl related websites
+## Other GNTL related websites
 
-- Gntl Information Centre: [https://gntl.github.io](https://gntl.github.io)
-- Gntl Blockchain Explorer: [blockexplorer.gntl.com](https://blockexplorer.gntl.com)
-- Gntl Blockchain Explorer 2: [explorer.gntl.com](https://explorer.gntl.com)
-- Gntl Blockchain Raw File updated every 24hrs: [https://raw.gntl.com](https://raw.gntl.com)
-- Gntl BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
-- Gntl Mining Pools Stream: [https://miningpoolstats.stream/gntl](https://miningpoolstats.stream/gntl)
-- Gntl Payment Gateway: [https://pg.gntl.com](https://pg.gntl.com)
-- Gntl WooCommerce Payment Plugin: [https://github.com/gntl/gntl-payments-woocommerce-gateway](https://github.com/gntl/gntl-payments-woocommerce-gateway)
-- Gntl Off-line Wallet Address Generator: [https://generate.gntl.com](https://generate.gntl.com)
-- myGntl - Gntl Web-Wallet Interface: [https://mygntl.com](https://mygntl.com)
-- gntlDroid - Gntl Android Wallet: [https://play.google.com/store/apps/details?id=com.gntl.Droid](https://play.google.com/store/apps/details?id=com.gntl.Droid)
-- Gntl GUI electron wallet: [https://github.com/gntl/gntl-electron-wallet](https://github.com/gntl/gntl-electron-wallet)
-
-## Gntl Social-Media Websites
-
-- Twitter: [https://twitter.com/GnTl_Network](https://twitter.com/GnTl_Network)
-- FaceBook: [https://www.facebook.com/ARQMAnetwork](https://www.facebook.com/ARQMAnetwork)
-- Medium: [https://medium.com/@GnTlNetwork](https://medium.com/@GnTlNetwork)
-- YouTube: [https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA](https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA)
-
-## Gntl Exchange Websites
-
-- TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
-- Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
-- Citex: [https://www.citex.co.kr/#/trade/ARQ_ETH](https://www.citex.co.kr/#/trade/ARQ_ETH)
-- GJ: [https://www.gj.com/trade/arqusdt](https://www.gj.com/trade/arqusdt)
+- GNTL Blockchain Explorer: [blockexplorer.pool.gntl.co.uk](https://blockexplorer.pool.gntl.co.uk)
+- GNTL Mining Pools Stream: [https://miningpoolstats.stream/gntl.co.uk_pools](https://miningpoolstats.stream/gntl.co.uk_pools)
+- GNTL Mining Pools Crypunit: [https://www.cryptunit.com/poolsgroup/GNTL-pools](https://www.cryptunit.com/poolsgroup/GNTL-pools)
+- GNTL Mining Pools Landing: [https://pool.gntl.co.uk/]https://pool.gntl.co.uk/)
 
 ## Introduction
 
-Gntl is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.
+GNTL is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.
 
-**Privacy:** Gntl uses a cryptographically sound system to allow you to send and receive funds without your transactions being easily revealed on the blockchain (the ledger of transactions that everyone has). This ensures that your purchases, receipts, and all transfers remain absolutely private by default.
+**Privacy:** GNTL uses a cryptographically sound system to allow you to send and receive funds without your transactions being easily revealed on the blockchain (the ledger of transactions that everyone has). This ensures that your purchases, receipts, and all transfers remain absolutely private by default.
 
 **Security:** Using the power of a distributed peer-to-peer consensus network, every transaction on the network is cryptographically secured. Individual wallets have a 25 word mnemonic seed that is only displayed once, and can be written down to backup the wallet. Wallet files are encrypted with a passphrase to ensure they are useless if stolen.
 
-**Untraceability:** By taking advantage of ring signatures, a special property of a certain type of cryptography, Gntl is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.
+**Untraceability:** By taking advantage of ring signatures, a special property of a certain type of cryptography, GNTL is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.
 
 ## SSL
 
-As a network, Gntl supports complete, cryptographically secured connections at all levels. This includes, but is not limited to Gntl Network Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
+As a network, GNTL supports complete, cryptographically secured connections at all levels. This includes, but is not limited to GNTL Network Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
 
-Gntl Network will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over the Gntl Network.
+GNTL Network will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over The GNTL Project.
 
-The use of SSL connections means that there will not be any possibility to use the Gntl Network with unsecured or tampered connections (daemons), and that your privacy will remain a feature built in a protocol level.
+The use of SSL connections means that there will not be any possibility to use The GNTL Project with unsecured or tampered connections (daemons), and that your privacy will remain a feature built in a protocol level.
 
  * Below is an example how to generate SSL Keys with openssl
 
@@ -70,11 +47,11 @@ The use of SSL connections means that there will not be any possibility to use t
 
 ## About this project
 
-This is the core implementation of Gntl. It is open source and completely free to use without restrictions, except for those specified in the license agreement below. There are no restrictions on anyone creating an alternative implementation of Gntl that uses the protocol and network in a compatible manner.
+This is the core implementation of GNTL. It is open source and completely free to use without restrictions, except for those specified in the license agreement below. There are no restrictions on anyone creating an alternative implementation of GNTL that uses the protocol and network in a compatible manner.
 
 As with many development projects, the repository on Github is considered to be the "staging" area for the latest changes. Before changes are merged into that branch on the main repository, they are tested by individual developers in their own branches, submitted as a pull request, and then subsequently tested by contributors who focus on testing and code reviews. That having been said, the repository should be carefully considered before using it in a production environment, unless there is a patch in the repository for a particular show-stopping issue you are experiencing. It is generally a better idea to use a tagged release for stability.
 
-**Anyone is welcome to contribute to Gntl's codebase!** If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.
+**Anyone is welcome to contribute to GNTL's codebase!** If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.
 
 ## License
 
@@ -84,7 +61,7 @@ See [LICENSE](LICENSE).
 
 If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidelines.
 
-## Compiling Gntl from source
+## Compiling GNTL from source
 
 ## Build
 
@@ -103,7 +80,7 @@ That build is from the master branch, which is used for active development and c
 
 ##### [Boost](https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz)
 
-##### Gntl build been tested on Ubuntu Server 20.04 Focal Fosa with above releases as long with [gcc9.3](https://gcc.gnu.org/gcc-9/)
+##### GNTL build been tested on Ubuntu Server 20.04 Focal Fosa with above releases as long with [gcc9.3](https://gcc.gnu.org/gcc-9/)
 
 The following table summarizes the tools and libraries required to build. A
 few of the libraries are also included in this repository (marked as
@@ -162,7 +139,7 @@ If you already have a repo cloned, initialize and update:
 
 ### Build instructions
 
-Gntl uses the CMake build system and a top-level [Makefile](Makefile) that
+GNTL uses the CMake build system and a top-level [Makefile](Makefile) that
 invokes cmake commands as needed.
 
 #### On Linux and OS X
@@ -179,7 +156,7 @@ invokes cmake commands as needed.
 
 * Add `PATH="$PATH:$HOME/gntl/build/release/bin"` to `.profile`
 
-* Run Gntl with `gntld --detach`
+* Run GNTL with `gntld --detach`
 
 * **Optional**: build and run the test suite to verify the binaries:
 
@@ -207,7 +184,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * `$ apt-get update && apt-get upgrade` to install all of the latest software
 
-* Install the dependencies for Gntl from the 'Debian' column in the table above.
+* Install the dependencies for GNTL from the 'Debian' column in the table above.
 
 * Increase the system swap size:
 
@@ -231,13 +208,13 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Add `PATH="$PATH:$HOME/gntl/build/release/bin"` to `.profile`
 
-* Run Gntl with `gntld --detach`
+* Run GNTL with `gntld --detach`
 
 * You may wish to reduce the size of the swap file after the build has finished, and delete the boost directory from your home directory
 
 #### *Note for Raspbian Jessie users:*
 
-If you are using the older Raspbian Jessie image, compiling Gntl is a bit more complicated. The version of Boost available in the Debian Jessie repositories is too old to use with Gntl, and thus you must compile a newer version yourself. The following explains the extra steps, and has been tested on a Raspberry Pi 2 with a clean install of minimal Raspbian Jessie.
+If you are using the older Raspbian Jessie image, compiling GNTL is a bit more complicated. The version of Boost available in the Debian Jessie repositories is too old to use with GNTL, and thus you must compile a newer version yourself. The following explains the extra steps, and has been tested on a Raspberry Pi 2 with a clean install of minimal Raspbian Jessie.
 
 * As before, `$ apt-get update && apt-get upgrade` to install all of the latest software, and increase the system swap size
 
@@ -299,7 +276,7 @@ application.
 
 **Building**
 
-* Download Gntl with command:
+* Download GNTL with command:
 
 	`$ git clone https://github.com/gntl/gntl`
 
@@ -323,13 +300,13 @@ application.
 
 * The resulting executables can be found in `build/debug/bin`
 
-*** Gntl does Not support 32-bit Windows anymore ***
+*** GNTL does Not support 32-bit Windows anymore ***
 
 ### On FreeBSD:
 
 The project can be built from scratch by following instructions for Linux above. If you are running gntl in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
 
-We expect to add Gntl into the ports tree in the near future, which will aid in managing installations using ports or packages.
+We expect to add GNTL into the ports tree in the near future, which will aid in managing installations using ports or packages.
 
 ### On OpenBSD:
 
@@ -344,7 +321,7 @@ The doxygen and graphviz packages are optional and require the xbase set.
 The Boost package has a bug that will prevent librpc.a from building correctly. In order to fix this, you will have to Build boost yourself from scratch. Follow the directions here (under "Building Boost"):
 https://github.com/bitcoin/bitcoin/blob/master/doc/build-openbsd.md
 
-You will have to add the serialization, date_time, and regex modules to Boost when building as they are needed by Gntl.
+You will have to add the serialization, date_time, and regex modules to Boost when building as they are needed by GNTL.
 
 To build: `$ env CC=egcc CXX=eg++ CPP=ecpp DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/path/to/the/boost/you/built make release-static-64`
 
@@ -423,7 +400,7 @@ By default, in either dynamically or statically linked builds, binaries target t
 
 ### Cross Compiling
 
-You can also cross-compile Gntl static binaries on Linux for Windows and macOS with the `depends` system.
+You can also cross-compile GNTL static binaries on Linux for Windows and macOS with the `depends` system.
 
 * `make depends target=x86_64-linux-gnu` for 64-bit linux binaries.
 * `make depends target=x86_64-w64-mingw32` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
@@ -435,7 +412,7 @@ You can also cross-compile Gntl static binaries on Linux for Windows and macOS w
 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
-Using `depends` might also be easier to compile Gntl on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
+Using `depends` might also be easier to compile GNTL on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
 
 ### Compability with older Linux Versions < GLIBC_2.25
 
@@ -482,7 +459,7 @@ See [README.i18n.md](README.i18n.md).
 > used solely for relaying transactions received over local RPC. This provides
 > privacy and better protection against surrounding node (sybil) attacks.
 
-While Gntl isn't made to integrate with Tor, it can be used wrapped with torsocks, by
+While GNTL isn't made to integrate with Tor, it can be used wrapped with torsocks, by
 setting the following configuration parameters and environment variables:
 
 * `--p2p-bind-ip 127.0.0.1` on the command line or `p2p-bind-ip=127.0.0.1` in
@@ -519,7 +496,7 @@ allow inbound connections. Full example:
         --data-dir /home/amnesia/Persistent/your/directory/to/the/blockchain`
 ## Debugging
 
-This section contains general instructions for debugging failed installs or problems encountered with Gntl. First ensure you are running the latest version built from the Github repository.
+This section contains general instructions for debugging failed installs or problems encountered with GNTL. First ensure you are running the latest version built from the Github repository.
 
 ### Obtaining stack traces and core dumps on Unix systems
 

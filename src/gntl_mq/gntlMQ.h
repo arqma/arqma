@@ -1,4 +1,4 @@
-// Copyright (c)2020, The Gntl Network
+// Copyright (c)2020, The GNTL Project
 // Copyright (c)2020, Gary Rusher
 // Portions of this software are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
 
@@ -125,14 +125,14 @@ namespace gntlMQ {
     };
 
 
-    class GntlNotifier: public INotifier {
+    class GNTLNotifier: public INotifier {
         public:
-            GntlNotifier(ZmqHandler& h);
-            ~GntlNotifier();
-            GntlNotifier(const GntlNotifier&) = delete;
-            GntlNotifier& operator=(const GntlNotifier&) = delete;
-            GntlNotifier(GntlNotifier&&) = delete;
-            GntlNotifier& operator=(GntlNotifier&&) = delete;
+            GNTLNotifier(ZmqHandler& h);
+            ~GNTLNotifier();
+            GNTLNotifier(const GNTLNotifier&) = delete;
+            GNTLNotifier& operator=(const GNTLNotifier&) = delete;
+            GNTLNotifier(GNTLNotifier&&) = delete;
+            GNTLNotifier& operator=(GNTLNotifier&&) = delete;
             bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t max_clients);
             void run();
 			void stop();

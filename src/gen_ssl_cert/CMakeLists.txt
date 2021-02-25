@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, The Gntl Network
+# Copyright (c) 2019-2020, The GNTL Project
 # Copyright (c) 2017-2020, The Monero Project
 #
 # All rights reserved.
