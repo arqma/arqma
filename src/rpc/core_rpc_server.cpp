@@ -2295,7 +2295,7 @@ namespace cryptonote
       return r;
 
     res.version = CORE_RPC_VERSION;
-    res.release = ARQMA_VERSION_IS_RELEASE;
+    res.release = GNTL_VERSION_IS_RELEASE;
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -2475,7 +2475,7 @@ namespace cryptonote
       res.status = "Error checking for updates";
       return true;
     }
-    if (tools::vercmp(version.c_str(), ARQMA_VERSION) <= 0)
+    if (tools::vercmp(version.c_str(), GNTL_VERSION) <= 0)
     {
       res.update = false;
       res.status = CORE_RPC_STATUS_OK;
