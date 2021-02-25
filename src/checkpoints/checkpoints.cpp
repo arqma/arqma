@@ -171,7 +171,7 @@ namespace cryptonote
       return true;
     }
 //    ADD_CHECKPOINT(0, "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328");
-  
+
     return true;
   }
 
@@ -216,10 +216,8 @@ namespace cryptonote
     std::vector<std::string> records;
 
     // All four ArQ-Net domains have DNSSEC on and valid
-    static const std::vector<std::string> dns_urls = { "checkpoints.gntl.com"
-                                                     , "checkpoints.mygntl.com"
-                                                     , "checkpoints.supportgntl.com"
-                                                     , "checkpoints.supportgntl.eu"
+    static const std::vector<std::string> dns_urls = {
+
 	};
 
     static const std::vector<std::string> testnet_dns_urls = {
@@ -229,7 +227,7 @@ namespace cryptonote
     };
 
     if (!tools::dns_utils::load_txt_records_from_dns(records, nettype == TESTNET ? testnet_dns_urls : nettype == STAGENET ? stagenet_dns_urls : dns_urls))
-      return true; // why true ?
+      return false; // why true ?
 
     for (const auto& record : records)
     {

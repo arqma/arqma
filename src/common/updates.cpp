@@ -47,10 +47,7 @@ namespace tools
 
     // All four ArQ-Net domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
-      "updates.gntl.com",
-      "updates.mygntl.com",
-      "updates.supportgntl.eu",
-      "updates.supportgntl.com"
+
     };
 
     if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls))

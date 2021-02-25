@@ -592,7 +592,7 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
   }
 
   good_records = records[good_records_index];
-  return true;
+  return false;
 }
 
 std::vector<std::string> parse_dns_public(const char *s)
