@@ -244,7 +244,7 @@ namespace config
    namespace tx_settings
    {
      const size_t GNTL_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     const size_t GNTL_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
+     const size_t GNTL_TX_VERSION = 2; // Current Transaction Version Valid on GNTL Network
      const uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }

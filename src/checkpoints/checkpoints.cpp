@@ -215,7 +215,7 @@ namespace cryptonote
   {
     std::vector<std::string> records;
 
-    // All four ArQ-Net domains have DNSSEC on and valid
+    // All four GNTL Network domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
 
 	};

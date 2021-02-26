@@ -1653,7 +1653,7 @@ namespace cryptonote
      {
        std::string main_message;
        if (m_offline)
-        main_message = "The daemon is running offline and will not attempt to sync to the ArQ-Net.";
+        main_message = "The daemon is running offline and will not attempt to sync to the GNTL Network.";
       else
         main_message = "The daemon will start synchronizing with the network. This may take a long time to complete.";
       MGINFO_CYAN(ENDL <<

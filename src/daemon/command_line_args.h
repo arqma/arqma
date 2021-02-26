@@ -99,7 +99,7 @@ namespace daemon_args
   
   const command_line::arg_descriptor<bool> arg_public_node = {
     "public-node"
-  , "Allow Arq-Net Users to use this GNTL Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
+  , "Allow GNTL Network Users to use this GNTL Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
   , false
   };
 

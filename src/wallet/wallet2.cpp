@@ -12438,7 +12438,7 @@ uint64_t wallet2::get_segregation_fork_height() const
   static const bool use_dns = true;
   if (use_dns)
   {
-    // All four Arq-Net domains have DNSSEC on and valid
+    // All four GNTL Network domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
 
     };
