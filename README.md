@@ -1,4 +1,4 @@
-## GNTL Network
+## The GNTL Project
 
 Copyright (c) 2021-2021, The GNTL Project    
 Copyright (c) 2014-2020, The Monero Project  
@@ -30,9 +30,9 @@ GNTL is a private, secure, untraceable, decentralised digital currency. You are 
 
 ## SSL
 
-As a network, GNTL supports complete, cryptographically secured connections at all levels. This includes, but is not limited to GNTL Network Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
+As a network, GNTL supports complete, cryptographically secured connections at all levels. This includes, but is not limited to The GNTL Project Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
 
-GNTL Network will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over The GNTL Project.
+The GNTL Project will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over The GNTL Project.
 
 The use of SSL connections means that there will not be any possibility to use The GNTL Project with unsecured or tampered connections (daemons), and that your privacy will remain a feature built in a protocol level.
 

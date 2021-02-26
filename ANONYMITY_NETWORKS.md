@@ -146,7 +146,7 @@ sees a transaction over Tor, it could _assume_ (possibly incorrectly) that the
 transaction originated from the peer. If both the Tor connection and an
 IPv4/IPv6 connection have timestamps that are approximately close in value they
 could be used to link the two connections. This is less likely to happen if the
-system clock is fairly accurate - many peers on the GNTL-Network should have
+system clock is fairly accurate - many peers on the GNTL Network should have
 similar timestamps.
 
 #### Mitigation
