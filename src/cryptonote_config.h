@@ -259,9 +259,9 @@ namespace config
 
    namespace governance
    {
-    static constexpr const char* MAINNET_WALLET_ADDRESS = "";
-    static constexpr const char* TESTNET_WALLET_ADDRESS = "";
-    static constexpr const char* STAGENET_WALLET_ADDRESS = "gn3QKCfjtTFPRDW29g3rpQFR9bvEY57WDRXE7r1jnZdcPrBFARK9NuGZ6GpBihSJjiBxVxC1A6c57Li26M2fPNg82JFpFaj9r4";
+    static constexpr const char* MAINNET_WALLET_ADDRESS = "gnt1TedgP6PiVngZo8p15PUjVr15aYUENTK1FjchXYRPW6AFvLS8PxVgvPdckyVviWUjEmyCJUZLCjKAFw7YM5yYAY6Ejf66A1";
+    static constexpr const char* TESTNET_WALLET_ADDRESS = "gn21QG3RwRY9q3Lhdz2L9Q1wnoB1BXVDyUmyZnAKc6HVDmKnHCo1uShHGdnQw4aQCKbBFisHup6Xk4oxg9yamGAG5JjkZnngbc";
+    static constexpr const char* STAGENET_WALLET_ADDRESS = "gn3QZ7s6FqnfA4NyCEQM49CLdva8JC7yCQCaztPaFXPdXiAJETPAsJYbP8PQ1aguYngUfPEsgYswCGSaqmg2v3Eo75vTyFjG7f";
    }
 
 }
