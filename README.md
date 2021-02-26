@@ -36,14 +36,13 @@ The GNTL Project will be consistently implementing the highest security protocol
 
 The use of SSL connections means that there will not be any possibility to use The GNTL Project with unsecured or tampered connections (daemons), and that your privacy will remain a feature built in a protocol level.
 
- * Below is an example how to generate SSL Keys with openssl
+ * Below is an example how to generate SSL Keys with openssl.  This example will generate 4096bit SSL Cert at /tmp (which can be changed)
 
-    `$ openssl genrsa -out /tmp/KEY 4096`    
-    `$ openssl req -new -key /tmp/KEY -out /tmp/REQ`    
-    `$ openssl x509 -req -days 999999 -sha256 -in /tmp/REQ -signkey /tmp/KEY -out /tmp/CERT`    
-
- * Above example will generate 4096bit SSL Cert at /tmp (which can be changed)*
-
+```
+openssl genrsa -out /tmp/KEY 4096
+openssl req -new -key /tmp/KEY -out /tmp/REQ
+openssl x509 -req -days 999999 -sha256 -in /tmp/REQ -signkey /tmp/KEY -out /tmp/CERT
+```
 
 ## About this project
 
@@ -80,7 +79,7 @@ That build is from the master branch, which is used for active development and c
 
 ##### [Boost](https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz)
 
-##### GNTL build been tested on Ubuntu Server 20.04 Focal Fosa with above releases as long with [gcc9.3](https://gcc.gnu.org/gcc-9/)
+##### GNTL build been tested on Ubuntu Server 18.04 Bionic Beaver with above releases as long with [gcc9.3](https://gcc.gnu.org/gcc-9/)
 
 The following table summarizes the tools and libraries required to build. A
 few of the libraries are also included in this repository (marked as
@@ -94,9 +93,9 @@ library archives (`.a`).
 | Dep          | Min. version  | Vendored | Debian/Ubuntu pkg  | Arch pkg     | Fedora            | Optional | Purpose        |
 | ------------ | ------------- | -------- | ------------------ | ------------ | ----------------- | -------- | -------------- |
 | GCC          | 7.3.0         | NO       | `build-essential`  | `base-devel` | `gcc`             | NO       |                |
-| CMake        | 3.12.0        | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
+| CMake        | 3.17.3        | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
 | pkg-config   | any           | NO       | `pkg-config`       | `base-devel` | `pkgconf`         | NO       |                |
-| Boost        | 1.62          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
+| Boost        | 1.73          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | 1.1.1         | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
 | libsodium    | 1.0.16        | NO       | `libsodium-dev`    | ?            | `libsodium-devel` | NO       | Cryptography   |
 | libunwind    | any           | NO       | `libunwind8-dev`   | `libunwind`  | `libunwind-devel` | YES      | Stack traces   |
@@ -115,28 +114,34 @@ library archives (`.a`).
 
 [1] On Debian/Ubuntu `libgtest-dev` only includes sources and headers. You must
 build the library binary manually. This can be done with the following command:
+```
+sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/
+```
 
-`sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/`
-
-Debian / Ubuntu one liner for all dependencies
-
-`$ sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
+Debian / Ubuntu one liner for all dependencies:
+```
+sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin
+```
 
 Install all dependencies at once on OSX:
-
-`$ brew update && brew bundle --file=contrib/apple/brew`
+```
+brew update && brew bundle --file=contrib/apple/brew
+```
 
 ### Cloning the repository
 
 Clone recursively to pull-in needed submodule(s):
 
-`$ git clone --recursive https://github.com/GNTLMiningPools/gntl`
+```
+git clone --recursive https://github.com/GNTLMiningPools/gntl
+```
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd gntl && git checkout <branch or release>`
-
-`$ git submodule init && git submodule update`
+```
+cd gntl && git checkout <branch or release>
+git submodule init && git submodule update
+```
 
 ### Build instructions
 
@@ -149,11 +154,13 @@ invokes cmake commands as needed.
 
 * Change to the root of the source code directory and build:
 
-	`$ cd gntl && make release`
+```
+cd gntl && make release
+```
 
-	*Optional*: If your machine has several cores and enough memory, enable parallel build by running `make -j<number of threads>` instead of `make`. For this to be worthwhile, the machine should have one core and about 2GB of RAM available per thread.
+*Optional*: If your machine has several cores and enough memory, enable parallel build by running `make -j<number of threads>` instead of `make`. For this to be worthwhile, the machine should have one core and about 2GB of RAM available per thread.
 
-* The resulting executables can be found in `build/release/bin`
+* The resulting executables can be found in: `build/release/bin`
 
 * Add `PATH="$PATH:$HOME/gntl/build/release/bin"` to `.profile`
 
@@ -161,17 +168,23 @@ invokes cmake commands as needed.
 
 * **Optional**: build and run the test suite to verify the binaries:
 
-	`$ make release-test`
+```
+make release-test
+```
 
-    *NOTE*: `core_tests` test may take a few hours to complete.
+*NOTE*: `core_tests` test may take a few hours to complete.
 
 * **Optional**: to build binaries suitable for debugging:
 
-	`$ make debug`
+```
+make debug
+```
 
 * **Optional**: to build statically-linked binaries:
 
-	`$ make release-static`
+```
+make release-static
+```
 
 Dependencies need to be built with -fPIC. Static libraries usually aren't, so you may have to build them yourself with `-fPIC`. Refer to their documentation for how to build them.
 
