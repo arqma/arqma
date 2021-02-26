@@ -55,7 +55,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install GnTl dependencies
+    - name: install GNTL dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev
     - name: build
       run: make release -j2
@@ -78,7 +78,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install GnTl dependencies
+    - name: install GNTL dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev
     - name: build
       run: make depends target=x86_64-linux-gnu -j2
@@ -101,7 +101,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install GnTl dependencies
+    - name: install GNTL dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev
     - name: build
       run: make depends-compat target=x86_64-linux-gnu -j2
@@ -124,7 +124,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install GnTl dependencies
+    - name: install GNTL dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev g++-arm-linux-gnueabihf
     - name: build
       run: make depends target=arm-linux-gnueabihf -j2
@@ -147,7 +147,7 @@ jobs:
         echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
     - name: update apt
       run: sudo apt update
-    - name: install GnTl dependencies
+    - name: install GNTL dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev g++-aarch64-linux-gnu
     - name: build
       run: make depends target=aarch64-linux-gnu -j2

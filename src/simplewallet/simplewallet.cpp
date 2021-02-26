@@ -436,7 +436,7 @@ namespace
     std::stringstream prompt;
     prompt << sw::tr("For URL: ") << url
            << ", " << dnssec_str << std::endl
-           << sw::tr(" GnTl Address = ") << addresses[0]
+           << sw::tr(" GNTL Address = ") << addresses[0]
            << std::endl
            << sw::tr("Is this OK?")
     ;
@@ -2049,7 +2049,7 @@ bool simple_wallet::welcome(const std::vector<std::string> &args)
 
 bool simple_wallet::version(const std::vector<std::string> &args)
 {
-  message_writer() << "GnTl '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")";
+  message_writer() << "GNTL '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")";
   return true;
 }
 
@@ -2837,12 +2837,12 @@ simple_wallet::simple_wallet()
                                   "auto-low-priority <1|0>\n "
                                   "  Whether to automatically use the low priority fee level when it's safe to do so.\n "
                                   "segregate-pre-fork-outputs <1|0>\n "
-                                  "  Set this if you intend to spend outputs on both GnTl AND a key reusing fork.\n "
+                                  "  Set this if you intend to spend outputs on both GNTL AND a key reusing fork.\n "
                                   "key-reuse-mitigation2 <1|0>\n "
-                                  "  Set this if you are not sure whether you will spend on a key reusing GnTl fork later.\n"
+                                  "  Set this if you are not sure whether you will spend on a key reusing GNTL fork later.\n"
                                   "subaddress-lookahead <major>:<minor>\n "
                                   "  Set the lookahead sizes for the subaddress hash table.\n "
-                                  "  Set this if you are not sure whether you will spend on a key reusing GnTl fork later.\n "
+                                  "  Set this if you are not sure whether you will spend on a key reusing GNTL fork later.\n "
                                   "segregation-height <n>\n "
                                   "  Set to the height of a key reusing fork you want to use, 0 to use default.\n"
                                   "persistent-client-id <1|0>\n "
@@ -9098,7 +9098,7 @@ int main(int argc, char* argv[])
   std::tie(vm, should_terminate) = wallet_args::main(
    argc, argv,
    "gntl-wallet-cli [--wallet-file=<filename>|--generate-new-wallet=<filename>] [<COMMAND>]",
-    sw::tr("This is the command line gntl wallet. It needs to connect to a gntl\ndaemon to work correctly.\nWARNING: Do not reuse your GnTl keys on an another fork, UNLESS this fork has key reuse mitigations built in. Doing so will harm your privacy."),
+    sw::tr("This is the command line gntl wallet. It needs to connect to a gntl\ndaemon to work correctly.\nWARNING: Do not reuse your GNTL keys on an another fork, UNLESS this fork has key reuse mitigations built in. Doing so will harm your privacy."),
     desc_params,
     positional_options,
     [](const std::string &s, bool emphasis){ tools::scoped_message_writer(emphasis ? epee::console_color_white : epee::console_color_default, true) << s; },

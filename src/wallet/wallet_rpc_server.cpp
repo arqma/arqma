@@ -666,7 +666,7 @@ namespace tools
           }
           if (addresses.empty())
           {
-            er.message = std::string("No GnTl address found at ") + url;
+            er.message = std::string("No GNTL address found at ") + url;
             return {};
           }
           return addresses[0];
@@ -1932,7 +1932,7 @@ namespace tools
         }
         if (addresses.empty())
         {
-          er.message = std::string("No GnTl address found at ") + url;
+          er.message = std::string("No GNTL address found at ") + url;
           return {};
         }
         return addresses[0];
@@ -2723,7 +2723,7 @@ namespace tools
         }
         if (addresses.empty())
         {
-          er.message = std::string("No GnTl address found at ") + url;
+          er.message = std::string("No GNTL address found at ") + url;
           return {};
         }
         return addresses[0];

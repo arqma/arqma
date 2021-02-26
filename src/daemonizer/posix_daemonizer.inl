@@ -101,7 +101,7 @@ namespace daemonizer
     }
     else
     {
-      //LOG_PRINT_L0("GnTl '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL);
+      //LOG_PRINT_L0("GNTL '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL);
       return executor.run_interactive(vm);
     }
   }

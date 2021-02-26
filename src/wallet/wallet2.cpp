@@ -104,9 +104,9 @@ using namespace cryptonote;
 #define CHACHA8_KEY_TAIL 0x8c
 #define CACHE_KEY_TAIL 0x8d
 
-#define UNSIGNED_TX_PREFIX "GnTl unsigned tx set\004"
-#define SIGNED_TX_PREFIX "GnTl signed tx set\004"
-#define MULTISIG_UNSIGNED_TX_PREFIX "GnTl multisig unsigned tx set\001"
+#define UNSIGNED_TX_PREFIX "GNTL unsigned tx set\004"
+#define SIGNED_TX_PREFIX "GNTL signed tx set\004"
+#define MULTISIG_UNSIGNED_TX_PREFIX "GNTL multisig unsigned tx set\001"
 
 #define RECENT_OUTPUT_RATIO (0.50) // 50% of outputs are from the recent zone
 #define RECENT_OUTPUT_DAYS (1.8) // last 1.8 day makes up the recent zone
@@ -120,11 +120,11 @@ using namespace cryptonote;
 #define SUBADDRESS_LOOKAHEAD_MAJOR 50
 #define SUBADDRESS_LOOKAHEAD_MINOR 200
 
-#define KEY_IMAGE_EXPORT_FILE_MAGIC "GnTl key image export\003"
+#define KEY_IMAGE_EXPORT_FILE_MAGIC "GNTL key image export\003"
 
-#define MULTISIG_EXPORT_FILE_MAGIC "GnTl multisig export\001"
+#define MULTISIG_EXPORT_FILE_MAGIC "GNTL multisig export\001"
 
-#define OUTPUT_EXPORT_FILE_MAGIC "GnTl output export\004"
+#define OUTPUT_EXPORT_FILE_MAGIC "GNTL output export\004"
 
 #define SEGREGATION_FORK_HEIGHT 9999999999999
 #define TESTNET_SEGREGATION_FORK_HEIGHT 9999999999999
