@@ -43,7 +43,7 @@ packages:
 - "libprotobuf-dev"
 - "python3-zmq"
 remotes:
-- "url": "https://github.com/gntl/gntl.git"
+- "url": "https://github.com/GNTLMiningPools/gntl.git"
   "dir": "gntl"
 files: []
 script: |

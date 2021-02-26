@@ -130,11 +130,12 @@ Install all dependencies at once on OSX:
 
 Clone recursively to pull-in needed submodule(s):
 
-`$ git clone https://github.com/gntl/gntl`
+`$ git clone --recursive https://github.com/GNTLMiningPools/gntl`
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd gntl && git checkout release-v0.6.1`
+`$ cd gntl && git checkout <branch or release>`
+
 `$ git submodule init && git submodule update`
 
 ### Build instructions
@@ -195,7 +196,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Clone gntl and checkout most recent release version:
 
-	`$ git clone https://github.com/gntl/gntl.git`
+	`$ git clone https://github.com/GNTLMiningPools/gntl.git`
 	`$ cd gntl`
 
 * Build:
@@ -278,7 +279,7 @@ application.
 
 * Download GNTL with command:
 
-	`$ git clone https://github.com/gntl/gntl`
+	`$ git clone https://github.com/GNTLMiningPools/gntl`
 
 * Change branch to last Release:
 
