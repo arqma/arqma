@@ -1001,13 +1001,13 @@ namespace cryptonote
     switch (std::atomic_load(&default_decimal_point))
     {
       case 9:
-        return "gnt";
+        return "gntl";
       case 6:
-        return "millignt";
+        return "milligntl";
       case 3:
-        return "micrognt";
+        return "microgntl";
       case 0:
-        return "nanognt";
+        return "nanogntl";
       default:
         ASSERT_MES_AND_THROW("Invalid decimal point specification: " << default_decimal_point);
     }
