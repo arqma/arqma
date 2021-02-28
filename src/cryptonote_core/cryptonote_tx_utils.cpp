@@ -103,8 +103,13 @@ keypair get_deterministic_keypair_from_height(uint64_t height)
 uint64_t get_governance_reward(uint64_t height, uint64_t base_reward, uint8_t hf_version)
 {
   if(hf_version >= 16)
-   return base_reward * 10 / 100;
-  return 0;
+    if(height >= 260000)
+      return base_reward * 1 / 100;
+    if(height >= 87000)
+      return base_reward * 5 / 100;
+    return base_reward * 10 /100;
+  else
+    return 0;
 }
 
 bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
