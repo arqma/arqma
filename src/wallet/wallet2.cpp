@@ -12400,7 +12400,7 @@ std::vector<std::pair<uint64_t, uint64_t>> wallet2::estimate_backlog(const std::
     uint64_t nblocks_min = priority_weight_min / full_reward_zone;
     uint64_t nblocks_max = priority_weight_max / full_reward_zone;
     MDEBUG("estimate_backlog: priority_weight " << priority_weight_min << " - " << priority_weight_max << " for "
-        << our_fee_byte_min << " - " << our_fee_byte_max << " nanoarq byte fee, "
+        << our_fee_byte_min << " - " << our_fee_byte_max << " nanognt byte fee, "
         << nblocks_min << " - " << nblocks_max << " blocks at block weight " << full_reward_zone);
     blocks.push_back(std::make_pair(nblocks_min, nblocks_max));
   }
