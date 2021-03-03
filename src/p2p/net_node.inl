@@ -468,6 +468,7 @@ namespace nodetool
       full_addrs.insert("83.151.238.36:26661"); //UK
       full_addrs.insert("46.101.74.32:26661"); //UK
       full_addrs.insert("79.143.181.203:26661"); //Europe
+      full_addrs.insert("13.66.214.75:26661"); //USA
       full_addrs.insert("47.181.202.47:26661"); //USA
     }
     else if (nettype == cryptonote::STAGENET)
@@ -476,6 +477,7 @@ namespace nodetool
       full_addrs.insert("83.151.238.36:36661"); //UK
       full_addrs.insert("46.101.74.32:36661"); //UK
       full_addrs.insert("79.143.181.203:36661"); //Europe
+      full_addrs.insert("13.66.214.75:36661"); //USA
       full_addrs.insert("47.181.202.47:36661"); //USA
     }
     else if (nettype == cryptonote::FAKECHAIN)
@@ -487,6 +489,7 @@ namespace nodetool
       full_addrs.insert("83.151.238.36:16661"); //UK
       full_addrs.insert("46.101.74.32:16661"); //UK
       full_addrs.insert("79.143.181.203:16661"); //Europe
+      full_addrs.insert("13.66.214.75:16661"); //USA
       full_addrs.insert("47.181.202.47:16661"); //USA
     }
     return full_addrs;
