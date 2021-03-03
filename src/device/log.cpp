@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -33,8 +33,8 @@
 
 namespace hw {
 
-  #undef ARQMA_DEFAULT_LOG_CATEGORY
-  #define ARQMA_DEFAULT_LOG_CATEGORY "device"
+  #undef GNTL_DEFAULT_LOG_CATEGORY
+  #define GNTL_DEFAULT_LOG_CATEGORY "device"
 
   void buffer_to_str(char *to_buff,  size_t to_len, const char *buff, size_t len) {
     CHECK_AND_ASSERT_THROW_MES(to_len > (len*2), "destination buffer too short. At least" << (len*2+1) << " bytes required");
@@ -56,8 +56,8 @@ void log_message(const std::string &msg, const std::string &info ) {
 #ifdef WITH_DEVICE_LEDGER
   namespace ledger {
 
-  #undef ARQMA_DEFAULT_LOG_CATEGORY
-  #define ARQMA_DEFAULT_LOG_CATEGORY "device.ledger"
+  #undef GNTL_DEFAULT_LOG_CATEGORY
+  #define GNTL_DEFAULT_LOG_CATEGORY "device.ledger"
 
 
     #ifdef DEBUG_HWDEVICE

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Project
+# Copyright (c) 2021-2021, The GNTL Project
 # Copyright (c) 2018-2020, The Monero Project
 #
 # All rights reserved.
@@ -43,7 +43,7 @@ set(net_headers
   socks_connect.h
   tor_address.h)
 
-arqma_add_library(net
+gntl_add_library(net
   ${net_sources}
   ${net_headers})
 

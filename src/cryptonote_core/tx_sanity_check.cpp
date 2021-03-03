@@ -1,4 +1,4 @@
-// Copyright (c) 2019, The Arqma Network
+// Copyright (c) 2019, The GNTL Project
 // Copyright (c) 2019, The Monero Project
 //
 // All rights reserved.
@@ -34,8 +34,8 @@
 #include "blockchain.h"
 #include "tx_sanity_check.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "verify"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "verify"
 
 namespace cryptonote
 {

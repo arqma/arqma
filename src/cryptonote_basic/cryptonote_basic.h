@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -172,7 +172,7 @@ namespace cryptonote
 
     BEGIN_SERIALIZE()
       VARINT_FIELD(version)
-      if(version == 0 || config::tx_settings::ARQMA_TX_VERSION < version) return false;
+      if(version == 0 || config::tx_settings::GNTL_TX_VERSION < version) return false;
       VARINT_FIELD(unlock_time)
       FIELD(vin)
       FIELD(vout)

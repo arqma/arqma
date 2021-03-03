@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -101,7 +101,7 @@ namespace daemonizer
     }
     else
     {
-      //LOG_PRINT_L0("ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL);
+      //LOG_PRINT_L0("GNTL '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL);
       return executor.run_interactive(vm);
     }
   }

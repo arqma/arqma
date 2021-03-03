@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -41,8 +41,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "WalletAPI"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "WalletAPI"
 
 namespace epee {
     unsigned int g_test_dbg_lock_sleep = 0;
@@ -360,7 +360,7 @@ std::tuple<bool, std::string, std::string, std::string, std::string> WalletManag
     if (!tools::check_updates(software, buildtag, version, hash))
       return std::make_tuple(false, "", "", "", "");
 
-    if (tools::vercmp(version.c_str(), ARQMA_VERSION) > 0)
+    if (tools::vercmp(version.c_str(), GNTL_VERSION) > 0)
     {
       std::string user_url = tools::get_update_url(software, buildtag, version, true);
       std::string auto_url = tools::get_update_url(software, buildtag, version, false);

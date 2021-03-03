@@ -56,8 +56,8 @@
 #include "connection_basic.hpp"
 #include "network_throttle-detail.hpp"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "net"
 
 #define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 3000
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -65,8 +65,8 @@
 #include <miniupnp/miniupnpc/upnpcommands.h>
 #include <miniupnp/miniupnpc/upnperrors.h>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net.p2p"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "net.p2p"
 
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
 
@@ -464,31 +464,30 @@ namespace nodetool
     std::set<std::string> full_addrs;
     if (nettype == cryptonote::TESTNET)
     {
-      full_addrs.insert("139.99.106.122:29993");
-      full_addrs.insert("77.93.206.172:29993");
-      full_addrs.insert("86.24.233.79:29993");
+      full_addrs.insert("83.151.238.35:26661"); //UK
+      full_addrs.insert("83.151.238.36:26661"); //UK
+      full_addrs.insert("46.101.74.32:26661"); //UK
+      full_addrs.insert("79.143.181.203:26661"); //Europe
+      full_addrs.insert("47.181.202.47:26661"); //USA
     }
     else if (nettype == cryptonote::STAGENET)
     {
-      full_addrs.insert("161.97.102.172:39993");
-      full_addrs.insert("164.68.123.118:39993");
-      full_addrs.insert("86.24.233.79:39993");
-      full_addrs.insert("139.99.106.122:39993");
-      full_addrs.insert("144.217.242.16:39993");
+      full_addrs.insert("83.151.238.35:36661"); //UK
+      full_addrs.insert("83.151.238.36:36661"); //UK
+      full_addrs.insert("46.101.74.32:36661"); //UK
+      full_addrs.insert("79.143.181.203:36661"); //Europe
+      full_addrs.insert("47.181.202.47:36661"); //USA
     }
     else if (nettype == cryptonote::FAKECHAIN)
     {
     }
     else
     {
-      full_addrs.insert("144.217.242.16:19993");
-      full_addrs.insert("161.97.102.172:19993");
-      full_addrs.insert("92.222.70.207:19993");
-      full_addrs.insert("86.24.233.79:19993");
-      full_addrs.insert("139.99.106.122:19993");
-      full_addrs.insert("51.15.50.83:19993");
-      full_addrs.insert("164.68.123.118:19993");
-      full_addrs.insert("51.15.253.177:19993");
+      full_addrs.insert("83.151.238.35:16661"); //UK
+      full_addrs.insert("83.151.238.36:16661"); //UK
+      full_addrs.insert("46.101.74.32:16661"); //UK
+      full_addrs.insert("79.143.181.203:16661"); //Europe
+      full_addrs.insert("47.181.202.47:16661"); //USA
     }
     return full_addrs;
   }

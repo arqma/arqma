@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
@@ -53,8 +53,8 @@
 #include "cryptonote_basic/cryptonote_boost_serialization.h"
 #include "misc_language.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "tests.core"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "tests.core"
 
 
 

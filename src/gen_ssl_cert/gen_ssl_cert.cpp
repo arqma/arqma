@@ -1,4 +1,4 @@
-// Copyright (c) 2019, The Arqma Network
+// Copyright (c) 2019, The GNTL Project
 // Copyright (c) 2019, The Monero Project
 //
 // All rights reserved.
@@ -45,8 +45,8 @@
 
 namespace po = boost::program_options;
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "gen_ssl_cert"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "gen_ssl_cert"
 
 namespace gencert
 {
@@ -122,13 +122,13 @@ int main(int argc, char* argv[])
 
   if (command_line::get_arg(vm, command_line::arg_help))
   {
-    std::cout << "Arqma '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL << ENDL;
+    std::cout << "GNTL '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")" << ENDL << ENDL;
     std::cout << desc_options << std::endl;
     return 0;
   }
   if (command_line::get_arg(vm, command_line::arg_version))
   {
-    std::cout << "Arqma '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL;
+    std::cout << "GNTL '" << GNTL_RELEASE_NAME << "' (v" << GNTL_VERSION_FULL << ")" << ENDL;
     return 0;
   }
 

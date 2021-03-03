@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2021-2021, The GNTL Project
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -61,9 +61,9 @@ set(cryptonote_basic_private_headers
   tx_extra.h
   verification_context.h)
 
-arqma_private_headers(cryptonote_basic
+gntl_private_headers(cryptonote_basic
   ${cryptonote_basic_private_headers})
-arqma_add_library(cryptonote_basic
+gntl_add_library(cryptonote_basic
   ${cryptonote_basic_sources}
   ${cryptonote_basic_headers}
   ${cryptonote_basic_private_headers})

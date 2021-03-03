@@ -1,4 +1,4 @@
-// Copyright (c) 2019, The Arqma Network
+// Copyright (c) 2019, The GNTL Project
 // Copyright (c) 2018-2019, The Monero Project
 //
 // All rights reserved.
@@ -43,8 +43,8 @@
 #include "core_rpc_server_error_codes.h"
 #include "rpc_payment.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon.rpc.payment"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "daemon.rpc.payment"
 
 #define STALE_THRESHOLD 15 /* seconds */
 

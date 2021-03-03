@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2021-2021, The GNTL Project
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -42,10 +42,10 @@ set(p2p_private_headers
   p2p_protocol_defs.h
   stdafx.h)
 
-arqma_private_headers(p2p
+gntl_private_headers(p2p
   ${p2p_private_headers})
 
-arqma_add_library(p2p
+gntl_add_library(p2p
   ${p2p_sources}
   ${p2p_headers}
   ${p2p_private_headers})

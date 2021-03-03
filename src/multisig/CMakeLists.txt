@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2021-2021, The GNTL Project
 # Copyright (c) 2017-2020, The Monero Project
 #
 # All rights reserved.
@@ -35,10 +35,10 @@ set(multisig_headers)
 set(multisig_private_headers
   multisig.h)
 
-arqma_private_headers(multisig
+gntl_private_headers(multisig
   ${multisig_private_headers})
 
-arqma_add_library(multisig
+gntl_add_library(multisig
   ${multisig_sources}
   ${multisig_headers}
   ${multisig_private_headers})

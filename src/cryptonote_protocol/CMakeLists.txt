@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2021-2021, The GNTL Project
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -40,10 +40,10 @@ set(cryptonote_protocol_private_headers
   cryptonote_protocol_handler.h
   cryptonote_protocol_handler_common.h)
 
-arqma_private_headers(cryptonote_protocol
+gntl_private_headers(cryptonote_protocol
   ${cryptonote_protocol_private_headers})
 
-arqma_add_library(cryptonote_protocol
+gntl_add_library(cryptonote_protocol
   ${cryptonote_protocol_sources}
   ${cryptonote_protocol_headers}
   ${cryptonote_protocol_private_headers})

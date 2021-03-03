@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2021-2021, The GNTL Project
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -44,9 +44,9 @@ set(cryptonote_core_private_headers
   tx_sanity_check.h
   cryptonote_tx_utils.h)
 
-arqma_private_headers(cryptonote_core
+gntl_private_headers(cryptonote_core
   ${cryptonote_core_private_headers})
-arqma_add_library(cryptonote_core
+gntl_add_library(cryptonote_core
   ${cryptonote_core_sources}
   ${cryptonote_core_headers}
   ${cryptonote_core_private_headers})
@@ -59,7 +59,7 @@ target_link_libraries(cryptonote_core
     multisig
     ringct
     device
-    arqma_mq
+    gntl_mq
     daemonizer
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}

@@ -1,4 +1,4 @@
-// Copyright (c)2020, The Arqma Network
+// Copyright (c)2020, The GNTL Project
 // Copyright (c)2020, Gary Rusher
 // Portions of this software are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
 
@@ -43,7 +43,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-#include "arqmaMQ.h"
+#include "gntlMQ.h"
 #include <cstdint>
 #include <system_error>
 
@@ -60,13 +60,13 @@ using namespace epee;
 #include "p2p/net_node.h"
 #include "version.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon.zmq"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "daemon.zmq"
 
 /*
 namespace cryptonote
 {
-  void arqma_zmq_server::init_options(boost::program_options::options_description& desc)
+  void gntl_zmq_server::init_options(boost::program_options::options_description& desc)
   {
     command_line::add_arg(desc, arg_zmq_enable);
     command_line::add_arg(desc, arg_zmq_bind_ip);
@@ -74,7 +74,7 @@ namespace cryptonote
     command_line::add_arg(desc, arg_zmq_max_clients);
   }
   //-
-  arqma_zmq_server::arqma_zmq_server(
+  gntl_zmq_server::gntl_zmq_server(
       core& cr
     , nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>& p2p
     )
@@ -82,7 +82,7 @@ namespace cryptonote
     , m_p2p(p2p)
   {}
   //-
-  bool arqma_zmq_server::init(const boost::program_options::variables_map& vm, const bool enabled)
+  bool gntl_zmq_server::init(const boost::program_options::variables_map& vm, const bool enabled)
   {
     m_enabled = enabled;
     m_net_server.set_threads_prefix("ZMQ");
@@ -91,26 +91,26 @@ namespace cryptonote
 */
 
 
-namespace arqmaMQ 
+namespace gntlMQ 
 {
 
 	 extern "C" void message_buffer_destroy(void*, void* hint) {
  		delete reinterpret_cast<std::string*>(hint);
 	}
 
-	zmq::message_t ArqmaNotifier::create_message(std::string &&data)
+	zmq::message_t GNTLNotifier::create_message(std::string &&data)
 	{
 		auto *buffer = new std::string(std::move(data));
 		return zmq::message_t(&(*buffer)[0], buffer->size(), message_buffer_destroy, buffer);
 	}
 
-    ArqmaNotifier::ArqmaNotifier(ZmqHandler& h): handler(h)
+    GNTLNotifier::GNTLNotifier(ZmqHandler& h): handler(h)
     {}
 
-    ArqmaNotifier::~ArqmaNotifier()
+    GNTLNotifier::~GNTLNotifier()
     {}
 
-	void ArqmaNotifier::stop()
+	void GNTLNotifier::stop()
 	{
 		producer.send(create_message(std::move("QUIT")), 0);
 		proxy_thread.join();
@@ -119,13 +119,13 @@ namespace arqmaMQ
         zmq_term(&context);
 	}
 
-    void ArqmaNotifier::run()
+    void GNTLNotifier::run()
     {
         producer.bind("inproc://backend");
-        proxy_thread = std::thread{&ArqmaNotifier::proxy_loop, this};
+        proxy_thread = std::thread{&GNTLNotifier::proxy_loop, this};
     }
 
-    bool ArqmaNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t clients)
+    bool GNTLNotifier::addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t clients)
     {
         if(address.empty())
             address = "*";
@@ -140,7 +140,7 @@ namespace arqmaMQ
 		remotes.max_size = clients;
         return true;
     }
-    void ArqmaNotifier::proxy_loop()
+    void GNTLNotifier::proxy_loop()
     {
         subscriber.connect("inproc://backend");
         listener.setsockopt<int>(ZMQ_ROUTER_HANDOVER, 1);

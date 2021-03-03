@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -50,9 +50,9 @@
 #define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V9            BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2
 
 // MONEY_SUPPLY - total number coins to be generated
-#define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define MONEY_PREMINE                                   ((uint64_t)7500000000000000)
-#define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
+#define MONEY_SUPPLY                                    ((uint64_t)77700000000000000)
+#define MONEY_PREMINE                                   ((uint64_t)30)
+#define EMISSION_SPEED_FACTOR_PER_MINUTE                (21)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
 
@@ -121,7 +121,7 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT		        32
+#define P2P_DEFAULT_CONNECTIONS_COUNT		                32
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -145,7 +145,7 @@
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
 
-#define CRYPTONOTE_NAME                                 "arqma"
+#define CRYPTONOTE_NAME                                 "gntl"
 #define CRYPTONOTE_POOLDATA_FILENAME                    "poolstate.bin"
 #define CRYPTONOTE_BLOCKCHAINDATA_FILENAME              "data.mdb"
 #define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
@@ -193,58 +193,58 @@ namespace config
    uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)20000); // Deprecated
    uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
 
-   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
-   uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
-   uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
-   uint16_t const P2P_DEFAULT_PORT = 19993;
-   uint16_t const RPC_DEFAULT_PORT = 19994;
-   uint16_t const ZMQ_DEFAULT_PORT = 19995;
+   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x7b2ed; // Wallet prefix: gnt... // decimal prefix: 504557
+   uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1c32ed; // Wallet prefix: gnti... // decimal prefix: 1848045
+   uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x20f2ed; // Wallet prefix: gnts... // decimal prefix: 2159341
+   uint16_t const P2P_DEFAULT_PORT = 16661;
+   uint16_t const RPC_DEFAULT_PORT = 16662;
+   uint16_t const ZMQ_DEFAULT_PORT = 16663;
    boost::uuids::uuid const NETWORK_ID = { {
-       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
+       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x1A
      } }; // Bender's nightmare
    std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
-   uint32_t const GENESIS_NONCE = 19993;
+   uint32_t const GENESIS_NONCE = 16661;
 
    namespace testnet
    {
-     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x53ca; // Wallet prefix: at... // decimal prefix: 21450
-     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x504a; // Wallet prefix: ati... // decimal prefix: 20554
-     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x524a; // Wallet prefix: ats... // decimal prefix: 21066
-     uint16_t const P2P_DEFAULT_PORT = 29993;
-     uint16_t const RPC_DEFAULT_PORT = 29994;
-     uint16_t const ZMQ_DEFAULT_PORT = 29995;
+     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x17a76d; // Wallet prefix: gn2... // decimal prefix: 1550189
+     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x2ca76d; // Wallet prefix: gn2i... // decimal prefix: 2926445
+     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x31276d; // Wallet prefix: gn2s... // decimal prefix: 3221357
+     uint16_t const P2P_DEFAULT_PORT = 26661;
+     uint16_t const RPC_DEFAULT_PORT = 26662;
+     uint16_t const ZMQ_DEFAULT_PORT = 26663;
      boost::uuids::uuid const NETWORK_ID = { {
-         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
+         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x1B
        } }; // Bender's daydream
    }
 
    namespace stagenet
    {
-     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x39ca; // Wallet prefix: as... // decimal prefix: 14794
-     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1742ca; // Wallet prefix: asi... // decimal prefix: 1524426
-     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1d84ca; // Wallet prefix: ass... // decimal prefix: 1934538
-     uint16_t const P2P_DEFAULT_PORT = 39993;
-     uint16_t const RPC_DEFAULT_PORT = 39994;
-     uint16_t const ZMQ_DEFAULT_PORT = 39995;
+     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x67ed; // Wallet prefix: gn3... // decimal prefix: 26605
+     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0xde7ed; // Wallet prefix: gn3i... // decimal prefix: 911341
+     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x967ed; // Wallet prefix: gn3s... // decimal prefix: 616429
+     uint16_t const P2P_DEFAULT_PORT = 36661;
+     uint16_t const RPC_DEFAULT_PORT = 36662;
+     uint16_t const ZMQ_DEFAULT_PORT = 36663;
      boost::uuids::uuid const NETWORK_ID = { {
-         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
+         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x1C
        } }; // Bender's daydream
    }
 
    namespace blockchain_settings
    {
-     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+     const uint64_t PREMINE_BURN = 30; // Will need to be set after knowing exact amount.
      const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
      const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
-     const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     const uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+     const uint8_t GNTL_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     const uint8_t GNTL_GENESIS_BLOCK_MINOR_VERSION = 1;
+     const uint8_t GNTL_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
    }
 
    namespace tx_settings
    {
-     const size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     const size_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
+     const size_t GNTL_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     const size_t GNTL_TX_VERSION = 2; // Current Transaction Version Valid on GNTL Network
      const uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
    }
@@ -259,9 +259,9 @@ namespace config
 
    namespace governance
    {
-    static constexpr const char* MAINNET_WALLET_ADDRESS = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
-    static constexpr const char* TESTNET_WALLET_ADDRESS = "";
-    static constexpr const char* STAGENET_WALLET_ADDRESS = "as2RzktNfxR8y3RgoDmoRFCGez6393Rd97e8c3ctupJu5i3CirGA4MVFzT7fwcSjxn8bV1orETq4eVQzkY2VTjox2TFnGUhgn";
+    static constexpr const char* MAINNET_WALLET_ADDRESS = "gnt1TedgP6PiVngZo8p15PUjVr15aYUENTK1FjchXYRPW6AFvLS8PxVgvPdckyVviWUjEmyCJUZLCjKAFw7YM5yYAY6Ejf66A1";
+    static constexpr const char* TESTNET_WALLET_ADDRESS = "gn21QG3RwRY9q3Lhdz2L9Q1wnoB1BXVDyUmyZnAKc6HVDmKnHCo1uShHGdnQw4aQCKbBFisHup6Xk4oxg9yamGAG5JjkZnngbc";
+    static constexpr const char* STAGENET_WALLET_ADDRESS = "gn3QZ7s6FqnfA4NyCEQM49CLdva8JC7yCQCaztPaFXPdXiAJETPAsJYbP8PQ1aguYngUfPEsgYswCGSaqmg2v3Eo75vTyFjG7f";
    }
 
 }

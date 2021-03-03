@@ -43,8 +43,8 @@
 #include <random>
 #include <chrono>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "net"
 
 #ifndef MIN_BYTES_WANTED
 #define MIN_BYTES_WANTED	512

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2020, The Monero Project
 //
 // All rights reserved.
@@ -29,8 +29,8 @@
 
 #include "blocksdat_file.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "bcutil"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "bcutil"
 
 namespace po = boost::program_options;
 

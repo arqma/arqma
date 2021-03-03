@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c)2020, Gary Rusher
 // Copyright (c) 2017-2018, The Monero Project
 //
@@ -37,7 +37,7 @@
 #include "cryptonote_basic/blobdatatype.h"
 #include "ringct/rctSigs.h"
 
-namespace arqmaMQ
+namespace gntlMQ
 {
 
   void ZmqHandler::handle(const cryptonote::rpc::GetHeight::Request& req, cryptonote::rpc::GetHeight::Response& res)
@@ -1018,4 +1018,4 @@ namespace arqmaMQ
     }
   }
 
-}  // namespace arqmaMQ
+}  // namespace gntlMQ

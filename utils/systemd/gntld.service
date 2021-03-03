@@ -1,19 +1,19 @@
 [Unit]
-Description=Arqma Full Node
+Description=GNTL Full Node
 After=network.target
 
 [Service]
-User=arqma
-Group=arqma
+User=gntl
+Group=gntl
 WorkingDirectory=~
-RuntimeDirectory=arqma
+RuntimeDirectory=gntl
 
 # Clearnet config
 #
 Type=forking
-PIDFile=/run/arqma/arqmad.pid
-ExecStart=/usr/bin/arqmad --config-file /etc/arqmad.conf \
-    --detach --pidfile /run/arqma/arqmad.pid
+PIDFile=/run/gntl/gntld.pid
+ExecStart=/usr/bin/gntld --config-file /etc/gntld.conf \
+    --detach --pidfile /run/gntl/gntld.pid
 
 # Tor config
 #
@@ -27,7 +27,7 @@ ExecStart=/usr/bin/arqmad --config-file /etc/arqmad.conf \
 ## host in the LAN, VPN, etc, the RPC must bind to 0.0.0.0, but
 ## by default torsocks only allows binding to localhost.
 #Environment=TORSOCKS_ALLOW_INBOUND=1
-#ExecStart=/usr/bin/torsocks /usr/bin/arqmad --config-file /etc/arqmad.conf \
+#ExecStart=/usr/bin/torsocks /usr/bin/gntld --config-file /etc/gntld.conf \
 #    --non-interactive
 
 Restart=always

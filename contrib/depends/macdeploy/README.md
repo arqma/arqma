@@ -8,7 +8,7 @@ Used part only for SDK Extraction Info.
 
 ### Step 1: Obtaining `Xcode.app`
 
-Arqma current macOS SDK
+GNTL current macOS SDK
 (`Xcode-11.3.1-11C505-extracted-SDK-with-libcxx-headers.tar.gz`) can be
 extracted from
 [Xcode_11.3.1.xip](https://download.developer.apple.com/Developer_Tools/Xcode_11.3.1/Xcode_11.3.1.xip).

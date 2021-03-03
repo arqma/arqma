@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -47,14 +47,14 @@
 #include "net/net_ssl.h"
 #include "version.h"
 
-#include "arqma_mq/arqmaMQ.h"
+#include "gntl_mq/gntlMQ.h"
 
 using namespace epee;
 
 #include <functional>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace daemonize {
 
@@ -166,8 +166,8 @@ bool t_daemon::run(bool interactive)
       rpc_commands->start_handling(std::bind(&daemonize::t_daemon::stop_p2p, this));
     }
 
-    arqmaMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
-    arqmaMQ::ArqmaNotifier arqmaNotifier{zmq_daemon_handler};
+    gntlMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
+    gntlMQ::GNTLNotifier gntlNotifier{zmq_daemon_handler};
 
     if(zmq_enabled)
     {
@@ -187,20 +187,20 @@ bool t_daemon::run(bool interactive)
         return false;
       }
 
-      MINFO("Starting Arqma ZMQ server...");
+      MINFO("Starting GNTL ZMQ server...");
 
-      if(!arqmaNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
+      if(!gntlNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
       {
-        LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to Arqma ZMQ Server");
+        LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to GNTL ZMQ Server");
         return false;
       }
 
-      arqmaNotifier.run();
+      gntlNotifier.run();
 
-      MGINFO_GREEN(std::string("Arqma ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
+      MGINFO_GREEN(std::string("GNTL ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
     }
     else
-      MGINFO_GREEN(std::string("Arqma ZMQ Server Disabled"));
+      MGINFO_GREEN(std::string("GNTL ZMQ Server Disabled"));
 
     if (public_rpc_port > 0)
     {
@@ -215,8 +215,8 @@ bool t_daemon::run(bool interactive)
 
     if(zmq_enabled)
     {
-      MGINFO_GREEN(std::string("Stopping Arqma ZMQ Server."));
-      arqmaNotifier.stop();
+      MGINFO_GREEN(std::string("Stopping GNTL ZMQ Server."));
+      gntlNotifier.stop();
     }
 
 

@@ -40,8 +40,8 @@
 
 #include <atomic>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "mlocker"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "mlocker"
 	
 // did an mlock operation previously fail? we only
 // want to log an error once and be done with it

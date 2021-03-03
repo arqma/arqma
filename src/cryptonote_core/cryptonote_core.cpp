@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2021-2021, The GNTL Project
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -34,7 +34,7 @@
 #include "string_tools.h"
 using namespace epee;
 
-#include "arqma_mq/arqmaMQ.h"
+#include "gntl_mq/gntlMQ.h"
 
 #include <unordered_set>
 #include "cryptonote_core.h"
@@ -57,8 +57,8 @@ using namespace epee;
 #include "common/notify.h"
 #include "version.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "cn"
+#undef GNTL_DEFAULT_LOG_CATEGORY
+#define GNTL_DEFAULT_LOG_CATEGORY "cn"
 
 DISABLE_VS_WARNINGS(4355)
 
@@ -69,7 +69,7 @@ DISABLE_VS_WARNINGS(4355)
 // basically at least how many bytes the block itself serializes to without the miner tx
 #define BLOCK_SIZE_SANITY_LEEWAY 100
 
-using namespace arqmaMQ;
+using namespace gntlMQ;
 
 namespace cryptonote
 {
@@ -140,7 +140,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<bool> arg_dns_checkpoints = {
     "enforce-dns-checkpointing"
   , "checkpoints from DNS server will be enforced"
-  , true
+  , false
   };
   static const command_line::arg_descriptor<uint64_t> arg_fast_block_sync = {
     "fast-block-sync"
@@ -164,7 +164,7 @@ namespace cryptonote
   };
   static const command_line::arg_descriptor<std::string> arg_check_updates = {
     "check-updates"
-  , "Check for new versions of arqma: [disabled|notify|download|update]"
+  , "Check for new versions of gntl: [disabled|notify|download|update]"
   , "notify"
   };
   static const command_line::arg_descriptor<bool> arg_fluffy_blocks = {
@@ -222,7 +222,7 @@ namespace cryptonote
               m_checkpoints_path(""),
               m_last_dns_checkpoints_update(0),
               m_last_json_checkpoints_update(0),
-              m_disable_dns_checkpoints(false),
+              m_disable_dns_checkpoints(true),
               m_update_download(0),
               m_nettype(UNDEFINED),
               m_update_available(false),
@@ -474,8 +474,8 @@ namespace cryptonote
       if (boost::filesystem::exists(old_files / "blockchain.bin"))
       {
         MWARNING("Found old-style blockchain.bin in " << old_files.string());
-        MWARNING("ArQmA now uses a new format. You can either remove blockchain.bin to start syncing");
-        MWARNING("the blockchain anew, or use arqma-blockchain-export and arqma-blockchain-import to");
+        MWARNING("GNTL now uses a new format. You can either remove blockchain.bin to start syncing");
+        MWARNING("the blockchain anew, or use gntl-blockchain-export and gntl-blockchain-import to");
         MWARNING("convert your existing blockchain.bin to the new format. See README.md for instructions.");
         return false;
       }
@@ -787,9 +787,9 @@ namespace cryptonote
     }
     bad_semantics_txes_lock.unlock();
 
-    if (tx.version == 0 || tx.version > config::tx_settings::ARQMA_TX_VERSION)
+    if (tx.version == 0 || tx.version > config::tx_settings::GNTL_TX_VERSION)
     {
-      MERROR_VER("Bad tx version (" << tx.version << ", max is " << config::tx_settings::ARQMA_TX_VERSION << ")");
+      MERROR_VER("Bad tx version (" << tx.version << ", max is " << config::tx_settings::GNTL_TX_VERSION << ")");
       tvc.m_verifivation_failed = true;
       return false;
     }
@@ -1653,41 +1653,27 @@ namespace cryptonote
      {
        std::string main_message;
        if (m_offline)
-        main_message = "The daemon is running offline and will not attempt to sync to the ArQ-Net.";
+        main_message = "The daemon is running offline and will not attempt to sync to the GNTL Network.";
       else
         main_message = "The daemon will start synchronizing with the network. This may take a long time to complete.";
       MGINFO_CYAN(ENDL <<
       "\n \n"
-      "WWWWWWWWWWWWWWWWWWWWWWWWWWWW@=WWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWWWWWWW@+::.--+@WWWWWWWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWWWW=:::-:+W=----:#WWWWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWW@+::+@W+:#WWWW:-=@+--*@WWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWW#:+:#WWWW::@WWWWWW#--@WW=--:#WWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWW@+::+@WWWWW#::WWWWWWWWWW+-*WWWW@:--*WWWWWWWWWWWW\n"
-      "WWWWWWWW#:+:=WWWWWWWW=+*WWWWWWWWWWWW@--@WWWWWW=--:=WWWWWWWW\n"
-      "WWWW@++:+@WWWWWWWWWW+:#WWWWWWWWWWWWWWW*-+WWWWWWWW@:-:*@WWWW\n"
-      "WWW@:-@WWWWWWWWWWWW::@WWWWWWWWWWWWWWWWWW:-#WWWWWWWW@::-WWWW\n"
-      "WWW@:-:WWWWWWWWWW#++WWWWWWWWWWWWWWWWWWWWW#-:WWWWW#+:#:-WWWW\n"
-      "WWW@:-:=WWWWWWWW*+=WWWWWWWWWWWWWWWWWWWWWWWW+-=W*+:@WW:-WWWW\n"
-      "WWW@:++-@WWWWWW+:#WWWWWWWWWWWWWWWWWWWWWWWW@=+::*WWWWW:-WWWW\n"
-      "WWW@:+W::WWWW@+:WWWWWWWWWWWWWWWWWW@=++++::*#*+:*WWWWW+:WWWW\n"
-      "WWW@:+W#:=WW#++WWWWWWWWWWW@=*+++::*#@WWWWWW@++=:#WWWW+:WWWW\n"
-      "WWW@:+WW*:@*+=WWWW@=*++++:*#@WWWWWWWWWWWWWW+:@W*:@WWW+:WWWW\n"
-      "WWW@+*WWW::++++++:*#@WWWWWWWWWWWWWWWWWWWWW=+#WWW::WWW+:WWWW\n"
-      "WWW@+*WWW+:-:*@WWWWWWWWWWWWWWWWWWWWWWWWWW@+*WWWW@:*WW+:WWWW\n"
-      "WWW@+*WW*+@*:++:+=WWWWWWWWWWWWWWWWWWWWWWW+:WWWWWW=:#W+:WWWW\n"
-      "WWW@+*W*+@WW@:+WW#::+#WWWWWWWWWWWWWWWWWW=+#WWWWWWW*:@+:WWWW\n"
-      "WWW@+*=+#WWWWW+:#WWWW=::+#WWWWWWWWWWWWW@+=WWWWWWWWW+++:WWWW\n"
-      "WWW@+++#WWWWWWW#:*WWWWWW@*:+*#WWWWWWWWW*+WWWWWWWWWW@:+:WWWW\n"
-      "WWW@++=WWWWWWWWWW+:@WWWWWWWW@+:+=@WWWW=+@WWWWWWWWWWW=::WWWW\n"
-      "WWWW+:*@WWWWWWWWWW=:=WWWWWWWWWWW#+++##+=WW@@#=****+++:+WWWW\n"
-      "WWWWWW@*++=WWWWWWWW@++@WWWWWWWWWWWWW=+:++*=#@@W@=*+*@WWWWWW\n"
-      "WWWWWWWWWW=++*@WWWWWW=:#WWWWWWWWWWW=*#WWWWWW@**+=WWWWWWWWWW\n"
-      "WWWWWWWWWWWWW@*++#WWWW@+*WWWWWWWW@**@WWWW=***@WWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWW#++*@WW*+@WWWWW#*=WW@**+#WWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWW@*+*##:=WWW**##***@WWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWWWWW@=++++=****#WWWWWWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWWWWWWWWW#*:*@WWWWWWWWWWWWWWWWWWWWWWWWWWW" << ENDL);
+      "                                                            \n"
+      "                               ,--.                 ,--.    \n"
+      "            ,----..          ,--.'|        ,----,,---.'|    \n"
+      "           /   /   \     ,--,:  : |      ,/   .`|;   : |    \n"
+      "          |   :     : ,`--.'`|  ' :    ,`   .'  :|   | :    \n"
+      "          .   |  ;. / |   :  :  | |  ;    ;     /:   : |    \n"
+      "          .   ; /--`  :   |   \ | :.'___,/    ,' |   ' :    \n"
+      "          ;   | ;  __ |   : '  '; ||    :     |  ;   ; '    \n"
+      "          |   : |.' .''   ' ;.    ;;    |.';  ;  '   | |__  \n"
+      "          .   | '_.' :|   | | \   |`----'  |  |  |   | :.'| \n"
+      "          '   ; : \  |'   : |  ; .'    '   :  ;  '   :    ; \n"
+      "          '   | '/  .'|   | '`--'      |   |  '  |   |  ./  \n"
+      "          |   :    /  '   : |          '   :  |  ;   : ;    \n"
+      "           \   \ .'   ;   |.'          ;   |.'   |   ,/     \n"
+      "            `---`     '---'            '---'     '---'      \n"
+      "                                                            " << ENDL);
       MGINFO_YELLOW(ENDL << "**********************************************************************" << ENDL
         << main_message << ENDL
         << ENDL
@@ -1731,7 +1717,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::check_updates()
   {
-    static const char software[] = "arqma";
+    static const char software[] = "gntl";
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
 //    static const char subdir[] = "cli"; // because it can never be simple
@@ -1751,7 +1737,7 @@ namespace cryptonote
     if (!tools::check_updates(software, buildtag, version, hash))
       return false;
 
-    if (tools::vercmp(version.c_str(), ARQMA_VERSION) <= 0)
+    if (tools::vercmp(version.c_str(), GNTL_VERSION) <= 0)
     {
       m_update_available = false;
       return true;
@@ -1856,7 +1842,7 @@ namespace cryptonote
       return true;
 
     MCERROR("updates", "Download/update not implemented yet");
-    return true;
+    return false;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::check_disk_space()
