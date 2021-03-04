@@ -1,0 +1,62 @@
+name: ci/gh-actions/depends
+
+on: [push, pull_request]
+
+jobs:
+  build-macos:
+    runs-on: ubuntu-18.04
+    env:
+      CCACHE_COMPRESS: 1
+      CCACHE_TEMPDIR: /tmp/.ccache-temp
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - name: "build-depends-armv7"
+            host: "arm-linux-gnueabihf"
+            packages: "python3 gperf g++-arm-linux-gnueabihf"
+          - name: "build-depends-armv8"
+            host: "aarch64-linux-gnu"
+            packages: "python3 gperf g++-aarch64-linux-gnu"
+          - name: "build-windows-depends"
+            host: "x86_64-w64-mingw32"
+            packages: "cmake python3 g++-mingw-w64-x86-64 qttools5-dev-tools"
+          - name: "build-ubuntu-depends"
+            host: "x86_64-unknown-linux-gnu"
+            packages: "gperf cmake python3-zmq libdbus-1-dev libharfbuzz-dev"
+    name: ${{ matrix.toolchain.name }}
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: ccache
+      uses: actions/cache@v2
+      with:
+        path: |
+            ~/.ccache
+            contrib/depends/built
+            contrib/depends/sdk-sources
+        key: ccache-${{ matrix.toolchain.host }}-${{ github.sha }}
+        restore-keys: ccache-${{ matrix.toolchain.host }}-
+    - name: set apt conf
+      run: |
+        echo "Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
+        echo "Acquire::http::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
+        echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
+    - name: install dependencies
+      run: sudo apt update; sudo apt -y install build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache ${{ matrix.toolchain.packages }}
+    - name: prepare w64-mingw32
+      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' }}
+      run: |
+        sudo update-alternatives --set ${{ matrix.toolchain.host }}-g++ $(which ${{ matrix.toolchain.host }}-g++-posix)
+        sudo update-alternatives --set ${{ matrix.toolchain.host }}-gcc $(which ${{ matrix.toolchain.host }}-gcc-posix)
+    - name: build
+      run: |
+        ccache --max-size=150M
+        make depends target=${{ matrix.toolchain.host }} -j2
+    - uses: actions/upload-artifact@v2
+      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' || matrix.toolchain.host == 'aarch64-linux-gnu' || matrix.toolchain.host == 'arm-linux-gnueabihf' }}
+      with:
+        name: ${{ matrix.toolchain.name }}
+        path: |
+          /home/runner/work/gntl/gntl/build/${{ matrix.toolchain.host }}/release/bin/gntl*
