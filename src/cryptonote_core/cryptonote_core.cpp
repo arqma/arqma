@@ -56,6 +56,7 @@ using namespace epee;
 #include "ringct/rctSigs.h"
 #include "common/notify.h"
 #include "version.h"
+#include "config/ascii.h"
 
 #undef GNTL_DEFAULT_LOG_CATEGORY
 #define GNTL_DEFAULT_LOG_CATEGORY "cn"
@@ -1651,38 +1652,13 @@ namespace cryptonote
   {
     if(!m_starter_message_showed)
      {
-       std::string main_message;
-       if (m_offline)
-        main_message = "The daemon is running offline and will not attempt to sync to the GNTL Network.";
-      else
-        main_message = "The daemon will start synchronizing with the network. This may take a long time to complete.";
-      MGINFO_CYAN(ENDL <<
-      "\n \n"
-      "                                                            \n"
-      "                               ,--.                 ,--.    \n"
-      "            ,----..          ,--.'|        ,----,,---.'|    \n"
-      "           /   /   \     ,--,:  : |      ,/   .`|;   : |    \n"
-      "          |   :     : ,`--.'`|  ' :    ,`   .'  :|   | :    \n"
-      "          .   |  ;. / |   :  :  | |  ;    ;     /:   : |    \n"
-      "          .   ; /--`  :   |   \ | :.'___,/    ,' |   ' :    \n"
-      "          ;   | ;  __ |   : '  '; ||    :     |  ;   ; '    \n"
-      "          |   : |.' .''   ' ;.    ;;    |.';  ;  '   | |__  \n"
-      "          .   | '_.' :|   | | \   |`----'  |  |  |   | :.'| \n"
-      "          '   ; : \  |'   : |  ; .'    '   :  ;  '   :    ; \n"
-      "          '   | '/  .'|   | '`--'      |   |  '  |   |  ./  \n"
-      "          |   :    /  '   : |          '   :  |  ;   : ;    \n"
-      "           \   \ .'   ;   |.'          ;   |.'   |   ,/     \n"
-      "            `---`     '---'            '---'     '---'      \n"
-      "                                                            " << ENDL);
-      MGINFO_YELLOW(ENDL << "**********************************************************************" << ENDL
-        << main_message << ENDL
-        << ENDL
-        << "You can set the level of process detailization through \"set_log <level|categories>\" command," << ENDL
-        << "where <level> is between 0 (no details) and 4 (very verbose), or custom category based levels (eg, *:WARNING)." << ENDL
-        << ENDL
-        << "Use the \"help\" command to see the list of available commands." << ENDL
-        << "Use \"help <command>\" to see a command's documentation." << ENDL
-        << "**********************************************************************" << ENDL);
+       MGINFO_YELLOW(ENDL << ascii_gntl_logo << ENDL);
+       MGINFO_CYAN(ENDL << ascii_gntl_info << ENDL);
+      if (m_offline)
+       MGINFO_GREEN(ENDL << main_message_true << ENDL);
+     else
+       MGINFO_GREEN(ENDL << main_message_false << ENDL);
+
       m_starter_message_showed = true;
     }
 
