@@ -4,6 +4,19 @@ Copyright (c) 2021-2021, The GNTL Project
 Copyright (c) 2014-2020, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
+## Coin Specifications
+
+- Name: GNTL
+- Ticker: GNTL
+- Max supply: 77.7 ml
+- Pre-mine: 30 (all burnt)
+- Governance Fee: 10% for 3 months, 5% for 6 months, and then 1% thereafter
+- Block time: 120 seconds
+- Decimals: 9
+- Algorithm: RandomARQ
+- Consensus: PoW
+- Anonymity: BulletProof RingCT
+
 ## Development resources
 
 - Web: [gntl.co.uk](https://gntl.co.uk)
@@ -14,9 +27,10 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 ## Other GNTL related websites
 
 - GNTL Blockchain Explorer: [blockexplorer.pool.gntl.co.uk](https://blockexplorer.pool.gntl.co.uk)
+- GNTL Coin Pools: [https://miningpoolstats.stream/gntlcoin](https://miningpoolstats.stream/gntlcoin)
+- GNTL Mining Pools Landing: [https://pool.gntl.co.uk/]https://pool.gntl.co.uk/)
 - GNTL Mining Pools Stream: [https://miningpoolstats.stream/gntl.co.uk_pools](https://miningpoolstats.stream/gntl.co.uk_pools)
 - GNTL Mining Pools Crypunit: [https://www.cryptunit.com/poolsgroup/GNTL-pools](https://www.cryptunit.com/poolsgroup/GNTL-pools)
-- GNTL Mining Pools Landing: [https://pool.gntl.co.uk/]https://pool.gntl.co.uk/)
 
 ## Introduction
 
