@@ -69,18 +69,46 @@ const std::string ascii_arqma_logo_win =
 
   const std::string ascii_arqma_logo_nowin =
     "\n"
-"    ▄▄▄       ██▀███    █████   ███▄ ▄███▓ ▄▄▄           █████▒▄▄▄       ██▓     ██▓    ▓█████  ███▄    █     ▄▄▄       ███▄    █   ▄████ ▓█████  ██▓      \n"
-"   ▒████▄    ▓██ ▒ ██▒▒██▓  ██▒▓██▒▀█▀ ██▒▒████▄       ▓██   ▒▒████▄    ▓██▒    ▓██▒    ▓█   ▀  ██ ▀█   █    ▒████▄     ██ ▀█   █  ██▒ ▀█▒▓█   ▀ ▓██▒       \n"
-"   ▒██  ▀█▄  ▓██ ░▄█ ▒▒██▒  ██░▓██    ▓██░▒██  ▀█▄     ▒████ ░▒██  ▀█▄  ▒██░    ▒██░    ▒███   ▓██  ▀█ ██▒   ▒██  ▀█▄  ▓██  ▀█ ██▒▒██░▄▄▄░▒███   ▒██░       \n"
-"   ░██▄▄▄▄██ ▒██▀▀█▄  ░██  █▀ ░▒██    ▒██ ░██▄▄▄▄██    ░▓█▒  ░░██▄▄▄▄██ ▒██░    ▒██░    ▒▓█  ▄ ▓██▒  ▐▌██▒   ░██▄▄▄▄██ ▓██▒  ▐▌██▒░▓█  ██▓▒▓█  ▄ ▒██░       \n"
-"    ▓█   ▓██▒░██▓ ▒██▒░▒███▒█▄ ▒██▒   ░██▒ ▓█   ▓██▒   ░▒█░    ▓█   ▓██▒░██████▒░██████▒░▒████▒▒██░   ▓██░    ▓█   ▓██▒▒██░   ▓██░░▒▓███▀▒░▒████▒░██████▒   \n"
-"    ▒▒   ▓▒█░░ ▒▓ ░▒▓░░░ ▒▒░ ▒ ░ ▒░   ░  ░ ▒▒   ▓▒█░    ▒ ░    ▒▒   ▓▒█░░ ▒░▓  ░░ ▒░▓  ░░░ ▒░ ░░ ▒░   ▒ ▒     ▒▒   ▓▒█░░ ▒░   ▒ ▒  ░▒   ▒ ░░ ▒░ ░░ ▒░▓  ░   \n"
-"     ▒   ▒▒ ░  ░▒ ░ ▒░ ░ ▒░  ░ ░  ░      ░  ▒   ▒▒ ░    ░       ▒   ▒▒ ░░ ░ ▒  ░░ ░ ▒  ░ ░ ░  ░░ ░░   ░ ▒░     ▒   ▒▒ ░░ ░░   ░ ▒░  ░   ░  ░ ░  ░░ ░ ▒  ░   \n"
-"     ░   ▒     ░░   ░    ░   ░ ░      ░     ░   ▒       ░ ░     ░   ▒     ░ ░     ░ ░      ░      ░   ░ ░      ░   ▒      ░   ░ ░ ░ ░   ░    ░     ░ ░      \n"
-"         ░  ░   ░         ░           ░         ░  ░                ░  ░    ░  ░    ░  ░   ░  ░         ░          ░  ░         ░       ░    ░  ░    ░  ░   ";
-
-
-
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWW@=WWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
+    "WWWWWWWWWWWWWWWWWWWWWWWWW@+::.--+@WWWWWWWWWWWWWWWWWWWWWWWWW\n"
+    "WWWWWWWWWWWWWWWWWWWWWW=:::-:+W=----:#WWWWWWWWWWWWWWWWWWWWWW\n"
+    "WWWWWWWWWWWWWWWWWW@+::+@W+:#WWWW:-=@+--*@WWWWWWWWWWWWWWWWWW\n"
+    "WWWWWWWWWWWWWWW#:+:#WWWW::@WWWWWW#--@WW=--:#WWWWWWWWWWWWWWW\n"
+    "WWWWWWWWWWW@+::+@WWWWW#::WWWWWWWWWW+-*WWWW@:--*WWWWWWWWWWWW\n"
+    "WWWWWWWW#:+:=WWWWWWWW=+*WWWWWWWWWWWW@--@WWWWWW=--:=WWWWWWWW\n"
+    "WWWW@++:+@WWWWWWWWWW+:#WWWWWWWWWWWWWWW*-+WWWWWWWW@:-:*@WWWW\n"
+    "WWW@:-@WWWWWWWWWWWW::@WWWWWWWWWWWWWWWWWW:-#WWWWWWWW@::-WWWW\n"
+    "WWW@:-:WWWWWWWWWW#++WWWWWWWWWWWWWWWWWWWWW#-:WWWWW#+:#:-WWWW\n"
+    "WWW@:-:=WWWWWWWW*+=WWWWWWWWWWWWWWWWWWWWWWWW+-=W*+:@WW:-WWWW\n"
+    "WWW@:++-@WWWWWW+:#WWWWWWWWWWWWWWWWWWWWWWWW@=+::*WWWWW:-WWWW\n"
+    "WWW@:+W::WWWW@+:WWWWWWWWWWWWWWWWWW@=++++::*#*+:*WWWWW+:WWWW\n"
+    "WWW@:+W#:=WW#++WWWWWWWWWWW@=*+++::*#@WWWWWW@++=:#WWWW+:WWWW\n"
+    "WWW@:+WW*:@*+=WWWW@=*++++:*#@WWWWWWWWWWWWWW+:@W*:@WWW+:WWWW\n"
+    "WWW@+*WWW::++++++:*#@WWWWWWWWWWWWWWWWWWWWW=+#WWW::WWW+:WWWW\n"
+    "WWW@+*WWW+:-:*@WWWWWWWWWWWWWWWWWWWWWWWWWW@+*WWWW@:*WW+:WWWW\n"
+    "WWW@+*WW*+@*:++:+=WWWWWWWWWWWWWWWWWWWWWWW+:WWWWWW=:#W+:WWWW\n"
+    "WWW@+*W*+@WW@:+WW#::+#WWWWWWWWWWWWWWWWWW=+#WWWWWWW*:@+:WWWW\n"
+    "WWW@+*=+#WWWWW+:#WWWW=::+#WWWWWWWWWWWWW@+=WWWWWWWWW+++:WWWW\n"
+    "WWW@+++#WWWWWWW#:*WWWWWW@*:+*#WWWWWWWWW*+WWWWWWWWWW@:+:WWWW\n"
+    "WWW@++=WWWWWWWWWW+:@WWWWWWWW@+:+=@WWWW=+@WWWWWWWWWWW=::WWWW\n"
+    "WWWW+:*@WWWWWWWWWW=:=WWWWWWWWWWW#+++##+=WW@@#=****+++:+WWWW\n"
+    "WWWWWW@*++=WWWWWWWW@++@WWWWWWWWWWWWW=+:++*=#@@W@=*+*@WWWWWW\n"
+    "WWWWWWWWWW=++*@WWWWWW=:#WWWWWWWWWWW=*#WWWWWW@**+=WWWWWWWWWW\n"
+    "WWWWWWWWWWWWW@*++#WWWW@+*WWWWWWWW@**@WWWW=***@WWWWWWWWWWWWW\n"
+    "WWWWWWWWWWWWWWWWW#++*@WW*+@WWWWW#*=WW@**+#WWWWWWWWWWWWWWWWW\n"
+    "WWWWWWWWWWWWWWWWWWWW@*+*##:=WWW**##***@WWWWWWWWWWWWWWWWWWWW\n"
+    "WWWWWWWWWWWWWWWWWWWWWWW@=++++=****#WWWWWWWWWWWWWWWWWWWWWWWW\n"
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWW#*:*@WWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
+    "\n"
+    "  ▄▄▄       ██▀███    █████   ███▄ ▄███▓ ▄▄▄        \n"
+    " ▒████▄    ▓██ ▒ ██▒▒██▓  ██▒▓██▒▀█▀ ██▒▒████▄      \n"
+    " ▒██  ▀█▄  ▓██ ░▄█ ▒▒██▒  ██░▓██    ▓██░▒██  ▀█▄    \n"
+    " ░██▄▄▄▄██ ▒██▀▀█▄  ░██  █▀ ░▒██    ▒██ ░██▄▄▄▄██   \n"
+    "  ▓█   ▓██▒░██▓ ▒██▒░▒███▒█▄ ▒██▒   ░██▒ ▓█   ▓██▒  \n"
+    "  ▒▒   ▓▒█░░ ▒▓ ░▒▓░░░ ▒▒░ ▒ ░ ▒░   ░  ░ ▒▒   ▓▒█░  \n"
+    "   ▒   ▒▒ ░  ░▒ ░ ▒░ ░ ▒░  ░ ░  ░      ░  ▒   ▒▒ ░  \n"
+    "   ░   ▒     ░░   ░    ░   ░ ░      ░     ░   ▒     \n"
+    "       ░  ░   ░         ░           ░         ░  ░  ";
 
  #ifdef _WIN32
  const std::string ascii_arqma_logo = ascii_arqma_logo_win;
