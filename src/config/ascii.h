@@ -34,7 +34,7 @@
 #include <string>
 
 //cryptonote_core strings
-const std::string ascii_arqma_logo =
+const std::string ascii_arqma_logo_win =
     "\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWWWWW@=WWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWW@+::.--+@WWWWWWWWWWWWWWWWWWWWWWWWW\n"
@@ -66,6 +66,28 @@ const std::string ascii_arqma_logo =
     "WWWWWWWWWWWWWWWWWWWW@*+*##:=WWW**##***@WWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWWW@=++++=****#WWWWWWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWWWW#*:*@WWWWWWWWWWWWWWWWWWWWWWWWWWW";
+
+  const std::string ascii_arqma_logo_nowin =
+    "\n"
+"    ▄▄▄       ██▀███    █████   ███▄ ▄███▓ ▄▄▄           █████▒▄▄▄       ██▓     ██▓    ▓█████  ███▄    █     ▄▄▄       ███▄    █   ▄████ ▓█████  ██▓      \n"
+"   ▒████▄    ▓██ ▒ ██▒▒██▓  ██▒▓██▒▀█▀ ██▒▒████▄       ▓██   ▒▒████▄    ▓██▒    ▓██▒    ▓█   ▀  ██ ▀█   █    ▒████▄     ██ ▀█   █  ██▒ ▀█▒▓█   ▀ ▓██▒       \n"
+"   ▒██  ▀█▄  ▓██ ░▄█ ▒▒██▒  ██░▓██    ▓██░▒██  ▀█▄     ▒████ ░▒██  ▀█▄  ▒██░    ▒██░    ▒███   ▓██  ▀█ ██▒   ▒██  ▀█▄  ▓██  ▀█ ██▒▒██░▄▄▄░▒███   ▒██░       \n"
+"   ░██▄▄▄▄██ ▒██▀▀█▄  ░██  █▀ ░▒██    ▒██ ░██▄▄▄▄██    ░▓█▒  ░░██▄▄▄▄██ ▒██░    ▒██░    ▒▓█  ▄ ▓██▒  ▐▌██▒   ░██▄▄▄▄██ ▓██▒  ▐▌██▒░▓█  ██▓▒▓█  ▄ ▒██░       \n"
+"    ▓█   ▓██▒░██▓ ▒██▒░▒███▒█▄ ▒██▒   ░██▒ ▓█   ▓██▒   ░▒█░    ▓█   ▓██▒░██████▒░██████▒░▒████▒▒██░   ▓██░    ▓█   ▓██▒▒██░   ▓██░░▒▓███▀▒░▒████▒░██████▒   \n"
+"    ▒▒   ▓▒█░░ ▒▓ ░▒▓░░░ ▒▒░ ▒ ░ ▒░   ░  ░ ▒▒   ▓▒█░    ▒ ░    ▒▒   ▓▒█░░ ▒░▓  ░░ ▒░▓  ░░░ ▒░ ░░ ▒░   ▒ ▒     ▒▒   ▓▒█░░ ▒░   ▒ ▒  ░▒   ▒ ░░ ▒░ ░░ ▒░▓  ░   \n"
+"     ▒   ▒▒ ░  ░▒ ░ ▒░ ░ ▒░  ░ ░  ░      ░  ▒   ▒▒ ░    ░       ▒   ▒▒ ░░ ░ ▒  ░░ ░ ▒  ░ ░ ░  ░░ ░░   ░ ▒░     ▒   ▒▒ ░░ ░░   ░ ▒░  ░   ░  ░ ░  ░░ ░ ▒  ░   \n"
+"     ░   ▒     ░░   ░    ░   ░ ░      ░     ░   ▒       ░ ░     ░   ▒     ░ ░     ░ ░      ░      ░   ░ ░      ░   ▒      ░   ░ ░ ░ ░   ░    ░     ░ ░      \n"
+"         ░  ░   ░         ░           ░         ░  ░                ░  ░    ░  ░    ░  ░   ░  ░         ░          ░  ░         ░       ░    ░  ░    ░  ░   ";
+
+
+
+
+ #ifdef _WIN32
+ const std::string ascii_arqma_logo = ascii_arqma_logo_win;
+ #else
+ const std::string ascii_arqma_logo = ascii_arqma_logo_nowin;
+ #endif
+
 
 const std::string ascii_arqma_info =
     "\n"

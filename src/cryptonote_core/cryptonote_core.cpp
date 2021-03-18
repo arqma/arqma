@@ -1664,7 +1664,7 @@ namespace cryptonote
   {
     if(!m_starter_message_showed)
      {
-      MGINFO_YELLOW(ENDL << ascii_arqma_logo << ENDL);
+      MGINFO_RED(ENDL << ascii_arqma_logo << ENDL);
       MGINFO_CYAN(ENDL << ascii_arqma_info << ENDL);
       if (m_offline)
        MGINFO_GREEN(ENDL << main_message_true << ENDL);
