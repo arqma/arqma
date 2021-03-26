@@ -19,14 +19,15 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
 
-- Web: [gntl.co.uk](https://gntl.co.uk)
+- Coin: [gntl.cash](https://gntl.cash)
+- Project: [gntl.co.uk](https://gntl.co.uk)
 - Mail: [support@gntl.co.uk](mailto:support@gntl.co.uk)
 - GitHub: [https://github.com/GNTLMiningPools/gntl](https://github.com/GNTLMiningPools/gntl)
 - Discord: [https://discord.gg/4HyVA2A](https://discord.gg/4HyVA2A)
 
 ## Other GNTL related websites
 
-- GNTL Blockchain Explorer: [blockexplorer.pool.gntl.co.uk](https://blockexplorer.pool.gntl.co.uk)
+- GNTL Blockchain Explorer: [explorer.pool.gntl.co.uk](https://explorer.pool.gntl.co.uk)
 - GNTL Coin Pools: [https://miningpoolstats.stream/gntlcoin](https://miningpoolstats.stream/gntlcoin)
 - GNTL Mining Pools Landing: [https://pool.gntl.co.uk/]https://pool.gntl.co.uk/)
 - GNTL Mining Pools Stream: [https://miningpoolstats.stream/gntl.co.uk_pools](https://miningpoolstats.stream/gntl.co.uk_pools)
