@@ -1,6 +1,7 @@
 ## The GNTL Project
 
 Copyright (c) 2021-2021, The GNTL Project    
+Copyright (c) 2018-2020, The Arqma Network
 Copyright (c) 2014-2020, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
@@ -22,14 +23,14 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Coin: [gntl.cash](https://gntl.cash)
 - Project: [gntl.co.uk](https://gntl.co.uk)
 - Mail: [support@gntl.co.uk](mailto:support@gntl.co.uk)
-- GitHub: [https://github.com/GNTLMiningPools/gntl](https://github.com/GNTLMiningPools/gntl)
+- GitHub: [https://github.com/BKdilse/gntl](https://github.com/BKdilse/gntl)
 - Discord: [https://discord.gg/4HyVA2A](https://discord.gg/4HyVA2A)
 
 ## Other GNTL related websites
 
-- GNTL Blockchain Explorer: [explorer.pool.gntl.co.uk](https://explorer.pool.gntl.co.uk)
-- GNTL Coin Pools: [https://miningpoolstats.stream/gntlcoin](https://miningpoolstats.stream/gntlcoin)
-- GNTL Mining Pools Landing: [https://pool.gntl.co.uk/]https://pool.gntl.co.uk/)
+- GNTL Coin Blockchain Explorer: [explorer.pool.gntl.co.uk](https://explorer.pool.gntl.co.uk)
+- GNTL Coin Pools Stream: [https://miningpoolstats.stream/gntlcoin](https://miningpoolstats.stream/gntlcoin)
+- GNTL Mining Pools Landing: [https://pool.gntl.co.uk/](https://pool.gntl.co.uk/)
 - GNTL Mining Pools Stream: [https://miningpoolstats.stream/gntl.co.uk_pools](https://miningpoolstats.stream/gntl.co.uk_pools)
 - GNTL Mining Pools Crypunit: [https://www.cryptunit.com/poolsgroup/GNTL-pools](https://www.cryptunit.com/poolsgroup/GNTL-pools)
 
@@ -148,7 +149,7 @@ brew update && brew bundle --file=contrib/apple/brew
 Clone recursively to pull-in needed submodule(s):
 
 ```
-git clone --recursive https://github.com/GNTLMiningPools/gntl
+git clone --recursive https://github.com/BKdilse/gntl
 ```
 
 If you already have a repo cloned, initialize and update:
@@ -224,7 +225,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Clone gntl and checkout most recent release version:
 
-	`$ git clone https://github.com/GNTLMiningPools/gntl.git`
+	`$ git clone https://github.com/BKdilse/gntl.git`
 	`$ cd gntl`
 
 * Build:
@@ -307,7 +308,7 @@ application.
 
 * Download GNTL with command:
 
-	`$ git clone https://github.com/GNTLMiningPools/gntl`
+	`$ git clone https://github.com/BKdilse/gntl`
 
 * Change branch to last Release:
 
