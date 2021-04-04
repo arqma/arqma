@@ -7,7 +7,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Coin Specifications
 
-- Name: GNTL
+- Name: GNTL Coin
 - Ticker: GNTL
 - Max supply: 77.7 ml
 - Pre-mine: 0.000000030 (all burnt)
