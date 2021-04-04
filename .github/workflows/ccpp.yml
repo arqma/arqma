@@ -9,8 +9,8 @@ jobs:
     - uses: actions/checkout@v1
       with:
         submodules: recursive
-    - name: update brew and install dependencies
-      run: brew update && brew install autoconf autogen automake binutils coreutils libsodium openssl pkg-config boost hidapi ldns expat libunwind-headers readline
+    - name: install dependencies
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install autoconf autogen automake binutils coreutils libsodium openssl pkg-config boost hidapi ldns expat libunwind-headers readline
     - name: build
       run: make release
     - name: Upload mac artifacts
