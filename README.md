@@ -23,7 +23,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Coin: [gntl.cash](https://gntl.cash)
 - Project: [gntl.co.uk](https://gntl.co.uk)
 - Mail: [support@gntl.co.uk](mailto:support@gntl.co.uk)
-- GitHub: [https://github.com/BKdilse/gntl](https://github.com/BKdilse/gntl)
+- GitHub: [https://github.com/The-GNTL-Project/gntl](https://github.com/The-GNTL-Project/gntl)
 - Discord: [https://discord.gg/4HyVA2A](https://discord.gg/4HyVA2A)
 
 ## Other GNTL related websites
@@ -149,7 +149,7 @@ brew update && brew bundle --file=contrib/apple/brew
 Clone recursively to pull-in needed submodule(s):
 
 ```
-git clone --recursive https://github.com/BKdilse/gntl
+git clone --recursive https://github.com/The-GNTL-Project/gntl
 ```
 
 If you already have a repo cloned, initialize and update:
@@ -225,7 +225,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Clone gntl and checkout most recent release version:
 
-	`$ git clone https://github.com/BKdilse/gntl.git`
+	`$ git clone https://github.com/The-GNTL-Project/gntl.git`
 	`$ cd gntl`
 
 * Build:
@@ -308,7 +308,7 @@ application.
 
 * Download GNTL with command:
 
-	`$ git clone https://github.com/BKdilse/gntl`
+	`$ git clone https://github.com/The-GNTL-Project/gntl`
 
 * Change branch to last Release:
 
