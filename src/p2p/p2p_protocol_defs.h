@@ -169,12 +169,14 @@ namespace nodetool
     uint32_t rpc_credits_per_hash;
     peerid_type peer_id;
     std::string version;
+    uint8_t hf_version;
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE_VAL_POD_AS_BLOB(network_id)
       KV_SERIALIZE(peer_id)
       KV_SERIALIZE(my_port)
       KV_SERIALIZE(version)
+      KV_SERIALIZE(hf_version)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)(0))
       KV_SERIALIZE_OPT(rpc_credits_per_hash, (uint32_t)0)
     END_KV_SERIALIZE_MAP()
