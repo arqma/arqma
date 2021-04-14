@@ -221,7 +221,6 @@ namespace nodetool
       : m_payload_handler(payload_handler),
         m_external_port(0),
         m_rpc_port(0),
-        m_zmq_port(0),
         m_rpc_credits_per_hash(0),
         m_allow_local_ip(false),
         m_hide_my_port(false),
@@ -269,8 +268,7 @@ namespace nodetool
 
   private:
     const std::vector<std::string> m_seed_nodes_list =
-    { };
-    //"seeds.arqma.com", "seeds.myarqma.com", "seeds.supportarqma.com", "seeds.supportarqma.eu" };
+    { "seeds.arqma.com", "seeds.myarqma.com", "seeds.supportarqma.com", "seeds.supportarqma.eu" };
     // TODO ASAP. Will try to do that yet before or just after HF11 Fork
     // One issue has to be sorted. seeder script os adding IN A to ZONE while
     // should not do so. SmajeNz0 got that script btw.
@@ -412,9 +410,9 @@ namespace nodetool
     }
 
     void set_rpc_credits_per_hash(uint32_t rpc_credits_per_hash)
-	{
-	  m_rpc_credits_per_hash = rpc_credits_per_hash;
-	}
+    {
+      m_rpc_credits_per_hash = rpc_credits_per_hash;
+    }
 
   private:
     std::string m_config_folder;

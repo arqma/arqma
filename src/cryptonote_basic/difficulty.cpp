@@ -374,8 +374,8 @@ namespace cryptonote {
     }
     return  next_D;
   }
-//v16 diffculty algo 
-  difficulty_type next_difficulty_v16(std::vector<uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties) {
+//v16 diffculty algo
+  difficulty_type next_difficulty_v16(std::vector<uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, uint64_t height, const uint8_t version) {
 
     uint64_t  T = DIFFICULTY_TARGET_V16;
     uint64_t  N = DIFFICULTY_WINDOW_V16; // N=45, 60, and 90 for T=600, 120, 60.
@@ -386,7 +386,7 @@ namespace cryptonote {
     // If it's a new coin, do startup code. Do not remove in case other coins copy your code.
     uint64_t difficulty_guess = 80000;
     if ( timestamps.size() <= 16 ) {   return difficulty_guess;   }
-    if ( timestamps.size()  < N +1 ) { N = timestamps.size()-1;  }
+    if ( timestamps.size()  < N + 1 ) { N = timestamps.size()-1;  }
 
     // If hashrate/difficulty ratio after a fork is < 1/3 prior ratio, hardcode D for N+1 blocks after fork.
     // This will also cover up a very common type of backwards-incompatible fork.
@@ -439,6 +439,6 @@ namespace cryptonote {
     if ( next_D > 100000 ) {
       next_D = ((next_D+500)/1000)*1000 + std::min(static_cast<uint64_t>(999), (TS[N]-TS[N-10])/10);
     }
-    return  next_D;
+    return next_D;
   }
 }
