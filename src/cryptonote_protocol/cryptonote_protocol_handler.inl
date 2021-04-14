@@ -55,8 +55,8 @@
   MCINFO(ARQMA_DEFAULT_LOG_CATEGORY, context << "[" << epee::string_tools::to_string_hex(context.m_pruning_seed) << "] state: " << x << " in state " << cryptonote::get_protocol_state_string(context.m_state))
 
 #define BLOCK_QUEUE_NSPANS_THRESHOLD 10 // chunks of N blocks
-#define BLOCK_QUEUE_SIZE_THRESHOLD (200*1024*1024) // MB
-#define BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS 3000
+#define BLOCK_QUEUE_SIZE_THRESHOLD (200*1024*1024) // 200MB
+#define BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS 2000
 #define REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY (5 * 1000000) // microseconds
 #define REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD (30 * 1000000) // microseconds
 #define IDLE_PEER_KICK_TIME (600 * 1000000) // microseconds
@@ -356,10 +356,14 @@ namespace cryptonote
       uint64_t diff_v16 = max_block_height > last_block_v15 ? std::min(abs_diff, max_block_height - last_block_v15) : 0;
 
       MCLOG(is_inital ? el::Level::Info : el::Level::Debug, "global", el::Color::Yellow, context <<  "Sync data returned a new top block candidate: " << m_core.get_current_blockchain_height() << " -> " << hshd.current_height
-      << " [Your node is " << abs_diff << " blocks (" << (((abs_diff - diff_v16) / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) + (diff_v16 / (24 * 60 * 60 / DIFFICULTY_TARGET_V16)) + ((diff_v16 - diff_v11) / (24 * 60 * 60 / DIFFICULTY_TARGET_V2)) + (diff_v11 / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)))  << " days) "
+      << " [Your node is " << abs_diff << " blocks (" << tools::get_human_readable_timespan((((abs_diff - diff_v16) / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) + (diff_v16 / (24 * 60 * 60 / DIFFICULTY_TARGET_V16)) + ((diff_v16 - diff_v11) / (24 * 60 * 60 / DIFFICULTY_TARGET_V2)) + (diff_v11 / (24 * 60 * 60 / DIFFICULTY_TARGET_V11))))  << ") "
       << (0 <= diff ? std::string("behind") : std::string("ahead"))
       << "] " << ENDL << "SYNCHRONIZATION started");
 
+      if(hshd.current_height >= m_core.get_current_blockchain_height() + 5)
+      {
+        m_core.safesyncmode(false);
+      }
       if(m_core.get_target_blockchain_height() == 0) // only when sync starts
       {
         m_sync_timer.resume();
@@ -389,6 +393,7 @@ namespace cryptonote
   bool t_cryptonote_protocol_handler<t_core>::get_payload_sync_data(CORE_SYNC_DATA& hshd)
   {
     m_core.get_blockchain_top(hshd.current_height, hshd.top_id);
+    hshd.hf_version = m_core.get_hard_fork_version(hshd.current_height);
     hshd.top_version = m_core.get_ideal_hard_fork_version(hshd.current_height);
     hshd.cumulative_difficulty = m_core.get_block_cumulative_difficulty(hshd.current_height);
     hshd.current_height += 1;
@@ -1816,9 +1821,9 @@ skip:
     const uint32_t local_stripe = tools::get_pruning_stripe(m_core.get_blockchain_pruning_seed());
     if(local_stripe == 0)
       return false;
-    static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(8);
-     if(first_block_height + nblocks - 1 < bp_fork_height)
-       return false;
+    static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(14);
+    if(first_block_height < bp_fork_height)
+      return false;
     // assumes the span size is less or equal to the stripe size
     bool full_data_needed = tools::get_pruning_stripe(first_block_height, context.m_remote_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES) == local_stripe
         || tools::get_pruning_stripe(first_block_height + nblocks - 1, context.m_remote_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES) == local_stripe;
@@ -1994,7 +1999,7 @@ skip:
         skip_unneeded_hashes(context, false);
 
         const uint64_t first_block_height = context.m_last_response_height - context.m_needed_objects.size() + 1;
-        static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(8);
+        static const uint64_t bp_fork_height = m_core.get_earliest_ideal_height_for_version(14);
         bool sync_pruned_blocks = m_sync_pruned_blocks && first_block_height >= bp_fork_height && m_core.get_blockchain_pruning_seed();
         span = m_block_queue.reserve_span(first_block_height, context.m_last_response_height, count_limit, context.m_connection_id, sync_pruned_blocks, m_core.get_blockchain_pruning_seed(), context.m_pruning_seed, context.m_remote_blockchain_height, context.m_needed_objects);
         MDEBUG(context << " span from " << first_block_height << ": " << span.first << "/" << span.second);
@@ -2092,30 +2097,15 @@ skip:
         return true;
       }
 
-      // if we're still around, we might be at a point where the peer is pruned, so we could either
-      // drop it to make space for other peers, or ask for a span further down the line
-      const uint32_t next_stripe = get_next_needed_pruning_stripe().first;
-      const uint32_t peer_stripe = tools::get_pruning_stripe(context.m_pruning_seed);
-      const uint32_t local_stripe = tools::get_pruning_stripe(m_core.get_blockchain_pruning_seed());
-      if (!(m_sync_pruned_blocks && peer_stripe == local_stripe) && next_stripe && peer_stripe && next_stripe != peer_stripe)
+      const uint64_t blockchain_height = m_core.get_current_blockchain_height();
+      if(std::max(blockchain_height, m_block_queue.get_next_needed_height(blockchain_height)) >= m_core.get_target_blockchain_height())
       {
-        // at this point, we have to either close the connection, or start getting blocks past the
-        // current point, or become dormant
-        MDEBUG(context << "this peer is pruned at seed " << epee::string_tools::to_string_hex(context.m_pruning_seed) <<
-            ", next stripe needed is " << next_stripe);
-        if (!context.m_is_income)
-        {
-          if (should_drop_connection(context, next_stripe))
-          {
-            m_p2p->add_used_stripe_peer(context);
-            return false; // drop outgoing connections
-          }
-        }
-        // we'll get back stuck waiting for the go ahead
         context.m_state = cryptonote_connection_context::state_normal;
         MLOG_PEER_STATE("Nothing to do for now, switching to normal state");
         return true;
       }
+      MLOG_PEER_STATE("We can download nothing from this peer, dropping");
+      return false;
     }
 
 skip:
@@ -2521,6 +2511,13 @@ skip:
     if (n_out_peers >= m_max_out_peers)
       return false;
     return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------
+  template<class t_core>
+  bool t_cryptonote_protocol_handler<t_core>::currently_busy_syncing()
+  {
+    const boost::unique_lock<boost::mutex> sync{m_sync_lock, boost::try_to_lock};
+    return !sync.owns_lock();
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>

@@ -35,6 +35,7 @@
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "cryptonote_basic/blobdatatype.h"
 #include "ringct/rctSigs.h"
+#include "version.h"
 
 namespace cryptonote
 {
@@ -53,7 +54,7 @@ namespace rpc
   {
     std::vector<std::pair<std::pair<blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, blobdata>>>> blocks;
 
-    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
+    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT, COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT))
     {
       res.status = Message::STATUS_FAILED;
       res.error_details = "core::find_blockchain_supplement() returned false";
@@ -456,6 +457,8 @@ namespace rpc
     res.info.block_size_limit = res.info.block_weight_limit = m_core.get_blockchain_storage().get_current_cumulative_block_weight_limit();
     res.info.block_size_median = res.info.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
     res.info.start_time = (uint64_t)m_core.get_start_time();
+    res.info.version = ARQMA_VERSION;
+    res.info.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = Message::STATUS_OK;
     res.error_details = "";

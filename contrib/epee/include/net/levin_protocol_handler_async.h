@@ -293,7 +293,7 @@ public:
 
     for (size_t i = 0; i < 60 * 1000 / 100 && 0 != boost::interprocess::ipcdetail::atomic_read32(&m_wait_count); ++i)
     {
-      misc_utils::sleep_no_w(100);
+      misc_utils::sleep_no_w(50);
     }
     CHECK_AND_ASSERT_MES_NO_RET(0 == boost::interprocess::ipcdetail::atomic_read32(&m_wait_count), "Failed to wait for operation completion. m_wait_count = " << m_wait_count);
 

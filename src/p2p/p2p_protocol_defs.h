@@ -75,7 +75,6 @@ namespace nodetool
     int64_t last_seen;
     uint32_t pruning_seed;
     uint16_t rpc_port;
-    uint16_t zmq_port;
     uint32_t rpc_credits_per_hash;
 
     BEGIN_KV_SERIALIZE_MAP()
@@ -84,7 +83,6 @@ namespace nodetool
       KV_SERIALIZE_OPT(last_seen, (int64_t)0)
       KV_SERIALIZE_OPT(pruning_seed, (uint32_t)0)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)0)
-      KV_SERIALIZE_OPT(zmq_port, (uint16_t)0)
       KV_SERIALIZE_OPT(rpc_credits_per_hash, (uint32_t)0)
     END_KV_SERIALIZE_MAP()
   };
@@ -167,7 +165,6 @@ namespace nodetool
     uuid network_id;
     uint32_t my_port;
     uint16_t rpc_port;
-    uint16_t zmq_port;
     uint32_t rpc_credits_per_hash;
     peerid_type peer_id;
 
@@ -176,7 +173,6 @@ namespace nodetool
       KV_SERIALIZE(peer_id)
       KV_SERIALIZE(my_port)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)(0))
-      KV_SERIALIZE_OPT(zmq_port, (uint16_t)(0))
       KV_SERIALIZE_OPT(rpc_credits_per_hash, (uint32_t)0)
     END_KV_SERIALIZE_MAP()
   };

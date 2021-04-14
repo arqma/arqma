@@ -67,15 +67,15 @@ namespace levin
 #pragma pack(pop)
 
 
-#define LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED 0
-#define LEVIN_DEFAULT_MAX_PACKET_SIZE 100000000      //100MB by default
+#define LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED   0
+#define LEVIN_DEFAULT_MAX_PACKET_SIZE         104857600      //100MB by default
 
-#define LEVIN_PACKET_REQUEST			0x00000001
-#define LEVIN_PACKET_RESPONSE		0x00000002
+#define LEVIN_PACKET_REQUEST			            0x00000001
+#define LEVIN_PACKET_RESPONSE		              0x00000002
 
 
-#define LEVIN_PROTOCOL_VER_0         0
-#define LEVIN_PROTOCOL_VER_1         1
+#define LEVIN_PROTOCOL_VER_0                  0
+#define LEVIN_PROTOCOL_VER_1                  1
 
   template<class t_connection_context = net_utils::connection_context_base>
   struct levin_commands_handler

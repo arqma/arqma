@@ -35,6 +35,8 @@
 #include "string_tools.h"
 #include "storages/portable_storage_template_helper.h" // epee json include
 #include "serialization/keyvalue_serialization.h"
+#include <functional>
+#include <vector>
 
 using namespace epee;
 
@@ -134,11 +136,9 @@ namespace cryptonote
   //---------------------------------------------------------------------------
   uint64_t checkpoints::get_max_height() const
   {
-    std::map<uint64_t, crypto::hash>::const_iterator highest = std::max_element(m_points.begin(), m_points.end(),
-             (boost::bind(&std::map<uint64_t, crypto::hash>::value_type::first, boost::placeholders::_1) <
-              boost::bind(&std::map<uint64_t, crypto::hash>::value_type::first, boost::placeholders::_2)));
-
-    return highest->first;
+    if(m_points.empty())
+      return 0;
+    return m_points.rbegin()->first;
   }
   //---------------------------------------------------------------------------
   const std::map<uint64_t, crypto::hash>& checkpoints::get_points() const
@@ -182,6 +182,11 @@ namespace cryptonote
     ADD_CHECKPOINT(400000, "c43ff8acd01aef5f22a1a875e167d9b28b3c703110255bdd6faf010fad5b2efa");
     ADD_CHECKPOINT(480000, "616bdd82bbeb6ac46228c277d7fadb90ff2ba624ce088bb2c0970f7a1b2bdc69");
     ADD_CHECKPOINT(491520, "ac93c7e4759b54aac4055316e4eab841d82c47e478edfd6c8f6c363c36572e18");
+    ADD_CHECKPOINT(525000, "8f674535f6915218d17cf496798047d5dedba8276b55f31ff89e3a73473bd1b1");
+    ADD_CHECKPOINT(575000, "79d338bc881334518eb8fd6e8d867efbc102395c7f81a686df01c126cb619016");
+    ADD_CHECKPOINT(600000, "597e137729e091884f03943a4af6e4026d6209ebfaa48e2554084111c8cc9960");
+    ADD_CHECKPOINT(635000, "5c856125ed827250ab0f503daa2b467c8fb641f53399d263ba25fb95f477657c");
+    ADD_CHECKPOINT(664600, "dc9828eb735c8038a125e927218e3ae78c543c56530db2e5855846e3de3ce280");
     return true;
   }
 

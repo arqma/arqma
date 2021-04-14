@@ -245,6 +245,7 @@ namespace cryptonote
   struct CORE_SYNC_DATA
   {
     uint64_t current_height;
+    uint8_t hf_version;
     uint64_t cumulative_difficulty;
     crypto::hash top_id;
     uint8_t top_version;
@@ -252,10 +253,11 @@ namespace cryptonote
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(current_height)
+      KV_SERIALIZE(hf_version)
       KV_SERIALIZE(cumulative_difficulty)
       KV_SERIALIZE_VAL_POD_AS_BLOB(top_id)
-      KV_SERIALIZE_OPT(top_version, (uint8_t)0)
-      KV_SERIALIZE_OPT(pruning_seed, (uint32_t)0)
+      KV_SERIALIZE(top_version)
+      KV_SERIALIZE(pruning_seed)
     END_KV_SERIALIZE_MAP()
   };
 
