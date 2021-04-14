@@ -41,6 +41,7 @@
 #include "string_tools.h"
 #include "time_helper.h"
 #include "cryptonote_config.h"
+#include "version.h"
 
 namespace nodetool
 {
@@ -170,11 +171,13 @@ namespace nodetool
     uint16_t zmq_port;
     uint32_t rpc_credits_per_hash;
     peerid_type peer_id;
+    std::string version;
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE_VAL_POD_AS_BLOB(network_id)
       KV_SERIALIZE(peer_id)
       KV_SERIALIZE(my_port)
+      KV_SERIALIZE(version)
       KV_SERIALIZE_OPT(rpc_port, (uint16_t)(0))
       KV_SERIALIZE_OPT(zmq_port, (uint16_t)(0))
       KV_SERIALIZE_OPT(rpc_credits_per_hash, (uint32_t)0)
