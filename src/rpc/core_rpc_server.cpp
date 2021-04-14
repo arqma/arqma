@@ -360,6 +360,8 @@ namespace cryptonote
     }
     res.database_size = restricted ? 0 : m_core.get_blockchain_storage().get_db().get_database_size();
     res.update_available = m_core.is_update_available();
+    res.version = restricted ? "" : ARQMA_VERSION_FULL;
+    res.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = CORE_RPC_STATUS_OK;
     return true;
@@ -414,12 +416,12 @@ namespace cryptonote
       }
     }
 
-    size_t max_blocks = COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT;
+    size_t max_blocks = COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT;
     if (m_rpc_payment)
     {
       max_blocks = res.credits / COST_PER_BLOCK;
-      if (max_blocks > COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT)
-        max_blocks = COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT;
+      if (max_blocks > COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT)
+        max_blocks = COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT;
       if (max_blocks == 0)
       {
         res.status = CORE_RPC_STATUS_PAYMENT_REQUIRED;
@@ -428,7 +430,7 @@ namespace cryptonote
     }
 
     std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>> bs;
-    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, bs, res.current_height, res.start_height, req.prune, !req.no_miner_tx, max_blocks))
+    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, bs, res.current_height, res.start_height, req.prune, !req.no_miner_tx, max_blocks, COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT))
     {
       res.status = "Failed";
       return false;
@@ -2051,10 +2053,10 @@ namespace cryptonote
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_BLOCKS_RANGE>(invoke_http_mode::JON_RPC, "getblocksrange", req, res, r))
       return r;
     size_t number_req_blocks = req.end_height - req.start_height + 1;
-    if (number_req_blocks > COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT)
+    if (number_req_blocks > COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT)
     {
       error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
-      error_resp.message = "Requested " + boost::lexical_cast<std::string>(number_req_blocks) +  " blocks. Limit is " + boost::lexical_cast<std::string>(COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT) + " blocks!";
+      error_resp.message = "Requested " + boost::lexical_cast<std::string>(number_req_blocks) +  " blocks. Limit is " + boost::lexical_cast<std::string>(COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT) + " blocks!";
       return false;
     }
     const uint64_t bc_height = m_core.get_current_blockchain_height();

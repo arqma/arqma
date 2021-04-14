@@ -125,7 +125,7 @@ if(IOS)
 endif()
 
 project(arqma
-  VERSION 7.0.0
+  VERSION 7.1.0
   LANGUAGES CXX C)
 
 set(CMAKE_C_STANDARD 11)

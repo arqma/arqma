@@ -47,7 +47,7 @@ namespace cryptonote
 const command_line::arg_descriptor<std::string> arg_db_sync_mode = {
   "db-sync-mode"
 , "Specify sync option, using format [safe|fast|fastest]:[sync|async]:[<nblocks_per_sync>[blocks]|<nbytes_per_sync>[bytes]]."
-, "fast:async:250000000bytes"
+, "fast:async:262144000bytes"
 };
 const command_line::arg_descriptor<bool> arg_db_salvage  = {
   "db-salvage"
@@ -73,7 +73,7 @@ void BlockchainDB::pop_block()
   pop_block(blk, txs);
 }
 
-void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
+void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, blobdata_ref>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
 {
   const transaction &tx = txp.first;
 
@@ -110,21 +110,14 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
     }
     else
     {
-      LOG_PRINT_L1("Unsupported input type, removing key images and aborting transaction addition");
-      for (const txin_v& tx_input : tx.vin)
-      {
-        if (tx_input.type() == typeid(txin_to_key))
-        {
-          remove_spent_key(boost::get<txin_to_key>(tx_input).k_image);
-        }
-      }
-      return;
+      LOG_PRINT_L1("Unsupported input type, aborting transaction addition");
+      throw std::runtime_error("Unexpected input type, aborting");
     }
   }
 
   uint64_t tx_id = add_transaction_data(blk_hash, txp, tx_hash, tx_prunable_hash);
 
-  std::vector<uint64_t> amount_output_indices;
+  std::vector<uint64_t> amount_output_indices(tx.vout.size());
 
   // iterate tx.vout using indices instead of C++11 foreach syntax because
   // we need the index
@@ -132,17 +125,16 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
   {
     // miner v2 txes have their coinbase output in one single out to save space,
     // and we store them as rct outputs with an identity mask
-    if (miner_tx && tx.version == 2)
+    if (miner_tx && tx.version >= 2)
     {
       cryptonote::tx_out vout = tx.vout[i];
       rct::key commitment = rct::zeroCommit(vout.amount);
       vout.amount = 0;
-      amount_output_indices.push_back(add_output(tx_hash, vout, i, tx.unlock_time, &commitment));
+      amount_output_indices[i] = add_output(tx_hash, vout, i, tx.unlock_time, &commitment);
     }
     else
     {
-      amount_output_indices.push_back(add_output(tx_hash, tx.vout[i], i, tx.unlock_time,
-        tx.version > 1 ? &tx.rct_signatures.outPk[i].mask : NULL));
+      amount_output_indices[i] = add_output(tx_hash, tx.vout[i], i, tx.unlock_time, &tx.rct_signatures.outPk[i].mask);
     }
   }
   add_tx_amount_output_indices(tx_id, amount_output_indices);
@@ -153,7 +145,7 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
                                 , uint64_t long_term_block_weight
                                 , const difficulty_type& cumulative_difficulty
                                 , const uint64_t& coins_generated
-                                , const std::vector<std::pair<transaction, blobdata>>& txs
+                                , const std::vector<std::pair<transaction, blobdata> >& txs
                                 )
 {
   const block &blk = blck.first;
@@ -175,8 +167,9 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
   time1 = epee::misc_utils::get_tick_count();
 
   uint64_t num_rct_outs = 0;
-  add_transaction(blk_hash, std::make_pair(blk.miner_tx, tx_to_blob(blk.miner_tx)));
-  if (blk.miner_tx.version == 2)
+  blobdata miner_bd = tx_to_blob(blk.miner_tx);
+  add_transaction(blk_hash, std::make_pair(blk.miner_tx, blobdata_ref(miner_bd)));
+  if (blk.miner_tx.version >= 2)
     num_rct_outs += blk.miner_tx.vout.size();
   int tx_i = 0;
   crypto::hash tx_hash = crypto::null_hash;

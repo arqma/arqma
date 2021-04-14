@@ -723,6 +723,8 @@ namespace cryptonote
       bool was_bootstrap_ever_used;
       uint64_t database_size;
       bool update_available;
+      std::string version;
+      bool syncing;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_PARENT(rpc_access_response_base)
@@ -756,6 +758,8 @@ namespace cryptonote
         KV_SERIALIZE(was_bootstrap_ever_used)
         KV_SERIALIZE(database_size)
         KV_SERIALIZE(update_available)
+        KV_SERIALIZE(version)
+        KV_SERIALIZE(syncing)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
