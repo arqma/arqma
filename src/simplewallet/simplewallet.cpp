@@ -467,7 +467,7 @@ void simple_wallet::handle_transfer_exception(const std::exception_ptr &e, bool 
         print_money(e.tx_amount() + e.fee())  %
         print_money(e.tx_amount()) %
         print_money(e.fee()));
-      fail_msg_writer() << sw::tr("You have been trying to commit transaction with amount which is Forbidden at ArQmA-Network due to transactions with sagnificantly small amount transferred are taken as a "dust_spam_transaction" which is only slowing down the whole network and get blockchain to be bigger and bigger while its useless");
+      fail_msg_writer() << sw::tr("You have been trying to commit transaction with amount which is Forbidden at ArQmA-Network due to transactions with sagnificantly small amount transferred are taken as a \"dust_spam_transaction\" which is only slowing down the whole network and get blockchain to be bigger and bigger while its useless");
       warn_of_possible_attack = false;
     }
     catch (const tools::error::not_enough_outs_to_mix& e)
