@@ -11,7 +11,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Ticker: GNTL
 - Max supply: 77.7 ml
 - Pre-mine: 0.000000030 (all burnt)
-- Governance Fee: 10% for 3 months, 5% for 6 months, and then 1% thereafter
+- Governance Fee: 10% for 3 months (height < 87000), 5% for 6 months (height > 87000), and then 1% thereafter (height 260000)
 - Block time: 120 seconds
 - Decimals: 9
 - Algorithm: RandomARQ
