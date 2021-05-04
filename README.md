@@ -22,7 +22,8 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 - Coin: [gntl.cash](https://gntl.cash)
 - Project: [gntl.co.uk](https://gntl.co.uk)
-- Mail: [support@gntl.co.uk](mailto:support@gntl.co.uk)
+- Mail (UK): [support@gntl.co.uk](mailto:support@gntl.co.uk)
+- Mail (US): [support@gntl.cash](mailto:support@gntl.cash)
 - GitHub: [https://github.com/The-GNTL-Project/gntl](https://github.com/The-GNTL-Project/gntl)
 - Discord: [https://discord.gg/4HyVA2A](https://discord.gg/4HyVA2A)
 
@@ -208,31 +209,36 @@ Dependencies need to be built with -fPIC. Static libraries usually aren't, so yo
 
 	HAVE_DOT=YES doxygen Doxyfile
 
-#### On the Raspberry Pi
+#### Raspberry Pi Zero
 
 Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (2017-09-07 or later) from https://www.raspberrypi.org/downloads/raspbian/. If you are using Raspian Jessie, [please see note in the following section](#note-for-raspbian-jessie-users).
 
-* `$ apt-get update && apt-get upgrade` to install all of the latest software
+* `apt-get update && apt-get upgrade` to install all of the latest software
 
 * Install the dependencies for GNTL from the 'Debian' column in the table above.
 
 * Increase the system swap size:
 
-	`$ sudo /etc/init.d/dphys-swapfile stop`
-	`$ sudo nano /etc/dphys-swapfile`
-	`$ CONF_SWAPSIZE=1024`
-	`$sudo /etc/init.d/dphys-swapfile start`
+```
+sudo /etc/init.d/dphys-swapfile stop
+sudo nano /etc/dphys-swapfile
+CONF_SWAPSIZE=1024
+sudo /etc/init.d/dphys-swapfile start
+```
 
 * Clone gntl and checkout most recent release version:
-
-	`$ git clone https://github.com/The-GNTL-Project/gntl.git`
-	`$ cd gntl`
+```
+git clone https://github.com/The-GNTL-Project/gntl.git
+cd gntl
+```
 
 * Build:
 
-	`$ make release`
+```
+make release
+```
 
-* Wait 4-6 hours
+* Wait a while, depending on you system specifications.
 
 * The resulting executables can be found in `build/release/bin`
 
@@ -246,31 +252,87 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 If you are using the older Raspbian Jessie image, compiling GNTL is a bit more complicated. The version of Boost available in the Debian Jessie repositories is too old to use with GNTL, and thus you must compile a newer version yourself. The following explains the extra steps, and has been tested on a Raspberry Pi 2 with a clean install of minimal Raspbian Jessie.
 
-* As before, `$ apt-get update && apt-get upgrade` to install all of the latest software, and increase the system swap size
+* As before, `apt-get update && apt-get upgrade` to install all of the latest software, and increase the system swap size
 
-	`$ sudo /etc/init.d/dphys-swapfile stop`
-	`$ sudo nano /etc/dphys-swapfile`
-	`$ CONF_SWAPSIZE=1024`
-	`$ sudo /etc/init.d/dphys-swapfile start`
+```
+sudo /etc/init.d/dphys-swapfile stop
+sudo nano /etc/dphys-swapfile
+CONF_SWAPSIZE=1024
+sudo /etc/init.d/dphys-swapfile start
+```
 
 * Then, install the dependencies for GNTL except `libunwind` and `libboost-all-dev`
 
-* Install the latest version of boost (this may first require invoking `$ apt-get remove --purge libboost*` to remove a previous version if you're not using a clean install):
+* Install the latest version of boost (this may first require invoking `apt-get remove --purge libboost*` to remove a previous version if you're not using a clean install):
 
-	`$ cd`
-	`$ wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.bz2`
-	`$ tar xvfo boost_1_68_0.tar.bz2`
-	`$ cd boost_1_68_0`
-	`$ ./bootstrap.sh`
-	`$ sudo ./b2`
+```
+cd
+wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.bz2
+tar xvfo boost_1_68_0.tar.bz2
+cd boost_1_68_0
+./bootstrap.sh
+sudo ./b2
+```
+* Wait a while, depending on you system specifications.
 
-* Wait ~8 hours
+```
+sudo ./bjam install
+```
 
-	`$ sudo ./bjam install`
-
-* Wait ~4 hours
+* Wait a while, depending on you system specifications.
 
 * From here, follow the [general Raspberry Pi instructions](#on-the-raspberry-pi) from the "Clone gntl and checkout most recent release version" step.
+
+#### Raspberry Pi 2b and Pi 400
+
+Tested on Raspberry Pi 2b and Pi 400 using official OS raspbian buster armhf (32bit). This should work on all pi3's and pi4's including compute modules untested though but pretty sure it will work.
+
+This will not work on pi64 os or by adding arm_64bit in config.txt in boot at present working progress.
+
+First we need to update glibc as the current raspbian system only has 2.28 while min 2.29 is needed. This will not update the whole system as this will run the gntl wallet in closed system as it could cause issues with raspiban os and related software etc.
+
+* Instructions for glibc
+(change -j4 to appropriate number related to your thread count)
+```
+sudo apt install gawk bison -y
+wget http://ftp.gnu.org/gnu/glibc/glibc-2.33.tar.gz
+tar -xf glibc-2.33.tar.gz
+rm -r glibc-2.33.tar.gz
+cd glibc-2.33
+mkdir build
+cd build
+../configure --prefix=$home
+make -j4
+```
+
+* Wait a while, depending on you system specifications.
+
+* wallet instructions
+Please make sure you get the armv7 version at present the armv8 wont work on 64bit os or arm_64bit in config.txt in boot
+
+(We will renames file for easy typing later on)
+```
+wget https://gntl.cash/downloads/GNTL-v0.1.0.1-arm-linux-gnueabihf.tar.gz
+tar -xf GNTL-v0.1.0.1-arm-linux-gnueabihf.tar.gz
+rm -r GNTL-v0.1.0.1-arm-linux-gnueabihf.tar.gz
+cd GNTL-arm-linux-gnueabihf
+mv GNTL-arm-linux-gnueabihf gntl
+```
+
+* To run the wallet you need to run it in the glibc container we just built.
+(please make sure data-dir is not on a small sd card)
+```
+cd glibc-2.33/build
+sudo ./testrun.sh ~/gntl/gntld --data-dir /gntl
+```
+
+* First time update blockchain will take a while depending on what storage your using. Please wait till this complete syncs up before you carry on to wallet.
+
+* Open another command prompt while leaving the above
+
+```
+sudo ./testrun.sh ~/gntl/gntl-wallet-cli
+```
 
 #### On Windows:
 
@@ -288,7 +350,9 @@ application.
 
 3. Update packages using pacman:
 
-	`$ pacman -Syu`
+```
+pacman -Syu
+```
 
 4. Exit the MSYS shell using Alt+F4 or by clicking X at top-right corner. It is Very Important to do not exit to shell!!.
 
@@ -296,37 +360,51 @@ application.
 
 6. Update packages again using pacman:
 
-	`$ pacman -Syu`
+```
+pacman -Syu
+```
 
 7. Install dependencies:
 
     To build for 64-bit Windows:
 
-    `$ pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi automake autoconf binutils patch`
+```
+pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi automake autoconf binutils patch
+```
 
 **Building**
 
 * Download GNTL with command:
 
-	`$ git clone https://github.com/The-GNTL-Project/gntl`
+```
+git clone https://github.com/The-GNTL-Project/gntl
+```
 
 * Change branch to last Release:
 
-	`$ cd gntl && git checkout release-v0.6.1`
+```
+cd gntl && git checkout release-vx.x.x
+```
 
 * Activate and update submodules:
 
-  `$ git submodule init && git submodule update`
+```
+git submodule init && git submodule update
+```
 
 * If you are on a 64-bit system, run:
 
-  `$ USE_SINGLE_BUILDDIR=1 make release-static-win`
+```
+USE_SINGLE_BUILDDIR=1 make release-static-win
+```
 
 * The resulting executables can be found in `build/release/bin`
 
 * **Optional**: to build Windows binaries suitable for debugging on a 64-bit system, run:
 
-  `$ make debug-static-win`
+```
+make debug-static-win
+```
 
 * The resulting executables can be found in `build/debug/bin`
 
@@ -353,11 +431,14 @@ https://github.com/bitcoin/bitcoin/blob/master/doc/build-openbsd.md
 
 You will have to add the serialization, date_time, and regex modules to Boost when building as they are needed by GNTL.
 
-To build: `$ env CC=egcc CXX=eg++ CPP=ecpp DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/path/to/the/boost/you/built make release-static-64`
+To build:
+```
+env CC=egcc CXX=eg++ CPP=ecpp DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/path/to/the/boost/you/built make release-static-64
+```
 
 #### OpenBSD >= 6.2
 
-You will need to add a few packages to your system. `$ pkg_add cmake miniupnpc zeromq libiconv`.
+You will need to add a few packages to your system. `pkg_add cmake miniupnpc zeromq libiconv`.
 
 The doxygen and graphviz packages are optional and require the xbase set.
 
@@ -369,54 +450,74 @@ We assume you are compiling with a non-root user and you have `doas` enabled.
 Note: do not use the boost package provided by OpenBSD, as we are installing boost to `/usr/local`.
 
 ### Create boost building directory
-`$ mkdir ~/boost`
-`$ cd ~/boost`
+```
+mkdir ~/boost
+cd ~/boost
+```
 
 ### Fetch boost source
-`$ ftp -o boost_1_64_0.tar.bz2 https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2`
+```
+ftp -o boost_1_64_0.tar.bz2 https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2
+```
 
 ### MUST output: (SHA256) boost_1_64_0.tar.bz2: OK
-`$ echo "7bcc5caace97baa948931d712ea5f37038dbb1c5d89b43ad4def4ed7cb683332 boost_1_64_0.tar.bz2" | sha256 -c`
-`$ tar xfj boost_1_64_0.tar.bz2`
+```
+echo "7bcc5caace97baa948931d712ea5f37038dbb1c5d89b43ad4def4ed7cb683332 boost_1_64_0.tar.bz2" | sha256 -c
+tar xfj boost_1_64_0.tar.bz2
+```
 
 ### Fetch and apply boost patches, required for OpenBSD
-`$ ftp -o boost_test_impl_execution_monitor_ipp.patch https://raw.githubusercontent.com/openbsd/ports/bee9e6df517077a7269ff0dfd57995f5c6a10379/devel/boost/patches/patch-boost_test_impl_execution_monitor_ipp`
-`$ ftp -o boost_config_platform_bsd_hpp.patch https://raw.githubusercontent.com/openbsd/ports/90658284fb786f5a60dd9d6e8d14500c167bdaa0/devel/boost/patches/patch-boost_config_platform_bsd_hpp`
+```
+ftp -o boost_test_impl_execution_monitor_ipp.patch https://raw.githubusercontent.com/openbsd/ports/bee9e6df517077a7269ff0dfd57995f5c6a10379/devel/boost/patches/patch-boost_test_impl_execution_monitor_ipp
+ftp -o boost_config_platform_bsd_hpp.patch https://raw.githubusercontent.com/openbsd/ports/90658284fb786f5a60dd9d6e8d14500c167bdaa0/devel/boost/patches/patch-boost_config_platform_bsd_hpp
+```
 
 ### MUST output: (SHA256) boost_config_platform_bsd_hpp.patch: OK
-`$ echo "1f5e59d1154f16ee1e0cc169395f30d5e7d22a5bd9f86358f738b0ccaea5e51d boost_config_platform_bsd_hpp.patch" | sha256 -c`
+```
+echo "1f5e59d1154f16ee1e0cc169395f30d5e7d22a5bd9f86358f738b0ccaea5e51d boost_config_platform_bsd_hpp.patch" | sha256 -c
+```
 ### MUST output: (SHA256) boost_test_impl_execution_monitor_ipp.patch: OK
-`$ echo "30cec182a1437d40c3e0bd9a866ab5ddc1400a56185b7e671bb3782634ed0206 boost_test_impl_execution_monitor_ipp.patch" | sha256 -c`
-
-`$ cd boost_1_64_0`
-`$ patch -p0 < ../boost_test_impl_execution_monitor_ipp.patch`
-`$ patch -p0 < ../boost_config_platform_bsd_hpp.patch`
+```
+echo "30cec182a1437d40c3e0bd9a866ab5ddc1400a56185b7e671bb3782634ed0206 boost_test_impl_execution_monitor_ipp.patch" | sha256 -c
+cd boost_1_64_0
+patch -p0 < ../boost_test_impl_execution_monitor_ipp.patch
+patch -p0 < ../boost_config_platform_bsd_hpp.patch
+```
 
 ### Start building boost
-`$ echo 'using clang : : c++ : <cxxflags>"-fvisibility=hidden -fPIC" <linkflags>"" <archiver>"ar" <striper>"strip"  <ranlib>"ranlib" <rc>"" : ;' > user-config.jam`
-`$ ./bootstrap.sh --without-icu --with-libraries=chrono,filesystem,program_options,system,thread,test,date_time,regex,serialization,locale --with-toolset=clang`
-`$ ./b2 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" -sICONV_PATH=/usr/local
-$ doas ./b2 -d0 runtime-link=shared threadapi=pthread threading=multi link=static variant=release --layout=tagged --build-type=complete --user-config=user-config.jam -sNO_BZIP2=1 -sICONV_PATH=/usr/local --prefix=/usr/local install
-`
+```
+echo 'using clang : : c++ : <cxxflags>"-fvisibility=hidden -fPIC" <linkflags>"" <archiver>"ar" <striper>"strip"  <ranlib>"ranlib" <rc>"" : ;' > user-config.jam
+./bootstrap.sh --without-icu --with-libraries=chrono,filesystem,program_options,system,thread,test,date_time,regex,serialization,locale --with-toolset=clang
+./b2 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" -sICONV_PATH=/usr/local
+doas ./b2 -d0 runtime-link=shared threadapi=pthread threading=multi link=static variant=release --layout=tagged --build-type=complete --user-config=user-config.jam -sNO_BZIP2=1 -sICONV_PATH=/usr/local --prefix=/usr/local install
+```
 
 ### On Solaris:
 
 The default Solaris linker can't be used, you have to install GNU ld, then run cmake manually with the path to your copy of GNU ld:
 
-`$ mkdir -p build/release`
-`$ cd build/release`
-`$ cmake -DCMAKE_LINKER=/path/to/ld -D CMAKE_BUILD_TYPE=Release ../..`
-`$ cd ../..`
-`$ make`
+```
+mkdir -p build/release
+cd build/release
+cmake -DCMAKE_LINKER=/path/to/ld -D CMAKE_BUILD_TYPE=Release ../..
+cd ../..
+make
+```
 
 ### On Linux for Android (using docker):
 
 ### Build image
-`docker build -f utils/build_scripts/android32.Dockerfile -t gntl-android .`
+```
+docker build -f utils/build_scripts/android32.Dockerfile -t gntl-android .
+```
 ### Create container
-`docker create -it --name gntl-android gntl-android bash`
+```
+docker create -it --name gntl-android gntl-android bash
+```
 ### Get binaries
-`docker cp gntl-android:/opt/android/gntl/build/release/bin .`
+```
+docker cp gntl-android:/opt/android/gntl/build/release/bin .
+```
 
 ### Building portable statically linked binaries
 
@@ -455,7 +556,9 @@ The build places the binary in `bin/` sub-directory within the build directory
 from which cmake was invoked (repository root by default). To run in
 foreground:
 
-`$ ./bin/gntld`
+```
+./bin/gntld
+```
 
 To list all available options, run `./bin/gntld --help`.  Options can be
 specified either on the command line or in a configuration file passed by the
@@ -465,7 +568,9 @@ of the argument without the leading dashes, for example `log-level=1`.
 
 To run in background:
 
-`$ ./bin/gntld --log-file gntld.log --detach`
+```
+./bin/gntld --log-file gntld.log --detach
+```
 
 To run as a systemd service, copy
 [gntld.service](utils/systemd/gntld.service) to `/etc/systemd/system/` and
@@ -513,7 +618,9 @@ setting the following configuration parameters and environment variables:
 
 Example command line to start gntld through Tor:
 
-`DNS_PUBLIC=tcp torsocks gntld --p2p-bind-ip 127.0.0.1 --no-igd`
+```
+DNS_PUBLIC=tcp torsocks gntld --p2p-bind-ip 127.0.0.1 --no-igd
+```
 
 ### Using Tor on Tails
 
@@ -521,9 +628,12 @@ TAILS ships with a very restrictive set of firewall rules. Therefore, you need
 to add a rule to allow this connection too, in addition to telling torsocks to
 allow inbound connections. Full example:
 
-`$ sudo iptables -I OUTPUT 2 -p tcp -d 127.0.0.1 -m tcp --dport 16662 -j ACCEPT`
-`$ DNS_PUBLIC=tcp torsocks ./gntld --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
-        --data-dir /home/amnesia/Persistent/your/directory/to/the/blockchain`
+```
+sudo iptables -I OUTPUT 2 -p tcp -d 127.0.0.1 -m tcp --dport 16662 -j ACCEPT
+DNS_PUBLIC=tcp torsocks ./gntld --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
+        --data-dir /home/amnesia/Persistent/your/directory/to/the/blockchain
+```
+
 ## Debugging
 
 This section contains general instructions for debugging failed installs or problems encountered with GNTL. First ensure you are running the latest version built from the Github repository.
@@ -538,7 +648,9 @@ Run the build.
 
 Once it stalls, enter the following command:
 
-`$ gdb /path/to/gntld `pidof gntld``
+```
+gdb /path/to/gntld `pidof gntld`
+```
 
 Type `thread apply all bt` within gdb in order to obtain the stack trace
 
@@ -554,13 +666,15 @@ When it terminates with an output along the lines of "Segmentation fault (core d
 
 You can now analyse this core dump with `gdb` as follows:
 
-`$ gdb /path/to/gntld /path/to/dumpfile`
+```
+gdb /path/to/gntld /path/to/dumpfile
+```
 
 Print the stack trace with `bt`
 
 * To run gntl within gdb:
 
-Type `$gdb /path/to/gntld`
+Type `gdb /path/to/gntld`
 
 Pass command-line options with `--args` followed by the relevant arguments
 
@@ -578,7 +692,9 @@ Instructions for debugging suspected blockchain corruption as per @HYC
 
 There is an `mdb_stat` command in the LMDB source that can print statistics about the database but it's not routinely built. This can be built with the following command:
 
-`$ cd ~/gntl/external/liblmdb && make`
+```
+cd ~/gntl/external/liblmdb && make
+```
 
 The output of `mdb_stat -ea <path to blockchain dir>` will indicate inconsistencies in the blocks, block_heights and block_info table.
 
