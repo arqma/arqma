@@ -165,7 +165,7 @@ GNTL uses the CMake build system and a top-level [Makefile](Makefile) that invok
 * Change to the root of the source code directory, switch branch and build:
 
 ```
-cd gntl && git checkout <branch or release> && USE_SINGLE_BUILDDIR=1 make release
+cd gntl && git checkout <branch or release> && make release
 ```
 
 *Optional*: If your machine has several cores and enough memory, enable parallel build by running `make -j<number of threads>` instead of `make`. For this to be worthwhile, the machine should have one core and about 2GB of RAM available per thread.
