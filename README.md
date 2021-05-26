@@ -124,7 +124,7 @@ The following table summarizes the tools and libraries required to build. A few 
 
 Debian / Ubuntu one liner for all dependencies (you must have cmake, gcc and boost installed as mentioned above):
 ```
-sudo apt update && sudo apt install --yes git build-essential curl pkg-config libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin libunbound-dev miniupnpc libevent-dev
+sudo apt update && sudo apt install --yes git build-essential curl pkg-config libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin libunbound-dev miniupnpc libevent-dev libzmq5-dev
 ```
 
 [1] On Debian/Ubuntu `libgtest-dev` only includes sources and headers. You must
@@ -165,7 +165,7 @@ GNTL uses the CMake build system and a top-level [Makefile](Makefile) that invok
 * Change to the root of the source code directory, switch branch and build:
 
 ```
-cd gntl && git checkout <branch or release> && make release
+cd gntl && git checkout <branch or release> && USE_SINGLE_BUILDDIR=1 make release
 ```
 
 *Optional*: If your machine has several cores and enough memory, enable parallel build by running `make -j<number of threads>` instead of `make`. For this to be worthwhile, the machine should have one core and about 2GB of RAM available per thread.
