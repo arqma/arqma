@@ -376,7 +376,7 @@ git clone https://github.com/The-GNTL-Project/gntl
 * Change branch to last Release:
 
 ```
-cd gntl && git checkout release-vx.x.x
+cd gntl && git checkout <branch or release>
 ```
 
 * Activate and update submodules:
