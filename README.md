@@ -124,7 +124,7 @@ The following table summarizes the tools and libraries required to build. A few 
 
 Debian / Ubuntu one liner for all dependencies (you must have cmake, boost and gcc installed as mentioned above):
 ```
-sudo apt update && sudo apt install --yes git build-essential curl pkg-config libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin
+sudo apt update && sudo apt install --yes git build-essential curl pkg-config libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin libunbound-dev miniupnpc libevent-dev
 ```
 
 [1] On Debian/Ubuntu `libgtest-dev` only includes sources and headers. You must
