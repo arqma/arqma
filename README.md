@@ -94,9 +94,9 @@ The master branch is used for active development and can be either unstable or i
 
 ##### [Cmake v3.17.3](https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz)
 
-##### [Boost 1.73.0](https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz)
-
 ##### [GCC 9.3](https://gcc.gnu.org/gcc-9/)
+
+##### [Boost 1.73.0](https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz)
 
 The following table summarizes the tools and libraries required to build. A few of the libraries are also included in this repository (marked as "Vendored"). By default, the build uses the library installed on the system, and ignores the vendored sources. However, if no library is found installed on the system, then the vendored source will be built and used. The vendored sources are also used for statically-linked builds because distribution packages often include only shared library binaries (`.so`) but not static library archives (`.a`).
 
@@ -122,7 +122,7 @@ The following table summarizes the tools and libraries required to build. A few 
 -------------------------------------------------------------------------------------------------------------------------------
 
 
-Debian / Ubuntu one liner for all dependencies (you must have cmake, boost and gcc installed as mentioned above):
+Debian / Ubuntu one liner for all dependencies (you must have cmake, gcc and boost installed as mentioned above):
 ```
 sudo apt update && sudo apt install --yes git build-essential curl pkg-config libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin libunbound-dev miniupnpc libevent-dev
 ```
