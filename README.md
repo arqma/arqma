@@ -47,7 +47,7 @@ GNTL is a private, secure, untraceable, decentralised digital currency. You are 
 
 ## SSL
 
-As a network, GNTL supports complete, cryptographically secured connections at all levels. This includes, but is not limited to The GNTL Project Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
+As a network, GNTL supports complete, cryptographically secured connections at all levels. This includes, but is not limited to The GNTL Project Nodes (Full nodes), Remote Nodes and all wallets.    
 
 The GNTL Project will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over The GNTL Project.
 
@@ -83,29 +83,22 @@ If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidel
 
 ### IMPORTANT
 
-That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
+The master branch is used for active development and can be either unstable or incompatible with release software. Please compile release branches instead.
 
 [![TravisCI master branch](https://img.shields.io/travis/gntl/gntl/master?label=master%20branch&style=for-the-badge)](https://travis-ci.org/gntl/gntl)
 ![Monitored by DiscordHooks](https://img.shields.io/static/v1?label=Monitored%20by&message=DiscordHooks&color=brightgreen&style=for-the-badge)
 
 ### Dependencies
 
-#### We are strongly suggest to update cmake and boost to the latest available release.
+#### Our build has been tested on Ubuntu Server 18.04 Bionic Beaver, with the following:
 
 ##### [Cmake v3.17.3](https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz)
 
-##### [Boost](https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz)
+##### [Boost 1.73.0](https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz)
 
-##### GNTL build been tested on Ubuntu Server 18.04 Bionic Beaver with above releases as long with [gcc9.3](https://gcc.gnu.org/gcc-9/)
+##### [GCC 9.3](https://gcc.gnu.org/gcc-9/)
 
-The following table summarizes the tools and libraries required to build. A
-few of the libraries are also included in this repository (marked as
-"Vendored"). By default, the build uses the library installed on the system,
-and ignores the vendored sources. However, if no library is found installed on
-the system, then the vendored source will be built and used. The vendored
-sources are also used for statically-linked builds because distribution
-packages often include only shared library binaries (`.so`) but not static
-library archives (`.a`).
+The following table summarizes the tools and libraries required to build. A few of the libraries are also included in this repository (marked as "Vendored"). By default, the build uses the library installed on the system, and ignores the vendored sources. However, if no library is found installed on the system, then the vendored source will be built and used. The vendored sources are also used for statically-linked builds because distribution packages often include only shared library binaries (`.so`) but not static library archives (`.a`).
 
 | Dep          | Min. version  | Vendored | Debian/Ubuntu pkg  | Arch pkg     | Fedora            | Optional | Purpose        |
 | ------------ | ------------- | -------- | ------------------ | ------------ | ----------------- | -------- | -------------- |
@@ -129,15 +122,16 @@ library archives (`.a`).
 -------------------------------------------------------------------------------------------------------------------------------
 
 
+Debian / Ubuntu one liner for all dependencies (you must have cmake, boost and gcc installed as mentioned above):
+```
+sudo apt update && sudo apt install --yes git build-essential curl pkg-config libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin
+```
+
 [1] On Debian/Ubuntu `libgtest-dev` only includes sources and headers. You must
 build the library binary manually. This can be done with the following command:
 ```
-sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/
-```
-
-Debian / Ubuntu one liner for all dependencies:
-```
-sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin
+sudo apt install -y libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/
+cd ~
 ```
 
 Install all dependencies at once on OSX:
@@ -162,17 +156,16 @@ git submodule init && git submodule update
 
 ### Build instructions
 
-GNTL uses the CMake build system and a top-level [Makefile](Makefile) that
-invokes cmake commands as needed.
+GNTL uses the CMake build system and a top-level [Makefile](Makefile) that invokes cmake commands as needed.
 
 #### On Linux and OS X
 
 * Install the dependencies
 
-* Change to the root of the source code directory and build:
+* Change to the root of the source code directory, switch branch and build:
 
 ```
-cd gntl && make release
+cd gntl && git checkout <branch or release> && make release
 ```
 
 *Optional*: If your machine has several cores and enough memory, enable parallel build by running `make -j<number of threads>` instead of `make`. For this to be worthwhile, the machine should have one core and about 2GB of RAM available per thread.
