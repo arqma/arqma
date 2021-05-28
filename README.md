@@ -1,7 +1,7 @@
 ## Arqma Network
 
-Copyright (c) 2018-2020, The Arqma Network    
-Copyright (c) 2014-2020, The Monero Project  
+Copyright (c) 2018-2021, The Arqma Network    
+Copyright (c) 2014-2021, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
@@ -11,6 +11,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
 - Discord: [https://chat.arqma.com](https://chat.arqma.com)
 - Telegram: [https://telegram.arqma.com](https://telegram.arqma.com)
+- Matrix chat: [#arqma:matrix.org or Internal room ID: !YqTIhVcMbLHivbYegN:matrix.org](https://#arqma:matrix.org)
 
 ## Other Arqma related websites
 
@@ -38,8 +39,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
 - Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
-- Citex: [https://www.citex.co.kr/#/trade/ARQ_ETH](https://www.citex.co.kr/#/trade/ARQ_ETH)
-- GJ: [https://www.gj.com/trade/arqusdt](https://www.gj.com/trade/arqusdt)
+- Citex: [https://trade.citex.co.kr/trade/ARQ_BTC](https://trade.citex.co.kr/trade/ARQ_BTC) **Not Avaialble in the USA**
 
 ## Introduction
 
