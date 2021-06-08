@@ -4,15 +4,25 @@ on: [push, pull_request]
 
 jobs:
   build-macos:
-    runs-on: macOS-latest
+     runs-on: macOS-latest
+    env:
+      CCACHE_COMPRESS: 1
+      CCACHE_TEMPDIR: /tmp/.ccache-temp
     steps:
     - uses: actions/checkout@v1
       with:
         submodules: recursive
-    - name: Install dependencies
-      run: HOMEBREW_NO_AUTOUPDATE=1 brew install autoconf autogen automake binutils coreutils libsodium openssl pkg-config boost hidapi ldns expat libunwind-headers readline
+    - uses: actions/cache@v2
+      with:
+        path: /Users/runner/Library/Caches/ccache
+        key: ccache-macos-build-${{ github.sha }}
+        restore-keys: ccache-macos-build-
+    - name: install dependencies
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install boost hidapi zmq libpgm miniupnpc ldns expat libunwind-headers protobuf ccache
     - name: build
-      run: make release
+      run: |
+        ccache --max-size=150M
+        make -j3
     - name: Upload mac artifacts
       uses: actions/upload-artifact@master
       with:
