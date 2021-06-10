@@ -17,6 +17,8 @@ jobs:
         path: /Users/runner/Library/Caches/ccache
         key: ccache-macos-build-${{ github.sha }}
         restore-keys: ccache-macos-build-
+    - name: install ccache
+      run: brew install ccache
     - name: install dependencies
       run: HOMEBREW_NO_AUTO_UPDATE=1 brew bundle --file=contrib/apple/brew
     - name: link libcrypto
