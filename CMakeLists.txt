@@ -221,6 +221,20 @@ enable_testing()
 
 option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
 option(BUILD_TESTS "Build tests." OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(DEFAULT_BUILD_DEBUG_UTILITIES ON)
+else()
+  set(DEFAULT_BUILD_DEBUG_UTILITIES OFF)
+endif()
+option(BUILD_DEBUG_UTILITIES "Build debug utilities." DEFAULT_BUILD_DEBUG_UTILITIES)
+
+if(BUILD_DEBUG_UTILITIES)
+  message(STATUS "Building debug utilities")
+else()
+  message(STATUS "Not building debug utilities")
+endif()
+
+
 
 # Check whether we're on a 32-bit or 64-bit system
 if(CMAKE_SIZEOF_VOID_P EQUAL "8")
@@ -766,6 +780,13 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -DGTEST_HAS_TR1_TUPLE=0")
   endif()
 
+  set(DEBUG_FLAGS "-g3")
+  if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT (CMAKE_C_COMPILER_VERSION VERSION_LESS 4.8))
+    set(DEBUG_FLAGS "${DEBUG_FLAGS} -O2 ")
+  else()
+    set(DEBUG_FLAGS "${DEBUG_FLAGS} -O0 ")
+  endif()
+
   # At least some CLANGs default to not enough for Arqma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth=900")
 
@@ -799,6 +820,11 @@ else()
     endif()
   endif()
 endif()
+
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_FLAGS}")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${RELEASE_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")
 
 if(${BOOST_IGNORE_SYSTEM_PATHS} STREQUAL "ON")
   set(Boost_NO_SYSTEM_PATHS TRUE)
