@@ -32,9 +32,9 @@ jobs:
   build-osx-depends:
     runs-on: ubuntu-latest
     steps:
-      -uses: actions/checkout@v1
-       with:
-         submodules: recursive
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
     - name: install ArQmA dependencies
       run:  sudo apt -y install cmake ccache imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools curl bsdmainutils python3-setuptools
     - name: add SDK
