@@ -48,6 +48,11 @@ arqma_add_library(net
   ${net_headers})
 
 target_link_libraries(net
-  common
-  epee
-  ${Boost_ASIO_LIBRARY})
+  PUBLIC
+    common
+    epee
+    miniupnpc
+    libunbound
+    ${Boost_ASIO_LIBRARY}
+  PRIVATE
+    ${EXTRA_LIBRARIES})

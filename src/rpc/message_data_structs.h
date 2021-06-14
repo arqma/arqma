@@ -195,6 +195,8 @@ namespace rpc
     uint64_t block_size_median;
     uint64_t block_weight_median;
     uint64_t start_time;
+    std::string version;
+    bool syncing;
   };
 
   struct output_distribution
@@ -204,18 +206,19 @@ namespace rpc
     bool cumulative;
   };
 
-  struct GetBlockTemplateInfo
+  struct BlockTemplateInfo
   {
-    std::string blocktemplate_blob;
     std::string blockhashing_blob;
+    std::string blocktemplate_blob;
     uint64_t difficulty;
-    uint64_t expected_reward;
     uint64_t height;
+    uint64_t expected_reward;
+    std::string next_seed_hash;
     std::string prev_hash;
     uint64_t reserved_offset;
-    std::string status;
     std::string seed_hash;
-    std::string next_seed_hash;
+    uint64_t seed_height;
+    std::string status;
   };
 
 }  // namespace rpc

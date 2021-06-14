@@ -31,6 +31,11 @@
 
 #pragma once
 #include <boost/asio/io_service.hpp>
+
+#if BOOST_VERSION >= 107400
+#include <boost/serialization/library_version_type.hpp>
+#endif
+
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/list.hpp>
@@ -38,19 +43,20 @@
 #include <boost/multi_index/global_fun.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
-#include <boost/circular_buffer.hpp>
 #include <atomic>
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
 
 
-#include "arqma_mq/zmq_addon.hpp"
+#include "arqma_mq/zmq.hpp"
 
 #include "span.h"
 #include "syncobj.h"
 #include "string_tools.h"
+#include "rolling_median.h"
 #include "cryptonote_basic/cryptonote_basic.h"
+#include "common/powerof.h"
 #include "common/util.h"
 #include "cryptonote_protocol/cryptonote_protocol_defs.h"
 #include "rpc/core_rpc_server_commands_defs.h"
@@ -345,8 +351,8 @@ namespace cryptonote
      *
      * @return true if block template filled in successfully, else false
      */
-    bool create_block_template(block& b, const account_public_address& miner_address, difficulty_type& di, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce);
-    bool create_block_template(block& b, const crypto::hash *from_block, const account_public_address& miner_address, difficulty_type& di, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce);
+    bool create_block_template(block& b, const account_public_address& miner_address, difficulty_type& di, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash);
+    bool create_block_template(block& b, const crypto::hash *from_block, const account_public_address& miner_address, difficulty_type& di, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash);
 
     /**
      * @brief checks if a block is known about with a given hash
@@ -443,11 +449,12 @@ namespace cryptonote
      * @param total_height return-by-reference our current blockchain height
      * @param start_height return-by-reference the height of the first block returned
      * @param pruned whether to return full or pruned tx blobs
-     * @param max_count the max number of blocks to get
+     * @param max_block_count the max number of blocks to get
+     * @param max_tx_count the max number of txes to get (it can get overshot by the last block's number of txes minus 1)
      *
      * @return true if a block found in common or req_start_block specified, else false
      */
-    bool find_blockchain_supplement(const uint64_t req_start_block, const std::list<crypto::hash>& qblock_ids, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata> > > >& blocks, uint64_t& total_height, uint64_t& start_height, bool pruned, bool get_miner_tx_hash, size_t max_count) const;
+    bool find_blockchain_supplement(const uint64_t req_start_block, const std::list<crypto::hash>& qblock_ids, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata> > > >& blocks, uint64_t& total_height, uint64_t& start_height, bool pruned, bool get_miner_tx_hash, size_t max_block_count, size_t max_tx_count) const;
 
     /**
      * @brief retrieves a set of blocks and their transactions, and possibly other transactions
@@ -570,7 +577,10 @@ namespace cryptonote
      *
      * @return the fee quantized mask
      */
-    static uint64_t get_fee_quantization_mask();
+    static uint64_t get_fee_quantization_mask()
+    {
+      return tools::PowerOf<10, CRYPTONOTE_DISPLAY_DECIMAL_POINT - PER_KB_FEE_QUANTIZATION_DECIMALS>::Value;
+    }
 
     /**
      * @brief get dynamic per kB or byte fee for a given block weight
@@ -978,7 +988,7 @@ namespace cryptonote
     bool get_txpool_tx_meta(const crypto::hash& txid, txpool_tx_meta_t &meta) const;
     bool get_txpool_tx_blob(const crypto::hash& txid, cryptonote::blobdata &bd) const;
     cryptonote::blobdata get_txpool_tx_blob(const crypto::hash& txid) const;
-    bool for_all_txpool_txes(std::function<bool(const crypto::hash&, const txpool_tx_meta_t&, const cryptonote::blobdata*)>, bool include_blob = false, bool include_unrelayed_txes = true) const;
+    bool for_all_txpool_txes(std::function<bool(const crypto::hash&, const txpool_tx_meta_t&, const cryptonote::blobdata_ref*)>, bool include_blob = false, bool include_unrelayed_txes = true) const;
 
     bool is_within_compiled_block_hash_area() const { return is_within_compiled_block_hash_area(m_db->height()); }
     uint64_t prevalidate_block_hashes(uint64_t height, const std::vector<crypto::hash> &hashes, const std::vector<uint64_t> &weights);
@@ -1044,11 +1054,11 @@ namespace cryptonote
     size_t m_current_block_cumul_weight_median;
 
     // metadata containers
-    std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, std::vector<output_data_t>>> m_scan_table;
+    std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, std::vector<output_data_t> > > m_scan_table;
     std::unordered_map<crypto::hash, crypto::hash> m_blocks_longhash_table;
 
     // SHA-3 hashes for each block and for fast pow checking
-    std::vector<std::pair<crypto::hash, crypto::hash>> m_blocks_hash_of_hashes;
+    std::vector<std::pair<crypto::hash, crypto::hash> > m_blocks_hash_of_hashes;
     std::vector<std::pair<crypto::hash, uint64_t>> m_blocks_hash_check;
     std::vector<crypto::hash> m_blocks_txs_check;
 
@@ -1068,6 +1078,8 @@ namespace cryptonote
     uint64_t m_timestamps_and_difficulties_height;
     uint64_t m_long_term_block_weights_window;
     uint64_t m_long_term_effective_median_block_weight;
+    mutable crypto::hash m_long_term_block_weights_cache_tip_hash;
+    mutable epee::misc_utils::rolling_median_t<uint64_t> m_long_term_block_weights_cache_rolling_median;
 
     epee::critical_section m_difficulty_lock;
     crypto::hash m_difficulty_for_next_block_top_hash;
@@ -1100,6 +1112,8 @@ namespace cryptonote
     uint64_t m_btc_height;
     uint64_t m_btc_pool_cookie;
     uint64_t m_btc_expected_reward;
+    crypto::hash m_btc_seed_hash;
+    uint64_t m_btc_seed_height;
     bool m_btc_valid;
 
     bool m_batch_success;
@@ -1303,7 +1317,7 @@ namespace cryptonote
      *
      * @return false if anything is found wrong with the miner transaction, otherwise true
      */
-    bool validate_miner_transaction(const block& b, size_t cumulative_block_weight, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, bool &partial_block_reward, uint8_t version);
+    bool validate_miner_transaction(const block& b, size_t cumulative_block_weight, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, bool &partial_block_reward, uint8_t version, uint64_t height);
 
     /**
      * @brief reverts the blockchain to its previous state following a failed switch
@@ -1330,15 +1344,16 @@ namespace cryptonote
     void get_last_n_blocks_weights(std::vector<uint64_t>& weights, size_t count) const;
 
     /**
-     * @brief gets recent block long term weights for median calculation
+     * @brief gets block long term weight median
      *
-     * get the block long term weights of the last <count> blocks, and return by reference <weights>.
+     * get the block long term weight median of <count> blocks, starting at <start_height>.
      *
-     * @param weights return-by-reference the list of weights
      * @param start_height the block height of the first block to query
      * @param count the number of blocks to get weights for
+     *
+     * @return the long term median block weight
      */
-    void get_long_term_block_weights(std::vector<uint64_t>& weights, uint64_t start_height, size_t count) const;
+    uint64_t get_long_term_block_weight_median(uint64_t start_height, size_t count) const;
 
     /**
      * @brief checks if a transaction is unlocked (its outputs spendable)
@@ -1514,6 +1529,6 @@ namespace cryptonote
      *
      * At some point, may be used to push an update to miners
      */
-    void cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t height, uint64_t expected_reward, uint64_t pool_cookie);
+    void cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t height, uint64_t expected_reward, uint64_t seed_height, const crypto::hash &seed_hash, uint64_t pool_cookie);
   };
 }  // namespace cryptonote

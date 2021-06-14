@@ -31,7 +31,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
-#include <lmdb.h>
+#include "lmdb/liblmdb/lmdb.h"
 #include <utility>
 
 #include "lmdb/value_stream.h"

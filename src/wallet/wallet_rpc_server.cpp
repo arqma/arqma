@@ -573,7 +573,7 @@ namespace tools
   {
     if (!m_wallet) return not_open(er);
     const std::pair<std::map<std::string, std::string>, std::vector<std::string>> account_tags = m_wallet->get_account_tags();
-    for (const std::pair<std::string, std::string>& p : account_tags.first)
+    for (const std::pair<const std::string, std::string>& p : account_tags.first)
     {
       res.account_tags.resize(res.account_tags.size() + 1);
       auto& info = res.account_tags.back();
@@ -868,6 +868,13 @@ namespace tools
       return false;
     }
 
+    if(m_wallet->use_fork_rules(HF_FORBID_BORROMEAN) && dsts.size() >= BULLETPROOF_MAX_OUTPUTS)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_TX_TOO_LARGE;
+      er.message = "Transaction is too large. Try /transfer_split.";
+      return false;
+    }
+
     try
     {
       uint64_t mixin;
@@ -893,7 +900,7 @@ namespace tools
       if (ptx_vector.size() != 1)
       {
         er.code = WALLET_RPC_ERROR_CODE_TX_TOO_LARGE;
-        er.message = "Transaction would be too large.  try /transfer_split.";
+        er.message = "Transaction would be too large. Try /transfer_split.";
         return false;
       }
 
@@ -941,7 +948,9 @@ namespace tools
       }
       uint32_t priority = m_wallet->adjust_priority(req.priority);
       LOG_PRINT_L2("on_transfer_split calling create_transactions_2");
+
       std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_2(dsts, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices);
+
       LOG_PRINT_L2("on_transfer_split called create_transactions_2");
 
       return fill_response(ptx_vector, req.get_tx_keys, res.tx_key_list, res.amount_list, res.fee_list, res.multisig_txset, res.unsigned_txset, req.do_not_relay,

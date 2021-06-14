@@ -227,53 +227,51 @@ POP_WARNINGS
     return pname;
   }
 #endif
-	//----------------------------------------------------------------------------
-	inline bool set_module_name_and_folder(const std::string& path_to_process_)
-	{
+  //----------------------------------------------------------------------------
+  inline bool set_module_name_and_folder(const std::string& path_to_process_)
+  {
     std::string path_to_process = path_to_process_;
 #ifdef _WIN32
     path_to_process = get_current_module_path();
 #endif
-		std::string::size_type a = path_to_process.rfind( '\\' );
-		if(a == std::string::npos )
-		{
-			a = path_to_process.rfind( '/' );
-		}
-		if ( a != std::string::npos )
-		{
-			get_current_module_name() = path_to_process.substr(a+1, path_to_process.size());
-			get_current_module_folder() = path_to_process.substr(0, a);
-			return true;
-		}else
-			return false;
+    std::string::size_type a = path_to_process.rfind( '\\' );
+    if(a == std::string::npos )
+    {
+      a = path_to_process.rfind( '/' );
+    }
+    if ( a != std::string::npos )
+    {
+      get_current_module_name() = path_to_process.substr(a+1, path_to_process.size());
+      get_current_module_folder() = path_to_process.substr(0, a);
+      return true;
+    }
+    else
+      return false;
 
-	}
+  }
+  //----------------------------------------------------------------------------
+  inline bool trim_left(std::string& str)
+  {
+    for(std::string::iterator it = str.begin(); it!= str.end() && isspace(static_cast<unsigned char>(*it));)
+      str.erase(str.begin());
 
-	//----------------------------------------------------------------------------
-	inline bool trim_left(std::string& str)
-	{
-		for(std::string::iterator it = str.begin(); it!= str.end() && isspace(static_cast<unsigned char>(*it));)
-			str.erase(str.begin());
+    return true;
+  }
+  //----------------------------------------------------------------------------
+  inline bool trim_right(std::string& str)
+  {
+    for(std::string::reverse_iterator it = str.rbegin(); it!= str.rend() && isspace(static_cast<unsigned char>(*it));)
+      str.erase( --((it++).base()));
 
-		return true;
-	}
-	//----------------------------------------------------------------------------
-	inline bool trim_right(std::string& str)
-	{
-
-		for(std::string::reverse_iterator it = str.rbegin(); it!= str.rend() && isspace(static_cast<unsigned char>(*it));)
-			str.erase( --((it++).base()));
-
-		return true;
-	}
-	//----------------------------------------------------------------------------
-	inline std::string& trim(std::string& str)
-	{
-
-		trim_left(str);
-		trim_right(str);
-		return str;
-	}
+    return true;
+  }
+  //----------------------------------------------------------------------------
+  inline std::string& trim(std::string& str)
+  {
+    trim_left(str);
+    trim_right(str);
+    return str;
+  }
   //----------------------------------------------------------------------------
   inline std::string trim(const std::string& str_)
   {
@@ -328,27 +326,27 @@ POP_WARNINGS
   //----------------------------------------------------------------------------
   bool validate_hex(uint64_t length, const std::string& str);
   //----------------------------------------------------------------------------
-	inline std::string get_extension(const std::string& str)
-	{
-		std::string res;
-		std::string::size_type pos = str.rfind('.');
-		if(std::string::npos == pos)
-			return res;
+  inline std::string get_extension(const std::string& str)
+  {
+    std::string res;
+    std::string::size_type pos = str.rfind('.');
+    if(std::string::npos == pos)
+      return res;
 
-		res = str.substr(pos+1, str.size()-pos);
-		return res;
-	}
-	//----------------------------------------------------------------------------
-	inline std::string cut_off_extension(const std::string& str)
-	{
-		std::string res;
-		std::string::size_type pos = str.rfind('.');
-		if(std::string::npos == pos)
-			return str;
+    res = str.substr(pos+1, str.size()-pos);
+      return res;
+  }
+  //----------------------------------------------------------------------------
+  inline std::string cut_off_extension(const std::string& str)
+  {
+    std::string res;
+    std::string::size_type pos = str.rfind('.');
+    if(std::string::npos == pos)
+      return str;
 
-		res = str.substr(0, pos);
-		return res;
-	}
+    res = str.substr(0, pos);
+      return res;
+  }
   //----------------------------------------------------------------------------
 #ifdef _WIN32
   inline std::wstring utf8_to_utf16(const std::string& str)

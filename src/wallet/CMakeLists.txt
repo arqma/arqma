@@ -27,7 +27,6 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 set(wallet_sources
   wallet2.cpp
@@ -90,6 +89,7 @@ if(NOT IOS)
   target_link_libraries(wallet_rpc_server
     PRIVATE
       wallet
+      arqma_mq
       rpc_base
       rpc_sig
       cryptonote_core
@@ -97,7 +97,7 @@ if(NOT IOS)
       common
       version
       daemonizer
-      ${EPEE_READLINE}
+      epee
       ${Boost_CHRONO_LIBRARY}
       ${Boost_PROGRAM_OPTIONS_LIBRARY}
       ${Boost_FILESYSTEM_LIBRARY}

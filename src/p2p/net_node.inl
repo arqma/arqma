@@ -60,6 +60,7 @@
 #include "storages/levin_abstract_invoke2.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "net/parse.h"
+#include "cryptonote_config.h"
 
 #include <miniupnp/miniupnpc/miniupnpc.h>
 #include <miniupnp/miniupnpc/upnpcommands.h>
@@ -69,8 +70,6 @@
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.p2p"
 
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
-
-#define MIN_WANTED_SEED_NODES 8
 
 using namespace boost::placeholders;
 
@@ -330,7 +329,7 @@ namespace nodetool
 
     if (command_line::has_arg(vm, arg_p2p_seed_node))
     {
-      boost::unique_lock<boost::shared_mutex> lock(m_seed_nodes_lock);
+//      boost::unique_lock<boost::shared_mutex> lock(m_seed_nodes_lock);
 
       if (!parse_peers_and_add_to_container(vm, arg_p2p_seed_node, m_seed_nodes))
         return false;
@@ -464,141 +463,22 @@ namespace nodetool
     std::set<std::string> full_addrs;
     if (nettype == cryptonote::TESTNET)
     {
-      full_addrs.insert("139.99.106.122:29993");
-      full_addrs.insert("77.93.206.172:29993");
-      full_addrs.insert("86.24.233.79:29993");
+      for(const auto &m_seed_nodes : arqma_nodes::TESTNET_NODES)
+        full_addrs.insert(m_seed_nodes);
     }
     else if (nettype == cryptonote::STAGENET)
     {
-      full_addrs.insert("161.97.102.172:39993");
-      full_addrs.insert("164.68.123.118:39993");
-      full_addrs.insert("86.24.233.79:39993");
-      full_addrs.insert("139.99.106.122:39993");
-      full_addrs.insert("144.217.242.16:39993");
+      for(const auto &m_seed_nodes : arqma_nodes::STAGENET_NODES)
+        full_addrs.insert(m_seed_nodes);
     }
     else if (nettype == cryptonote::FAKECHAIN)
     {
     }
     else
     {
-      full_addrs.insert("144.217.242.16:19993");
-      full_addrs.insert("161.97.102.172:19993");
-      full_addrs.insert("92.222.70.207:19993");
-      full_addrs.insert("86.24.233.79:19993");
-      full_addrs.insert("139.99.106.122:19993");
-      full_addrs.insert("51.15.50.83:19993");
-      full_addrs.insert("164.68.123.118:19993");
-      full_addrs.insert("51.15.253.177:19993");
+      for(const auto &m_seed_nodes : arqma_nodes::MAINNET_NODES)
+        full_addrs.insert(m_seed_nodes);
     }
-    return full_addrs;
-  }
-  //-----------------------------------------------------------------------------------
-  template<class t_payload_net_handler>
-  std::set<std::string> node_server<t_payload_net_handler>::get_seed_nodes()
-  {
-    if (!m_exclusive_peers.empty() || m_offline)
-    {
-      return {};
-    }
-    if (m_nettype == cryptonote::TESTNET)
-    {
-      return get_seed_nodes(cryptonote::TESTNET);
-    }
-    if (m_nettype == cryptonote::STAGENET)
-    {
-      return get_seed_nodes(cryptonote::STAGENET);
-    }
-
-    std::set<std::string> full_addrs;
-
-    // for each hostname in the seed nodes list, attempt to DNS resolve and
-    // add the result addresses as seed nodes
-    // TODO: at some point add IPv6 support, but that won't be relevant
-    // for some time yet.
-
-    std::vector<std::vector<std::string>> dns_results;
-    dns_results.resize(m_seed_nodes_list.size());
-
-    // some libc implementation provide only a very small stack
-    // for threads, e.g. musl only gives +- 80kb, which is not
-    // enough to do a resolve with unbound. we request a stack
-    // of 1 mb, which should be plenty
-    boost::thread::attributes thread_attributes;
-    thread_attributes.set_stack_size(1024*1024);
-
-    std::list<boost::thread> dns_threads;
-    uint64_t result_index = 0;
-    for (const std::string& addr_str : m_seed_nodes_list)
-    {
-      boost::thread th = boost::thread(thread_attributes, [=, &dns_results, &addr_str]
-      {
-        MDEBUG("dns_threads[" << result_index << "] created for: " << addr_str);
-        // TODO: care about dnssec avail/valid
-        bool avail, valid;
-        std::vector<std::string> addr_list;
-
-        try
-        {
-          addr_list = tools::DNSResolver::instance().get_ipv4(addr_str, avail, valid);
-          MDEBUG("dns_threads[" << result_index << "] DNS resolve done");
-          boost::this_thread::interruption_point();
-        }
-        catch(const boost::thread_interrupted&)
-        {
-          // thread interruption request
-          // even if we now have results, finish thread without setting
-          // result variables, which are now out of scope in main thread
-          MWARNING("dns_threads[" << result_index << "] interrupted");
-          return;
-        }
-
-        MINFO("dns_threads[" << result_index << "] addr_str: " << addr_str << "  number of results: " << addr_list.size());
-        dns_results[result_index] = addr_list;
-      });
-
-      dns_threads.push_back(std::move(th));
-      ++result_index;
-    }
-
-    MDEBUG("dns_threads created, now waiting for completion or timeout of " << CRYPTONOTE_DNS_TIMEOUT_MS << "ms");
-    boost::chrono::system_clock::time_point deadline = boost::chrono::system_clock::now() + boost::chrono::milliseconds(CRYPTONOTE_DNS_TIMEOUT_MS);
-    uint64_t i = 0;
-    for (boost::thread& th : dns_threads)
-    {
-      if (! th.try_join_until(deadline))
-      {
-        MWARNING("dns_threads[" << i << "] timed out, sending interrupt");
-        th.interrupt();
-      }
-      ++i;
-    }
-
-    i = 0;
-    for (const auto& result : dns_results)
-    {
-      MDEBUG("DNS lookup for " << m_seed_nodes_list[i] << ": " << result.size() << " results");
-      // if no results for node, thread's lookup likely timed out
-      if (result.size())
-      {
-        for (const auto& addr_string : result)
-          full_addrs.insert(addr_string + ":" + std::to_string(cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT));
-      }
-      ++i;
-    }
-
-    // append the fallback nodes if we have too few seed nodes to start with
-    if (full_addrs.size() < MIN_WANTED_SEED_NODES)
-    {
-      if (full_addrs.empty())
-        MINFO("DNS seed node lookup either timed out or failed, falling back to defaults");
-      else
-        MINFO("Not enough DNS seed nodes found, using fallback defaults too");
-
-      for (const auto &peer: get_seed_nodes(cryptonote::MAINNET))
-        full_addrs.insert(peer);
-      m_fallback_seed_nodes_added.test_and_set();
-    }
-
     return full_addrs;
   }
   //-----------------------------------------------------------------------------------
@@ -616,21 +496,106 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::init(const boost::program_options::variables_map& vm)
   {
+    std::set<std::string> full_addrs;
+
     bool res = handle_command_line(vm);
     CHECK_AND_ASSERT_MES(res, false, "Failed to handle command line");
 
+    m_fallback_seed_nodes_added = false;
     if (m_nettype == cryptonote::TESTNET)
     {
       memcpy(&m_network_id, &::config::testnet::NETWORK_ID, 16);
+      full_addrs = get_seed_nodes(cryptonote::TESTNET);
     }
     else if (m_nettype == cryptonote::STAGENET)
     {
       memcpy(&m_network_id, &::config::stagenet::NETWORK_ID, 16);
+      full_addrs = get_seed_nodes(cryptonote::STAGENET);
     }
     else
     {
       memcpy(&m_network_id, &::config::NETWORK_ID, 16);
+      if(m_exclusive_peers.empty() && !m_offline)
+      {
+        std::vector<std::vector<std::string>> dns_results;
+        dns_results.resize(m_seed_nodes_list.size());
+
+        boost::thread::attributes thread_attributes;
+        thread_attributes.set_stack_size(1024*1024);
+
+        std::list<boost::thread> dns_threads;
+        uint64_t result_index = 0;
+        for(const std::string& addr_str : m_seed_nodes_list)
+        {
+          boost::thread th = boost::thread(thread_attributes, [=, &dns_results, &addr_str]
+          {
+            MDEBUG("dns_threads[" << result_index << "] created for: " << addr_str);
+            bool avail, valid;
+            std::vector<std::string> addr_list;
+
+            try
+            {
+              addr_list = tools::DNSResolver::instance().get_ipv4(addr_str, avail, valid);
+              MDEBUG("dns_threads[" << result_index << "] DNS resolve done");
+              boost::this_thread::interruption_point();
+            }
+            catch(const boost::thread_interrupted&)
+            {
+              MWARNING("dns_threads[" << result_index << "] interrupted");
+              return;
+            }
+
+            MINFO("dns_threads[" << result_index << "] addr_str: " << addr_str << "  number of results: " << addr_list.size());
+            dns_results[result_index] = addr_list;
+          });
+
+          dns_threads.push_back(std::move(th));
+          ++result_index;
+        }
+
+        MDEBUG("dns_threads created, now waiting for completion or timeout of " << CRYPTONOTE_DNS_TIMEOUT_MS << "ms");
+        boost::chrono::system_clock::time_point deadline = boost::chrono::system_clock::now() + boost::chrono::milliseconds(CRYPTONOTE_DNS_TIMEOUT_MS);
+        uint64_t i = 0;
+        for(boost::thread& th : dns_threads)
+        {
+          if(! th.try_join_until(deadline))
+          {
+            MWARNING("dns_threads[" << i << "] timed out, sending interrupt");
+            th.interrupt();
+          }
+          ++i;
+        }
+        i = 0;
+        for(const auto& result : dns_results)
+        {
+          MDEBUG("DNS lookup for " << m_seed_nodes_list[i] << ": " << result.size() << " results");
+          if(result.size())
+          {
+            for(const auto& addr_string : result)
+              full_addrs.insert(addr_string + ":" + std::to_string(cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT));
+          }
+          ++i;
+        }
+        if(full_addrs.size() < arqma_nodes::seed_nodes_qty)
+        {
+          if(full_addrs.empty())
+            MINFO("DNS seed node lookup either timed out or failed, falling back to defaults");
+          else
+            MINFO("Not enough DNS seed nodes found, using fallback defaults too");
+
+          for(const auto &peer : get_seed_nodes(cryptonote::MAINNET))
+            full_addrs.insert(peer);
+          m_fallback_seed_nodes_added = true;
+        }
+      }
     }
+
+    for(const auto& full_addr : full_addrs)
+    {
+      MDEBUG("Seed node: " << full_addr);
+      append_net_address(m_seed_nodes, full_addr, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
+    }
+    MDEBUG("Number of seed nodes: " << m_seed_nodes.size());
 
     m_config_folder = command_line::get_arg(vm, cryptonote::arg_data_dir);
     network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
@@ -747,7 +712,8 @@ namespace nodetool
             }
             else
             {
-              ++number_of_out_peers;
+              if(!(cntxt.m_state == p2p_connection_context::state_before_handshake && std::time(NULL) < cntxt.m_started + 15))
+                ++number_of_out_peers;
             }
             return true;
           }); // lambda
@@ -760,11 +726,11 @@ namespace nodetool
     })); // lambda
 
     network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
-    public_zone.m_net_server.add_idle_handler(boost::bind(&node_server<t_payload_net_handler>::idle_worker, this), 1000);
-    public_zone.m_net_server.add_idle_handler(boost::bind(&t_payload_net_handler::on_idle, &m_payload_handler), 1000);
+    public_zone.m_net_server.add_idle_handler(std::bind(&node_server<t_payload_net_handler>::idle_worker, this), 1000);
+    public_zone.m_net_server.add_idle_handler(std::bind(&t_payload_net_handler::on_idle, &m_payload_handler), 1000);
 
     //here you can set worker threads count
-    int thrds_count = 16;
+    int thrds_count = 10;
 
     boost::thread::attributes attrs;
     attrs.set_stack_size(THREAD_STACK_SIZE);
@@ -877,6 +843,14 @@ namespace nodetool
           timeout = true;
         return;
       }
+      if(rsp.node_data.version.size() == 0)
+      {
+        MINFO("Peer " << context.m_remote_address.str() << " did not provide version info. It is probably Old Version");
+      }
+      else if(rsp.node_data.version.size() != 0 && rsp.node_data.version != ARQMA_VERSION)
+      {
+        MINFO("Peer " << context.m_remote_address.str() << " has a different version than ours: " << rsp.node_data.version.substr(0,12));
+      }
 
       if(rsp.node_data.network_id != m_network_id)
       {
@@ -903,7 +877,7 @@ namespace nodetool
         pi = context.peer_id = rsp.node_data.peer_id;
         context.m_rpc_port = rsp.node_data.rpc_port;
         context.m_rpc_credits_per_hash = rsp.node_data.rpc_credits_per_hash;
-	    m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(rsp.node_data.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port, context.m_rpc_credits_per_hash);
+  	    m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(rsp.node_data.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port, context.m_rpc_credits_per_hash);
 
         // move
         for (auto const& zone : m_network_zones)
@@ -1002,50 +976,49 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::is_peer_used(const peerlist_entry& peer)
   {
-    for(const auto& zone : m_network_zones)
-      if(zone.second.m_config.m_peer_id == peer.id)
-        return true;//dont make connections to ourself
+    const auto zone = peer.adr.get_zone();
+    const auto server = m_network_zones.find(zone);
+    if(server == m_network_zones.end())
+      return false;
+
+    if(server->second.m_config.m_peer_id == peer.id)
+      return true;//dont make connections to ourself
 
     bool used = false;
-    for(auto& zone : m_network_zones)
+    server->second.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
     {
-      zone.second.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
+      if(cntxt.peer_id == peer.id || (!cntxt.m_is_income && peer.adr == cntxt.m_remote_address))
       {
-        if(cntxt.peer_id == peer.id || (!cntxt.m_is_income && peer.adr == cntxt.m_remote_address))
-        {
-          used = true;
-          return false;//stop enumerating
-        }
-        return true;
-      });
-
-      if(used)
-        return true;
-    }
-    return false;
+        used = true;
+        return false;//stop enumerating
+      }
+      return true;
+    });
+    return used;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::is_peer_used(const anchor_peerlist_entry& peer)
   {
-    for(auto& zone : m_network_zones) {
-      if(zone.second.m_config.m_peer_id == peer.id) {
-        return true; // do NOT make connections to ourself
-      }
-      bool used = false;
-      zone.second.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
+    const auto zone = peer.adr.get_zone();
+    const auto server = m_network_zones.find(zone);
+    if(server == m_network_zones.end())
+      return false;
+
+    if(server->second.m_config.m_peer_id == peer.id)
+      return true; // do NOT make connections to ourself
+
+    bool used = false;
+    server->second.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
+    {
+      if(cntxt.peer_id == peer.id || (!cntxt.m_is_income && peer.adr == cntxt.m_remote_address))
       {
-        if(cntxt.peer_id == peer.id || (!cntxt.m_is_income && peer.adr == cntxt.m_remote_address))
-        {
-          used = true;
-          return false;//stop enumerating
-        }
-        return true;
-      });
-      if (used)
-        return true;
-    }
-    return false;
+        used = true;
+        return false;//stop enumerating
+      }
+      return true;
+    });
+    return used;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -1136,7 +1109,6 @@ namespace nodetool
     pe_local.last_seen = static_cast<int64_t>(last_seen);
     pe_local.pruning_seed = con->m_pruning_seed;
     pe_local.rpc_port = con->m_rpc_port;
-    pe_local.zmq_port = con->m_zmq_port;
     pe_local.rpc_credits_per_hash = con->m_rpc_credits_per_hash;
     zone.m_peerlist.append_with_peer_white(pe_local);
     //update last seen and push it to peerlist manager
@@ -1336,65 +1308,48 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::connect_to_seed()
   {
-    boost::upgrade_lock<boost::shared_mutex> seed_nodes_upgrade_lock(m_seed_nodes_lock);
+    if(m_seed_nodes.empty() || m_offline || !m_exclusive_peers.empty())
+      return true;
 
-    if (!m_seed_nodes_initialized)
+    size_t try_count = 0;
+    size_t current_index = crypto::rand_idx(m_seed_nodes.size());
+    const net_server& server = m_network_zones.at(epee::net_utils::zone::public_).m_net_server;
+    while(true)
     {
-      boost::upgrade_to_unique_lock<boost::shared_mutex> seed_nodes_lock(seed_nodes_upgrade_lock);
-      m_seed_nodes_initialized = true;
-      for (const auto& full_addr : get_seed_nodes())
+      if(server.is_stop_signal_sent())
+        return false;
+
+      if(try_to_connect_and_handshake_with_new_peer(m_seed_nodes[current_index], true))
+        break;
+      if(++try_count > m_seed_nodes.size())
       {
-        MDEBUG("Seed node: " << full_addr);
-        append_net_address(m_seed_nodes, full_addr, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
-      }
-      MDEBUG("Number of seed nodes: " << m_seed_nodes.size());
-      }
-
-      if (m_seed_nodes.empty() || m_offline || !m_exclusive_peers.empty())
-        return true;
-
-      size_t try_count = 0;
-      size_t current_index = crypto::rand_idx(m_seed_nodes.size());
-      const net_server& server = m_network_zones.at(epee::net_utils::zone::public_).m_net_server;
-      while(true)
-      {
-        if(server.is_stop_signal_sent())
-          return false;
-
-        if(try_to_connect_and_handshake_with_new_peer(m_seed_nodes[current_index], true))
-          break;
-        if(++try_count > m_seed_nodes.size())
+        if(!m_fallback_seed_nodes_added)
         {
-          if (!m_fallback_seed_nodes_added.test_and_set())
+          MWARNING("Failed to connect to any of seed peers, trying fallback seeds");
+          current_index = m_seed_nodes.size() - 1;
+          for(const auto &peer: get_seed_nodes(m_nettype))
           {
-            MWARNING("Failed to connect to any of seed peers, trying fallback seeds");
-            current_index = m_seed_nodes.size();
-            {
-              boost::upgrade_to_unique_lock<boost::shared_mutex> seed_nodes_lock(seed_nodes_upgrade_lock);
-
-              for(const auto &peer: get_seed_nodes(m_nettype))
-              {
-                MDEBUG("Fallback seed Node: " << peer);
-                append_net_address(m_seed_nodes, peer, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
-              }
-            }
-            if (current_index == m_seed_nodes.size())
-            {
-              MWARNING("No fallback seeds, continuing without seeds");
-              break;
-            }
-            // continue for another few cycles
+            MDEBUG("Fallback seed Node: " << peer);
+            append_net_address(m_seed_nodes, peer, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
           }
-          else
+          m_fallback_seed_nodes_added = true;
+          if(current_index == m_seed_nodes.size() - 1)
           {
-            MWARNING("Failed to connect to any of seed peers, continuing without seeds");
+            MWARNING("No fallback seeds, continuing without seeds");
             break;
           }
+          // continue for another few cycles
         }
-        if(++current_index >= m_seed_nodes.size())
-          current_index = 0;
+        else
+        {
+          MWARNING("Failed to connect to any of seed peers, continuing without seeds");
+          break;
+        }
       }
-      return true;
+      if(++current_index >= m_seed_nodes.size())
+        current_index = 0;
+    }
+    return true;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -1410,9 +1365,10 @@ namespace nodetool
     // ONLY have seeds in the public zone at the moment!
 
     size_t start_conn_count = get_public_outgoing_connections_count();
-    if(!get_public_white_peers_count() && !connect_to_seed())
+    if(!get_public_white_peers_count() && m_seed_nodes.size())
     {
-      return false;
+      if(!connect_to_seed())
+        return false;
     }
 
     if (!connect_to_peerlist(m_priority_peers)) return false;
@@ -1583,11 +1539,11 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::idle_worker()
   {
-    m_peer_handshake_idle_maker_interval.do_call(boost::bind(&node_server<t_payload_net_handler>::peer_sync_idle_maker, this));
-    m_connections_maker_interval.do_call(boost::bind(&node_server<t_payload_net_handler>::connections_maker, this));
-    m_gray_peerlist_housekeeping_interval.do_call(boost::bind(&node_server<t_payload_net_handler>::gray_peerlist_housekeeping, this));
-    m_peerlist_store_interval.do_call(boost::bind(&node_server<t_payload_net_handler>::store_config, this));
-    m_incoming_connections_interval.do_call(boost::bind(&node_server<t_payload_net_handler>::check_incoming_connections, this));
+    m_peer_handshake_idle_maker_interval.do_call(std::bind(&node_server<t_payload_net_handler>::peer_sync_idle_maker, this));
+    m_connections_maker_interval.do_call(std::bind(&node_server<t_payload_net_handler>::connections_maker, this));
+    m_gray_peerlist_housekeeping_interval.do_call(std::bind(&node_server<t_payload_net_handler>::gray_peerlist_housekeeping, this));
+    m_peerlist_store_interval.do_call(std::bind(&node_server<t_payload_net_handler>::store_config, this));
+    m_incoming_connections_interval.do_call(std::bind(&node_server<t_payload_net_handler>::check_incoming_connections, this));
     return true;
   }
   //-----------------------------------------------------------------------------------
@@ -1706,12 +1662,12 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::get_local_node_data(basic_node_data& node_data, const network_zone& zone)
   {
     node_data.peer_id = zone.m_config.m_peer_id;
+    node_data.version = ARQMA_VERSION;
     if(!m_hide_my_port && zone.m_can_pingback)
       node_data.my_port = m_external_port ? m_external_port : m_listening_port;
     else
       node_data.my_port = 0;
     node_data.rpc_port = zone.m_can_pingback ? m_rpc_port : 0;
-    node_data.zmq_port = zone.m_can_pingback ? m_zmq_port : 0;
     node_data.rpc_credits_per_hash = zone.m_can_pingback ? m_rpc_credits_per_hash : 0;
     node_data.network_id = m_network_id;
     return true;
@@ -1934,6 +1890,20 @@ namespace nodetool
   template<class t_payload_net_handler>
   int node_server<t_payload_net_handler>::handle_handshake(int command, typename COMMAND_HANDSHAKE::request& arg, typename COMMAND_HANDSHAKE::response& rsp, p2p_connection_context& context)
   {
+    if(arg.node_data.version.size() == 0)
+    {
+      MGINFO("Peer " << context.m_remote_address.str() << " did not provide version info. It is probably Old Version");
+      drop_connection(context);
+      block_host(context.m_remote_address);
+    }
+
+    if(arg.node_data.version.size() != 0 && arg.node_data.version != ARQMA_VERSION)
+    {
+      MGINFO("Peer " << context.m_remote_address.str() << " has a different version than ours: " << arg.node_data.version.substr(0,12));
+      drop_connection(context);
+      block_host(context.m_remote_address);
+    }
+
     if(arg.node_data.network_id != m_network_id)
     {
 
@@ -1960,7 +1930,14 @@ namespace nodetool
 
     network_zone& zone = m_network_zones.at(context.m_remote_address.get_zone());
 
-    if (zone.m_current_number_of_in_peers >= zone.m_config.m_net_config.max_in_connection_count) // in peers limit
+    if(arg.node_data.peer_id == zone.m_config.m_peer_id)
+    {
+      LOG_DEBUG_CC(context, "Connection to self. Disconnecting");
+      drop_connection(context);
+      return 1;
+    }
+
+    if(zone.m_current_number_of_in_peers >= zone.m_config.m_net_config.max_in_connection_count) // in peers limit
     {
       LOG_WARNING_CC(context, "COMMAND_HANDSHAKE came, but already have max incoming connections, so dropping this one.");
       drop_connection(context);
@@ -1985,10 +1962,9 @@ namespace nodetool
     context.peer_id = arg.node_data.peer_id;
     context.m_in_timedsync = false;
     context.m_rpc_port = arg.node_data.rpc_port;
-    context.m_zmq_port = arg.node_data.zmq_port;
     context.m_rpc_credits_per_hash = arg.node_data.rpc_credits_per_hash;
 
-    if(arg.node_data.peer_id != zone.m_config.m_peer_id && arg.node_data.my_port && zone.m_can_pingback)
+    if(arg.node_data.my_port && zone.m_can_pingback)
     {
       peerid_type peer_id_l = arg.node_data.peer_id;
       uint32_t port_l = arg.node_data.my_port;
@@ -2007,7 +1983,6 @@ namespace nodetool
         pe.id = peer_id_l;
         pe.pruning_seed = context.m_pruning_seed;
         pe.rpc_port = context.m_rpc_port;
-        pe.zmq_port = context.m_zmq_port;
         pe.rpc_credits_per_hash = context.m_rpc_credits_per_hash;
         this->m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.append_with_peer_white(pe);
         LOG_DEBUG_CC(context, "PING SUCCESS " << context.m_remote_address.host_str() << ":" << port_l);
@@ -2342,8 +2317,8 @@ namespace nodetool
     const uint32_t index = stripe - 1;
     CRITICAL_REGION_LOCAL(m_used_stripe_peers_mutex);
     MINFO("adding stripe " << stripe << " peer: " << context.m_remote_address.str());
-    std::remove_if(m_used_stripe_peers[index].begin(), m_used_stripe_peers[index].end(),
-        [&context](const epee::net_utils::network_address &na){ return context.m_remote_address == na; });
+    m_used_stripe_peers[index].erase(std::remove_if(m_used_stripe_peers[index].begin(), m_used_stripe_peers[index].end(),
+        [&context](const epee::net_utils::network_address &na){ return context.m_remote_address == na; }), m_used_stripe_peers[index].end());
     m_used_stripe_peers[index].push_back(context.m_remote_address);
   }
 
@@ -2356,8 +2331,8 @@ namespace nodetool
     const uint32_t index = stripe - 1;
     CRITICAL_REGION_LOCAL(m_used_stripe_peers_mutex);
     MINFO("removing stripe " << stripe << " peer: " << context.m_remote_address.str());
-    std::remove_if(m_used_stripe_peers[index].begin(), m_used_stripe_peers[index].end(),
-        [&context](const epee::net_utils::network_address &na){ return context.m_remote_address == na; });
+    m_used_stripe_peers[index].erase(std::remove_if(m_used_stripe_peers[index].begin(), m_used_stripe_peers[index].end(),
+        [&context](const epee::net_utils::network_address &na){ return context.m_remote_address == na; }), m_used_stripe_peers[index].end());
   }
 
   template<class t_payload_net_handler>
@@ -2374,13 +2349,9 @@ namespace nodetool
   {
     MDEBUG("Attempting to add IGD port mapping.");
     int result;
-#if MINIUPNPC_API_VERSION > 13
     // default according to miniupnpc.h
     unsigned char ttl = 2;
     UPNPDev* deviceList = upnpDiscover(1000, NULL, NULL, 0, 0, ttl, &result);
-#else
-    UPNPDev* deviceList = upnpDiscover(1000, NULL, NULL, 0, 0, &result);
-#endif
     UPNPUrls urls;
     IGDdatas igdData;
     char lanAddress[64];
@@ -2420,13 +2391,9 @@ namespace nodetool
   {
     MDEBUG("Attempting to delete IGD port mapping.");
     int result;
-#if MINIUPNPC_API_VERSION > 13
     // default according to miniupnpc.h
     unsigned char ttl = 2;
     UPNPDev* deviceList = upnpDiscover(1000, NULL, NULL, 0, 0, ttl, &result);
-#else
-    UPNPDev* deviceList = upnpDiscover(1000, NULL, NULL, 0, 0, &result);
-#endif
     UPNPUrls urls;
     IGDdatas igdData;
     char lanAddress[64];

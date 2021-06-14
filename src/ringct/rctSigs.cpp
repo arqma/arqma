@@ -1250,7 +1250,10 @@ namespace rct {
           CHECK_AND_ASSERT_MES(rv.type == RCTTypeSimple || rv.type == RCTTypeBulletproof, false, "verRctSemanticsSimple called on non simple rctSig");
           const bool bulletproof = is_rct_bulletproof(rv.type);
           if(rv.type == RCTTypeBulletproof)
+          {
+            CHECK_AND_ASSERT_MES(rv.outPk.size() <= BULLETPROOF_MAX_OUTPUTS, false, "Too many outputs");
             CHECK_AND_ASSERT_MES(rv.outPk.size() == n_bulletproof_amounts(rv.p.bulletproofs), false, "Mismatched sizes of outPk and bulletproofs");
+          }
           else if(bulletproof && rv.type != RCTTypeBulletproof)
           {
             CHECK_AND_ASSERT_MES(rv.p.pseudoOuts.size() == rv.p.MGs.size(), false, "Mismatched sizes of rv.p.pseudoOuts and rv.p.MGs");

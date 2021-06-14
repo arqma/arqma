@@ -49,6 +49,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <functional>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
@@ -56,7 +57,7 @@
 #define DEFAULT_TIMEOUT_MS_LOCAL 1800000 // 30 minutes
 #define DEFAULT_TIMEOUT_MS_REMOTE 300000 // 5 minutes
 #define TIMEOUT_EXTRA_MS_PER_BYTE 0.2
-#define AGGRESSIVE_TIMEOUT_THRESHOLD 240  // sockets
+#define AGGRESSIVE_TIMEOUT_THRESHOLD 120  // sockets
 #define NEW_CONNECTION_TIMEOUT_LOCAL 1200000 // 2 minutes
 #define NEW_CONNECTION_TIMEOUT_REMOTE 10000 // 10 seconds
 
@@ -860,20 +861,6 @@ PRAGMA_WARNING_DISABLE_VS(4355)
     MDEBUG("set m_connection_type = RPC ");
   }
 
-
-  template<class t_protocol_handler>
-  void connection<t_protocol_handler>::setZmqStation()
-  {
-    m_connection_type = e_connection_type_ZMQ;
-    MDEBUG("set m_connection_type = ZMQ ");
-  }
-
-  template<class t_protocol_handler>
-  bool connection<t_protocol_handler>::zmq_speed_limit_is_enabled() const
-  {
-    return m_connection_type != e_connection_type_ZMQ;
-  }
-
   template<class t_protocol_handler>
   bool connection<t_protocol_handler>::rpc_speed_limit_is_enabled() const {
 		return m_connection_type != e_connection_type_RPC ;
@@ -930,7 +917,6 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   {
     server_type_map["NET"] = e_connection_type_NET;
     server_type_map["RPC"] = e_connection_type_RPC;
-    server_type_map["ZMQ"] = e_connection_type_ZMQ;
     server_type_map["P2P"] = e_connection_type_P2P;
   }
   //---------------------------------------------------------------------------------

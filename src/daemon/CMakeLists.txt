@@ -80,7 +80,7 @@ target_link_libraries(daemon
     daemonizer
     serialization
     daemon_rpc_server
-    ${EPEE_READLINE}
+    epee
     version
     ${Boost_CHRONO_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
@@ -91,7 +91,7 @@ target_link_libraries(daemon
     libzmq
     ${GNU_READLINE_LIBRARY}
     ${EXTRA_LIBRARIES}
-    ${Blocks})
+    blocks)
 set_property(TARGET daemon
   PROPERTY
     OUTPUT_NAME "arqmad")

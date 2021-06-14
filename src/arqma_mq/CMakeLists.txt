@@ -62,16 +62,20 @@ arqma_add_library(arqma_mq
   ${arqma_mq_private_headers})
 
 target_link_libraries(arqma_mq
-  PRIVATE
+  PUBLIC
     common
     epee
+    libunbound
+    miniupnpc
     net
     rpc
     daemon_messages
+    serialization
     cryptonote_core
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     libzmq
+  PRIVATE
     ${EXTRA_LIBRARIES})
 
 add_dependencies(arqma_mq

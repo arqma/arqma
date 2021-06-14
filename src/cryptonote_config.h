@@ -53,6 +53,7 @@
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
 #define MONEY_PREMINE                                   ((uint64_t)7500000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
+#define EMISSION_FACTOR_V16                             (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
 
@@ -74,7 +75,7 @@
 #define DYNAMIC_FEE_PER_KB_BASE_BLOCK_REWARD            ((uint64_t)10000000000)
 #define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)20000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
 #define DYNAMIC_FEE_PER_BYTE_BASE_FEE_V13               ((uint64_t)(DYNAMIC_FEE_PER_KB_BASE_FEE_V5) * 50 / 1000)
-#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)750)
+#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)1800)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
@@ -100,6 +101,12 @@
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11          360
 #define DIFFICULTY_WINDOW_V11                           90
 
+#define DIFFICULTY_TARGET_V16                           90
+#define DIFFICULTY_WINDOW_V16                           75
+#define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V16           11
+#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V16          270
+#define DIFFICULTY_BLOCKS_COUNT_V16                     (DIFFICULTY_WINDOW_V16 + 1)
+
 #define DIFFICULTY_BLOCKS_COUNT_V3                      (DIFFICULTY_WINDOW_V3 + 1)
 #define DIFFICULTY_BLOCKS_COUNT_V2                      (DIFFICULTY_WINDOW_V2 + 1) // added to make N=N
 #define DIFFICULTY_BLOCKS_COUNT                         DIFFICULTY_WINDOW + DIFFICULTY_LAG
@@ -116,31 +123,32 @@
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) //seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 //seconds, one week
 
-#define COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT           1000
+#define COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT     1000
+#define COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT        20000
 
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT		        32
+#define P2P_DEFAULT_CONNECTIONS_COUNT                   12
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
-#define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
+#define P2P_DEFAULT_PACKET_MAX_SIZE                     52428800   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
-#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               45         // seconds
-#define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       // 2 seconds
+#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               60         // seconds
+#define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             5000       // 5 seconds
 #define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  // 2 minutes
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
-#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            6
+#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 
-#define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // kB/s
-#define P2P_DEFAULT_LIMIT_RATE_DOWN                     16384      // kB/s
+#define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // kbps
+#define P2P_DEFAULT_LIMIT_RATE_DOWN                     16384      // kbps
 
-#define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)    // 1 hour
-#define P2P_IP_BLOCKTIME                                (60*60*24) // 24 hour
-#define P2P_IP_FAILS_BEFORE_BLOCK                       10
-#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60)     // 5 minutes
+#define P2P_FAILED_ADDR_FORGET_SECONDS                  (24*60*60)    // 1 day
+#define P2P_IP_BLOCKTIME                                (2*60*60*24) // 2 days
+#define P2P_IP_FAILS_BEFORE_BLOCK                       5
+#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (30)     // 30 seconds
 
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
@@ -153,7 +161,7 @@
 #define RPC_PAYMENTS_DATA_FILENAME                      "rpcpayments.bin"
 #define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
-#define THREAD_STACK_SIZE                               5 * 1024 * 1024
+#define THREAD_STACK_SIZE                               10 * 1024 * 1024
 
 #define HF_VERSION_DYNAMIC_FEE                          4
 #define HF_VERSION_MIN_MIXIN_4                          6
@@ -205,6 +213,8 @@ namespace config
    std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
    uint32_t const GENESIS_NONCE = 19993;
 
+   const unsigned char HASH_KEY_MM_SLOT = 'm';
+
    namespace testnet
    {
      uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x53ca; // Wallet prefix: at... // decimal prefix: 21450
@@ -234,8 +244,8 @@ namespace config
    namespace blockchain_settings
    {
      const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
-     const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
-     const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
+     const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2097152; // It is set to 2048kB (2MB)
+     const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1048576; // It is set to 1024kB (1MB)
      const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
      const uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
      const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
@@ -245,16 +255,20 @@ namespace config
    {
      const size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
      const size_t ARQMA_TX_VERSION = 2; // Current Transaction Version Valid on Arq-Net
-     const uint64_t TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
+     const uint64_t TRANSACTION_SIZE_LIMIT = 49152; // I did set it to 48kB for now but it need to be verified.
      const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
+
+     static const uint64_t min_tx_amount = 10000;
+     static const uint64_t min_amount_blockage_fee = (MONEY_SUPPLY - 1);
+
    }
 
 
    namespace sync
    {
-     const uint64_t HIGHEST_CHECKPOINT = 248920;
-     const size_t NORMAL_SYNC = 10;
-     const size_t FAST_SYNC = 50;
+     static constexpr size_t NORMAL_SYNC = 32;
+     static constexpr size_t FAST_SYNC = 128;
+     static constexpr size_t MAX_SYNC = 2048;
    }
 
    namespace governance
@@ -264,6 +278,39 @@ namespace config
     static constexpr const char* STAGENET_WALLET_ADDRESS = "as2RzktNfxR8y3RgoDmoRFCGez6393Rd97e8c3ctupJu5i3CirGA4MVFzT7fwcSjxn8bV1orETq4eVQzkY2VTjox2TFnGUhgn";
    }
 
+}
+
+namespace arqma_nodes
+{
+  static constexpr size_t seed_nodes_qty = 12;
+  
+  const char *const MAINNET_NODES[] =
+  {
+    "144.217.242.16",
+    "161.97.102.172",
+    "it-support.mal-bit.com",
+    "207.244.249.105",
+    "139.99.106.122",
+    "164.68.123.118"
+  };
+
+  const char *const TESTNET_NODES[] =
+  {
+    "161.97.102.172",
+    "139.99.106.122",
+    "77.93.206.172",
+    "it-support.mal-bit.com"
+  };
+
+  const char *const STAGENET_NODES[] =
+  {
+    "161.97.102.172",
+    "139.99.106.122",
+    "77.93.206.172",
+    "it-support.mal-bit.com",
+    "164.68.123.118",
+    "144.217.242.16"
+  };
 }
 
 namespace cryptonote

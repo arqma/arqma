@@ -28,7 +28,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
-#include <lmdb.h>
+#include "lmdb/liblmdb/lmdb.h"
 #include <boost/algorithm/string.hpp>
 #include "common/command_line.h"
 #include "common/pruning.h"
@@ -41,7 +41,7 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "bcutil"
 
-#define MDB_val_set(var, val)   MDB_val var = {sizeof(val), (void *)&val}
+#define MDB_val_set(var, val) MDB_val var = {sizeof(val), (void *)&val}
 
 namespace po = boost::program_options;
 using namespace epee;

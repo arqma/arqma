@@ -36,6 +36,7 @@
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "cryptonote_basic/blobdatatype.h"
 #include "ringct/rctSigs.h"
+#include "version.h"
 
 namespace arqmaMQ
 {
@@ -51,7 +52,7 @@ namespace arqmaMQ
   {
     std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>> blocks;
 
-    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
+    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT, COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT))
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "core::find_blockchain_supplement() returned false";
@@ -454,6 +455,8 @@ namespace arqmaMQ
     res.info.block_size_limit = res.info.block_weight_limit = m_core.get_blockchain_storage().get_current_cumulative_block_weight_limit();
     res.info.block_size_median = res.info.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
     res.info.start_time = (uint64_t)m_core.get_start_time();
+    res.info.version = ARQMA_VERSION;
+    res.info.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = cryptonote::rpc::Message::STATUS_OK;
     res.error_details = "";
@@ -546,7 +549,7 @@ namespace arqmaMQ
   {
     if(!check_core_ready())
     {
-      res.status  = cryptonote::rpc::Message::STATUS_FAILED; 
+      res.status  = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "Core is busy";
       return;
     }
@@ -578,7 +581,7 @@ namespace arqmaMQ
     blob_reserve.resize(req.reserve_size, 0);
     size_t reserved_offset;
     crypto::hash seed_hash, next_seed_hash;
-    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, res))
+    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
       return;
     res.reserved_offset = reserved_offset;
     cryptonote::blobdata block_blob = cryptonote::t_serializable_object_to_blob(b);
@@ -593,10 +596,10 @@ namespace arqmaMQ
     return;
   }
 
-  bool ZmqHandler::get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, cryptonote::rpc::GetBlockTemplate::Response& res)
+  bool ZmqHandler::get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, cryptonote::rpc::GetBlockTemplate::Response& res)
   {
     b = boost::value_initialized<cryptonote::block>();
-    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
+    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
@@ -820,7 +823,7 @@ namespace arqmaMQ
     {
       histogram = m_core.get_blockchain_storage().get_output_histogram(req.amounts, req.unlocked, req.recent_cutoff);
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = e.what();

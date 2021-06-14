@@ -35,6 +35,7 @@
 #include <boost/functional/hash/hash.hpp>
 #include <vector>
 #include <cstring>  // memcmp
+#include <cstddef>
 #include <sstream>
 #include <atomic>
 #include "serialization/variant.h"

@@ -56,6 +56,7 @@ using namespace epee;
 #include "ringct/rctSigs.h"
 #include "common/notify.h"
 #include "version.h"
+#include "config/ascii.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
@@ -150,7 +151,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<uint64_t> arg_prep_blocks_threads = {
     "prep-blocks-threads"
   , "Max number of threads to use when preparing block hashes in groups."
-  , 4
+  , 8
   };
   static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
@@ -213,8 +214,8 @@ namespace cryptonote
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
               m_blockchain_storage(m_mempool),
-              m_miner(this, [this](const cryptonote::block &b, uint64_t height, unsigned int threads, crypto::hash &hash) {
-                return cryptonote::get_block_longhash(&m_blockchain_storage, b, hash, height, threads);
+              m_miner(this, [this](const cryptonote::block &b, uint64_t height, const crypto::hash *seed_hash, unsigned int threads, crypto::hash &hash) {
+                return cryptonote::get_block_longhash(&m_blockchain_storage, b, hash, height, seed_hash, threads);
               }),
               m_miner_address(account_public_address{}),
               m_starter_message_showed(false),
@@ -412,7 +413,7 @@ namespace cryptonote
     return m_blockchain_storage.get_transactions_blobs(txs_ids, txs, missed_txs);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_split_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>>& txs, std::vector<crypto::hash>& missed_txs) const
+  bool core::get_split_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata> >& txs, std::vector<crypto::hash>& missed_txs) const
   {
     return m_blockchain_storage.get_split_transactions_blobs(txs_ids, txs, missed_txs);
   }
@@ -600,13 +601,24 @@ namespace cryptonote
 
     try
     {
-     if (!command_line::is_arg_defaulted(vm, arg_block_notify))
-       m_blockchain_storage.set_block_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_block_notify).c_str())));
+      if(!command_line::is_arg_defaulted(vm, arg_block_notify))
+        m_blockchain_storage.set_block_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_block_notify).c_str())));
     }
     catch (const std::exception& e)
     {
       MERROR("Failed to parse block notify spec");
     }
+
+    try
+    {
+      bool zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled);
+      std::string zmq_ip_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip);
+      std::string zmq_port_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_port);
+      uint16_t zmq_max_clients = command_line::get_arg(vm, daemon_args::arg_zmq_max_clients);
+      if(zmq_enabled)
+        m_blockchain_storage.set_zmq_options(zmq_ip_str, zmq_port_str, zmq_max_clients, zmq_enabled);
+    }
+    catch(...) {}
 
     try
     {
@@ -1181,12 +1193,43 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
+    static const uint64_t hash_height = m_nettype == TESTNET ? 0 : m_nettype == MAINNET ? 659456 : 0;
+    size_t res = 0;
     if(block_sync_size > 0)
-      return block_sync_size;
-    if(get_current_blockchain_height() <= config::sync::HIGHEST_CHECKPOINT)
-      return config::sync::FAST_SYNC;
+      res = block_sync_size;
+    else if(height >= hash_height)
+      res = config::sync::NORMAL_SYNC;
     else
-      return config::sync::NORMAL_SYNC;
+      res = config::sync::FAST_SYNC;
+
+    static size_t max_block_size = 0;
+    if(max_block_size == 0)
+    {
+      const char *env = getenv("SEEDHASH_EPOCH_BLOCKS");
+      if (env)
+      {
+        int n = atoi(env);
+        if (n <= 0)
+          n = config::sync::MAX_SYNC;
+        size_t p = 1;
+        while (p < (size_t)n)
+          p <<= 1;
+        max_block_size = p;
+      }
+      else
+        max_block_size = config::sync::MAX_SYNC;
+    }
+    if (res > max_block_size)
+    {
+      static bool warned = false;
+      if(!warned)
+      {
+        MWARNING("Clamping block sync size to " << max_block_size);
+        warned = true;
+      }
+      res = max_block_size;
+    }
+    return res;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::are_key_images_spent_in_pool(const std::vector<crypto::key_image>& key_im, std::vector<bool> &spent) const
@@ -1334,14 +1377,14 @@ namespace cryptonote
     m_mempool.set_relayed(txs);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_block_template(block& b, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce)
+  bool core::get_block_template(block& b, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash)
   {
-    return m_blockchain_storage.create_block_template(b, adr, diffic, height, expected_reward, ex_nonce);
+    return m_blockchain_storage.create_block_template(b, adr, diffic, height, expected_reward, ex_nonce, seed_height, seed_hash);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_block_template(block& b, const crypto::hash *prev_block, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce)
+  bool core::get_block_template(block& b, const crypto::hash *prev_block, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash)
   {
-    return m_blockchain_storage.create_block_template(b, prev_block, adr, diffic, height, expected_reward, ex_nonce);
+    return m_blockchain_storage.create_block_template(b, prev_block, adr, diffic, height, expected_reward, ex_nonce, seed_height, seed_hash);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::find_blockchain_supplement(const std::list<crypto::hash>& qblock_ids, bool clip_pruned, NOTIFY_RESPONSE_CHAIN_ENTRY::request& resp) const
@@ -1349,9 +1392,9 @@ namespace cryptonote
     return m_blockchain_storage.find_blockchain_supplement(qblock_ids, clip_pruned, resp);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::find_blockchain_supplement(const uint64_t req_start_block, const std::list<crypto::hash>& qblock_ids, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata> > > >& blocks, uint64_t& total_height, uint64_t& start_height, bool pruned, bool get_miner_tx_hash, size_t max_count) const
+  bool core::find_blockchain_supplement(const uint64_t req_start_block, const std::list<crypto::hash>& qblock_ids, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata> > > >& blocks, uint64_t& total_height, uint64_t& start_height, bool pruned, bool get_miner_tx_hash, size_t max_block_count, size_t max_tx_count) const
   {
-    return m_blockchain_storage.find_blockchain_supplement(req_start_block, qblock_ids, blocks, total_height, start_height, pruned, get_miner_tx_hash, max_count);
+    return m_blockchain_storage.find_blockchain_supplement(req_start_block, qblock_ids, blocks, total_height, start_height, pruned, get_miner_tx_hash, max_block_count, max_tx_count);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_outs(const COMMAND_RPC_GET_OUTPUTS_BIN::request& req, COMMAND_RPC_GET_OUTPUTS_BIN::response& res) const
@@ -1647,56 +1690,18 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
+  //messages moved to ascii.h
   bool core::on_idle()
   {
     if(!m_starter_message_showed)
      {
-       std::string main_message;
-       if (m_offline)
-        main_message = "The daemon is running offline and will not attempt to sync to the ArQ-Net.";
-      else
-        main_message = "The daemon will start synchronizing with the network. This may take a long time to complete.";
-      MGINFO_CYAN(ENDL <<
-      "\n \n"
-      "WWWWWWWWWWWWWWWWWWWWWWWWWWWW@=WWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWWWWWWW@+::.--+@WWWWWWWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWWWW=:::-:+W=----:#WWWWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWW@+::+@W+:#WWWW:-=@+--*@WWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWW#:+:#WWWW::@WWWWWW#--@WW=--:#WWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWW@+::+@WWWWW#::WWWWWWWWWW+-*WWWW@:--*WWWWWWWWWWWW\n"
-      "WWWWWWWW#:+:=WWWWWWWW=+*WWWWWWWWWWWW@--@WWWWWW=--:=WWWWWWWW\n"
-      "WWWW@++:+@WWWWWWWWWW+:#WWWWWWWWWWWWWWW*-+WWWWWWWW@:-:*@WWWW\n"
-      "WWW@:-@WWWWWWWWWWWW::@WWWWWWWWWWWWWWWWWW:-#WWWWWWWW@::-WWWW\n"
-      "WWW@:-:WWWWWWWWWW#++WWWWWWWWWWWWWWWWWWWWW#-:WWWWW#+:#:-WWWW\n"
-      "WWW@:-:=WWWWWWWW*+=WWWWWWWWWWWWWWWWWWWWWWWW+-=W*+:@WW:-WWWW\n"
-      "WWW@:++-@WWWWWW+:#WWWWWWWWWWWWWWWWWWWWWWWW@=+::*WWWWW:-WWWW\n"
-      "WWW@:+W::WWWW@+:WWWWWWWWWWWWWWWWWW@=++++::*#*+:*WWWWW+:WWWW\n"
-      "WWW@:+W#:=WW#++WWWWWWWWWWW@=*+++::*#@WWWWWW@++=:#WWWW+:WWWW\n"
-      "WWW@:+WW*:@*+=WWWW@=*++++:*#@WWWWWWWWWWWWWW+:@W*:@WWW+:WWWW\n"
-      "WWW@+*WWW::++++++:*#@WWWWWWWWWWWWWWWWWWWWW=+#WWW::WWW+:WWWW\n"
-      "WWW@+*WWW+:-:*@WWWWWWWWWWWWWWWWWWWWWWWWWW@+*WWWW@:*WW+:WWWW\n"
-      "WWW@+*WW*+@*:++:+=WWWWWWWWWWWWWWWWWWWWWWW+:WWWWWW=:#W+:WWWW\n"
-      "WWW@+*W*+@WW@:+WW#::+#WWWWWWWWWWWWWWWWWW=+#WWWWWWW*:@+:WWWW\n"
-      "WWW@+*=+#WWWWW+:#WWWW=::+#WWWWWWWWWWWWW@+=WWWWWWWWW+++:WWWW\n"
-      "WWW@+++#WWWWWWW#:*WWWWWW@*:+*#WWWWWWWWW*+WWWWWWWWWW@:+:WWWW\n"
-      "WWW@++=WWWWWWWWWW+:@WWWWWWWW@+:+=@WWWW=+@WWWWWWWWWWW=::WWWW\n"
-      "WWWW+:*@WWWWWWWWWW=:=WWWWWWWWWWW#+++##+=WW@@#=****+++:+WWWW\n"
-      "WWWWWW@*++=WWWWWWWW@++@WWWWWWWWWWWWW=+:++*=#@@W@=*+*@WWWWWW\n"
-      "WWWWWWWWWW=++*@WWWWWW=:#WWWWWWWWWWW=*#WWWWWW@**+=WWWWWWWWWW\n"
-      "WWWWWWWWWWWWW@*++#WWWW@+*WWWWWWWW@**@WWWW=***@WWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWW#++*@WW*+@WWWWW#*=WW@**+#WWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWW@*+*##:=WWW**##***@WWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWWWWW@=++++=****#WWWWWWWWWWWWWWWWWWWWWWWW\n"
-      "WWWWWWWWWWWWWWWWWWWWWWWWWWW#*:*@WWWWWWWWWWWWWWWWWWWWWWWWWWW" << ENDL);
-      MGINFO_YELLOW(ENDL << "**********************************************************************" << ENDL
-        << main_message << ENDL
-        << ENDL
-        << "You can set the level of process detailization through \"set_log <level|categories>\" command," << ENDL
-        << "where <level> is between 0 (no details) and 4 (very verbose), or custom category based levels (eg, *:WARNING)." << ENDL
-        << ENDL
-        << "Use the \"help\" command to see the list of available commands." << ENDL
-        << "Use \"help <command>\" to see a command's documentation." << ENDL
-        << "**********************************************************************" << ENDL);
+      MGINFO_RED(ENDL << ascii_arqma_logo << ENDL);
+      MGINFO_CYAN(ENDL << ascii_arqma_info << ENDL);
+      if (m_offline)
+       MGINFO_GREEN(ENDL << main_message_true << ENDL);
+     else
+       MGINFO_GREEN(ENDL << main_message_false << ENDL);
+
       m_starter_message_showed = true;
     }
 
@@ -1708,6 +1713,7 @@ namespace cryptonote
     m_mempool.on_idle();
     return true;
   }
+
   //-----------------------------------------------------------------------------------------------
   uint8_t core::get_ideal_hard_fork_version() const
   {

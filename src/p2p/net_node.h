@@ -221,7 +221,6 @@ namespace nodetool
       : m_payload_handler(payload_handler),
         m_external_port(0),
         m_rpc_port(0),
-        m_zmq_port(0),
         m_rpc_credits_per_hash(0),
         m_allow_local_ip(false),
         m_hide_my_port(false),
@@ -353,7 +352,7 @@ namespace nodetool
     bool is_addr_recently_failed(const epee::net_utils::network_address& addr);
     bool is_priority_node(const epee::net_utils::network_address& na);
     std::set<std::string> get_seed_nodes(cryptonote::network_type nettype) const;
-    std::set<std::string> get_seed_nodes();
+//    std::set<std::string> get_seed_nodes();
     bool connect_to_seed();
 
     template <class Container>
@@ -411,9 +410,9 @@ namespace nodetool
     }
 
     void set_rpc_credits_per_hash(uint32_t rpc_credits_per_hash)
-	{
-	  m_rpc_credits_per_hash = rpc_credits_per_hash;
-	}
+    {
+      m_rpc_credits_per_hash = rpc_credits_per_hash;
+    }
 
   private:
     std::string m_config_folder;
@@ -442,16 +441,17 @@ namespace nodetool
 
     epee::math_helper::once_a_time_seconds<P2P_DEFAULT_HANDSHAKE_INTERVAL> m_peer_handshake_idle_maker_interval;
     epee::math_helper::once_a_time_seconds<1> m_connections_maker_interval;
-    epee::math_helper::once_a_time_seconds<60*30, false> m_peerlist_store_interval;
-    epee::math_helper::once_a_time_seconds<60> m_gray_peerlist_housekeeping_interval;
+    epee::math_helper::once_a_time_seconds<60*10, false> m_peerlist_store_interval;
+    epee::math_helper::once_a_time_seconds<10> m_gray_peerlist_housekeeping_interval;
     epee::math_helper::once_a_time_seconds<3600, false> m_incoming_connections_interval;
 
     std::list<epee::net_utils::network_address>   m_priority_peers;
     std::vector<epee::net_utils::network_address> m_exclusive_peers;
     std::vector<epee::net_utils::network_address> m_seed_nodes;
-    bool m_seed_nodes_initialized = false;
-    boost::shared_mutex m_seed_nodes_lock;
-    std::atomic_flag m_fallback_seed_nodes_added;
+    bool m_fallback_seed_nodes_added; 
+//   bool m_seed_nodes_initialized = false;
+ //   boost::shared_mutex m_seed_nodes_lock;
+ //   std::atomic_flag m_fallback_seed_nodes_added;
     std::vector<nodetool::peerlist_entry> m_command_line_peers;
     uint64_t m_peer_livetime;
     //keep connections to initiate some interactions
