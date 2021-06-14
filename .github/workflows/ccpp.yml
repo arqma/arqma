@@ -22,7 +22,7 @@ jobs:
     - name: install ccache
       run: brew install ccache
     - name: install dependencies
-      run: HOMEBREW_NO_AUTO_UPDATE=1 brew bundle --file=contrib/apple/brew
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install boost hidapi zmq libpgm miniupnpc ldns expat libunwind-headers protobuf
     - name: Restore Boost cache
       uses: actions/cache@v2
       id: cache-boost
