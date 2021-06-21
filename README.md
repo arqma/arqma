@@ -1,7 +1,7 @@
 ## Arqma Network
 
-Copyright (c) 2018-2021, The Arqma Network    
-Copyright (c) 2014-2021, The Monero Project  
+Copyright (c) 2018-2020, The Arqma Network    
+Copyright (c) 2014-2020, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
@@ -11,13 +11,11 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
 - Discord: [https://chat.arqma.com](https://chat.arqma.com)
 - Telegram: [https://telegram.arqma.com](https://telegram.arqma.com)
-- Matrix chat: [#arqma:matrix.org or Internal room ID: !YqTIhVcMbLHivbYegN:matrix.org](https://#arqma:matrix.org)
 
 ## Other Arqma related websites
 
 - Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
-- Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
-- Arqma Blockchain Explorer 2: [explorer.arqma.com](https://explorer.arqma.com)
+- Arqma Blockchain Explorer: [explorer.arqma.com](https://explorer.arqma.com)
 - Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
 - Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
@@ -39,7 +37,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
 - Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
-- Citex: [https://trade.citex.co.kr/trade/ARQ_BTC](https://trade.citex.co.kr/trade/ARQ_BTC) **Not Avaialble in the USA**
+- Citex: [https://www.citex.co.kr/#/trade/ARQ_ETH](https://www.citex.co.kr/#/trade/ARQ_ETH)
 
 ## Introduction
 
@@ -424,14 +422,14 @@ By default, in either dynamically or statically linked builds, binaries target t
 ### Cross Compiling
 
 You can also cross-compile Arqma static binaries on Linux for Windows and macOS with the `depends` system.
-
 * `make depends target=x86_64-linux-gnu` for 64-bit linux binaries.
 * `make depends target=x86_64-w64-mingw32` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
 * `make depends target=x86_64-apple-darwin19.2.0` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools curl bsdmainutils python3-setuptools
 * `make depends target=arm-linux-gnueabihf` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * `make depends target=aarch64-linux-gnu` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
-*** For `x86_64-apple-darwin19.2.0` you need to download SDK first ***        
+*** For `x86_64-apple-darwin19.2.0` you need to download SDK first ***
+* `git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDK       
 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
