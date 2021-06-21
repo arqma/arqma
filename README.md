@@ -429,7 +429,7 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 * `make depends target=aarch64-linux-gnu` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
 *** For `x86_64-apple-darwin19.2.0` you need to download SDK first ***
-* `git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDK       
+* `git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDK`
 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
