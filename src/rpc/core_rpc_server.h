@@ -127,6 +127,7 @@ namespace cryptonote
       MAP_URI_AUTO_JON2("/get_outs",                            on_get_outs,                              COMMAND_RPC_GET_OUTPUTS)
       MAP_URI_AUTO_JON2_IF("/update",                           on_update,                                COMMAND_RPC_UPDATE, !m_restricted)
       MAP_URI_AUTO_BIN2("/get_output_distribution.bin",         on_get_output_distribution_bin,           COMMAND_RPC_GET_OUTPUT_DISTRIBUTION)
+      MAP_URI_AUTO_BIN2("/get_output_blacklist.bin",            on_get_output_blacklist_bin,              COMMAND_RPC_GET_OUTPUT_BLACKLIST)
       MAP_URI_AUTO_JON2_IF("/pop_blocks",                       on_pop_blocks,                            COMMAND_RPC_POP_BLOCKS, !m_restricted)
       BEGIN_JSON_RPC_MAP("/json_rpc")
         MAP_JON_RPC("get_block_count",                          on_getblockcount,                         COMMAND_RPC_GETBLOCKCOUNT)
@@ -168,6 +169,7 @@ namespace cryptonote
         MAP_JON_RPC_WE("get_quorum_state",                      on_get_quorum_state,                      COMMAND_RPC_GET_QUORUM_STATE)
         MAP_JON_RPC_WE("get_quorum_state_batched",              on_get_quorum_state_batched,              COMMAND_RPC_GET_QUORUM_STATE_BATCHED)
         MAP_JON_RPC_WE("get_service_node_registration_cmd_raw", on_get_service_node_registration_cmd_raw, COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW)
+        MAP_JON_RPC_WE("get_service_node_blacklisted_key_images", on_get_service_node_blacklisted_key_images, COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES)
         MAP_JON_RPC_WE("get_service_node_registration_cmd",     on_get_service_node_registration_cmd,     COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD)
         MAP_JON_RPC_WE("get_service_node_key",                  on_get_service_node_key,                  COMMAND_RPC_GET_SERVICE_NODE_KEY)
         MAP_JON_RPC_WE("get_service_nodes",                     on_get_service_nodes,                     COMMAND_RPC_GET_SERVICE_NODES)
@@ -213,6 +215,7 @@ namespace cryptonote
     bool on_stop_save_graph(const COMMAND_RPC_STOP_SAVE_GRAPH::request& req, COMMAND_RPC_STOP_SAVE_GRAPH::response& res, const connection_context *ctx = NULL);
     bool on_update(const COMMAND_RPC_UPDATE::request& req, COMMAND_RPC_UPDATE::response& res, const connection_context *ctx = NULL);
     bool on_get_output_distribution_bin(const COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request& req, COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response& res, const connection_context *ctx = NULL);
+    bool on_get_output_blacklist_bin(const COMMAND_RPC_GET_OUTPUT_BLACKLIST::request& req, COMMAND_RPC_GET_OUTPUT_BLACKLIST::response& res, const connection_context *ctx = NULL);
     bool on_pop_blocks(const COMMAND_RPC_POP_BLOCKS::request& req, COMMAND_RPC_POP_BLOCKS::response& res, const connection_context *ctx = NULL);
 
     //json_rpc
@@ -246,6 +249,7 @@ namespace cryptonote
     bool on_get_quorum_state(const COMMAND_RPC_GET_QUORUM_STATE::request& req, COMMAND_RPC_GET_QUORUM_STATE::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_quorum_state_batched(const COMMAND_RPC_GET_QUORUM_STATE_BATCHED::request& req, COMMAND_RPC_GET_QUORUM_STATE_BATCHED::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_service_node_registration_cmd_raw(const COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW::request& req, COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
+    bool on_get_service_node_blacklisted_key_images(const COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::request& req, COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_service_node_registration_cmd(const COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD::request& req, COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_service_node_key(const COMMAND_RPC_GET_SERVICE_NODE_KEY::request& req, COMMAND_RPC_GET_SERVICE_NODE_KEY::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_service_nodes(const COMMAND_RPC_GET_SERVICE_NODES::request& req, COMMAND_RPC_GET_SERVICE_NODES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);

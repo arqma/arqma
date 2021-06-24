@@ -53,7 +53,7 @@ namespace cryptonote
   {
     using stake_portions = uint64_t;
 
-    arqma_miner_tx_context(network_type type = MAINNET, crypto::public_key winner = crypto::null_pkey, std::vector<std::pair<account_public_address, stake_portions>> winner_info = {});
+    arqma_miner_tx_context(network_type type = MAINNET, crypto::public_key const &winner = crypto::null_pkey, std::vector<std::pair<account_public_address, stake_portions>> const &winner_info = {});
 
     network_type nettype;
     crypto::public_key snode_winner_key;
@@ -152,8 +152,25 @@ namespace cryptonote
   //---------------------------------------------------------------
   crypto::public_key get_destination_view_key_pub(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::account_public_address>& change_addr);
   bool construct_tx(const account_keys& sender_account_keys, std::vector<tx_source_entry> &sources, const std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, std::vector<uint8_t> extra, transaction& tx, uint64_t unlock_time, uint8_t hard_fork_version = cryptonote::network_version_7, bool is_staking = false);
-  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, std::vector<uint8_t> extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, rct::RangeProofType range_proof_type = rct::RangeProofBorromean, rct::multisig_out *msout = NULL, bool per_output_unlock = false);
-  bool construct_tx_and_get_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, std::vector<uint8_t> extra, transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, rct::RangeProofType range_proof_type = rct::RangeProofBorromean, rct::multisig_out *msout = NULL, bool is_staking_tx = false, bool per_output_unlock = false);
+
+  struct arqma_construct_tx_params
+  {
+    bool v3_sn;
+    bool staking_tx; // NOTE: Set to true manually if you need staking transaction
+    bool use_rct;
+
+    arqma_construct_tx_params() = default;
+    arqma_construct_tx_params(uint8_t hard_fork_version)
+    {
+      *this = {};
+      v3_sn = (hard_fork_version >= cryptonote::network_version_16_sn);
+      staking_tx = (hard_fork_version >= cryptonote::network_version_16_sn);
+      use_rct = (hard_fork_version >= cryptonote::network_version_7);
+    }
+  };
+
+  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const rct::RCTConfig &rct_config = { rct::RangeProofBorromean, 0 }, rct::multisig_out *msout = NULL, bool shuffle_outs = true, arqma_construct_tx_params const &tx_params = {});
+  bool construct_tx_and_get_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, const rct::RCTConfig &rct_config = { rct::RangeProofBorromean, 0 }, rct::multisig_out *msout = NULL, arqma_construct_tx_params const &tx_params = {});
 
   bool generate_genesis_block(block& bl);
 

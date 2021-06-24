@@ -63,7 +63,6 @@
 #define CRYPTONOTE_LONG_TERM_BLOCK_WEIGHT_WINDOW_SIZE   100000 // size in blocks of the long term block weight median window
 #define CRYPTONOTE_SHORT_TERM_BLOCK_WEIGHT_SURGE_FACTOR 50
 #define CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE          600
-#define CRYPTONOTE_DISPLAY_DECIMAL_POINT                9
 
 #define FEE_PER_KB_OLD                                  ((uint64_t)10000000)
 #define FEE_PER_KB                                      ((uint64_t)20000)
@@ -97,10 +96,10 @@
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11          360
 #define DIFFICULTY_WINDOW_V11                           90
 
-#define DIFFICULTY_TARGET_V16                           90
-#define DIFFICULTY_WINDOW_V16                           75
+#define DIFFICULTY_TARGET_V16                           DIFFICULTY_TARGET_V11
+#define DIFFICULTY_WINDOW_V16                           DIFFICULTY_WINDOW_V11
 #define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V16           11
-#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V16          270
+#define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V16          CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V11
 #define DIFFICULTY_BLOCKS_COUNT_V16                     (DIFFICULTY_WINDOW_V16 + 1)
 
 #define DIFFICULTY_BLOCKS_COUNT_V3                      (DIFFICULTY_WINDOW_V3 + 1)
@@ -119,15 +118,12 @@
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) // seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 // seconds, one week
 
-#define MEMPOOL_PRUNE_DEREGISTER_LIFETIME               7200 // seconds, 2 hours
-
 #define COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT           10000
 
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT_OUT               4
-#define P2P_DEFAULT_CONNECTIONS_COUNT_IN                12
+#define P2P_DEFAULT_CONNECTIONS_COUNT                   24
 
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // seconds
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
@@ -174,6 +170,8 @@
 #define HF_FORBID_BORROMEAN                             13
 #define HF_VERSION_LONG_TERM_BLOCK_WEIGHT               14
 
+#define HF_VERSION_SERVICE_NODES                        16
+
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
 #define HASH_OF_HASHES_STEP                             512
@@ -199,7 +197,11 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define MIN_STAKE_SHARE                                 (STAKING_SHARE_PARTS / MAX_NUMBER_OF_CONTRIBUTORS)
 
 #define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (86400*14) // (seconds_per_day times days)
-#define STAKING_AUTHORIZATION_EXPIRATION_AUTOSTAKE      (86400*7*365*2) // 2 years
+
+#define MEMPOOL_PRUNE_NON_STANDARD_TX_LIFETIME          (7200) // value in seconds
+#define BLOCKS_EXPECTED_IN_HOURS(val)                   ((3600 / DIFFICULTY_TARGET_V16) * (val))
+#define BLOCKS_EXPECTED_IN_DAYS(val)                    (BLOCKS_EXPECTED_IN_HOURS(24) * (val))
+#define BLOCKS_EXPECTED_IN_YEARS(val)                   (BLOCKS_EXPECTED_IN_DAYS(365) * (val))
 
 // testing constants
 // TODO: To be removed after successful tests.
@@ -260,20 +262,20 @@ namespace config
    namespace blockchain_settings
    {
      uint64_t const ARQMA = 1000000000; // Atomic representation of a value 1 ARQMA
+     static uint_fast8_t const ARQMA_DECIMALS = 9;
      uint64_t const PREMINE = 7500000000000000; // Premine Reward (already burned).
      uint64_t const PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
      uint64_t const MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
      uint64_t const MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
-     uint8_t const ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     uint8_t const ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     uint8_t const ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+     static int_fast8_t const ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     static int_fast8_t const ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
+     static uint_fast8_t const ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
    }
 
    namespace tx_settings
    {
-     uint_fast8_t const ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     static uint_fast8_t const ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
      uint_fast16_t const ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
-     uint_fast8_t const CURRENT_TX_VERSION = 3; // Current Transaction Version Valid on Arq-Net
      uint64_t const TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      uint64_t const MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
 
@@ -284,8 +286,8 @@ namespace config
    namespace sync
    {
      uint64_t const HIGHEST_CHECKPOINT = 248920;
-     size_t const NORMAL_SYNC = 20;
-     size_t const FAST_SYNC = 100;
+     static size_t const NORMAL_SYNC = 20;
+     static size_t const FAST_SYNC = 100;
    }
 
    namespace governance
@@ -298,8 +300,8 @@ namespace config
 
    namespace base_reward_divisor
    {
-     uint8_t const governance = 10;
-     uint8_t const service_node = 2;
+     static uint_fast8_t const governance = 10;
+     static uint_fast8_t const service_node = 2;
    }
 
    namespace governance

@@ -203,7 +203,7 @@ namespace rpc
       }
     }
 
-    for (size_t i=0; i < found_hashes.size(); i++)
+    for(size_t i = 0; i < found_hashes.size(); i++)
     {
       cryptonote::rpc::transaction_info info;
       info.height = heights[i];
@@ -305,38 +305,38 @@ namespace rpc
       res.status = Message::STATUS_FAILED;
       res.error_details = "";
 
-      if (tvc.m_low_mixin)
+      if(tvc.m_low_mixin)
       {
         res.error_details = "mixin too low";
       }
-      if (tvc.m_double_spend)
+      if(tvc.m_double_spend)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "double spend";
       }
-      if (tvc.m_invalid_input)
+      if(tvc.m_invalid_input)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "invalid input";
       }
-      if (tvc.m_invalid_output)
+      if(tvc.m_invalid_output)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "invalid output";
       }
-      if (tvc.m_too_big)
+      if(tvc.m_too_big)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "too big";
       }
-      if (tvc.m_overspend)
+      if(tvc.m_overspend)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "overspend";
       }
-      if (tvc.m_fee_too_low)
+      if(tvc.m_fee_too_low)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "fee too low";
       }
       if(tvc.m_invalid_version)
@@ -344,7 +344,23 @@ namespace rpc
         if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "tx version below 2 is invalid and forbidden";
       }
-      if (res.error_details.empty())
+      if(tvc.m_invalid_type)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx has an invalid type";
+      }
+      if(tvc.m_key_image_locked_by_snode)
+      {
+        if (!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx uses outputs that are locked by the service node network";
+      }
+      if(tvc.m_key_image_blacklisted)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx uses a key image that has been temporarily blacklisted by the service node network";
+      }
+
+      if(res.error_details.empty())
       {
         res.error_details = "an unknown issue was found with the transaction";
       }

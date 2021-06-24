@@ -46,6 +46,8 @@
 #include "ringct/rctTypes.h"
 #include "ringct/rctOps.h"
 
+BOOST_CLASS_VERSION(rct::ecdhTuple, 1)
+
 //namespace cryptonote {
 namespace boost
 {
@@ -154,7 +156,7 @@ namespace boost
     if(x.version >= 3)
     {
       a & x.output_unlock_times;
-      a & x.is_deregister;
+      a & x.type;
     }
     a & x.unlock_time;
     a & x.vin;
@@ -169,7 +171,7 @@ namespace boost
     if(x.version >= 3)
     {
       a & x.output_unlock_times;
-      a & x.is_deregister;
+      a & x.type;
     }
     a & x.unlock_time;
     a & x.vin;
@@ -256,9 +258,19 @@ namespace boost
   template <class Archive>
   inline void serialize(Archive &a, rct::ecdhTuple &x, const boost::serialization::version_type ver)
   {
-    a & x.mask;
-    a & x.amount;
-    // a & x.senderPk; // not serialized, as we do not use it in Arqma currently
+    if(ver < 1)
+    {
+      a & x.mask;
+      a & x.amount;
+      return;
+    }
+    crypto::hash8 &amount = (crypto::hash8&)x.amount;
+    if(!Archive::is_saving::value)
+    {
+      memset(&x.mask, 0, sizeof(x.mask));
+      memset(&x.amount, 0, sizeof(x.amount));
+    }
+    a & amount;
   }
 
   template <class Archive>
@@ -304,7 +316,7 @@ namespace boost
     a & x.type;
     if (x.type == rct::RCTTypeNull)
       return;
-    if (x.type != rct::RCTTypeFull && x.type != rct::RCTTypeFullBulletproof && x.type != rct::RCTTypeSimple && x.type != rct::RCTTypeSimpleBulletproof && x.type != rct::RCTTypeBulletproof)
+    if (x.type != rct::RCTTypeFull && x.type != rct::RCTTypeFullBulletproof && x.type != rct::RCTTypeSimple && x.type != rct::RCTTypeSimpleBulletproof && x.type != rct::RCTTypeBulletproof && x.type != rct::RCTTypeBulletproof2)
       throw boost::archive::archive_exception(boost::archive::archive_exception::other_exception, "Unsupported rct type");
     // a & x.message; message is not serialized, as it can be reconstructed from the tx data
     // a & x.mixRing; mixRing is not serialized, as it can be reconstructed from the offsets
@@ -332,7 +344,7 @@ namespace boost
     a & x.type;
     if (x.type == rct::RCTTypeNull)
       return;
-    if (x.type != rct::RCTTypeFull && x.type != rct::RCTTypeFullBulletproof && x.type != rct::RCTTypeSimple && x.type != rct::RCTTypeSimpleBulletproof && x.type != rct::RCTTypeBulletproof)
+    if (x.type != rct::RCTTypeFull && x.type != rct::RCTTypeFullBulletproof && x.type != rct::RCTTypeSimple && x.type != rct::RCTTypeSimpleBulletproof && x.type != rct::RCTTypeBulletproof && x.type != rct::RCTTypeBulletproof2)
       throw boost::archive::archive_exception(boost::archive::archive_exception::other_exception, "Unsupported rct type");
     // a & x.message; message is not serialized, as it can be reconstructed from the tx data
     // a & x.mixRing; mixRing is not serialized, as it can be reconstructed from the offsets
@@ -346,7 +358,7 @@ namespace boost
     if (x.p.rangeSigs.empty())
       a & x.p.bulletproofs;
     a & x.p.MGs;
-    if (x.type == rct::RCTTypeBulletproof || x.type == rct::RCTTypeSimpleBulletproof)
+    if (x.type == rct::RCTTypeBulletproof || x.type == rct::RCTTypeSimpleBulletproof || x.type == rct::RCTTypeBulletproof2)
       a & x.p.pseudoOuts;
   }
 }

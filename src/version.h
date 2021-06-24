@@ -2,6 +2,7 @@
 
 extern const int ARQMA_VERSION_MAJOR;
 extern const int ARQMA_VERSION_MINOR;
+extern const int ARQMA_VERSION_PATCH;
 extern const int ARQMA_SNODE_VERSION_MAJOR;
 extern const int ARQMA_SNODE_VERSION_MINOR;
 

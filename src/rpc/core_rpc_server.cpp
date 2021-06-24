@@ -848,6 +848,11 @@ namespace cryptonote
       res.too_big = tvc.m_too_big;
       res.overspend = tvc.m_overspend;
       res.fee_too_low = tvc.m_fee_too_low;
+      res.invalid_version = tvc.m_invalid_version;
+      res.invalid_type = tvc.m_invalid_type;
+      res.key_image_locked_by_snode = tvc.m_key_image_locked_by_snode;
+      res.key_image_blacklisted = tvc.m_key_image_blacklisted;
+      res.not_enough_votes = vvc.m_not_enough_votes;
       res.invalid_block_height = vvc.m_invalid_block_height;
       res.duplicate_voters = vvc.m_duplicate_voters;
       res.voters_quorum_index_out_of_bounds = vvc.m_voters_quorum_index_out_of_bounds;
@@ -1160,6 +1165,29 @@ namespace cryptonote
     // FIXME: replace back to original m_p2p.send_stop_signal() after
     // investigating why that isn't working quite right.
     m_p2p.send_stop_signal();
+    res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_get_output_blacklist_bin(const COMMAND_RPC_GET_OUTPUT_BLACKLIST::request& req, COMMAND_RPC_GET_OUTPUT_BLACKLIST::response& res, const connection_context *ctx)
+  {
+    PERF_TIMER(on_get_output_blacklist_bin);
+
+    bool r;
+    if(use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_OUTPUT_BLACKLIST>(invoke_http_mode::BIN, "/get_output_blacklist.bin", req, res, r))
+      return r;
+
+    res.status = "Failed";
+    try
+    {
+      m_core.get_output_blacklist(res.blacklist);
+    }
+    catch (const std::exception &e)
+    {
+      res.status = "Failed to get output blacklist";
+      return false;
+    }
+
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -2827,11 +2855,6 @@ namespace cryptonote
 
     std::vector<std::string> args;
 
-    if(req.autostake)
-    {
-      args.push_back("auto");
-    }
-
     uint64_t staking_requirement = service_nodes::get_staking_requirement(m_core.get_nettype(), m_core.get_current_blockchain_height());
 
     {
@@ -2893,18 +2916,32 @@ namespace cryptonote
       COMMAND_RPC_GET_SERVICE_NODES::response::entry entry = {};
       entry.service_node_pubkey = string_tools::pod_to_hex(pubkey_info.pubkey);
       entry.registration_height = pubkey_info.info.registration_height;
+      entry.requested_unlock_height = pubkey_info.info.requested_unlock_height;
       entry.last_reward_block_height = pubkey_info.info.last_reward_block_height;
       entry.last_reward_transaction_index = pubkey_info.info.last_reward_transaction_index;
       entry.last_uptime_proof = m_core.get_uptime_proof(pubkey_info.pubkey);
 
       entry.contributors.reserve(pubkey_info.info.contributors.size());
-      for(service_nodes::service_node_info::contribution const &contributor : pubkey_info.info.contributors)
+
+      using namespace service_nodes;
+      for(service_node_info::contributor_t const &contributor : pubkey_info.info.contributors)
       {
-        COMMAND_RPC_GET_SERVICE_NODES::response::contribution new_contributor = {};
+        COMMAND_RPC_GET_SERVICE_NODES::response::contributor new_contributor = {};
         new_contributor.amount = contributor.amount;
         new_contributor.reserved = contributor.reserved;
         new_contributor.address = cryptonote::get_account_address_as_str(nettype(), false/*is_subaddress*/, contributor.address);
         entry.contributors.push_back(new_contributor);
+
+        new_contributor.locked_contributions.reserve(contributor.locked_contributions.size());
+        for(service_node_info::contribution_t const &src : contributor.locked_contribution)
+        {
+          COMMAND_RPC_GET_SERVICE_NODE::response::contribution dest = {};
+          dest.amount = src.amount;
+          dest.key_image = string_tools::pod_to_hex(src.key_image);
+          dest.key_image_pub_key = string_tools::pod_to_hex(src.key_image_pub_key);
+          new_contributor.locked_contributions.push_back(dest);
+        }
+
       }
 
       entry.total_contributed = pubkey_info.info.total_contributed;
@@ -2931,6 +2968,24 @@ namespace cryptonote
     PERF_TIMER(on_get_staking_requirement);
     res.staking_requirement = service_nodes::get_staking_requirement(nettype(), req.height);
     res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_get_service_node_blacklisted_key_images(const COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::request& req, COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::response& res, epee::json_rpc::error &error_resp, const connection_context *ctx)
+  {
+    PERF_TIMER(on_get_service_node_blacklisted_key_images);
+    const std::vector<service_nodes::key_image_blacklist_entry> &blacklist = m_core.get_service_node_blacklisted_key_images();
+
+    res.status = CORE_RPC_STATUS_OK;
+    res.blacklist.reserve(blacklist.size());
+    for(const service_nodes::key_image_blacklist_entry &entry : blacklist)
+    {
+      COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::entry new_entry = {};
+      new_entry.key_image = epee::string_tools::pod_to_hex(entry.key_image);
+      new_entry.unlock_height = entry.unlock_height;
+      res.blacklist.push_back(std::move(new_entry));
+    }
+
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------

@@ -56,7 +56,7 @@ public: \
   bool load( t_storage& stg, typename t_storage::hsection hparent_section = nullptr)\
   {\
     try{\
-    return serialize_map<false>(stg, hparent_section);\
+    return serialize_map<false>(*this, stg, hparent_section);\
     }\
     catch(const std::exception& err) \
     { \

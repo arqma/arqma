@@ -169,11 +169,13 @@ namespace cryptonote
       version_2,
       version_3,
     };
+    static version get_min_version_for_hf(uint8_t hard_fork_version);
+    static version get_max_version_for_hf(uint8_t hard_fork_version);
 
     // tx information
     size_t   version;
 
-    uint64_t unlock_time;  //number of block (or time), used as a limitation like: spend this tx not early then block/time
+    uint64_t unlock_time;  // number of block (or time), used as a limitation like: spend this tx not early then block/time
 
     std::vector<txin_v> vin;
     std::vector<tx_out> vout;
@@ -181,21 +183,40 @@ namespace cryptonote
     std::vector<uint8_t> extra;
 
     std::vector<uint64_t> output_unlock_times;
-    bool is_deregister; //service node deregister tx
+
+    enum type_t
+    {
+      type_genesis,
+      type_standard,
+      type_deregister,
+      type_key_image_unlock,
+      type_count,
+    };
+
+    static char const *type_to_string(type_t type);
+    static char const *type_to_string(uint16_t type_as_uint);
+
+    union
+    {
+      uint16_t type;
+    };
 
     BEGIN_SERIALIZE()
       VARINT_FIELD(version)
-      if(version > 2)
-      {
-        FIELD(output_unlock_times)
-        FIELD(is_deregister)
-      }
-      if(version == 0 || config::tx_settings::CURRENT_TX_VERSION < version) return false;
+      if(version == version_0 || version > version_3)
+        return false;
       VARINT_FIELD(unlock_time)
       FIELD(vin)
       FIELD(vout)
-      if(version >= 3 && vout.size() != output_unlock_times.size()) return false;
+      if(version >= version_3 && vout.size() != output_unlock_times.size())
+        return false;
       FIELD(extra)
+      if(version >= version_3)
+      {
+        FIELD(output_unlock_times)
+        VARINT_FIELD(type)
+        if(static_cast<uint16_t>(type) >= type_count) return false;
+      }
     END_SERIALIZE()
 
   public:
@@ -204,12 +225,14 @@ namespace cryptonote
     {
       version = 1;
       unlock_time = 0;
-      output_unlock_times.clear();
-      is_deregister = false;
       vin.clear();
       vout.clear();
       extra.clear();
+      output_unlock_times.clear();
+      type = type_standard;
     }
+    type_t get_type() const;
+    bool set_type(type_t new_type);
 
     uint64_t get_unlock_time(size_t out_index) const
     {
@@ -263,7 +286,6 @@ namespace cryptonote
     void set_hash(const crypto::hash &h) const { hash = h; set_hash_valid(true); }
     void set_prunable_hash(const crypto::hash &h) const { prunable_hash = h; set_prunable_hash_valid(true); }
     void set_blob_size(size_t sz) const { blob_size = sz; set_blob_size_valid(true); }
-    bool is_deregister_tx() const { return (version == version_3) && is_deregister; }
 
     BEGIN_SERIALIZE_OBJECT()
       if (!typename Archive<W>::is_saving())
@@ -576,7 +598,83 @@ namespace cryptonote
     }
   };
   //---------------------------------------------------------------
+  inline enum transaction_prefix::version transaction_prefix::get_max_version_for_hf(uint8_t hard_fork_version)
+  {
+    if(hard_fork_version < cryptonote::network_version_7)
+      return transaction::version_1;
+    if(hard_fork_version >= cryptonote::network_version_7 && hard_fork_version <= cryptonote::network_version_15)
+      return transaction::version_2;
+    return transaction::version_3;
+  }
+  //---------------------------------------------------------------
+  inline enum transaction_prefix::version transaction_prefix::get_min_version_for_hf(uint8_t hard_fork_version)
+  {
+    if(hard_fork_version < cryptonote::network_version_7)
+      return transaction::version_1;
+    if(hard_fork_version >= cryptonote::network_version_7 && hard_fork_version <= cryptonote::network_version_15)
+      return transaction::version_2;
+    return transaction::version_3;
+  }
+  //---------------------------------------------------------------
+  inline transaction_prefix::type_t transaction_prefix::get_type() const
+  {
+    if(version == version_1)
+      return type_genesis;
+    if(version == version_2)
+      return type_standard;
 
+    assert(static_cast<uint16_t>(type) < static_cast<uint16_t>(type_count));
+    return static_cast<transaction::type_t>(type);
+  }
+  //---------------------------------------------------------------
+  inline bool transaction_prefix::set_type(transaction_prefix::type_t new_type)
+  {
+    bool result = false;
+    if(version == version_1)
+      result = (new_type == type_genesis);
+    if(version == version_2)
+    {
+      if(new_type == type_standard)
+        result = true;
+    }
+    else
+    {
+      result = true;
+    }
+
+    if(result)
+    {
+      assert(static_cast<uint16_t>(new_type) <= static_cast<uint16_t>(type_count));
+      type = static_cast<uint16_t>(new_type);
+    }
+
+    return result;
+  }
+  //---------------------------------------------------------------
+  inline char const *transaction_prefix::type_to_string(uint16_t type_as_uint)
+  {
+    return type_to_string(static_cast<type_t>(type_as_uint));
+  }
+  //---------------------------------------------------------------
+  inline char const *transaction_prefix::type_to_string(type_t type)
+  {
+    switch(type)
+    {
+      case type_genesis:
+        return "Genesis_TX";
+      case type_standard:
+        return "standard";
+      case type_deregister:
+        return "deregister";
+      case type_key_image_unlock:
+        return "key_image_unlock";
+      case type_count:
+        return "xx_count";
+      default:
+        assert(false);
+        return "xx_unhandled_type";
+    }
+  }
 }
 
 namespace std {
