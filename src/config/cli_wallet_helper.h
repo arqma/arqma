@@ -116,8 +116,8 @@ namespace command_helper
   const char* REFRESH("Synchronize the transactions and balance.");
   const char* BALANCE("Show the wallet's balance of the currently selected account.");
   const char* INCOMING_TRANSFERS("Show the incoming transfers, all or filtered by availability and address index.\n\n"
-     "Output format:\n"
-     "Amount, Spent(\"T\"|\"F\"), \"locked\"|\"unlocked\", RingCT, Global Index, Transaction Hash, Address Index, [Public Key, Key Image] ");
+                                 "Output format:\n"
+                                 "Amount, Spent(\"T\"|\"F\"), \"locked\"|\"unlocked\", RingCT, Global Index, Transaction Hash, Address Index, [Public Key, Key Image] ");
   const char* PAYMENTS("Show the payments for the given payment IDs.");
   const char* BC_HEIGHT("Show the blockchain height.");
   const char* TRANSFER("Transfer <amount> to <address>. If the parameter \"index=<N1>[,<N2>,...]\" is specified, the wallet uses outputs received by addresses of those indices. If omitted, the wallet randomly chooses address indices to be used. In any case, it tries its best not to combine outputs across multiple addresses. <priority> is the priority of the transaction. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used. <ring_size> is the number of inputs to include for untraceability. Multiple payments can be made at once by adding URI_2 or <address_2> <amount_2> etcetera (before the payment ID, if it's included)");
@@ -132,12 +132,12 @@ namespace command_helper
   const char* SUBMIT_TRANSFER("Submit a signed transaction from a file.");
   const char* SET_LOG("Change the current log detail (level must be <0-4>).");
   const char* ACCOUNT("If no arguments are specified, the wallet shows all the existing accounts along with their balances.\n"
-     "If the \"new\" argument is specified, the wallet creates a new account with its label initialized by the provided label text (which can be empty).\n"
-     "If the \"switch\" argument is specified, the wallet switches to the account specified by <index>.\n"
-     "If the \"label\" argument is specified, the wallet sets the label of the account specified by <index> to the provided label text.\n"
-     "If the \"tag\" argument is specified, a tag <tag_name> is assigned to the specified accounts <account_index_1>, <account_index_2>, ....\n"
-     "If the \"untag\" argument is specified, the tags assigned to the specified accounts <account_index_1>, <account_index_2> ..., are removed.\n"
-     "If the \"tag_description\" argument is specified, the tag <tag_name> is assigned an arbitrary text <description>.");
+                      "If the \"new\" argument is specified, the wallet creates a new account with its label initialized by the provided label text (which can be empty).\n"
+                      "If the \"switch\" argument is specified, the wallet switches to the account specified by <index>.\n"
+                      "If the \"label\" argument is specified, the wallet sets the label of the account specified by <index> to the provided label text.\n"
+                      "If the \"tag\" argument is specified, a tag <tag_name> is assigned to the specified accounts <account_index_1>, <account_index_2>, ....\n"
+                      "If the \"untag\" argument is specified, the tags assigned to the specified accounts <account_index_1>, <account_index_2> ..., are removed.\n"
+                      "If the \"tag_description\" argument is specified, the tag <tag_name> is assigned an arbitrary text <description>.");
   const char* ADDRESS("If no arguments are specified or <index> is specified, the wallet shows the default or specified address. If \"all\" is specified, the wallet shows all the existing addresses in the currently selected account. If \"new \" is specified, the wallet creates a new address with the provided label text (which can be empty). If \"label\" is specified, the wallet sets the label of the address specified by <index> to the provided label text.");
   const char* INTEGRATED_ADDRESS("Encode a payment ID into an integrated address for the current wallet public address (no argument uses a random payment ID), or decode an integrated address to standard address and payment ID");
   const char* ADDRESS_BOOK("Print all entries in the address book, optionally adding/deleting an entry to/from it.");
@@ -263,12 +263,18 @@ namespace command_helper
 
   // Service-Nodes
 
-  const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <address> <amount>");
-  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] [auto] <operator cut> <address1> <contribution %> [<address2> <contribution %> [...]] <expiration timestamp> <pubkey> <signature>");
+  const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount|percent>");
+  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] <operator cut> <address1> <contribution %> [<address2> <contribution %> [...]] <expiration timestamp> <pubkey> <signature>");
 
   const char* STAKE("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
   const char* REGISTER_SN("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
 
   const char* AUTOSTAKE_PWD("Can not autostake with ask-password set to true.\nPassword are scrubbed from memory after use.\n\nYou must switch idle password OFF with command \"set ask-password 0\" to allow autostake to work.");
   const char* AUTOSTAKE_WARN("Auto staking with non-trusted contributors may lock your ArQmA for staking duration if they do not restake after Service Node expiration.\n\nIf this behaviour is not desirable, please reuse stakin command without auto command"); 
+
+  const char* USAGE_UNLOCK_HELPER("request_stake_unlock <service_node_pubkey>");
+  const char* UNLOCK_HELPER("");
+
+  const char* USAGE_LOCKED_STAKES("");
+  const char* LOCKED_STAKES_HELPER("Print stakes that currently locked on the ArQmA Service Node Network");
 }

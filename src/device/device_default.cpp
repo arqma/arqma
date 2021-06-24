@@ -234,7 +234,7 @@ namespace hw {
             return true;
         }
 
-        crypto::secret_key  device_default::generate_keys(crypto::public_key &pub, crypto::secret_key &sec, const crypto::secret_key& recovery_key, bool recover) {
+        crypto::secret_key device_default::generate_keys(crypto::public_key &pub, crypto::secret_key &sec, const crypto::secret_key& recovery_key, bool recover) {
             return crypto::generate_keys(pub, sec, recovery_key, recover);
         }
 
@@ -303,13 +303,13 @@ namespace hw {
             return true;
         }
 
-        bool  device_default::ecdhEncode(rct::ecdhTuple & unmasked, const rct::key & sharedSec) {
-            rct::ecdhEncode(unmasked, sharedSec);
+        bool  device_default::ecdhEncode(rct::ecdhTuple & unmasked, const rct::key & sharedSec, bool short_amount) {
+            rct::ecdhEncode(unmasked, sharedSec, short_amount);
             return true;
         }
 
-        bool  device_default::ecdhDecode(rct::ecdhTuple & masked, const rct::key & sharedSec) {
-            rct::ecdhDecode(masked, sharedSec);
+        bool  device_default::ecdhDecode(rct::ecdhTuple & masked, const rct::key & sharedSec, bool short_amount) {
+            rct::ecdhDecode(masked, sharedSec, short_amount);
             return true;
         }
 

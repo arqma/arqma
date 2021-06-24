@@ -125,7 +125,7 @@ namespace tools
       "failed to get hashes",
       "failed to get out indices",
       "failed to get random outs",
-      "failed to get service_node_list"
+      "failed to get service node data"
     };
     enum failed_rpc_request_message_indices
     {
@@ -843,6 +843,14 @@ namespace tools
     {
       explicit get_output_distribution(std::string&& loc, const std::string& request)
         : wallet_rpc_error(std::move(loc), "failed to get output distribution", request)
+      {
+      }
+    };
+    //----------------------------------------------------------------------------------------------------
+    struct get_output_blacklist : public wallet_rpc_error
+    {
+      explicit get_output_blacklist(std::string&& loc, const std::string& request)
+        : wallet_rpc_error(std::move(loc), "Failed to get output blacklist", request)
       {
       }
     };

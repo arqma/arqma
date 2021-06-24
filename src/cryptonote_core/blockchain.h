@@ -30,6 +30,7 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
+#include <time.h>
 #include <boost/asio/io_service.hpp>
 #include <boost/function/function_fwd.hpp>
 #if BOOST_VERSION >= 107400
@@ -67,6 +68,23 @@
 
 namespace service_nodes { class service_node_list; class deregister_vote_pool; }
 namespace tools { class Notify; }
+
+struct forks_t
+{
+  uint8_t version;
+  uint64_t height;
+  uint8_t threshold;
+  time_t time;
+  forks_t(uint8_t version, uint64_t height, uint8_t threshold, time_t time): version(version), height(height), threshold(threshold), time(time) {}
+};
+
+extern const forks_t mainnet_hard_forks[];
+extern const forks_t testnet_hard_forks[];
+extern const forks_t stagenet_hard_forks[];
+
+extern const size_t num_mainnet_hard_forks;
+extern const size_t num_testnet_hard_forks;
+extern const size_t num_stagenet_hard_forks;
 
 namespace cryptonote
 {
@@ -114,7 +132,7 @@ namespace cryptonote
     class BlockAddedHook
     {
     public:
-      virtual void block_added(const block& block, const std::vector<transaction>& txs) = 0;
+      virtual void block_added(const block& block, const std::vector<std::pair<<transaction, blobdata>>& txs) = 0;
     };
 
     class BlockchainDetachedHook
@@ -141,6 +159,11 @@ namespace cryptonote
      * @param tx_pool a reference to the transaction pool to be kept by the Blockchain
      */
     Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list, service_nodes::deregister_vote_pool &deregister_vote_pool);
+
+    /**
+     * @brief Blockchain destructor
+     */
+    ~Blockchain();
 
     /**
      * @brief Initialize the Blockchain state
@@ -547,6 +570,8 @@ namespace cryptonote
      * @param return-by-reference base how many outputs of that amount are before the stated distribution
      */
     bool get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, uint64_t &start_height, std::vector<uint64_t> &distribution, uint64_t &base) const;
+
+    bool get_output_blacklist(std::vector<uint64_t> &blacklist) const;
 
     /**
      * @brief gets the global indices for outputs from a given transaction
@@ -1045,10 +1070,10 @@ namespace cryptonote
     /**
      * @brief add a hook for processing new blocks and rollbacks for reorgs
      */
-    void hook_block_added(BlockAddedHook& block_added_hook);
-    void hook_blockchain_detached(BlockchainDetachedHook& blockchain_detached_hook);
-    void hook_init(InitHook& init_hook);
-    void hook_validate_miner_tx(ValidateMinerTxHook& validate_miner_tx_hook);
+    void hook_block_added(BlockAddedHook& hook) { m_block_added_hooks.push_back(&hook); }
+    void hook_blockchain_detached(BlockchainDetachedHook& hook) { m_blockchain_detached_hooks.push_back(&hook); }
+    void hook_init(InitHook& hook) { m_init_hooks.push_back(&hook); }
+    void hook_validate_miner_tx(ValidateMinerTxHook& hook) { m_validate_miner_tx_hooks.push_back(&hook); }
 
     /**
      * @brief checks whether a given block height is included in the precompiled block hash area

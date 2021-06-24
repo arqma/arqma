@@ -90,8 +90,8 @@ namespace cryptonote
 // whether they can talk to a given daemon without having to know in
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
-#define CORE_RPC_VERSION_MAJOR 3
-#define CORE_RPC_VERSION_MINOR 8
+#define CORE_RPC_VERSION_MAJOR 4
+#define CORE_RPC_VERSION_MINOR 0
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -612,6 +612,10 @@ namespace cryptonote
       bool overspend;
       bool fee_too_low;
       bool sanity_check_failed;
+      bool invalid_version;
+      bool invalid_type;
+      bool key_image_locked_by_snode;
+      bool key_image_blacklisted;
       bool untrusted;
       bool invalid_block_height;
       bool voters_quorum_index_out_of_bounds;
@@ -632,6 +636,10 @@ namespace cryptonote
         KV_SERIALIZE(overspend)
         KV_SERIALIZE(fee_too_low)
         KV_SERIALIZE(sanity_check_failed)
+        KV_SERIALIZE(invalid_version)
+        KV_SERIALIZE(invalid_type)
+        KV_SERIALIZE(key_image_locked_by_snode)
+        KV_SERIALIZE(key_image_blacklisted)
         KV_SERIALIZE(untrusted)
         KV_SERIALIZE(invalid_block_height)
         KV_SERIALIZE(voters_quorum_index_out_of_bounds)
@@ -2381,7 +2389,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE(distributions)
-        KV_SERIALIZE(untrusted
+        KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -2542,11 +2550,9 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         END_KV_SERIALIZE_MAP()
       };
 
-      bool autostake;
       std::string operator_cut;
       std::vector<contribs> contributions;
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(autostake)
         KV_SERIALIZE(operator_cut)
         KV_SERIALIZE(contributions)
       END_KV_SERIALIZE_MAP()
@@ -2601,13 +2607,27 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     {
       struct contribution
       {
+        std::string key_image;
+        std::string key_image_pub_key;
+        uint64_t amount;
+        BEGIN_KV_SERIALIZE_MAP()
+          KV_SERIALIZE(key_image)
+          KV_SERIALIZE(key_image_pub_key)
+          KV_SERIALIZE(amount)
+        END_KV_SERIALIZE_MAP()
+      };
+
+      struct contributor
+      {
         uint64_t amount;
         uint64_t reserved;
         std::string address;
+        std::vector<contribution> locked_contributions;
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(amount)
           KV_SERIALIZE(reserved)
           KV_SERIALIZE(address)
+          KV_SERIALIZE(locked_contributions)
         END_KV_SERIALIZE_MAP()
       };
 
@@ -2615,10 +2635,11 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       {
         std::string service_node_pubkey;
         uint64_t registration_height;
+        uint64_t requested_unlock_height;
         uint64_t last_reward_block_height;
         uint32_t last_reward_transaction_index;
         uint64_t last_uptime_proof;
-        std::vector<contribution> contributors;
+        std::vector<contributor> contributors;
         uint64_t total_contributed;
         uint64_t total_reserved;
         uint64_t staking_requirement;
@@ -2627,6 +2648,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(service_node_pubkey)
           KV_SERIALIZE(registration_height)
+          KV_SERIALIZE(requested_unlock_height)
           KV_SERIALIZE(last_reward_block_height)
           KV_SERIALIZE(last_reward_transaction_index)
           KV_SERIALIZE(last_uptime_proof)
@@ -2671,4 +2693,59 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     };
     typedef epee::misc_utils::struct_init<response_t> response;
   };
+
+  struct COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES
+  {
+    struct request_t
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct entry
+    {
+      std::string key_image;
+      uint64_t unlock_height;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(key_image)
+        KV_SERIALIZE(unlock_height)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response_t
+    {
+      std::vector<entry> blacklist;
+      std::string status;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(blacklist)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_OUTPUT_BLACKLIST
+  {
+    struct request_t
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::vector<uint64_t> blacklist;
+      std::string status;
+      bool untrusted;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(blacklist)
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(untrusted)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
 }

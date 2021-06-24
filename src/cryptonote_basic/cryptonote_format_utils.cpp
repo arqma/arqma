@@ -44,6 +44,7 @@
 #include "cryptonote_core/service_node_deregister.h"
 
 using namespace epee;
+namespace arqma_bc = config::blockchain_settings;
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
@@ -77,7 +78,7 @@ static const uint64_t valid_decomposed_outputs[] = {
   (uint64_t)10000000000000000000ull
 };
 
-static std::atomic<unsigned int> default_decimal_point(CRYPTONOTE_DISPLAY_DECIMAL_POINT);
+static std::atomic<unsigned int> default_decimal_point(arqma_bc::ARQMA_DECIMALS);
 
 static std::atomic<uint64_t> tx_hashes_calculated_count(0);
 static std::atomic<uint64_t> tx_hashes_cached_count(0);
@@ -271,7 +272,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool is_v1_tx(const blobdata_ref& tx_blob)
   {
-    uint64_t version;
+    uint_fast8_t version;
     const char* begin = static_cast<const char*>(tx_blob.data());
     const char* end = begin + tx_blob.size();
     int read = tools::read_varint(begin, end, version);
@@ -419,25 +420,12 @@ namespace cryptonote
   uint64_t get_transaction_weight(const transaction &tx, size_t blob_size)
   {
     CHECK_AND_ASSERT_MES(!tx.pruned, std::numeric_limits<uint64_t>::max(), "get_transaction_weight does not support pruned txes");
-    if (tx.version < 2)
+    if (tx.version <= 1)
       return blob_size;
     const rct::rctSig &rv = tx.rct_signatures;
-//    if (!rct::is_rct_bulletproof(rv.type))
-//      return blob_size;
-//    const size_t n_outputs = tx.vout.size();
-//    if (n_outputs <= 2)
-//      return blob_size;
     if (rv.type != rct::RCTTypeBulletproof)
       return blob_size;
-//    const uint64_t bp_base = 368;
     const size_t n_padded_outputs = rct::n_bulletproof_max_amounts(rv.p.bulletproofs);
-//    size_t nlr = 0;
-//    for (const auto &bp: rv.p.bulletproofs)
-//      nlr += bp.L.size() * 2;
-//    const size_t bp_size = 32 * (9 + nlr);
-//    CHECK_AND_ASSERT_THROW_MES_L1(n_outputs <= BULLETPROOF_MAX_OUTPUTS, "maximum number of outputs is " + std::to_string(BULLETPROOF_MAX_OUTPUTS) + " per transaction");
-//    CHECK_AND_ASSERT_THROW_MES_L1(bp_base * n_padded_outputs >= bp_size, "Invalid bulletproof clawback");
-//    const uint64_t bp_clawback = (bp_base * n_padded_outputs - bp_size) * 4 / 5;
     uint64_t bp_clawback = get_transaction_weight_clawback(tx, n_padded_outputs);
     CHECK_AND_ASSERT_THROW_MES_L1(bp_clawback <= std::numeric_limits<uint64_t>::max() - blob_size, "Weight overflow");
     return blob_size + bp_clawback;
@@ -504,7 +492,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool get_tx_fee(const transaction& tx, uint64_t & fee)
   {
-    if (tx.version > 1)
+    if(tx.version >= 2)
     {
       fee = tx.rct_signatures.txnFee;
       return true;
@@ -635,6 +623,8 @@ namespace cryptonote
     if(!pick<tx_extra_service_node_contributor>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_CONTRIBUTOR)) return false;
     if(!pick<tx_extra_service_node_pubkey>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_PUBKEY)) return false;
     if(!pick<tx_extra_tx_secret_key>(nar, tx_extra_fields, TX_EXTRA_TAG_TX_SECRET_KEY)) return false;
+    if(!pick<tx_extra_tx_key_image_proofs>(nar, tx_extra_fields, TX_EXTRA_TAG_TX_KEY_IMAGE_PROOFS)) return false;
+    if(!pick<tx_extra_tx_key_image_unlock>(nar, tx_extra_fields, TX_EXTRA_TAG_TX_KEY_IMAGE_UNLOCK)) return false;
     if(!pick<tx_extra_merge_mining_tag>(nar, tx_extra_fields, TX_EXTRA_MERGE_MINING_TAG)) return false;
     if(!pick<tx_extra_mysterious_minergate>(nar, tx_extra_fields, TX_EXTRA_MYSTERIOUS_MINERGATE_TAG)) return false;
     if(!pick<tx_extra_padding>(nar, tx_extra_fields, TX_EXTRA_TAG_PADDING)) return false;
@@ -718,20 +708,26 @@ namespace cryptonote
     return get_additional_tx_pub_keys_from_extra(tx.extra);
   }
   //---------------------------------------------------------------
-  bool add_additional_tx_pub_keys_to_extra(std::vector<uint8_t>& tx_extra, const std::vector<crypto::public_key>& additional_pub_keys)
+  static bool add_tx_extra_field_to_tx_extra(std::vector<uint8_t>& tx_extra, tx_extra_field& field)
   {
-    // convert to variant
-    tx_extra_field field = tx_extra_additional_pub_keys{ additional_pub_keys };
-    // serialize
     std::ostringstream oss;
     binary_archive<true> ar(oss);
-    bool r = ::do_serialize(ar, field);
-    CHECK_AND_NO_ASSERT_MES_L1(r, false, "failed to serialize tx extra additional tx pub keys");
-    // append
+    if(!::do_serialize(ar, field))
+      return false;
+
     std::string tx_extra_str = oss.str();
     size_t pos = tx_extra.size();
-    tx_extra.resize(tx_extra.size() + tx_extra_str.size());
+    tx_extra.resize(tx_extra.size() + tx_extra_str. size());
     memcpy(&tx_extra[pos], tx_extra_str.data(), tx_extra_str.size());
+
+    return true;
+  }
+  //---------------------------------------------------------------
+  bool add_additional_tx_pub_keys_to_extra(std::vector<uint8_t>& tx_extra, const std::vector<crypto::public_key>& additional_pub_keys)
+  {
+    tx_extra_field field = tx_extra_additional_pub_keys{ additional_pub_keys };
+    bool r = add_tx_extra_field_to_tx_extra(tx_extra, field);
+    CHECK_AND_NO_ASSERT_MES_L1(r, false, "Failed to serialize tx_extra additional tx_pub_keys");
     return true;
   }
   //---------------------------------------------------------------
@@ -807,6 +803,40 @@ namespace cryptonote
     add_data_to_tx_extra(tx_extra, reinterpret_cast<const char *>(&key), sizeof(key), TX_EXTRA_TAG_TX_SECRET_KEY);
   }
   //---------------------------------------------------------------
+  bool get_tx_key_image_proofs_from_tx_extra(const std::vector<uint8_t>& tx_extra, tx_extra_tx_key_image_proofs &proofs)
+  {
+    std::vector<tx_extra_field> tx_extra_fields;
+    parse_tx_extra(tx_extra, tx_extra_fields);
+
+    bool result = find_tx_extra_field_by_type(tx_extra_fields, proofs);
+    return result;
+  }
+  //---------------------------------------------------------------
+  bool add_tx_key_image_proofs_to_tx_extra(std::vector<uint8_t>& tx_extra, const tx_extra_tx_key_image_proofs &proofs)
+  {
+    tx_extra_field field = proofs;
+    bool result = add_tx_extra_field_to_tx_extra(tx_extra, field);
+    CHECK_AND_NO_ASSERT_MES_L1(result, false, "Failed to serialize tx_extra tx_key image proof");
+    return result;
+  }
+  //---------------------------------------------------------------
+  bool get_tx_key_image_unlock_from_tx_extra(const std::vector<uint8_t>& tx_extra, tx_extra_tx_key_image_unlock &unlock)
+  {
+    std::vector<tx_extra_field> tx_extra_fields;
+    parse_tx_extra(tx_extra, tx_extra_fields);
+
+    bool result = find_tx_extra_field_by_type(tx_extra_fields, unlock);
+    return result;
+  }
+  //---------------------------------------------------------------
+  bool add_tx_key_image_unlock_to_tx_extra(std::vector<uint8_t>& tx_extra, const tx_extra_tx_key_image_unlock &unlock)
+  {
+    tx_extra_field field = unlock;
+    bool result = add_tx_extra_field_to_tx_extra(tx_extra, field);
+    CHECK_AND_NO_ASSERT_MES_L1(result, false, "Failed to serialize tx_extra tx_key image unlock");
+    return result;
+  }
+  //---------------------------------------------------------------
   bool get_service_node_contributor_from_tx_extra(const std::vector<uint8_t>& tx_extra, cryptonote::account_public_address& address)
   {
     std::vector<tx_extra_field> tx_extra_fields;
@@ -830,30 +860,24 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool add_service_node_register_to_tx_extra(std::vector<uint8_t>& tx_extra, const std::vector<cryptonote::account_public_address>& addresses, uint64_t portions_for_operator, const std::vector<uint64_t>& portions, uint64_t expiration_timestamp, const crypto::signature& service_node_signature)
   {
-    if (addresses.size() != portions.size())
+    if(addresses.size() != portions.size())
     {
       LOG_ERROR("Tried to serialize registration with more addresses than portions, this should never happen");
       return false;
     }
     std::vector<crypto::public_key> public_view_keys(addresses.size());
     std::vector<crypto::public_key> public_spend_keys(addresses.size());
-    for (size_t i = 0; i < addresses.size(); i++)
+    for(size_t i = 0; i < addresses.size(); i++)
     {
       public_view_keys[i] = addresses[i].m_view_public_key;
       public_spend_keys[i] = addresses[i].m_spend_public_key;
     }
     // convert to variant
     tx_extra_field field = tx_extra_service_node_register{ public_spend_keys, public_view_keys, portions_for_operator, portions, expiration_timestamp, service_node_signature };
-    // serialize
-    std::ostringstream oss;
-    binary_archive<true> ar(oss);
-    bool r = ::do_serialize(ar, field);
+
+    bool r = add_tx_extra_field_to_tx_extra(tx_extra, field);
     CHECK_AND_NO_ASSERT_MES_L1(r, false, "failed to serialize tx extra registration tx");
-    // append
-    std::string tx_extra_str = oss.str();
-    size_t pos = tx_extra.size();
-    tx_extra.resize(tx_extra.size() + tx_extra_str.size());
-    memcpy(&tx_extra[pos], tx_extra_str.data(), tx_extra_str.size());
+
     return true;
   }
   //---------------------------------------------------------------
@@ -979,9 +1003,9 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool check_outs_valid(const transaction& tx)
   {
-    if(tx.is_deregister_tx())
+    if(tx.get_type() != transaction::type_standard)
     {
-      CHECK_AND_NO_ASSERT_MES(tx.vout.size() == 0, false, "tx version deregister must have 0 outputs, received: " << tx.vout.size() << ", id=" << get_transaction_hash(tx));
+      CHECK_AND_NO_ASSERT_MES(tx.vout.size() == 0, false, "tx type: " << transaction::type_to_string(tx.type) << " must have 0 outputs, received: " << tx.vout.size() << ", id: " << get_transaction_hash(tx));
     }
 
     if(tx.version >= 3)
@@ -991,13 +1015,11 @@ namespace cryptonote
 
     for(const tx_out& out: tx.vout)
     {
-      CHECK_AND_ASSERT_MES(out.target.type() == typeid(txout_to_key), false, "wrong variant type: "
-        << out.target.type().name() << ", expected " << typeid(txout_to_key).name()
-        << ", in transaction id=" << get_transaction_hash(tx));
+      CHECK_AND_ASSERT_MES(out.target.type() == typeid(txout_to_key), false, "wrong variant type: " << out.target.type().name() << ", expected: " << typeid(txout_to_key).name() << ", in transaction id: " << get_transaction_hash(tx));
 
       if (tx.version == 1)
       {
-        CHECK_AND_NO_ASSERT_MES(0 < out.amount, false, "zero amount output in transaction id=" << get_transaction_hash(tx));
+        CHECK_AND_NO_ASSERT_MES(0 < out.amount, false, "zero amount output in transaction id: " << get_transaction_hash(tx));
       }
 
       if(!check_key(boost::get<txout_to_key>(out.target).key))
@@ -1125,33 +1147,47 @@ namespace cryptonote
   //---------------------------------------------------------------
   char const *print_tx_verification_context(tx_verification_context const &tvc, transaction const *tx)
   {
-    static char buf[1024];
+    static char buf[2048];
     buf[0] = 0;
     char *bufPtr = buf;
     char *bufEnd = buf + sizeof(buf);
 
-    if(tvc.m_verification_failed)     bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Verification failed, connection should be dropped, "); //bad tx, should drop connection
-    if(tvc.m_verification_impossible) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Verification impossible, related to alt chain, "); //the transaction is related with an alternative blockchain
-    if(tvc.m_should_be_relayed)       bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "TX should be relayed, ");
-    if(tvc.m_added_to_pool)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "TX added to pool, ");
-    if(tvc.m_low_mixin)               bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Insufficient mixin, ");
-    if(tvc.m_double_spend)            bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Double spend TX, ");
-    if(tvc.m_invalid_input)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid inputs, ");
-    if(tvc.m_invalid_output)          bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid outputs, ");
-    if(tvc.m_too_big)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "TX too big, ");
-    if(tvc.m_overspend)               bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Overspend, ");
-    if(tvc.m_fee_too_low)             bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Fee too low, ");
-    if(tvc.m_not_rct)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "TX is not a valid RCT TX., ");
-    if(tvc.m_invalid_version)         bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "TX has invalid version, ");
+    if(tvc.m_verification_failed)       bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Verification failed, connection should be dropped, "); // bad tx, should drop connection
+    if(tvc.m_verification_impossible)   bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Verification impossible, related to alt chain, "); // the transaction is related with an alternative blockchain
+    if(tvc.m_should_be_relayed)         bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction should be relayed, ");
+    if(tvc.m_added_to_pool)             bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction added to pool, ");
+    if(tvc.m_low_mixin)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Insufficient mixin, ");
+    if(tvc.m_double_spend)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction already been spent., ");
+    if(tvc.m_invalid_input)             bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid inputs, ");
+    if(tvc.m_invalid_output)            bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid outputs, ");
+    if(tvc.m_too_big)                   bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction too big, ");
+    if(tvc.m_overspend)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Overspend, ");
+    if(tvc.m_fee_too_low)               bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Fee too low, ");
+    if(tvc.m_not_rct)                   bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction is not a valid RCT., ");
+    if(tvc.m_invalid_version)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction has invalid version, ");
+    if(tvc.m_invalid_type)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction has invalid type, ");
+    if(tvc.m_key_image_locked_by_snode) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Key image is locked by Service Node, ");
+    if(tvc.m_key_image_blacklisted)     bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Key image is blacklisted on the Service Node Network, ");
 
-    if(tx) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "TX Version: %d", (int)tx->version);
+    if(tx)
+    {
+      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction Version: %d", (int)tx->version);
+      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, " Type: %s", transaction::type_to_string(tx->type));
+    }
+
+    if(bufPtr != buf)
+    {
+      char *last_comma = bufPtr - 2;
+      if(last_comma[0] == ',')
+        last_comma[0] = 0;
+    }
 
     return buf;
   }
   //---------------------------------------------------------------
   char const *print_vote_verification_context(vote_verification_context const &vvc, service_nodes::deregister_vote const *vote)
   {
-    static char buf[1024];
+    static char buf[2048];
     buf[0] = 0;
 
     char *bufPtr = buf;
@@ -1159,11 +1195,18 @@ namespace cryptonote
     if(vvc.m_invalid_block_height)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid block height: %s, ",              vote ? std::to_string(vote->block_height).c_str() : "??");
     if(vvc.m_duplicate_voters)                  bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Voters quorum index was duplicated: %s, ",vote ? std::to_string(vote->voters_quorum_index).c_str() : "??");
     if(vvc.m_voters_quorum_index_out_of_bounds) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Voters quorum index out of bounds: %s, ", vote ? std::to_string(vote->voters_quorum_index).c_str() : "??");
-    if(vvc.m_service_node_index_out_of_bounds)  bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Service node index out of bounds: %s, ",  vote ? std::to_string(vote->service_node_index).c_str() : "??");
+    if(vvc.m_service_node_index_out_of_bounds)  bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Service Node index out of bounds: %s, ",  vote ? std::to_string(vote->service_node_index).c_str() : "??");
     if(vvc.m_signature_not_valid)               bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Signature not valid, ");
     if(vvc.m_added_to_pool)                     bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Added to pool, ");
     if(vvc.m_full_tx_deregister_made)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Full TX deregister made, ");
     if(vvc.m_not_enough_votes)                  bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Not enough votes, ");
+
+    if(bufPtr != buf)
+    {
+      char *last_comma = bufPtr - 2;
+      if(last_comma[0] == ',')
+        last_comma[0] = 0;
+    }
 
     return buf;
   }

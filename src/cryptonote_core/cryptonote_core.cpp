@@ -858,15 +858,6 @@ namespace cryptonote
       }
     }
     bad_semantics_txes_lock.unlock();
-
-    uint8_t version = m_blockchain_storage.get_current_hard_fork_version();
-    const size_t max_tx_version = (version == 1) ? 1 : (version < 16) ? transaction::version_2 : transaction::version_3;
-    if (tx.version == 0 || tx.version > max_tx_version)
-    {
-      tvc.m_verification_failed = true;
-      return false;
-    }
-
     return true;
   }
   //-----------------------------------------------------------------------------------------------
@@ -885,7 +876,7 @@ namespace cryptonote
     if(tx.version >= 2)
     {
       rct::rctSig &rv = tx.rct_signatures;
-      if(rv.type != rct::RCTTypeBulletproof)
+      if(rv.type != rct::RCTTypeBulletproof || rv.type != rct::RCTTypeBulletproof2)
       {
         if(rv.outPk.size() != tx.vout.size())
         {
@@ -960,7 +951,7 @@ namespace cryptonote
         continue;
       }
 
-      if(tx_info[n].tx->version >= transaction::version_2 && !tx_info[n].tx->is_deregister_tx())
+      if(tx_info[n].tx->get_type() != transaction::type_standard)
         continue;
       const rct::rctSig &rv = tx_info[n].tx->rct_signatures;
       switch(rv.type) {
@@ -1003,6 +994,7 @@ namespace cryptonote
           }
           break;
         case rct::RCTTypeBulletproof:
+        case rct::RCTTypeBulletproof1:
           if(!is_canonical_bulletproof_layout(rv.p.bulletproofs))
           {
             MERROR_VER("Bulletproof does not have canonical form");
@@ -1030,7 +1022,7 @@ namespace cryptonote
       {
         if(!tx_info[n].result)
           continue;
-        if(tx_info[n].tx->rct_signatures.type != rct::RCTTypeBulletproof)
+        if(tx_info[n].tx->rct_signatures.type != rct::RCTTypeBulletproof && tx_info[n].tx->rct_signatures.type != rct::RCTTypeBulletproof2)
           continue;
         if(assumed_bad || !rct::verRctSemanticsSimple(tx_info[n].tx->rct_signatures))
         {
@@ -1163,11 +1155,11 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::check_tx_semantic(const transaction& tx, bool keeped_by_block) const
   {
-    if(tx.is_deregister_tx())
+    if(tx.get_type() != transaction::type_standard)
     {
       if(tx.vin.size() != 0)
       {
-        MERROR_VER("tx version deregister must have 0 inputs, received: " << tx.vin.size() << ", rejected for tx id = " << get_transaction_hash(tx));
+        MERROR_VER("tx type: " << transaction::type_to_string(tx.type) << " must have 0 inputs, received: " << tx.vin.size() << ", rejected for tx id = " << get_transaction_hash(tx));
         return false;
       }
     }
@@ -1497,6 +1489,11 @@ namespace cryptonote
   bool core::get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, uint64_t &start_height, std::vector<uint64_t> &distribution, uint64_t &base) const
   {
     return m_blockchain_storage.get_output_distribution(amount, from_height, to_height, start_height, distribution, base);
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::get_output_blacklist(std::vector<uint64_t> &blacklist) const
+  {
+    return m_blockchain_storage.get_output_blacklist(blacklist);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_tx_outputs_gindexs(const crypto::hash& tx_id, std::vector<uint64_t>& indexs) const
@@ -2061,6 +2058,12 @@ namespace cryptonote
   bool core::is_service_node(const crypto::public_key& pubkey) const
   {
     return m_service_node_list.is_service_node(pubkey);
+  }
+  //-----------------------------------------------------------------------------------------------
+  const std::vector<service_nodes::key_image_blacklist_entry> &core::get_service_node_blacklisted_key_images() const
+  {
+    const auto &result = m_service_node_list.get_blacklisted_key_images();
+    return result;
   }
   //-----------------------------------------------------------------------------------------------
   std::vector<service_nodes::service_node_pubkey_info> core::get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const

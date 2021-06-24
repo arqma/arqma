@@ -50,7 +50,7 @@ namespace service_nodes
 
   struct deregister_vote
   {
-    static const uint64_t VOTE_LIFETIME_BY_HEIGHT = (60 * 60 * 2) / DIFFICULTY_TARGET_V16;
+    static const uint64_t VOTE_LIFETIME_BY_HEIGHT = BLOCKS_EXPECTED_IN_HOURS(2);
     static const uint64_t DEREGISTER_LIFETIME_BY_HEIGHT = VOTE_LIFETIME_BY_HEIGHT;
 
     uint64_t block_height;
@@ -77,7 +77,7 @@ namespace service_nodes
 
       void set_relayed(const std::vector<deregister_vote>& votes);
       void remove_expired_votes(uint64_t height);
-      void remove_used_votes(std::vector<cryptonote::transaction> const &txs);
+      void remove_used_votes(std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>> const &txs);
       std::vector<deregister_vote> get_relayable_votes() const;
 
       cryptonote::network_type m_nettype = cryptonote::UNDEFINED;

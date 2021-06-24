@@ -73,29 +73,30 @@ typedef struct mdb_txn_cursors
   MDB_cursor *m_txc_hf_versions;
 
   MDB_cursor *m_txc_service_node_data;
-
+  MDB_cursor *m_txc_output_blacklist;
   MDB_cursor *m_txc_properties;
 } mdb_txn_cursors;
 
-#define m_cur_blocks            m_cursors->m_txc_blocks
-#define m_cur_block_heights	m_cursors->m_txc_block_heights
-#define m_cur_block_info	m_cursors->m_txc_block_info
-#define m_cur_output_txs	m_cursors->m_txc_output_txs
-#define m_cur_output_amounts	m_cursors->m_txc_output_amounts
-#define m_cur_txs               m_cursors->m_txc_txs
-#define m_cur_txs_pruned	m_cursors->m_txc_txs_pruned
-#define m_cur_txs_prunable	m_cursors->m_txc_txs_prunable
-#define m_cur_txs_prunable_hash	m_cursors->m_txc_txs_prunable_hash
-#define m_cur_txs_prunable_tip	m_cursors->m_txc_txs_prunable_tip
-#define m_cur_tx_indices	m_cursors->m_txc_tx_indices
-#define m_cur_tx_outputs	m_cursors->m_txc_tx_outputs
-#define m_cur_spent_keys	m_cursors->m_txc_spent_keys
-#define m_cur_txpool_meta	m_cursors->m_txc_txpool_meta
-#define m_cur_txpool_blob	m_cursors->m_txc_txpool_blob
-#define m_cur_alt_blocks        m_cursors->m_txc_alt_blocks
-#define m_cur_hf_versions	m_cursors->m_txc_hf_versions
-#define m_cur_service_node_data m_cursors->m_txc_service_node_data
-#define m_cur_properties	m_cursors->m_txc_properties
+#define m_cur_blocks                m_cursors->m_txc_blocks
+#define m_cur_block_heights         m_cursors->m_txc_block_heights
+#define m_cur_block_info            m_cursors->m_txc_block_info
+#define m_cur_output_txs            m_cursors->m_txc_output_txs
+#define m_cur_output_amounts        m_cursors->m_txc_output_amounts
+#define m_cur_output_blabklist      m_cursors->m_txc_output_blacklist;
+#define m_cur_txs                   m_cursors->m_txc_txs
+#define m_cur_txs_pruned            m_cursors->m_txc_txs_pruned
+#define m_cur_txs_prunable          m_cursors->m_txc_txs_prunable
+#define m_cur_txs_prunable_hash     m_cursors->m_txc_txs_prunable_hash
+#define m_cur_txs_prunable_tip      m_cursors->m_txc_txs_prunable_tip
+#define m_cur_tx_indices            m_cursors->m_txc_tx_indices
+#define m_cur_tx_outputs            m_cursors->m_txc_tx_outputs
+#define m_cur_spent_keys            m_cursors->m_txc_spent_keys
+#define m_cur_txpool_meta           m_cursors->m_txc_txpool_meta
+#define m_cur_txpool_blob           m_cursors->m_txc_txpool_blob
+#define m_cur_alt_blocks            m_cursors->m_txc_alt_blocks
+#define m_cur_hf_versions           m_cursors->m_txc_hf_versions
+#define m_cur_service_node_data     m_cursors->m_txc_service_node_data
+#define m_cur_properties            m_cursors->m_txc_properties
 
 typedef struct mdb_rflags
 {
@@ -105,6 +106,7 @@ typedef struct mdb_rflags
   bool m_rf_block_info;
   bool m_rf_output_txs;
   bool m_rf_output_amounts;
+  bool m_rf_output_blacklist;
   bool m_rf_txs;
   bool m_rf_txs_pruned;
   bool m_rf_txs_prunable;
@@ -353,6 +355,8 @@ public:
   std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> get_output_histogram(const std::vector<uint64_t> &amounts, bool unlocked, uint64_t recent_cutoff, uint64_t min_count) const;
 
   bool get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, std::vector<uint64_t> &distribution, uint64_t &base) const;
+  virtual bool get_output_blacklist(std::vector<uint64_t> &blacklist) const override;
+  virtual void add_output_blacklist(std::vector<uint64_t> const &blacklist) override;
 
   // helper functions
   static int compare_uint64(const MDB_val *a, const MDB_val *b);
@@ -442,6 +446,9 @@ private:
   // migrate from DB version 3 to 4
   void migrate_3_4();
 
+  // migrate from DB version 4 to 5
+  void migrate_4_5();
+
   void cleanup_batch();
 
   virtual void set_service_node_data(const std::string &data);
@@ -465,6 +472,7 @@ private:
 
   MDB_dbi m_output_txs;
   MDB_dbi m_output_amounts;
+  MDB_dbi m_output_blacklist;
 
   MDB_dbi m_spent_keys;
 

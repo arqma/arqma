@@ -74,13 +74,8 @@
 #include "common/int-util.h"
 #include "common/threadpool.h"
 #include "daemonizer/posix_fork.h"
+
 #ifdef WIN32
-#include <cstdlib>
-#include <fcntl.h>
-#include <unistd.h>
-#include <stdexcept>
-#include <string>
-#include <sys/stat.h>
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
 #endif
@@ -173,7 +168,7 @@ namespace
 #endif
     std::cout << prompt;
     if (yesno)
-      std::cout << "  (Y/Yes/N/No)";
+      std::cout << " (Y/Yes/N/No)";
     std::cout << ": " << std::flush;
 
     std::string buf;
@@ -220,17 +215,6 @@ namespace
   boost::optional<tools::password_container> default_password_prompter(bool verify)
   {
     return password_prompter(verify ? sw::tr("Enter a new password for the wallet") : sw::tr("Wallet password"), verify);
-  }
-
-  bool yes_no_parser(char const *prompt)
-  {
-    std::string y_n_parser = std::string(prompt) + " (Y/Yes/N/No): ";
-    std::string result = input_line(y_n_parser);
-
-    if(std::cin.eof())
-      return false;
-
-    return command_line::is_yes(result);
   }
 
   inline std::string interpret_rpc_response(bool ok, const std::string& status)
@@ -2428,15 +2412,6 @@ bool simple_wallet::set_track_uses(const std::vector<std::string> &args/* = std:
   return true;
 }
 
-bool simple_wallet::set_fork_on_autostake(const std::vector<std::string> &args)
-{
-  parse_bool_and_use(args[1], [&](bool r)
-  {
-    m_wallet->fork_on_autostake(r);
-  });
-  return true;
-}
-
 bool simple_wallet::help(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
 {
   if(args.empty())
@@ -2510,6 +2485,14 @@ simple_wallet::simple_wallet()
                            std::bind(&simple_wallet::stake, this, pl::_1),
                            tr(command_helper::USAGE_STAKE),
                            tr(command_helper::STAKE));
+  m_cmd_binder.set_handler("request_stake_unlock",
+                           std::bind(&simple_wallet::request_stake_unlock, this, pl::_1),
+                           tr(command_helper::USAGE_UNLOCK_HELPER),
+                           tr(command_helper::UNLOCK_HELPER));
+  m_cmd_binder.set_handler("print_locked_stakes",
+                           std::bind(&simple_wallet::print_locked_stakes, this, pl::_1),
+                           tr(command_helper::USAGE_LOCKED_STAKES),
+                           tr(command_helper::LOCKED_STAKES_HELPER));
   m_cmd_binder.set_handler("sweep_unmixable",
                            std::bind(&simple_wallet::sweep_unmixable, this, pl::_1),
                            tr(command_helper::SWEEP_UNMIXABLE));
@@ -2825,7 +2808,6 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     success_msg_writer() << "ignore-fractional-outputs = " << m_wallet->ignore_fractional_outputs();
     success_msg_writer() << "device_name = " << m_wallet->device_name();
     success_msg_writer() << "track-uses = " << m_wallet->track_uses();
-    success_msg_writer() << "fork-on-autostake = " << m_wallet->fork_on_autostake();
     return true;
   }
   else
@@ -2882,7 +2864,6 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     CHECK_SIMPLE_VARIABLE("segregation-height", set_segregation_height, tr("unsigned integer"));
     CHECK_SIMPLE_VARIABLE("ignore-fractional-outputs", set_ignore_fractional_outputs, tr("0 or 1"));
     CHECK_SIMPLE_VARIABLE("track-uses", set_track_uses, tr("0 or 1"));
-    CHECK_SIMPLE_VARIABLE("fork-on-autostake", set_fork_on_autostake, tr("0 or 1"));
   }
   fail_msg_writer() << tr("set: unrecognized argument(s)");
   return true;
@@ -2979,8 +2960,9 @@ bool simple_wallet::ask_wallet_create_if_needed()
           bool ok = true;
           if (!m_restoring)
           {
-            message_writer() << tr("No wallet found with that name. Confirm creation of new wallet named: ") << wallet_path;
-            confirm_creation = input_line("", true);
+            std::string prompt << tr("No wallet found with that name. Confirm creation of new wallet named: ");
+            prompt += "\"" + wallet_path + "\"";
+            confirm_creation = input_line(prompt, true);
             if(std::cin.eof())
             {
               LOG_ERROR("Unexpected std::cin.eof() - Exited simple_wallet::ask_wallet_create_if_needed()");
@@ -4450,6 +4432,7 @@ bool simple_wallet::refresh_main(uint64_t start_height, enum ResetType reset, bo
     m_in_manual_refresh.store(true, std::memory_order_relaxed);
     epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){m_in_manual_refresh.store(false, std::memory_order_relaxed);});
     m_wallet->refresh(m_wallet->is_trusted_daemon(), start_height, fetched_blocks);
+    m_has_locked_key_images = print_locked_stakes_main({}, false);
 
     if(reset == ResetSoftKeepKI)
     {
@@ -5037,33 +5020,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     local_args.erase(local_args.begin());
 
   priority = m_wallet->adjust_priority(priority);
-
-  size_t fake_outs_count = 0;
-  if(local_args.size() > 0) {
-    size_t ring_size;
-    if(!epee::string_tools::get_xtype_from_string(ring_size, local_args[0]))
-    {
-      fake_outs_count = m_wallet->default_mixin();
-      if (fake_outs_count == 0)
-        fake_outs_count = config::tx_settings::tx_mixin;
-    }
-    else if (ring_size == 0)
-    {
-      fail_msg_writer() << tr("Ring size must not be 0");
-      return true;
-    }
-    else
-    {
-      fake_outs_count = ring_size - 1;
-      local_args.erase(local_args.begin());
-    }
-  }
-  uint64_t adjusted_fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
-  if (adjusted_fake_outs_count > fake_outs_count)
-  {
-    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count + 1) % (adjusted_fake_outs_count + 1)).str();
-    return true;
-  }
+  size_t fake_outs_count = config::tx_settings::tx_mixin;
 
   const size_t min_args = (transfer_type == TransferLocked) ? 2 : 1;
   if(local_args.size() < min_args)
@@ -5463,23 +5420,14 @@ bool simple_wallet::locked_sweep_all(const std::vector<std::string> &args_)
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool simple_wallet::register_service_node_main(const std::vector<std::string>& service_node_key_as_str, uint64_t expiration_timestamp, const cryptonote::account_public_address& address, uint64_t priority, const std::vector<uint64_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indicies, bool autostake)
+bool simple_wallet::register_service_node_main(const std::vector<std::string>& service_node_key_as_str, uint64_t expiration_timestamp, const cryptonote::account_public_address& address, uint64_t priority, const std::vector<uint64_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indicies)
 {
-  if(autostake)
-  {
-    if(!try_connect_to_daemon(true))
-      return true;
-  }
-
   m_wallet->refresh(false);
   if(expiration_timestamp <= (uint64_t)time(nullptr) + 600 /* 10 minutes */)
   {
     fail_msg_writer() << tr("This registration has expired.");
     return false;
   }
-
-  uint64_t staking_requirement_lock_blocks = service_nodes::get_staking_requirement_lock_blocks(m_wallet->nettype());
-  uint64_t locked_blocks = staking_requirement_lock_blocks + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
 
   std::string err, err2;
   uint64_t bc_height = std::max(m_wallet->get_daemon_blockchain_height(err), m_wallet->get_daemon_blockchain_target_height(err2));
@@ -5492,13 +5440,8 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
 
   if(!m_wallet->is_synced() || bc_height < 10)
   {
-    if(autostake)
-    {
-      fail_msg_writer() << tr("Wallet is yet not synced.");
-      return true;
-    }
     fail_msg_writer() << tr("Wallet not synced. Best guess for the height is ") << bc_height;
-    std::string accepted = input_line("Is this correct [y/yes/n/no]? ");
+    std::string accepted = input_line("Is this correct [y/yes/n/no]? ", true);
     if(std::cin.eof())
       return true;
     if(!command_line::is_yes(accepted))
@@ -5506,7 +5449,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
       std::string height = input_line(tr("Please enter the current network block height (0 to cancel): "));
       try
       {
-        bc_height = boost::lexicat_cast<uint64_t>(height);
+        bc_height = boost::lexical_cast<uint64_t>(height);
       }
       catch(const std::exception &e)
       {
@@ -5517,35 +5460,7 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
     }
   }
 
-  try
-  (
-    const auto& response = m_wallet->get_service_nodes(service_node_key_as_str);
-    if(response.service_node_states.size() >= 1)
-    {
-      bool can_reregister = false;
-      if(m_wallet->use_fork_rules(cryptonote::network_version_16_sn, 0))
-      {
-        cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry const &node_info = response.service_node_states[0];
-        uint64_t expiry_height = node_info.registration_height + staking_requirement_lock_blocks;
-        if(bc_height >= expiry_height)
-          can_reregister = true;
-      }
-
-      if(!can_reregister)
-      {
-        if(!autostake)
-          fail_msg_writer() << tr("This service node is already registered");
-        return true;
-      }
-    }
-  }
-  catch(const std::exception& e)
-  {
-    fail_msg_writer() << e.what();
-    return true;
-  }
-
-  uint64_t unlock_block = bc_height + locked_blocks;
+  uint64_t unlock_block = 0; // No Unlock block -> INFINITE STAKING
 
   uint64_t expected_staking_requirement = std::max(service_nodes::get_staking_requirement(m_wallet->nettype(), bc_height), service_nodes::get_staking_requirement(m_wallet->nettype(), bc_height + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS));
 
@@ -5582,112 +5497,15 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
   de.amount = amount_payable_by_operator;
   dsts.push_back(de);
 
-  bool submitted_to_network = false;
   try
   {
-    // figure out what tx will be necessary
-    auto ptx_vector = m_wallet->create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, true);
+    cryptonote::address_parse_info dest = {};
+    dest.address = address;
 
-    if(ptx_vector.empty())
-    {
-      fail_msg_writer() << tr("No outputs found, or daemon is not ready");
-      return true;
-    }
-
-    if(ptx_vector.size() > 1)
-    {
-      fail_msg_writer() << tr("Too many outputs. Please sweep_all first");
-      return true;
-    }
-
-    // give user total and fee, and prompt to confirm
-    uint64_t total_fee = 0, total_sent = 0, change = 0;
-    for (size_t n = 0; n < ptx_vector.size(); ++n)
-    {
-      ptx_vector[n].tx.version = std::max((size_t)transaction::version_3, ptx_vector[n].tx.version);
-      total_fee += ptx_vector[n].fee;
-      for (auto i: ptx_vector[n].selected_transfers)
-        total_sent += m_wallet->get_transfer_details(i).amount();
-      total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
-      change += ptx_vector[n].change_dts.amount;
-    }
-
-    std::ostringstream prompt;
-    for (size_t n = 0; n < ptx_vector.size(); ++n)
-    {
-      prompt << tr("\nTransaction ") << (n + 1) << "/" << ptx_vector.size() << ":\n";
-      subaddr_indices.clear();
-      for (uint32_t i : ptx_vector[n].construction_data.subaddr_indices)
-        subaddr_indices.insert(i);
-      for (uint32_t i : subaddr_indices)
-        prompt << boost::format(tr("Spending from address index %d\n")) % i;
-      if(subaddr_indices.size() > 1)
-        prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
-    }
-    if(m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
-    {
-      fail_msg_writer() << tr("Error printing ring members");
-      return true;
-    }
-    if(ptx_vector.size() > 1)
-    {
-      prompt << boost::format(tr("Staking %s for %u blocks in %llu transactions for a total fee of %s.  Is this okay?")) %
-        print_money(total_sent) % locked_blocks % ((unsigned long long)ptx_vector.size()) % print_money(total_fee);
-    }
-    else
-    {
-      prompt << boost::format(tr("Staking %s for %u blocks a total fee of %s.  Is this okay?")) %
-        print_money(total_sent) % locked_blocks % print_money(total_fee);
-    }
-    if(autostake)
-    {
-      success_msg_writer() << prompt.str();
-    }
-    else
-    {
-      std::string accepted = input_line(prompt.str());
-      if(std::cin.eof())
-        return true;
-      if(!command_line::is_yes(accepted))
-      {
-        fail_msg_writer() << tr("transaction cancelled.");
-
-        return true;
-      }
-    }
-
-    // actually commit the transactions
-    if(m_wallet->multisig())
-    {
-      bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_arqma_tx");
-      if(!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_arqma_tx";
-      }
-    }
-    else if(m_wallet->watch_only())
-    {
-      bool r = m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx");
-      if(!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "unsigned_arqma_tx";
-      }
-    }
-    else
-    {
-      commit_or_save(ptx_vector, m_do_not_relay);
-      submitted_to_network = true;
-    }
+    auto ptx_vector = m_wallet->create_transactions_2(dsts, fake_outs_count, unlock_block, priority, extra, m_current_subaddress_account, subaddr_indices, true);
+    sweep_main_internal(sweep_type_t::register_stake, ptx_vector, dsts);
   }
-  catch (const std::exception& e)
+  catch (const std::exception &e)
   {
     handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
   }
@@ -5697,23 +5515,9 @@ bool simple_wallet::register_service_node_main(const std::vector<std::string>& s
     fail_msg_writer() << tr("unknown error");
   }
 
-  if(submitted_to_network && !autostake)
-  {
-    success_msg_writer() << tr("Wait for the transaction to be included in block before registration is complete.\nTo check status use \"print_sn\" command in daemon.");
-  }
-
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-static bool autostaking_warning()
-{
-  success_msg_writer(false/*color*/) << tr(command_helper::AUTOSTAKE_WARN);
-
-  return yes_no_parser("Accept auto staking towards a reserved service node");
-}
-//----------------------------------------------------------------------------------------------------
-const int AUTOSTAKE_INTERVAL = 60 * 40;
-
 bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 {
   if(!try_connect_to_daemon())
@@ -5737,7 +5541,7 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
 
   if(local_args.size() < 6)
   {
-    fail_msg_writer() << tr("Usage: register_service_node [index=<N1>[,<N2>,...]] [priority] [auto] <operator cut> <address1> <share1 %> [<address2> <share2 %> [...]] <expiration timestamp> <service node pubkey> <signature>");
+    fail_msg_writer() << tr(command_helper::USAGE_REGISTER_SERVICE_NODE);
     fail_msg_writer() << tr("");
     fail_msg_writer() << tr("Prepare this command in the daemon with the prepare_registration command");
     fail_msg_writer() << tr("");
@@ -5749,20 +5553,14 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
   std::vector<cryptonote::account_public_address> addresses;
   std::vector<uint64_t> portions;
   uint64_t portions_for_operator;
-  bool autostake;
   std::string err_msg;
-  if(!service_nodes::convert_registration_args(m_wallet->nettype(), address_portions_args, addresses, portions, portions_for_operator, autostake, err_msg))
+  if(!service_nodes::convert_registration_args(m_wallet->nettype(), address_portions_args, addresses, portions, portions_for_operator, err_msg))
   {
     fail_msg_writer() << tr("Could not convert registration args");
     if(err_msg != "")
       fail_msg_writer() << err_msg;
-    fail_msg_writer() << tr("Usage: register_service_node [index=<N1>[,<N2>,...]] [priority] [auto] <operator cut> <address1> <share1 %> [<address2> <share2 %> [...]] <expiration timestamp> <service node pubkey> <signature>");
-    return true;
-  }
 
-  if(m_wallet->ask_password() && autostake)
-  {
-    fail_msg_writer() << tr(command_helper::AUTOSTAKE_PWD);
+    fail_msg_writer() << tr(command_helper::USAGE_REGISTER_SERVICE_NODE);
     return true;
   }
 
@@ -5818,244 +5616,280 @@ bool simple_wallet::register_service_node(const std::vector<std::string> &args_)
   }
 
   add_service_node_contributor_to_tx_extra(extra, address);
+  register_service_node_main(service_node_key_as_str, expiration_timestamp, address, priority, portions, extra, subaddr_indices);
 
-  if(autostake)
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
+bool simple_wallet::stake(const std::vector<std::string> &args_)
+{
+  if(!try_connect_to_daemon())
+    return true;
+
+  crypto::public_key service_node_key = {};
+  uint32_t priority = 0;
+  std::set<uint32_t> subaddr_indices = {};
+  uint64_t amount = 0;
+  double amount_fraction = 0;
   {
-    bool is_open_service_node = portions_for_operator != STAKING_SHARE_PARTS;
-    if(!is_open_service_node || portions.size() > 1)
+    std::vector<std::string> local_args = args_;
+    if(local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
     {
-      if(!autostaking_warning())
+      if(!parse_subaddress_indices(local_args[0], subarrd_indices))
         return true;
+      local_args.erase(local_args.begin());
     }
 
-    m_cmd_binder.stop_handling();
-#ifndef WIN32
-    if(m_wallet->fork_on_autostake())
+    if(local_args.size() > 0 && parse_priority(local_args[0], priority))
+      local_args.erase(local_args.begin());
+    priority = m_wallet->adjust_priority(priority);
+
+    if(local_args.size() < 2)
     {
-      success_msg_writer(true) << tr("Entering autostaking mode, forking to background...");
-      tools::threadpool::getInstance().stop();
-      posix::fork("");
-      tools::threadpool::getInstance().start();
+      fail_msg_writer() << tr(USAGE_STAKE);
+      return true;
+    }
+
+    if(!epee::string_tools::hex_to_pod(local_args[0], service_node_key))
+    {
+      fail_msg_writer() << tr("Failed to parse Service Node pubkey");
+      return true;
+    }
+
+    if(local_args[1].back == '%')
+    {
+      local_args[1].pop_back();
+      amount = 0;
+      try
+      {
+        amount_fraction = boost::lexical_cast<double>(local_args[2]) / 100.0;
+      }
+      catch(const std::exception &e)
+      {
+        fail_msg_writer() << tr("Invalid percentage");
+        return true;
+      }
+      if(amount_friction < 0 || amount_friction > 1)
+      {
+        fail_msg_writer() << tr("Invalid percentage");
+        return true;
+      }
     }
     else
-#endif
     {
-      success_msg_writer(true) << tr("Entering autostaking mode, forking to background...");
-    }
-    while(true)
-    {
-      if(!register_service_node_main(service_node_key_as_str, expiration_timestamp, address, priority, portions, extra, subaddr_indices, autostake))
-        break;
-      m_idle_cond.wait_for(lock, boost::chrono::seconds(AUTOSTAKE_INTERVAL));
+      if(!cryptonote::parse_amount(amount, local_args[1]) || amount == 0)
+      {
+        fail_msg_writer() << tr("amount is wrong: ") << local_args[2] << ", " << tr("expected number from ") << print_money(1) << " to " << print_money(std::numeric_limits<uint64_t>::max());
+        return true;
+      }
     }
   }
-  else
+
+  // Try STAKING
+  SCOPED_WALLET_UNLOCK()
   {
-    register_service_node_main(service_node_key_as_str, expiration_timestamp, address, priority, portions, extra, subaddr_indices, autostake);
+    m_wallet->refresh(false);
+    try
+    {
+      address_parse_info info = {};
+      info.address = m_wallet->get_address();
+
+      time_t begin_construct_time = time(nullptr);
+      std::vector<tools::wallet2::pending_tx> ptx_vector;
+
+      tools::wallet2::stake_result stake_result = m_wallet->create_stake_tx(ptx_vector, service_node_key, info, amount, amount_fraction, priority, m_current_subaddress_account, subaddr_indices);
+      if(stake_result.status != tools::wallet2::stake_result_status::success)
+      {
+        fail_msg_writer() << stake_result.msg;
+        return true;
+      }
+
+      if(!stake_result.msg.empty())
+        tools::msg_writer() << stake_result.msg;
+
+      if(!sweep_main_internal(sweep_type_t::stake, ptx_vector, info))
+      {
+        fail_msg_writer() << tr("Sending Stake_TX failed");
+        return true;
+      }
+
+      time_t end_cintruct_time = time(nullptr);
+      time_t construct_time = end_construct_time - begin_construct_time;
+      if(construct_time > 600/*value in seconds*/)
+      {
+        fail_msg_writer() << tr("Staking command has timed out due to waiting longer than 10 mins.\nThis prevents the staking transaction from becoming invalid due to blocks mined interim. Please try again");
+        return true;
+      }
+    }
+    catch(const std::exception &e)
+    {
+      handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
+    }
+    catch(...)
+    {
+      LOG_ERROR("unknown error");
+      fail_msg_writer() << tr("unknown error");
+    }
   }
 
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const cryptonote::address_parse_info& parse_info, uint32_t priority, std::set<uint32_t>& subaddr_indices, uint64_t amount, double amount_fraction, bool autostake)
+bool simple_wallet::request_stake_unlock(const std::vector<std::string> &args_)
 {
-  if(autostake)
+  if(!try_connect_to_daemon())
+    return true;
+
+  if(args_.size() != 1)
   {
-    if(!try_connect_to_daemon(true))
-      return true;
-  }
-
-  m_wallet->refresh(false);
-
-  time_t begin_construct_time = time(nullptr);
-  std::string err, err2;
-  uint64_t bc_height = std::max(m_wallet->get_daemon_blockchain_height(err), m_wallet->get_daemon_blockchain_target_height(err2));
-
-  if(!err.empty() || !err2.empty())
-  {
-    fail_msg_writer() << tr("unable to get network blockchain height from daemon: ") << (err.empty() ? err2 : err);
+    fail_msg_writer() << tr(USAGE_REQUEST_STAKE_UNLOCK);
     return true;
   }
 
-  if(!m_wallet->is_synced() || bc_height < 10)
+  crypto::public_key snode_key;
+  if(!epee::string_tools::hex_to_pod(args_[0], snode_key))
   {
-    if(autostake)
-    {
-      fail_msg_writer() << tr("Wallet is yet not synced");
-      return true;
-    }
-    fail_msg_writer() << tr("Wallet not synced. Best guess for the height is ") << bc_height;
-    std::string accepted = input_line("Is this correct [y/yes/n/no]? ");
-    if(std::cin.eof())
-      return true;
-    if(!command_line::is_yes(accepted))
-    {
-      std::string height = input_line(tr("Please enter the current network block height (0 to cancel): "));
-      try
-      {
-        bc_height = boost::lexical_cast<uint64_t>(height);
-      }
-      catch(const std::exception &e)
-      {
-        fail_msg_writer() << tr("Invalid block height");
-        return true;
-      }
-      if(bc_height == 0)
-        return true;
-    }
-  }
-
-  uint64_t staking_requirement_lock_blocks = service_nodes::get_staking_requirement_lock_blocks(m_wallet->nettype());
-  uint64_t locked_blocks = staking_requirement_lock_blocks + STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS;
-  uint64_t unlock_block = bc_height + locked_blocks;
-
-  try
-  {
-    const tools::stake_check_result res = m_wallet->check_stake_allowed(service_node_key, parse_info, amount, amount_fraction);
-    if(res == tools::stake_check_result::try_later)
-    {
-      return true;
-    }
-    else if(res == tools::stake_check_result::not_allowed)
-    {
-      return false;
-    }
-  }
-  catch(const std::exception& e)
-  {
-    fail_msg_writer() << e.what();
+    fail_msg_writer() << tr("Failed to parse Service Node pubkey: ") << args_[0];
     return true;
   }
 
-  std::vector<uint8_t> extra;
+  SCOPED_WALLET_UNLOCK();
 
-  add_service_node_pubkey_to_tx_extra(extra, service_node_key);
+  std::vector<tools::wallet2::pending_tx> ptx_vector;
+  {
+    ptx_vector.push_back({});
+    tools::wallet2::pending_tx &ptx = ptx_vector.back();
+    ptx.tx.vector = cryptonote::transaction::version_3;
+    if(!ptx.tx.set_type(cryptonote::transaction::type_key_image_unlock))
+    {
+      fail_msg_writer() << tr("Failed to construct key_image unlocking transaction");
+      return true;
+    }
 
-  add_service_node_contributor_to_tx_extra(extra, parse_info.address);
+    using namespace cryptonote;
+    boost::optional<std::string> failed;
+    const std::vector<COMMAND_RPC_GET_SERVICE_NODES::response::entry> response = m_wallet->get_service_nodes({args_[0]}, failed);
+    if(failed)
+    {
+      fail_msg_writer() << *failed;
+      return true;
+    }
 
-  vector<cryptonote::tx_destination_entry> dsts;
-  cryptonote::tx_destination_entry de;
-  de.addr = parse_info.address;
-  de.is_subaddress = false;
-  de.amount = amount;
-  dsts.push_back(de);
+    if(response.empty())
+    {
+      fail_msg_writer() << tr("No service node is known for: ") << args_[0];
+      return true;
+    }
+
+    cryptonote::account_public_address const primary_address = m_wallet->get_address();
+    std::vector<COMMAND_RPC_GET_SERVICE_NODES::response::contribution> const *contributions = nullptr;
+    COMMAND_RPC_GET_SERVICE_NODES::response::entry const &node_info = response[0];
+    for(COMMAND_RPC_GET_SERVICE_NODES::response::contributor const &contributor : node_info.contributors)
+    {
+      address_parse_info address_info = {};
+      cryptonote::get_account_address_from_str(address_info, m_wallet->nettype(), contributor.address);
+      if(address_info.address != primary_address)
+        continue;
+
+      contributions = &contributor.locked_contributions;
+      break;
+    }
+
+    if(!contributions)
+    {
+      fail_msg_writer() << tr("No contributions recognised by this wallet in service node: ") << args_[0];
+      return true;
+    }
+
+    if(contributions->empty())
+    {
+      fail_msg_writer() << tr("Unexpected 0 contributions in service node for this wallet ") << args_[0];
+      return true;
+    }
+
+    cryptonote::tx_extra_tx_key_image_unlock unlock = {};
+    {
+      std::string msg_buf;
+      msg_buf.reserve(512);
+
+      COMMAND_RPC_GET_SERVICE_NODES::response::contribution const &contribution = (*contributions)[0];
+      if(node_info.requested_unlock_height != 0)
+      {
+        msg_buf.append("Key image: ");
+        msg_buf.append(contribution.key_image);
+        msg_buf.append(" has already been requested to be unlocked, unlocking at height: ");
+        msg_buf.append(std::to_string(node_info.requested_unlock_height));
+        fail_msg_writer() << msg_buf;
+        return true;
+      }
+
+      msg_buf.append("You are requesting to unlock a stake of: ");
+      msg_buf.append(cryptonote::print_money(contribution.amount));
+      msg_buf.append(" ARQ from the ArQmA Service Node Network.\nThis will deactivate your Service Node: ");
+      msg_buf.append(node_info.service_node_pubkey);
+      msg_buf.append(" and schedule the Service Node for expiration along with all other contributions made to be unlocked.\n\n");
+
+      uint64_t curr_height = 0;
+      {
+        std::string err_msg;
+        curr_height = m_wallet->get_daemon_blockchain_height(err_msg);
+        if(!err_msg.empty())
+        {
+          fail_msg_writer() << tr("unable to get network blockchain height from daemon: ") << err_msg;
+          return true;
+        }
+      }
+
+      uint64_t unlock_height = service_nodes::get_locked_key_image_unlock_height(m_wallet->nettype(), node_info.registration_height, curr_height);
+      msg_buf.append("You will continue receiving rewards until the service node expires at the estimated height: ");
+      msg_buf.append(std::to_string(unlock_height));
+
+      cryptonote::blobdata binary_buf;
+      if(!string_tools::parse_hexstr_to_binbuff(contribution.key_image, binary_buf) || binary_buf.size() != sizeof(crypto::key_image))
+      {
+        fail_msg_writer() << tr("Failed to parse hex representation of key image: ") << contribution.key_image;
+        return true;
+      }
+
+      unlock.key_image = *reinterpret_cast<const crypto::key_image*>(binary_buf.data());
+      if(!m_wallet->generate_signature_for_request_stake_unlock(unlock.key_image, unlock.signature, unlock.nonce))
+      {
+        fail_msg_writer() << tr("Failed to generate signature to sign request. The key image: ") << contribution.key_image << (" doesn't belong to this wallet");
+        return true;
+      }
+
+      success_msg_writer() << msg_buf;
+    }
+
+    add_service_node_pubkey_to_tx_extra(ptx.tx.extra, snode_key);
+    add_tx_key_image_unlock_to_tx_extra(ptx.tx.extra, unlock);
+  }
+
+  if(m_wallet->multisig())
+  {
+    fail_msg_writer() << tr("MultiSig Wallets stake unlock is not supported");
+    return true;
+  }
+
+  if(m_wallet->watch_only())
+  {
+    if(m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx"))
+      success_msg_writer(true) << tr("Unsigned transaction successfully written to file: ") << "unsigned_arqma_tx";
+    else
+      fail_msg_writer() << tr("Failed to write transaction to file");
+
+    return true;
+  }
 
   try
   {
-    // figure out what tx will be necessary
-    auto ptx_vector = m_wallet->create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, true);
-
-    if(ptx_vector.empty())
-    {
-      fail_msg_writer() << tr("No outputs found, or daemon is not ready");
-      return true;
-    }
-
-    if(ptx_vector.size() > 1)
-    {
-      fail_msg_writer() << tr("Too many outputs. Please do sweep_all first");
-      return true;
-    }
-
-    // give user total and fee, and prompt to confirm
-    uint64_t total_fee = 0, total_sent = 0, change = 0;
-    for (size_t n = 0; n < ptx_vector.size(); ++n)
-    {
-      ptx_vector[n].tx.version = std::max((size_t)transaction::version_3, ptx_vector[n].tx.version);
-      total_fee += ptx_vector[n].fee;
-      for (auto i: ptx_vector[n].selected_transfers)
-        total_sent += m_wallet->get_transfer_details(i).amount();
-      total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
-      change += ptx_vector[n].change_dts.amount;
-    }
-
-    std::ostringstream prompt;
-    for (size_t n = 0; n < ptx_vector.size(); ++n)
-    {
-      prompt << tr("\nTransaction ") << (n + 1) << "/" << ptx_vector.size() << ":\n";
-      subaddr_indices.clear();
-      for (uint32_t i : ptx_vector[n].construction_data.subaddr_indices)
-        subaddr_indices.insert(i);
-      for (uint32_t i : subaddr_indices)
-        prompt << boost::format(tr("Spending from address index %d\n")) % i;
-      if(subaddr_indices.size() > 1)
-        prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
-    }
-    if(m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
-    {
-      fail_msg_writer() << tr("Error printing ring members");
-      return true;
-    }
-    if(ptx_vector.size() > 1) {
-      prompt << boost::format(tr("Staking %s for %u blocks in %llu transactions for a total fee of %s.")) %
-        print_money(total_sent) % locked_blocks % ((unsigned long long)ptx_vector.size()) % print_money(total_fee);
-    }
-    else
-    {
-      prompt << boost::format(tr("Staking %s for %u blocks a total fee of %s.")) %
-        print_money(total_sent) % locked_blocks % print_money(total_fee);
-    }
-    if(autostake)
-    {
-      success_msg_writer() << prompt.str();
-    }
-    else
-    {
-      std::string accepted = input_line(prompt.str());
-      if(std::cin.eof())
-        return true;
-      if(!command_line::is_yes(accepted))
-      {
-        fail_msg_writer() << tr("transaction cancelled.");
-
-        return true;
-      }
-    }
-
-    time_t end_construct_time = time(nullptr);
-    time_t construct_time = end_construct_time - begin_construct_time;
-
-    if(!autostake && construct_time > (60 * 10))
-    {
-      fail_msg_writer() << tr("Staking command took more than 10 minutes and has been cancelled. Please try again");
-      return true;
-    }
-
-    // actually commit the transactions
-    if (m_wallet->multisig())
-    {
-      bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_arqma_tx");
-      if (!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_arqma_tx";
-      }
-    }
-    else if (m_wallet->watch_only())
-    {
-      bool r = m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx");
-      if (!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "unsigned_arqma_tx";
-      }
-    }
-    else
-    {
-      commit_or_save(ptx_vector, m_do_not_relay);
-    }
+    commit_or_save(ptx.vector, m_do_not_relay);
   }
-  catch (const std::exception& e)
+  catch(const std::exception &e)
   {
     handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
   }
-  catch (...)
+  catch(...)
   {
     LOG_ERROR("unknown error");
     fail_msg_writer() << tr("unknown error");
@@ -6064,184 +5898,157 @@ bool simple_wallet::stake_main(const crypto::public_key& service_node_key, const
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool simple_wallet::stake(const std::vector<std::string> &args_)
+bool simple_wallet::print_locked_stakes_main(const std::vector<std::string> &args_, bool print_result)
 {
-  // stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <contributor address> <amount|percent%>
+  if(!try_connect_to_daemon())
+    return false;
 
-  if (!try_connect_to_daemon())
-    return true;
-
-  std::vector<std::string> local_args = args_;
-
-  std::set<uint32_t> subaddr_indices;
-  if(local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
+  bool has_locked_stakes = false;
+  std::string msg_buf;
   {
-    if(!parse_subaddress_indices(local_args[0], subaddr_indices))
-      return true;
-    local_args.erase(local_args.begin());
-  }
-
-  uint32_t priority = 0;
-  if(local_args.size() > 0 && parse_priority(local_args[0], priority))
-    local_args.erase(local_args.begin());
-
-  priority = m_wallet->adjust_priority(priority);
-
-  bool autostake = false;
-  if(!local_args.empty() && local_args[0] == "auto")
-  {
-    autostake = true;
-    local_args.erase(local_args.begin());
-  }
-
-  if(local_args.size() < 2)
-  {
-    fail_msg_writer() << tr("Usage: stake [index=<N1>[,<N2>,...]] [priority] [auto] <service node pubkey> <address> [<amount|percent%>]");
-    return true;
-  }
-
-  if(m_wallet->ask_password() && autostake)
-  {
-    fail_msg_writer() << tr(command_helper::AUTOSTAKE_PWD);
-    return true;
-  }
-
-  SCOPED_WALLET_UNLOCK();
-
-  crypto::public_key service_node_key;
-  if(!epee::string_tools::hex_to_pod(local_args[0], service_node_key))
-  {
-    fail_msg_writer() << tr("failed to parse service node pubkey");
-    return true;
-  }
-
-  uint64_t amount;
-  double amount_fraction;
-  if(local_args.size() < 3)
-  {
-    amount = 0;
-    amount_fraction = 0;
-  }
-  else if(local_args[2].back() == '%')
-  {
-    local_args[2].pop_back();
-    amount = 0;
-    try
+    using namespace cryptonote;
+    boost::optional<std::string> failed;
+    const std::vector<COMMAND_RPC_GET_SERVICE_NODES::response::entry> response = m_wallet->get_all_service_nodes(failed);
+    if(failed)
     {
-      amount_fraction = boost::lexical_cast<double>(local_args[2]) / 100.0;
+      fail_msg_writer() << *failed;
+      return has_locked_stakes;
     }
-    catch(const std::exception &e)
+
+    cryptonote::account_public_address const primary_address = m_wallet->get_address();
+    for(COMMAND_RPC_GET_SERVICE_NODES::response::entry const &node_info : response)
     {
-      fail_msg_writer() << tr("Invalid percentage");
-      return true;
-    }
-    if(amount_fraction < 0 || amount_fraction > 1)
-    {
-      fail_msg_writer() << tr("Invalid percentage");
-      return true;
-    }
-  }
-  else
-  {
-    amount_fraction = 0;
-    if(!cryptonote::parse_amount(amount, local_args[2]) || amount == 0)
-    {
-      fail_msg_writer() << tr("amount is wrong: ") << local_args[2] << ", " << tr("expected number from ") << print_money(1) << " to " << print_money(std::numeric_limits<uint64_t>::max());
-      return true;
-    }
-  }
-
-  std::string const &address_str = local_args[1];
-  cryptonote::address_parse_info info;
-  if(!cryptonote::get_account_address_from_str_or_url(info, m_wallet->nettype(), local_args[1], oa_prompter))
-  {
-    fail_msg_writer() << tr("failed to parse address");
-    return true;
-  }
-
-  if(info.is_subaddress)
-  {
-    fail_msg_writer() << tr("Service nodes doesn't support rewards to subaddresses, can not stake for address: ") << local_args[1] << tr("Use index=[...] if you want to stake funds from particular subaddress.");
-    return true;
-  }
-
-  if(autostake)
-  {
-    {
-      const auto& response = m_wallet->get_service_nodes({ epee::string_tools::pod_to_hex(service_node_key) });
-      if(response.service_node_states.size() != 1)
+      bool only_once = true;
+      for(COMMAND_RPC_GET_SERVICE_NODES::response::contributor const &contributor : node_info.contributors)
       {
-        fail_msg_writer() << tr("Could not find service node in service node list, please make sure it is registered first.");
-        return false;
-      }
+        address_parse_info address_info = {};
+        if(!cryptonote::get_account_address_from_str(address_info, m_wallet->nettype(), contributor.address))
+        {
+          fail_msg_writer() << tr("Failed to parse string representation of address: ") << contributor.address;
+          continue;
+        }
 
-      const auto& snode_info = response.service_node_states.front();
-      bool preexisting_contributor = false;
-      for(const auto& contributor : snode_info.contributors)
-      {
-        preexisting_contributor = (contributor.address == address_str);
-        if(preexisting_contributor)
-          break;
-      }
+        if(primary_address != address_info.address)
+          continue;
 
-      if(!preexisting_contributor)
-      {
-        // NOTE: Disallowed since there isn't a sensible way to recalculate the portions of the staker reliably
-        fail_msg_writer() << tr("Autostaking is disallowed for contributors who did not reserve a spot in a service node");
-        return false;
-      }
+        for(size_t i = 0; i < contributor.locked_contributions.size(); ++i)
+        {
+          COMMAND_RPC_GET_SERVICE_NODES::response::contribution const &contribution = contributor.locked_contributions[i];
+          has_locked_stakes = true;
 
-      // Autostaking in reserved pools warning
-      if(snode_info.contributors.size() > 1 && !autostaking_warning())
-      {
-        return true;
+          if(!print_result)
+            continue;
+
+          msg_buf.reserve(512);
+          if(only_once)
+          {
+            only_once = false;
+            msg_buf.append("Service Node: ");
+            msg_buf.append(node_info.service_node_pubkey);
+            msg_buf.append("\n");
+
+            msg_buf.append("Unlock Height: ");
+            if(node_info.requested_unlock_height == service_nodes::KEY_IMAGE_AWAITING_UNLOCK_HEIGHT)
+              msg_buf.append("Unlock yet not requested");
+            else
+              msg_buf.append(std::to_string(node_info.requested_unlock_height));
+            msg_buf.append("\n");
+
+            msg_buf.append("Total Locked: ");
+            msg_buf.append(cryptonote::print_money(contributor.amount));
+            msg_buf.append("\n");
+
+            msg_buf.append("Amount/Key Image: ");
+          }
+
+          msg_buf.append(cryptonote::print_money(contribution.amount));
+          msg_buf.append("/");
+          msg_buf.append(contribution.key_image);
+          msg_buf.append("\n");
+
+          if(i < (contributor.locked_contributions.size() - 1))
+          {
+            msg_buf.append("                  ");
+          }
+          else
+          {
+            msg_buf.append("\n");
+          }
+        }
       }
     }
+  }
 
-    if(amount_fraction == 0) // Fixed amount ArQmA warning
+  {
+    using namespace cryptonote;
+    boost::optional<std::string> failed;
+    const std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::entry> response = m_wallet->get_service_node_blacklisted_key_images(failed);
+    if(failed)
     {
-      success_msg_writer(false/*color*/) << tr("You're autostaking to a service node using a fixed amount of ArQmA: ") << print_money(amount)
-                                         << tr(".\nThe staking requirement will be different after the service node expires.")
-                                         << tr("\nStaking a fixed amount may change your percentage of stake towards the service node and consequently your block reward allocation.")
-                                         << tr("\n\nIf this behaviour is not desirable, please reuse the staking command with a percentage sign.");
-
-      if(!yes_no_parser("Accept staking with a fixed amount of ArQmA"));
-      {
-        fail_msg_writer() << tr("Staking transaction with fixed ArQmA amount cancelled.");
-        return true;
-      }
-
-      success_msg_writer(false/*color*/) << "\n";
+      fail_msg_writer() << *failed;
+      return has_locked_stakes;
     }
 
-    m_cmd_binder.stop_handling();
-
-#ifndef WIN32
-    if(m_wallet->fork_on_autostake())
+    bool once_only = true;
+    cryptonote::blobdata binary_buf;
+    binary_buf.reserve(sizeof(crypto::key_image));
+    for(size_t i = 0; i < response.size(); ++i)
     {
-      success_msg_writer(true) << tr("Entering autostaking mode, forking to background...");
-      tools::threadpool::getInstance().stop();
-      posix::fork("");
-      tools::threadpool::getInstance().start();
+      COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::entry const &entry = response[i];
+      binary_buf.clear();
+      if(!epee::string_tools::parse_hexstr_to_binbuff(entry.key_image, binary_buf) || binary_buf.size() != sizeof(crypto::key_image))
+      {
+        fail_msg_writer() << tr("Failed to parse hex representation of key image: ") << entry.key_image;
+        continue;
+      }
+
+      if(!m_wallet->contains_key_image(*reinterpret_cast<const crypto::key_image*>(binary_buf.data())))
+        continue;
+
+      has_locked_stakes = true;
+      if(!print_result)
+        continue;
+
+      msg_buf.reserve(512);
+      if(once_only)
+      {
+        msg_buf.append("Blacklisted Stakes\n");
+        once_only = false;
+      }
+
+      msg_buf.append("  Unlock Height/Key Image: ");
+      msg_buf.append(std::to_string(entry.unlock_height));
+      msg_buf.append("/");
+      msg_buf.append(entry.key_image);
+      msg_buf.append("\n");
+
+      if(i < (response.size() - 1))
+        msg_buf.append("\n");
+    }
+  }
+
+  if(print_result)
+  {
+    if(has_locked_stakes)
+    {
+      tools::msg_writer() << msg_buf;
     }
     else
-#endif
     {
-      success_msg_writer(true) << tr("Entering autostaking mode, forking to background...");
-    }
-
-    while(true)
-    {
-      if(!stake_main(service_node_key, info, priority, subaddr_indices, amount, amount_fraction, autostake))
-        break;
-      m_idle_cond.wait_for(lock, boost::chrono::seconds(AUTOSTAKE_INTERVAL));
+      tools::msg_writer() << "No locked stakes known for this wallet on the network";
     }
   }
-  else
-  {
-    stake_main(service_node_key, info, priority, subaddr_indices, amount, amount_fraction, autostake);
-  }
 
+  return has_locked_stakes;
+}
+//----------------------------------------------------------------------------------------------------
+bool simple_wallet::print_locked_stakes(const std::vector<std::string> &args_)
+{
+  if(!try_connect_to_daemon())
+    return false;
+  SCOPED_WALLET_UNLOCK();
+
+  print_locked_stakes_main(args_, true);
   return true;
 }
 //----------------------------------------------------------------------------------------------------
@@ -6351,6 +6158,158 @@ bool simple_wallet::sweep_unmixable(const std::vector<std::string> &args_)
   return true;
 }
 //----------------------------------------------------------------------------------------------------
+bool simple_wallet::sweep_main_internal(sweep_type_t sweep_type, std::vector<tools::wallet2::pending_tx> &ptx_vector, cryptonote::address_parse_info const &dest)
+{
+  if((sweep_type == sweep_type_t::stake || sweep_type == sweep_type_t::register_stake) && ptx_vector.size() > 1)
+  {
+    fail_msg_writer() << tr("Too many outputs. Please sweep_all first");
+    return true;
+  }
+
+  if(sweep_type == sweep_type_t::single)
+  {
+    if(ptx_vector.size() > 1)
+    {
+      fail_msg_writer() << tr("Multiple transactions are created, which is not supposed to happen");
+      return true;
+    }
+
+    if(ptx_vector[0].selected_transfers.size() != 1)
+    {
+      fail_msg_writer() << tr("The transaction uses multiple or no inputs, which is not supposed to happen");
+      return true;
+    }
+  }
+
+  if(ptx_vector.empty())
+  {
+    fail_msg_writer() << tr("No outputs found, or daemon is not ready");
+    return false;
+  }
+
+  // give user total and fee, and prompt to confirm
+  uint64_t total_fee = 0, total_sent = 0;
+  for(size_t n = 0; n < ptx_vector.size(); ++n)
+  {
+    total_fee += ptx_vector[n].fee;
+    for(auto i: ptx_vector[n].selected_transfers)
+      total_sent += m_wallet->get_transfer_details(i).amount();
+
+    if(sweep_type == sweep_type_t::stake || sweep_type == sweep_type_t::register_stake)
+    {
+      ptx_vector[n].tx.version = std::max((size_t)transaction::version_3, ptx_vector[n].tx.version);
+      total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
+    }
+  }
+
+  std::ostringstream prompt;
+  std::set<uint32_t> subaddr_indices;
+  for(size_t n = 0; n < ptx_vector.size(); ++n)
+  {
+    prompt << tr("\nTransaction ") << (n + 1) << "/" << ptx_vector.size() << ":\n";
+    subaddr_indices.clear();
+    for(uint32_t i : ptx_vector[n].construction_data.subaddr_indices)
+      subaddr_indices.insert(i);
+    for(uint32_t i : subaddr_indices)
+      prompt << boost::format(tr("Spending from address index %d\n")) % i;
+    if(subaddr_indices.size() > 1)
+      prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
+  }
+  if(m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
+  {
+    fail_msg_writer() << tr("Error printing ring members");
+    return false;
+  }
+
+  const char *label = (sweep_type == sweep_type_t::stake || sweep_type == sweep_type_t::register_stake) ? "Staking" : "Sweeping";
+  if(ptx_vector.size() > 1) {
+    prompt << boost::format(tr("%s %s in %llu transactions for a total fee of %s. Is this okay?")) %
+      label %
+      print_money(total_sent) %
+      ((unsigned long long)ptx_vector.size()) %
+      print_money(total_fee);
+  }
+  else {
+    prompt << boost::format(tr("%s %s for a total fee of %s. Is this okay?")) %
+      label %
+      print_money(total_sent) %
+      print_money(total_fee);
+  }
+  std::string accepted = input_line(prompt.str(), true);
+  if(std::cin.eof())
+    return false;
+  if(!command_line::is_yes(accepted))
+  {
+    fail_msg_writer() << tr("transaction cancelled.");
+    return false;
+  }
+
+  // actually commit the transactions
+  bool submitted_to_network = false;
+  if(m_wallet->multisig())
+  {
+    bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_arqma_tx");
+    if(!r)
+    {
+      fail_msg_writer() << tr("Failed to write transaction(s) to file");
+    }
+    else
+    {
+      success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_arqma_tx";
+    }
+  }
+  else if(m_wallet->get_account().get_device().has_tx_cold_sign())
+  {
+    try
+    {
+      tools::wallet2::signed_tx_set signed_tx;
+      std::vector<cryptonote::address_parse_info> dsts_info;
+      dsts_info.push_back(dest);
+
+      if(!cold_sign_tx(ptx_vector, signed_tx, dsts_info, [&](const tools::wallet2::signed_tx_set &tx){ return accept_loaded_tx(tx); })){
+        fail_msg_writer() << tr("Failed to cold sign transaction with HW wallet");
+        return true;
+      }
+
+      commit_or_save(signed_tx.ptx, m_do_not_relay);
+    }
+    catch (const std::exception& e)
+    {
+      handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
+    }
+    catch (...)
+    {
+      LOG_ERROR("Unknown error");
+      fail_msg_writer() << tr("unknown error");
+    }
+  }
+  else if(m_wallet->watch_only())
+  {
+    bool r = m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx");
+    if(!r)
+    {
+      fail_msg_writer() << tr("Failed to write transaction(s) to file");
+    }
+    else
+    {
+      success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "unsigned_arqma_tx";
+    }
+  }
+  else
+  {
+    commit_or_save(ptx_vector, m_do_not_relay);
+    submitted_to_network = true;
+  }
+
+  if(sweep_type == sweep_type_t::register_stake && submitted_to_network)
+  {
+    success_msg_writer() << tr("Wait for transaction to be included in a block before registration is complete.\n")
+                         << tr("Use the print_sn command in the daemon to check the status.");
+  }
+
+  return true;
+}
+//-----------------------------------------------------------------------------
 bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<std::string> &args_)
 {
   auto print_usage = [below]()
@@ -6392,33 +6351,7 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
     local_args.erase(local_args.begin());
 
   priority = m_wallet->adjust_priority(priority);
-
-  size_t fake_outs_count = 0;
-  if(local_args.size() > 0) {
-    size_t ring_size;
-    if(!epee::string_tools::get_xtype_from_string(ring_size, local_args[0]))
-    {
-      fake_outs_count = m_wallet->default_mixin();
-      if (fake_outs_count == 0)
-        fake_outs_count = config::tx_settings::tx_mixin;
-    }
-    else if (ring_size == 0)
-    {
-      fail_msg_writer() << tr("Ring size must not be 0");
-      return true;
-    }
-    else
-    {
-      fake_outs_count = ring_size - 1;
-      local_args.erase(local_args.begin());
-    }
-  }
-  uint64_t adjusted_fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
-  if (adjusted_fake_outs_count > fake_outs_count)
-  {
-    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count + 1) % (adjusted_fake_outs_count + 1)).str();
-    return true;
-  }
+  size_t fake_outs_count = config::tx_settings_tx_mixin;
 
   uint64_t unlock_block = 0;
   if (locked) {
@@ -6554,99 +6487,12 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
   }
 
   SCOPED_WALLET_UNLOCK();
-
   try
   {
-    // figure out what tx will be necessary
     auto ptx_vector = m_wallet->create_transactions_all(below, info.address, info.is_subaddress, outputs, fake_outs_count, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices);
-
-    if (ptx_vector.empty())
-    {
-      fail_msg_writer() << tr("No outputs found, or daemon is not ready");
-      return true;
-    }
-
-    if (!prompt_if_old(ptx_vector))
-    {
-      fail_msg_writer() << tr("transaction cancelled.");
-      return false;
-    }
-
-    // give user total and fee, and prompt to confirm
-    uint64_t total_fee = 0, total_sent = 0;
-    for (size_t n = 0; n < ptx_vector.size(); ++n)
-    {
-      total_fee += ptx_vector[n].fee;
-      for (auto i: ptx_vector[n].selected_transfers)
-        total_sent += m_wallet->get_transfer_details(i).amount();
-    }
-
-    std::ostringstream prompt;
-    for (size_t n = 0; n < ptx_vector.size(); ++n)
-    {
-      prompt << tr("\nTransaction ") << (n + 1) << "/" << ptx_vector.size() << ":\n";
-      subaddr_indices.clear();
-      for (uint32_t i : ptx_vector[n].construction_data.subaddr_indices)
-        subaddr_indices.insert(i);
-      for (uint32_t i : subaddr_indices)
-        prompt << boost::format(tr("Spending from address index %d\n")) % i;
-      if (subaddr_indices.size() > 1)
-        prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
-    }
-    if (m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
-      return true;
-    if (ptx_vector.size() > 1) {
-      prompt << boost::format(tr("Sweeping %s in %llu transactions for a total fee of %s.  Is this okay?")) %
-        print_money(total_sent) %
-        ((unsigned long long)ptx_vector.size()) %
-        print_money(total_fee);
-    }
-    else {
-      prompt << boost::format(tr("Sweeping %s for a total fee of %s.  Is this okay?")) %
-        print_money(total_sent) %
-        print_money(total_fee);
-    }
-    std::string accepted = input_line(prompt.str(), true);
-    if (std::cin.eof())
-      return true;
-    if (!command_line::is_yes(accepted))
-    {
-      fail_msg_writer() << tr("transaction cancelled.");
-
-      return true;
-    }
-
-    // actually commit the transactions
-    if (m_wallet->multisig())
-    {
-      bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_arqma_tx");
-      if (!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_arqma_tx";
-      }
-    }
-    else if (m_wallet->watch_only())
-    {
-      bool r = m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx");
-      if (!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "unsigned_arqma_tx";
-      }
-    }
-    else
-    {
-      commit_or_save(ptx_vector, m_do_not_relay);
-    }
+    sweep_main_internal(sweep_type_t::all_or_below, ptx_vector, info);
   }
-  catch (const std::exception& e)
+  catch (const std::exception &e)
   {
     handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
   }
@@ -6672,27 +6518,7 @@ bool simple_wallet::sweep_single(const std::vector<std::string> &args_)
     local_args.erase(local_args.begin());
 
   priority = m_wallet->adjust_priority(priority);
-
-  size_t fake_outs_count = 0;
-  if(local_args.size() > 0) {
-    size_t ring_size;
-    if(!epee::string_tools::get_xtype_from_string(ring_size, local_args[0]))
-    {
-      fake_outs_count = m_wallet->default_mixin();
-      if (fake_outs_count == 0)
-        fake_outs_count = config::tx_settings::tx_mixin;
-    }
-    else if (ring_size == 0)
-    {
-      fail_msg_writer() << tr("Ring size must not be 0");
-      return true;
-    }
-    else
-    {
-      fake_outs_count = ring_size - 1;
-      local_args.erase(local_args.begin());
-    }
-  }
+  size_t fake_outs_count = config::tx_settings::tx_mixin;
 
   size_t outputs = 1;
   if (local_args.size() > 0 && local_args[0].substr(0, 8) == "outputs=")
@@ -6802,72 +6628,9 @@ bool simple_wallet::sweep_single(const std::vector<std::string> &args_)
   {
     // figure out what tx will be necessary
     auto ptx_vector = m_wallet->create_transactions_single(ki, info.address, info.is_subaddress, outputs, fake_outs_count, 0 /* unlock_time */, priority, extra);
-
-    if (ptx_vector.empty())
-    {
-      fail_msg_writer() << tr("No outputs found");
-      return true;
-    }
-    if (ptx_vector.size() > 1)
-    {
-      fail_msg_writer() << tr("Multiple transactions are created, which is not supposed to happen");
-      return true;
-    }
-    if (ptx_vector[0].selected_transfers.size() != 1)
-    {
-      fail_msg_writer() << tr("The transaction uses multiple or no inputs, which is not supposed to happen");
-      return true;
-    }
-
-    // give user total and fee, and prompt to confirm
-    uint64_t total_fee = ptx_vector[0].fee;
-    uint64_t total_sent = m_wallet->get_transfer_details(ptx_vector[0].selected_transfers.front()).amount();
-    std::ostringstream prompt;
-    if (!print_ring_members(ptx_vector, prompt))
-      return true;
-    prompt << boost::format(tr("Sweeping %s for a total fee of %s.  Is this okay?")) % print_money(total_sent) % print_money(total_fee);
-    std::string accepted = input_line(prompt.str(), true);
-    if (std::cin.eof())
-      return true;
-    if (!command_line::is_yes(accepted))
-    {
-      fail_msg_writer() << tr("transaction cancelled.");
-      return true;
-    }
-
-    // actually commit the transactions
-    if (m_wallet->multisig())
-    {
-      bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_arqma_tx");
-      if (!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_arqma_tx";
-      }
-    }
-    else if (m_wallet->watch_only())
-    {
-      bool r = m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx");
-      if (!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "unsigned_arqma_tx";
-      }
-    }
-    else
-    {
-      m_wallet->commit_tx(ptx_vector[0]);
-      success_msg_writer(true) << tr("Money successfully sent, transaction: ") << get_transaction_hash(ptx_vector[0].tx);
-    }
-
+    sweep_main_internal(sweep_type_t::single, ptx_vector, info);
   }
-  catch (const std::exception& e)
+  catch (const std::exception &e)
   {
     handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
   }
@@ -7874,7 +7637,7 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
         output.unlock_time = (dest_index < pd.m_unlock_times.size()) ? pd.m_unlock_times[dest_index] : 0;
       }
 
-      const uint64_t staking_duration = service_nodes::get_staking_requirement_lock_blocks(m_wallet->nettype());
+      const uint64_t staking_duration = service_nodes::staking_num_lock_blocks(m_wallet->nettype());
       bool locked = false;
 
       tools::pay_type type = tools::pay_type::out;
@@ -8443,8 +8206,20 @@ std::string simple_wallet::get_prompt() const
   std::string prompt = std::string("[") + tr("wallet") + " " + addr_start;
   if (!m_wallet->check_connection(NULL))
     prompt += tr(" (no daemon)");
-  else if (!m_wallet->is_synced())
-    prompt += tr(" (out of sync)");
+  else
+  {
+    if(m_wallet->is_synced())
+    {
+      if(m_has_locked_key_images)
+      {
+        prompt += tr(" (has locked stakes)");
+      }
+    }
+    else
+    {
+      prompt += tr(" (out_of_sync)");
+    }
+  }
   prompt += "]: ";
   return prompt;
 }
