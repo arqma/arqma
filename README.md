@@ -5,6 +5,32 @@ Copyright (c) 2018-2020, The Arqma Network
 Copyright (c) 2014-2020, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
+## Table of Contents
+
+  - [Coin Specifications](#coin-specifications)
+  - [Development Resources](#development-resources)
+  - [Other GNTL related Websites](#other-gntl-related-websites)
+  - [Introduction](#introduction)
+  - [SSL](#ssl)
+  - [About this project](#about-this-project)
+  - [Supporting the project](#supporting-the-project)
+  - [License](#license)
+  - [Contributing](#contributing)
+  - [Compiling GNTL from source](#compiling-gntl-from-source)
+  - [Build](#build)
+    - [IMPORTANT](#important)
+    - [Dependencies](#dependencies)
+    - [Cloning the repository](#cloning-the-repository)
+    - [Build instructions](#build-instructions)
+  - [Running gntld](#running-gntld)
+  - [Internationalization](#internationalization)
+  - [Using Tor](#using-tor)
+    - [Tails](#tails)
+  - [Debugging](#debugging)
+    - [Obtaining stack traces and core dumps on Unix systems](#obtaining-stack-traces-and-core-dumps-on-unix-systems)
+    - [Analysing memory corruption](#analysing-memory-corruption)
+    - [LMDB](#lmdb)
+
 ## Coin Specifications
 
 - Name: GNTL Coin
@@ -18,7 +44,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Consensus: PoW
 - Anonymity: BulletProof RingCT
 
-## Development resources
+## Development Resources
 
 - Coin: [gntl.cash](https://gntl.cash)
 - Project: [gntl.co.uk](https://gntl.co.uk)
@@ -27,7 +53,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - GitHub: [https://github.com/The-GNTL-Project/gntl](https://github.com/The-GNTL-Project/gntl)
 - Discord: [https://discord.gg/4HyVA2A](https://discord.gg/4HyVA2A)
 
-## Other GNTL related websites
+## Other GNTL related Websites
 
 - GNTL Coin Blockchain Explorer: [explorer.pool.gntl.co.uk](https://explorer.pool.gntl.co.uk)
 - GNTL Coin Pools Stream: [https://miningpoolstats.stream/gntlcoin](https://miningpoolstats.stream/gntlcoin)
@@ -68,6 +94,14 @@ This is the core implementation of GNTL. It is open source and completely free t
 As with many development projects, the repository on Github is considered to be the "staging" area for the latest changes. Before changes are merged into that branch on the main repository, they are tested by individual developers in their own branches, submitted as a pull request, and then subsequently tested by contributors who focus on testing and code reviews. That having been said, the repository should be carefully considered before using it in a production environment, unless there is a patch in the repository for a particular show-stopping issue you are experiencing. It is generally a better idea to use a tagged release for stability.
 
 **Anyone is welcome to contribute to GNTL's codebase!** If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.
+
+## Supporting the project
+
+GNTL is a 100% community developed.  If you would like to donate to our cause, please do so via the following donation addresses:
+
+GNTL Wallet: `gnt1ibrAtYtThQWQ8QdeLPWGD9ZeqnDsJ9A4d86DMC2RD7frBSE1uZmFezsbW7TXHdNHYWDWsccRo8TpE55p2HWR74ofajRWc5`
+
+GNTL Viewkey: `d0abbf9c47bdf8189676eed67bfb31a2ef16ef276a8077877a987bff9fcb8203`
 
 ## License
 
@@ -158,7 +192,7 @@ git submodule init && git submodule update
 
 GNTL uses the CMake build system and a top-level [Makefile](Makefile) that invokes cmake commands as needed.
 
-#### On Linux and OS X
+#### Linux and OS X
 
 * Install the dependencies
 
@@ -327,7 +361,7 @@ sudo ./testrun.sh ~/gntl/gntld --data-dir /gntl
 sudo ./testrun.sh ~/gntl/gntl-wallet-cli
 ```
 
-#### On Windows:
+#### Windows 10:
 
 Binaries for Windows are built on Windows using the MinGW toolchain within
 [MSYS2 environment](http://msys2.github.io). The MSYS2 environment emulates a
@@ -403,13 +437,11 @@ make debug-static-win
 
 *** GNTL does Not support 32-bit Windows anymore ***
 
-### On FreeBSD:
+#### FreeBSD:
 
 The project can be built from scratch by following instructions for Linux above. If you are running gntl in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
 
 We expect to add GNTL into the ports tree in the near future, which will aid in managing installations using ports or packages.
-
-### On OpenBSD:
 
 #### OpenBSD < 6.2
 
@@ -485,7 +517,7 @@ echo 'using clang : : c++ : <cxxflags>"-fvisibility=hidden -fPIC" <linkflags>"" 
 doas ./b2 -d0 runtime-link=shared threadapi=pthread threading=multi link=static variant=release --layout=tagged --build-type=complete --user-config=user-config.jam -sNO_BZIP2=1 -sICONV_PATH=/usr/local --prefix=/usr/local install
 ```
 
-### On Solaris:
+#### Solaris:
 
 The default Solaris linker can't be used, you have to install GNU ld, then run cmake manually with the path to your copy of GNU ld:
 
@@ -497,7 +529,7 @@ cd ../..
 make
 ```
 
-### On Linux for Android (using docker):
+#### Linux for Android (using docker):
 
 ### Build image
 ```
@@ -512,7 +544,7 @@ docker create -it --name gntl-android gntl-android bash
 docker cp gntl-android:/opt/android/gntl/build/release/bin .
 ```
 
-### Building portable statically linked binaries
+#### Building portable statically linked binaries
 
 By default, in either dynamically or statically linked builds, binaries target the specific host processor on which the build happens and are not portable to other processors. Portable binaries can be built using the following targets:
 
@@ -522,7 +554,7 @@ By default, in either dynamically or statically linked builds, binaries target t
 * `make release-static-linux-armv6` builds binaries on Linux portable across POSIX systems on armv6 processors
 * `make release-static-win` builds binaries on 64-bit Windows portable across 64-bit Windows systems
 
-### Cross Compiling
+#### Cross Compiling
 
 You can also cross-compile GNTL static binaries on Linux for Windows and macOS with the `depends` system.
 
@@ -538,7 +570,7 @@ The required packages are the names for each toolchain on apt. Depending on your
 
 Using `depends` might also be easier to compile GNTL on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
 
-### Compability with older Linux Versions < GLIBC_2.25
+#### Compability with older Linux Versions < GLIBC_2.25
 
 * `make depends-compat target=x86_64-linux-gnu` for 64-bit linux binaries.
 
@@ -615,7 +647,7 @@ Example command line to start gntld through Tor:
 DNS_PUBLIC=tcp torsocks gntld --p2p-bind-ip 127.0.0.1 --no-igd
 ```
 
-### Using Tor on Tails
+### Tails
 
 TAILS ships with a very restrictive set of firewall rules. Therefore, you need
 to add a rule to allow this connection too, in addition to telling torsocks to
