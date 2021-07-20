@@ -37,6 +37,8 @@
 #include "portable_storage_val_converters.h"
 #include "span.h"
 #include "int-util.h"
+//Needed for OSX building Big Sur and M1 silicon
+#include <boost/mpl/contains.hpp>
 
 namespace epee
 {
