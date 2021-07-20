@@ -1,7 +1,7 @@
 ## Arqma Network
 
-Copyright (c) 2018-2020, The Arqma Network    
-Copyright (c) 2014-2020, The Monero Project  
+Copyright (c) 2018-2021, The Arqma Network    
+Copyright (c) 2014-2021, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
@@ -11,6 +11,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
 - Discord: [https://chat.arqma.com](https://chat.arqma.com)
 - Telegram: [https://telegram.arqma.com](https://telegram.arqma.com)
+- Matrix chat: [#arqma:matrix.org or Internal room ID: !YqTIhVcMbLHivbYegN:matrix.org](https://#arqma:matrix.org)
 
 ## Other Arqma related websites
 
@@ -38,8 +39,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
 - Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
-- Citex: [https://www.citex.co.kr/#/trade/ARQ_ETH](https://www.citex.co.kr/#/trade/ARQ_ETH)
-- GJ: [https://www.gj.com/trade/arqusdt](https://www.gj.com/trade/arqusdt)
+- Citex: [https://trade.citex.co.kr/trade/ARQ_BTC](https://trade.citex.co.kr/trade/ARQ_BTC) **Not Avaialble in the USA**
 
 ## Introduction
 
@@ -143,7 +143,7 @@ build the library binary manually. This can be done with the following command:
 
 Debian / Ubuntu one liner for all dependencies
 
-`$ sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
+`$ sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
 
 Install all dependencies at once on OSX:
 
