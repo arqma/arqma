@@ -18,7 +18,7 @@ jobs:
         key: ccache-macos-build-${{ github.sha }}
         restore-keys: ccache-macos-build-
     - name: install dependencies
-            run: HOMEBREW_NO_AUTOUPDATE=1 brew install autoconf autogen automake binutils coreutils libsodium openssl pkg-config boost hidapi ldns expat libunwind-headers readline
+      run: HOMEBREW_NO_AUTOUPDATE=1 brew install autoconf autogen automake binutils coreutils libsodium openssl pkg-config boost hidapi ldns expat libunwind-headers readline
     - name: build
       run: |
         ccache --max-size=150M
