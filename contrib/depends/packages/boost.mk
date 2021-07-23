@@ -1,6 +1,6 @@
 package=boost
 $(package)_version=1_73_0
-$(package)_download_path=https://gitlab.com/ArqTras/depends/-/blob/2898dd00b9958fc9a7461067e2506da6415907a8/boost_1_73_0.tar.bz2
+$(package)_download_path=https://gitlab.com/ArqTras/depends/-/blob/2898dd00b9958fc9a7461067e2506da6415907a8/
 $(package)_file_name=boost_$($(package)_version).tar.bz2
 $(package)_sha256_hash=4eb3b8d442b426dc35346235c8733b5ae35ba431690e38c6a8263dce9fcbb402
 $(package)_dependencies=libiconv
