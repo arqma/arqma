@@ -5,18 +5,83 @@ on: [push, pull_request]
 jobs:
   build-macos:
     runs-on: macOS-latest
+    env:
+      CCACHE_COMPRESS: 1
+      CCACHE_TEMPDIR: /tmp/.ccache-temp
     steps:
     - uses: actions/checkout@v1
       with:
         submodules: recursive
-    - name: Install dependencies
-      run: HOMEBREW_NO_AUTOUPDATE=1 brew install autoconf autogen automake binutils coreutils libsodium openssl pkg-config boost hidapi ldns expat libunwind-headers readline
+    - uses: actions/cache@v2
+      with:
+        path: /Users/runner/Library/Caches/ccache
+        key: ccache-macos-build-${{ github.sha }}
+        restore-keys: ccache-macos-build-
+    - name: install dependencies
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew bundle --file=contrib/apple/brew
     - name: build
-      run: make release
+      run: |
+        ccache --max-size=150M
+        make -j3
     - name: Upload mac artifacts
       uses: actions/upload-artifact@master
       with:
         name: macos
+        path: 'build/**/**/arqma*'
+
+  build-osx-depends:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: install ArQmA dependencies
+      run:  sudo apt -y install cmake ccache imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools curl bsdmainutils python3-setuptools
+    - name: add SDK
+      run: git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs
+    - name: build
+      run: |
+        ccache --max-size=150M
+        make depends target=x86_64-apple-darwin19.2.0 -j2
+    - name: Upload mac artifacts
+      uses: actions/upload-artifact@master
+      with:
+        name: MacOSX
+        path: 'build/**/**/arqma*'
+
+  build-windows:
+    runs-on: windows-latest
+    env:
+      CCACHE_COMPRESS: 1
+      CCACHE_TEMPDIR: C:\Users\runneradmin\.ccache-temp
+      CCACHE_DIR: C:\Users\runneradmin\.ccache
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - uses: actions/cache@v2
+      with:
+        path: C:\Users\runneradmin\.ccache
+        key: ccache-windows-build-${{ github.sha }}
+        restore-keys: ccache-windows-build-
+    - uses: eine/setup-msys2@v2
+      with:
+        update: true
+        install: mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-libusb mingw-w64-x86_64-libtool binutils git automake autoconf patch mingw-w64-x86_64-ccache
+    - name: boost
+      run: pacman --noconfirm -U https://gitlab.com/ArqTras/depends/-/raw/main/mingw-w64-x86_64-boost-1.73.0-3-any.pkg.tar.zst
+    - name: build
+      run: |
+        ccache --max-size=150M
+        make release-static-win -j2
+    - name: Upload windows artifacts
+      uses: actions/upload-artifact@master
+      with:
+        name: windows
         path: 'build/**/**/arqma*'
 
   build-ubuntu:
@@ -43,26 +108,3 @@ jobs:
       with:
         name: linux
         path: 'build/**/**/arqma*'
-
-  build-depends-compat:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-      with:
-        submodules: recursive
-    - name: set apt conf
-      run: |
-        echo "Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
-        echo "Acquire::http::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
-        echo "Acquire::ftp::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
-    - name: update apt
-      run: sudo apt update
-    - name: install ArQmA dependencies
-      run: sudo apt -y install build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev
-    - name: build
-      run: make depends-compat target=x86_64-linux-gnu -j2
-    - name: Upload linux artifacts
-      uses: actions/upload-artifact@master
-      with:
-        name: linux-compat
-        path: 'build/x86_64-linux-gnu-compat/release/bin/arqma*'

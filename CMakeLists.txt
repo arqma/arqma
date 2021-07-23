@@ -334,6 +334,20 @@ enable_testing()
 
 option(BUILD_DOCUMENTATION "Build the Doxygen documentation." ON)
 option(BUILD_TESTS "Build tests." OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(DEFAULT_BUILD_DEBUG_UTILITIES ON)
+else()
+  set(DEFAULT_BUILD_DEBUG_UTILITIES OFF)
+endif()
+option(BUILD_DEBUG_UTILITIES "Build debug utilities." DEFAULT_BUILD_DEBUG_UTILITIES)
+
+if(BUILD_DEBUG_UTILITIES)
+  message(STATUS "Building debug utilities")
+else()
+  message(STATUS "Not building debug utilities")
+endif()
+
+
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(DEFAULT_BUILD_DEBUG_UTILITIES ON)
@@ -522,7 +536,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "(SunOS|Solaris)")
 endif()
 
 if(APPLE AND NOT IOS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=x86-64 -fvisibility=default")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -std=c++11")
   if(NOT OpenSSL_DIR)
       EXECUTE_PROCESS(COMMAND brew --prefix openssl
         OUTPUT_VARIABLE OPENSSL_ROOT_DIR
@@ -757,12 +771,14 @@ else()
   endif()
 
   # linker
-  if(NOT WIN32 AND NOT (CMAKE_C_COMPILER_ID STREQUAL "Clang") AND NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1))
+  if(NOT (WIN32 AND (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1)))
     # Windows binaries die on startup with PIE compiled with GCC < 9.x
-    add_linker_flag_if_supported(-pie LD_SECURITY_FLAGS)
-  endif()
-  if(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
-    add_linker_flag_if_supported(-Wl, -pie LD_SECURITY_FLAGS)
+    if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+       # Clang does not support -pie flag
+       add_linker_flag_if_supported("-Wl,-pie" LD_SECURITY_FLAGS)
+       else()
+       add_linker_flag_if_supported("-pie" LD_SECURITY_FLAGS)
+     endif()
   endif()
   add_linker_flag_if_supported(-Wl,-z,relro LD_SECURITY_FLAGS)
   add_linker_flag_if_supported(-Wl,-z,now LD_SECURITY_FLAGS)
@@ -975,6 +991,11 @@ endif()
 
 cmake_policy(SET CMP0093 NEW)
 
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_FLAGS}")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${RELEASE_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")
+
 set(Boost_USE_MULTITHREADED ON)
 
 if(${BOOST_IGNORE_SYSTEM_PATHS} STREQUAL "ON")
@@ -1033,7 +1054,7 @@ endif()
 if(HIDAPI_FOUND OR LibUSB_COMPILE_TEST_PASSED)
   if(APPLE)
     if(DEPENDS)
-      list(APPEND EXTRA_LIBRARIES "-framework Foundation -framework IOKit")
+      list(APPEND EXTRA_LIBRARIES "-framework Foundation -framework AppKit -framework IOKit")
     else()
       find_library(COREFOUNDATION CoreFoundation)
       find_library(IOKIT IOKit)
