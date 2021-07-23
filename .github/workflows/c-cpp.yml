@@ -44,8 +44,6 @@ jobs:
         install: mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-libusb mingw-w64-x86_64-libtool binutils git automake autoconf patch mingw-w64-x86_64-ccache
     - name: boost
       run: pacman --noconfirm -U https://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-boost-1.72.0-2-any.pkg.tar.zst
-    - name: icu version
-      run: pacman --noconfirm -U https://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-icu-65.1-1-any.pkg.tar.xz
     - name: build
       run: |
         ccache --max-size=150M
