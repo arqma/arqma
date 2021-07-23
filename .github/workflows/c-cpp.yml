@@ -19,6 +19,26 @@ jobs:
         name: macos
         path: 'build/**/**/arqma*'
 
+  build-osx-depends:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: install ArQmA dependencies
+      run:  sudo apt -y install cmake ccache imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools curl bsdmainutils python3-setuptools
+    - name: add SDK
+      run: git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs
+    - name: build
+      run: |
+        ccache --max-size=150M
+        make depends target=x86_64-apple-darwin19.2.0 -j2
+    - name: Upload mac artifacts
+      uses: actions/upload-artifact@master
+      with:
+        name: MacOSX
+        path: 'build/**/**/arqma*'
+
   build-windows:
     runs-on: windows-latest
     env:
