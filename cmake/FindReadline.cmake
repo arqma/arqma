@@ -21,6 +21,7 @@
 #  GNU_READLINE_LIBRARY      The GNU readline library or empty string.
 #  LIBEDIT_LIBRARY           The libedit library or empty string.
 
+
 find_path(Readline_ROOT_DIR
     NAMES include/readline/readline.h
     PATHS /usr/local/opt/readline/ /opt/local/ /usr/local/ /usr/

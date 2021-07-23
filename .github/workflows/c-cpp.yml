@@ -5,14 +5,24 @@ on: [push, pull_request]
 jobs:
   build-macos:
     runs-on: macOS-latest
+    env:
+      CCACHE_COMPRESS: 1
+      CCACHE_TEMPDIR: /tmp/.ccache-temp
     steps:
     - uses: actions/checkout@v1
       with:
         submodules: recursive
-    - name: Install dependencies
-      run: HOMEBREW_NO_AUTOUPDATE=1 brew install autoconf autogen automake binutils coreutils libsodium openssl pkg-config boost hidapi ldns expat libunwind-headers readline
+    - uses: actions/cache@v2
+      with:
+        path: /Users/runner/Library/Caches/ccache
+        key: ccache-macos-build-${{ github.sha }}
+        restore-keys: ccache-macos-build-
+    - name: install dependencies
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew bundle --file=contrib/apple/brew
     - name: build
-      run: make release
+      run: |
+        ccache --max-size=150M
+        make -j3
     - name: Upload mac artifacts
       uses: actions/upload-artifact@master
       with:
@@ -20,6 +30,26 @@ jobs:
         path: 'build/**/**/arqma*'
 
   build-osx-depends:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+    - name: install ArQmA dependencies
+      run:  sudo apt -y install cmake ccache imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools curl bsdmainutils python3-setuptools
+    - name: add SDK
+      run: git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs
+    - name: build
+      run: |
+        ccache --max-size=150M
+        make depends target=x86_64-apple-darwin19.2.0 -j2
+    - name: Upload mac artifacts
+      uses: actions/upload-artifact@master
+      with:
+        name: MacOSX
+        path: 'build/**/**/arqma*'
+
+  build-ubuntu:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
