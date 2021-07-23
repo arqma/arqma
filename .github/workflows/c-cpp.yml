@@ -25,6 +25,7 @@ jobs:
       CCACHE_COMPRESS: 1
       CCACHE_TEMPDIR: C:\Users\runneradmin\.ccache-temp
       CCACHE_DIR: C:\Users\runneradmin\.ccache
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     defaults:
       run:
         shell: msys2 {0}
