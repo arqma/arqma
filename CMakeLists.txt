@@ -763,14 +763,12 @@ else()
   endif()
 
   # linker
-  if(NOT (WIN32 AND (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1)))
+if(NOT WIN32 AND NOT (CMAKE_C_COMPILER_ID STREQUAL "Clang") AND NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1))
     # Windows binaries die on startup with PIE compiled with GCC < 9.x
-    if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-       # Clang does not support -pie flag
-       add_linker_flag_if_supported("-Wl,-pie" LD_SECURITY_FLAGS)
-       else()
-       add_linker_flag_if_supported("-pie" LD_SECURITY_FLAGS)
-     endif()
+    add_linker_flag_if_supported(-pie LD_SECURITY_FLAGS)
+  endif()
+  if(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+    add_linker_flag_if_supported(-Wl, -pie LD_SECURITY_FLAGS)
   endif()
   add_linker_flag_if_supported(-Wl,-z,relro LD_SECURITY_FLAGS)
   add_linker_flag_if_supported(-Wl,-z,now LD_SECURITY_FLAGS)
@@ -929,14 +927,14 @@ else()
   if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -DGTEST_HAS_TR1_TUPLE=0")
   endif()
- 
+
   set(DEBUG_FLAGS "-g3")
   if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT (CMAKE_C_COMPILER_VERSION VERSION_LESS 4.8))
     set(DEBUG_FLAGS "${DEBUG_FLAGS} -O2 ")
   else()
     set(DEBUG_FLAGS "${DEBUG_FLAGS} -O0 ")
   endif()
-  
+
   # At least some CLANGs default to not enough for Arqma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth=900")
 
