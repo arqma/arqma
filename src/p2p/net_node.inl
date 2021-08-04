@@ -1893,15 +1893,15 @@ namespace nodetool
     if(arg.node_data.version.size() == 0)
     {
       MGINFO("Peer " << context.m_remote_address.str() << " did not provide version info. It is probably Old Version");
-      drop_connection(context);
-      block_host(context.m_remote_address);
+  //    drop_connection(context);
+  //    block_host(context.m_remote_address);
     }
 
     if(arg.node_data.version.size() != 0 && arg.node_data.version != ARQMA_VERSION)
     {
       MGINFO("Peer " << context.m_remote_address.str() << " has a different version than ours: " << arg.node_data.version.substr(0,12));
-      drop_connection(context);
-      block_host(context.m_remote_address);
+  //    drop_connection(context);
+  //    block_host(context.m_remote_address);
     }
 
     if(arg.node_data.network_id != m_network_id)
