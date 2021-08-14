@@ -106,7 +106,7 @@ namespace cryptonote
       MAP_URI_AUTO_JON2_IF("/mining_status",                    on_mining_status,                         COMMAND_RPC_MINING_STATUS, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/save_bc",                          on_save_bc,                               COMMAND_RPC_SAVE_BC, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/get_peer_list",                    on_get_peer_list,                         COMMAND_RPC_GET_PEER_LIST, !m_restricted)
-      MAP_URI_AUTO_JON2("/get_public_nodes",                    on_get_public_nodes,                      COMMAND_RPC_GET_PUBLIC_NODES)
+      MAP_URI_AUTO_JON2_IF("/get_public_nodes",                 on_get_public_nodes,                      COMMAND_RPC_GET_PUBLIC_NODES, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/set_log_hash_rate",                on_set_log_hash_rate,                     COMMAND_RPC_SET_LOG_HASH_RATE, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/set_log_level",                    on_set_log_level,                         COMMAND_RPC_SET_LOG_LEVEL, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/set_log_categories",               on_set_log_categories,                    COMMAND_RPC_SET_LOG_CATEGORIES, !m_restricted)
@@ -255,7 +255,7 @@ namespace cryptonote
     bool on_get_service_nodes(const COMMAND_RPC_GET_SERVICE_NODES::request& req, COMMAND_RPC_GET_SERVICE_NODES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_all_service_nodes(const COMMAND_RPC_GET_SERVICE_NODES::request& req, COMMAND_RPC_GET_SERVICE_NODES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_all_service_nodes_keys(const COMMAND_RPC_GET_ALL_SERVICE_NODES_KEYS::request& req, COMMAND_RPC_GET_ALL_SERVICE_NODES_KEYS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
-    bool on_get_staking_requirement(const COMMAND_RPC_GET_STAKING_REQUIREMENT::request& req, COMMAND_RPC_GET_STAKING_REQUIREMENT::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL;
+    bool on_get_staking_requirement(const COMMAND_RPC_GET_STAKING_REQUIREMENT::request& req, COMMAND_RPC_GET_STAKING_REQUIREMENT::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_prune_blockchain(const COMMAND_RPC_PRUNE_BLOCKCHAIN::request& req, COMMAND_RPC_PRUNE_BLOCKCHAIN::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     //------------------------------
 

@@ -169,11 +169,11 @@ namespace service_nodes
   {
   public:
     service_node_list(cryptonote::Blockchain& blockchain);
-    void block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs) override;
+    void block_added(const cryptonote::block& block, const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>>& txs) override;
     void blockchain_detached(uint64_t height) override;
     void register_hooks(service_nodes::quorum_cop &quorum_cop);
     void init() override;
-    bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, int hard_fork_version, cryptonote::block_reward_parts const &base_reward) const override;
+    bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &base_reward) const override;
     std::vector<std::pair<cryptonote::account_public_address, uint64_t>> get_winner_addresses_and_portions() const;
     crypto::public_key select_winner() const;
 
@@ -187,7 +187,7 @@ namespace service_nodes
     const std::vector<key_image_blacklist_entry> &get_blacklisted_key_images() const { return m_key_image_blacklist; }
 
     void set_db_pointer(cryptonote::BlockchainDB* db);
-    void set_my_service_node_key(crypto::public_key const *pub_key);
+    void set_my_service_node_keys(crypto::public_key const *pub_key);
     bool store();
 
     void get_all_service_nodes_public_keys(std::vector<crypto::public_key>& keys, bool fully_funded_nodes_only) const;
@@ -307,15 +307,14 @@ namespace service_nodes
 
     std::vector<crypto::public_key> get_service_nodes_pubkeys() const;
 
-    template<typename T>
-    void block_added_generic(const cryptonote::block& block, const T& txs);
+    void block_added_generic(const cryptonote::block& blck, const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>>& txs);
 
     bool contribution_tx_output_has_correct_unlock_time(const cryptonote::transaction& tx, size_t i, uint64_t block_height) const;
 
     void store_quorum_state_from_rewards_list(uint64_t height);
 
     bool is_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index, crypto::public_key& key, service_node_info& info) const;
-    std::vector<crypto::public_key> update_and_get_expired_nodes(const std::vector<cryptonote::transaction> &txs, uint64_t block_height);
+    std::vector<crypto::public_key> update_and_get_expired_nodes(const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>>& txs, uint64_t block_height);
 
     void clear(bool delete_db_entry = false);
     bool load();
@@ -326,7 +325,7 @@ namespace service_nodes
     cryptonote::Blockchain& m_blockchain;
     bool m_hooks_registered;
 
-    using  block_height = uint64_t;
+    using block_height = uint64_t;
     block_height m_height;
 
     crypto::public_key const *m_service_node_pubkey;
@@ -338,11 +337,21 @@ namespace service_nodes
   };
 
   bool reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, uint64_t& portions_for_operator, std::vector<uint64_t>& portions, uint64_t& expiration_timestamp, crypto::public_key& service_node_key, crypto::signature& signature, crypto::public_key& tx_pub_key);
-  bool convert_registration_args(cryptonote::network_type nettype, const std::vector<std::string> &args, std::vector<cryptonote::account_public_address>& addresses, std::vector<uint64_t>& portions, uint64_t& portions_for_operator, boost::optional<std::string&> err_msg);
-  bool make_registration_cmd(cryptonote::network_type nettype, const std::vector<std::string> &args, const crypto::public_key& service_node_pubkey, const crypto::secret_key &service_node_key, std::string &cmd, bool make_friendly, boost::optional<std::string&> err_msg);
+
+  struct converted_registration_args
+  {
+    bool success;
+    std::vector<cryptonote::account_public_address> addresses;
+    std::vector<uint64_t> portions;
+    uint64_t portions_for_operator;
+    std::string err_msg;
+  };
+  converted_registration_args convert_registration_args(cryptonote::network_type nettype, const std::vector<std::string>& args, uint64_t staking_requirement);
+
+  bool make_registration_cmd(cryptonote::network_type nettype, uint64_t staking_requirement, const std::vector<std::string>& args, const crypto::public_key& service_node_pubkey, const crypto::secret_key &service_node_key, std::string &cmd, bool make_friendly, boost::optional<std::string&> err_msg);
 
   const static cryptonote::account_public_address null_address{ crypto::null_pkey, crypto::null_pkey };
-  const static std::vector<std::pair<cryptonote::account_public_address, uint64_t>> null_winner = {std::pair<cryptonote::account_public_address, uint64_t>({null_address, STAKING_SHARE_PARTS})};
+  const static std::vector<std::pair<cryptonote::account_public_address, uint64_t>> null_winner = { std::pair<cryptonote::account_public_address, uint64_t>({ null_address, STAKING_SHARE_PARTS }) };
 }
 
 VARIANT_TAG(binary_archive, service_nodes::service_node_list::data_members_for_serialization, 0xa0);

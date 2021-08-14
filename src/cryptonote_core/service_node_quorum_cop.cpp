@@ -47,7 +47,7 @@ namespace service_nodes
   void quorum_cop::init()
   {
     m_last_height = 0;
-    m_uptime_proof_seed.clear();
+    m_uptime_proof_seen.clear();
   }
 
   void quorum_cop::blockchain_detached(uint64_t height)
@@ -60,7 +60,7 @@ namespace service_nodes
     }
   }
 
-  void quorum_cop::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)
+  void quorum_cop::block_added(const cryptonote::block& block, const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>>& txs)
   {
     uint64_t const height = cryptonote::get_block_height(block);
     if(m_core.get_hard_fork_version(height) < 16)
@@ -163,7 +163,7 @@ namespace service_nodes
     // if(!(proof.arqma_ver_major == 7 && proof.arqma_ver_minor == 1 && proof.arqma_snode_major == 1 && proof.arqma_snode_minor == 0))
     uint64_t height = m_core.get_current_blockchain_height();
     int hf_ver = m_core.get_hard_fork_version(height);
-    if(hf_ver >= cryptonote::network_version_16_sn && proof.arqma_snode_major != 1) // for tests
+    if(hf_ver >= cryptonote::network_version_16 && proof.arqma_snode_major != 1) // for tests
       return false;
 
     CRITICAL_REGION_LOCAL(m_lock);
@@ -182,8 +182,8 @@ namespace service_nodes
   {
     req.arqma_ver_major = static_cast<uint16_t>(ARQMA_VERSION_MAJOR);
     req.arqma_ver_minor = static_cast<uint16_t>(ARQMA_VERSION_MINOR);
-    req.arqma_snode_major = static_cast<uint16_t>(ARQMA_SN_VERSION_MAJOR);
-    req.arqma_snode_minor = static_cast<uint16_t>(ARQMA_SN_VERSION_MINOR);
+    req.arqma_snode_major = static_cast<uint16_t>(ARQMA_SNODE_VERSION_MAJOR);
+    req.arqma_snode_minor = static_cast<uint16_t>(ARQMA_SNODE_VERSION_MINOR);
     req.timestamp = time(nullptr);
     req.pubkey = pubkey;
 

@@ -133,7 +133,7 @@ namespace cryptonote
     class BlockAddedHook
     {
     public:
-      virtual void block_added(const block& block, const std::vector<std::pair<<transaction, blobdata>>& txs) = 0;
+      virtual void block_added(const block& block, const std::vector<std::pair<transaction, blobdata>>& txs) = 0;
     };
 
     class BlockchainDetachedHook
@@ -151,7 +151,7 @@ namespace cryptonote
     class ValidateMinerTxHook
     {
     public:
-      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, int hard_fork_version, block_reward_parts const &reward_parts) const = 0;
+      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, block_reward_parts const &reward_parts) const = 0;
     };
 
     /**
@@ -1051,8 +1051,6 @@ namespace cryptonote
     bool update_blockchain_pruning();
     bool check_blockchain_pruning();
 
-    bool calc_batched_governance_reward(uint64_t height, uint64_t &reward) const;
-
     void lock();
     void unlock();
 
@@ -1066,19 +1064,19 @@ namespace cryptonote
     void on_new_tx_from_block(const cryptonote::transaction &tx);
 
     /**
+     * @brief add a hook for processing new blocks and rollbacks for reorgs
+     */
+    void hook_block_added        (BlockAddedHook& hook)         { m_block_added_hooks.push_back(&hook); }
+    void hook_blockchain_detached(BlockchainDetachedHook& hook) { m_blockchain_detached_hooks.push_back(&hook); }
+    void hook_init               (InitHook& hook)               { m_init_hooks.push_back(&hook); }
+    void hook_validate_miner_tx  (ValidateMinerTxHook& hook)    { m_validate_miner_tx_hooks.push_back(&hook); }
+
+    /**
      * @brief removes blocks from the top of the blockchain
      *
      * @param nblocks number of blocks to be removed
      */
     void pop_blocks(uint64_t nblocks);
-
-    /**
-     * @brief add a hook for processing new blocks and rollbacks for reorgs
-     */
-    void hook_block_added(BlockAddedHook& hook) { m_block_added_hooks.push_back(&hook); }
-    void hook_blockchain_detached(BlockchainDetachedHook& hook) { m_blockchain_detached_hooks.push_back(&hook); }
-    void hook_init(InitHook& hook) { m_init_hooks.push_back(&hook); }
-    void hook_validate_miner_tx(ValidateMinerTxHook& hook) { m_validate_miner_tx_hooks.push_back(&hook); }
 
     /**
      * @brief checks whether a given block height is included in the precompiled block hash area
@@ -1227,7 +1225,7 @@ namespace cryptonote
      * @return false if any keys are not found or any inputs are not unlocked, otherwise true
      */
     template<class visitor_t>
-    inline bool scan_outputkeys_for_indexes(size_t tx_version, const txin_to_key& tx_in_to_key, visitor_t &vis, const crypto::hash &tx_prefix_hash, uint64_t* pmax_related_block_height = NULL) const;
+    bool scan_outputkeys_for_indexes(const txin_to_key& tx_in_to_key, visitor_t &vis, const crypto::hash &tx_prefix_hash, uint64_t* pmax_related_block_height = NULL) const;
 
     /**
      * @brief collect output public keys of a transaction input set
@@ -1249,7 +1247,7 @@ namespace cryptonote
      *
      * @return false if any output is not yet unlocked, or is missing, otherwise true
      */
-    bool check_tx_input(size_t tx_version,const txin_to_key& txin, const crypto::hash& tx_prefix_hash, const std::vector<crypto::signature>& sig, const rct::rctSig &rct_signatures, std::vector<rct::ctkey> &output_keys, uint64_t* pmax_related_block_height) const;
+    bool check_tx_input(txversion tx_version, const txin_to_key& txin, const crypto::hash& tx_prefix_hash, const std::vector<crypto::signature>& sig, const rct::rctSig &rct_signatures, std::vector<rct::ctkey> &output_keys, uint64_t* pmax_related_block_height) const;
 
     /**
      * @brief validate a transaction's inputs and their keys
@@ -1568,8 +1566,7 @@ namespace cryptonote
      * @param sig the signature generated for each input in the ring signature
      * @param result false if the ring signature is invalid, otherwise true
      */
-    void check_ring_signature(const crypto::hash &tx_prefix_hash, const crypto::key_image &key_image,
-        const std::vector<rct::ctkey> &pubkeys, const std::vector<crypto::signature> &sig, uint64_t &result) const;
+    void check_ring_signature(const crypto::hash &tx_prefix_hash, const crypto::key_image &key_image, const std::vector<rct::ctkey> &pubkeys, const std::vector<crypto::signature> &sig, uint64_t &result) const;
 
     /**
      * @brief loads block hashes from compiled-in data set

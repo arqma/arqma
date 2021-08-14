@@ -160,8 +160,8 @@ int main(int argc, char* argv[])
   const std::string input = command_line::get_arg(vm, arg_input);
 
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  blockchain_objects_t blockchain_objects = {};
-  Blockchain *core_storage = &blockchain_objects.m_blockchain;
+  blockchain_objects_t *blockchain_objects = new blockchain_objects_t();
+  Blockchain *core_storage = &blockchain_objects->m_blockchain;
   BlockchainDB *db = new_db();
   if (db == NULL)
   {
@@ -208,7 +208,7 @@ int main(int argc, char* argv[])
       for (const auto &out: tx.vout)
       {
         uint64_t amount = out.amount;
-        if (miner_tx && tx.version >= 2)
+        if (miner_tx && tx.version >= cryptonote::txversion::v2)
           amount = 0;
         if (amount == 0)
           continue;

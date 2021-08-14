@@ -64,8 +64,8 @@ using namespace epee;
 
 #define OUTPUT_HISTOGRAM_RECENT_CUTOFF_RESTRICTION (3 * 86400) // 3 days max, the wallet requests 1.8 days
 
-namespace
-{
+//namespace
+//{
 
 namespace cryptonote
 {
@@ -143,7 +143,7 @@ namespace cryptonote
     }
     return true;
   }
-#define CHECK_CORE_READY() do { if(!check_core_ready()){res.status =  CORE_RPC_STATUS_BUSY;return true;} } while(0)
+#define CHECK_CORE_READY() do { if(!check_core_ready()){res.status = CORE_RPC_STATUS_BUSY; return true;} } while(0)
 
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_height(const COMMAND_RPC_GET_HEIGHT::request& req, COMMAND_RPC_GET_HEIGHT::response& res, const connection_context *ctx)
@@ -596,7 +596,7 @@ namespace cryptonote
               return true;
             }
             const cryptonote::blobdata pruned = ss.str();
-            const crypto::hash prunable_hash = tx.version == 1 ? crypto::null_hash : get_transaction_prunable_hash(tx);
+            const crypto::hash prunable_hash = tx.version == cryptonote::txversion::v1 ? crypto::null_hash : get_transaction_prunable_hash(tx);
             sorted_txs.push_back(std::make_tuple(h, pruned, prunable_hash, std::string(i->tx_blob, pruned.size())));
             missed_txs.erase(std::find(missed_txs.begin(), missed_txs.end(), h));
             pool_tx_hashes.insert(h);
@@ -838,10 +838,11 @@ namespace cryptonote
     {
       const vote_verification_context &vvc = tvc.m_vote_ctx;
       res.status = "Failed";
-      res.reason = print_tx_verification_context(tvc);
-      res.reason += print_vote_verification_context(vvc);
+      std::string reason = print_tx_verification_context(tvc);
+      reason += print_vote_verification_context(vvc);
+      res.tvc = tvc;
 
-      res.low_mixin = tvc.m_low_mixin;
+/*      res.low_mixin = tvc.m_low_mixin;
       res.double_spend = tvc.m_double_spend;
       res.invalid_input = tvc.m_invalid_input;
       res.invalid_output = tvc.m_invalid_output;
@@ -859,8 +860,8 @@ namespace cryptonote
       res.service_node_index_out_of_bounds = vvc.m_service_node_index_out_of_bounds;
       res.signature_not_valid = vvc.m_signature_not_valid;
       res.not_enough_votes = vvc.m_not_enough_votes;
-
-      const std::string punctuation = reason.empty() ? "" : ": ";
+*/
+      const std::string punctuation = res.reason.empty() ? "" : ": ";
       if (tvc.m_verification_failed)
       {
         LOG_PRINT_L0("[on_send_raw_tx]: tx verification failed" << punctuation << reason);
@@ -2537,13 +2538,9 @@ namespace cryptonote
   {
     PERF_TIMER(on_pop_blocks);
 
-    if(!m_core.offline())
-    {
-      res.status = "Daemon must be running in offline mode to pop blocks.";
-      return false;
-    }
+    m_core.get_blockchain_storage().pop_blocks(req.nblocks);
 
-    m_core.pop_blocks(req.num_blocks_to_pop);
+    res.height = m_core.get_current_blockchain_height();
     res.status = CORE_RPC_STATUS_OK;
 
     return true;
@@ -2836,12 +2833,12 @@ namespace cryptonote
     }
 
     std::string err_msg;
-    if(!service_nodes::make_registration_cmd(m_core.get_nettype(), req.args, service_node_pubkey, service_node_key, res.registration_cmd, req.make_friendly, err_msg))
+    if(!service_nodes::make_registration_cmd(m_core.get_nettype(), req.staking_requirement, req.args, service_node_pubkey, service_node_key, res.registration_cmd, req.make_friendly, err_msg))
     {
       error_resp.code    = CORE_RPC_ERROR_CODE_WRONG_PARAM;
       error_resp.message = "Failed to make registration command";
       if(err_msg != "")
-        error_rest.message += ": " + err_msg;
+        error_resp.message += ": " + err_msg;
       return false;
     }
 
@@ -2878,6 +2875,7 @@ namespace cryptonote
     COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW::request req_old;
     COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW::response res_old;
 
+    req_old.staking_requirement = req.staking_requirement;
     req_old.args = std::move(args);
     req_old.make_friendly = false;
 
@@ -2930,18 +2928,18 @@ namespace cryptonote
         new_contributor.amount = contributor.amount;
         new_contributor.reserved = contributor.reserved;
         new_contributor.address = cryptonote::get_account_address_as_str(nettype(), false/*is_subaddress*/, contributor.address);
-        entry.contributors.push_back(new_contributor);
 
         new_contributor.locked_contributions.reserve(contributor.locked_contributions.size());
-        for(service_node_info::contribution_t const &src : contributor.locked_contribution)
+        for(service_node_info::contribution_t const &src : contributor.locked_contributions)
         {
-          COMMAND_RPC_GET_SERVICE_NODE::response::contribution dest = {};
+          COMMAND_RPC_GET_SERVICE_NODES::response::contribution dest = {};
           dest.amount = src.amount;
           dest.key_image = string_tools::pod_to_hex(src.key_image);
           dest.key_image_pub_key = string_tools::pod_to_hex(src.key_image_pub_key);
           new_contributor.locked_contributions.push_back(dest);
         }
 
+        entry.contributors.push_back(new_contributor);
       }
 
       entry.total_contributed = pubkey_info.info.total_contributed;

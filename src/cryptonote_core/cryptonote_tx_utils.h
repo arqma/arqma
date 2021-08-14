@@ -42,27 +42,24 @@ namespace cryptonote
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key);
   bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
 
-  uint64_t governance_reward_formula(uint64_t height);
-  bool block_has_governance_output(network_type nettype, cryptonote::block const &block);
-  bool height_has_governance_output(network_type nettype, int hard_fork_version, uint64_t height);
-  uint64_t derive_governance_from_block_reward(network_type nettype, const cryptonote::block &block);
+  uint64_t governance_reward_formula(uint64_t base_reward, uint8_t hard_fork_version);
+  uint64_t service_node_reward_formula(uint64_t base_reward, uint8_t hard_fork_version);
   uint64_t get_portion_of_reward(uint64_t portions, uint64_t total_service_node_reward);
-  uint64_t service_node_reward_formula(uint64_t base_reward, int hard_fork_version);
+  uint64_t derive_governance_reward(uint8_t hard_fork_version, const cryptonote::block &block);
 
   struct arqma_miner_tx_context
   {
     using stake_portions = uint64_t;
 
-    arqma_miner_tx_context(network_type type = MAINNET, crypto::public_key const &winner = crypto::null_pkey, std::vector<std::pair<account_public_address, stake_portions>> const &winner_info = {});
+    arqma_miner_tx_context(network_type type = MAINNET, crypto::public_key winner = crypto::null_pkey, std::vector<std::pair<account_public_address, stake_portions>> winner_info = {});
 
     network_type nettype;
     crypto::public_key snode_winner_key;
     std::vector<std::pair<account_public_address, stake_portions>> snode_winner_info;
-    uint64_t batched_governance;
+    uint64_t governance;
   };
 
-
-  bool construct_miner_tx(size_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce = blobdata(), uint8_t hard_fork_version = 1, const arqma_miner_tx_context &miner_context = {});
+  bool construct_miner_tx(uint64_t height, size_t median_weight, uint64_t already_generated_coins, size_t current_block_weight, uint64_t fee, const account_public_address &miner_address, transaction& tx, const blobdata& extra_nonce = blobdata(), uint8_t hard_fork_version = 1, const arqma_miner_tx_context &miner_context = {});
 
   struct block_reward_parts
   {
@@ -71,8 +68,6 @@ namespace cryptonote
     uint64_t governance;
     uint64_t base_miner;
     uint64_t base_miner_fee;
-
-    uint64_t adjusted_base_reward;
     uint64_t original_base_reward;
 
     uint64_t miner_reward() { return base_miner + base_miner_fee; }
@@ -81,14 +76,13 @@ namespace cryptonote
   struct arqma_block_reward_context
   {
     using portions = uint64_t;
-
-    uint64_t height;
     uint64_t fee;
-    uint64_t batched_governance;
+    uint64_t height;
+    uint64_t governance;
     std::vector<std::pair<account_public_address, portions>> snode_winner_info;
   };
 
-  bool get_arqma_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, int hard_fork_version, block_reward_parts &result, const arqma_block_reward_context &arqma_context);
+  bool get_arqma_block_reward(size_t medium_weight, size_t current_block_weight, uint64_t already_generated_coins, uint8_t hard_fork_version, block_reward_parts &result, const arqma_block_reward_context &arqma_context);
 
   struct tx_source_entry
   {
@@ -150,8 +144,8 @@ namespace cryptonote
   };
 
   //---------------------------------------------------------------
-  crypto::public_key get_destination_view_key_pub(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::account_public_address>& change_addr);
-  bool construct_tx(const account_keys& sender_account_keys, std::vector<tx_source_entry> &sources, const std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, std::vector<uint8_t> extra, transaction& tx, uint64_t unlock_time, uint8_t hard_fork_version = cryptonote::network_version_7, bool is_staking = false);
+  crypto::public_key get_destination_view_key_pub(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr);
+  bool construct_tx(const account_keys& sender_account_keys, std::vector<tx_source_entry> &sources, const std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, std::vector<uint8_t> extra, transaction& tx, uint64_t unlock_time, uint8_t hard_fork_version = 1, bool is_staking = false);
 
   struct arqma_construct_tx_params
   {
@@ -163,14 +157,18 @@ namespace cryptonote
     arqma_construct_tx_params(uint8_t hard_fork_version)
     {
       *this = {};
-      v3_sn = (hard_fork_version >= cryptonote::network_version_16_sn);
-      staking_tx = (hard_fork_version >= cryptonote::network_version_16_sn);
+      v3_sn = (hard_fork_version >= cryptonote::network_version_16);
+      staking_tx = (hard_fork_version >= cryptonote::network_version_16);
       use_rct = (hard_fork_version >= cryptonote::network_version_7);
     }
   };
 
-  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const rct::RCTConfig &rct_config = { rct::RangeProofBorromean, 0 }, rct::multisig_out *msout = NULL, bool shuffle_outs = true, arqma_construct_tx_params const &tx_params = {});
-  bool construct_tx_and_get_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, const rct::RCTConfig &rct_config = { rct::RangeProofBorromean, 0 }, rct::multisig_out *msout = NULL, arqma_construct_tx_params const &tx_params = {});
+  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const rct::RCTConfig &rct_config = { rct::RangeProofBorromean, 0}, rct::multisig_out *msout = NULL, bool shuffle_outs = true, arqma_construct_tx_params const tx_params = {});
+  bool construct_tx_and_get_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, const rct::RCTConfig &rct_config = { rct::RangeProofBorromean, 0}, rct::multisig_out *msout = NULL, arqma_construct_tx_params const tx_params = {});
+  bool generate_output_ephemeral_keys(const size_t tx_version, bool &found_change, const cryptonote::account_keys &sender_account_keys, const crypto::public_key &txkey_pub,  const crypto::secret_key &tx_key,
+                                      const cryptonote::tx_destination_entry &dst_entr, const boost::optional<cryptonote::tx_destination_entry> &change_addr, const size_t output_index,
+                                      const bool &need_additional_txkeys, const std::vector<crypto::secret_key> &additional_tx_keys, std::vector<crypto::public_key> &additional_tx_public_keys,
+                                      std::vector<rct::key> &amount_keys, crypto::public_key &out_eph_public_key);
 
   bool generate_genesis_block(block& bl);
 

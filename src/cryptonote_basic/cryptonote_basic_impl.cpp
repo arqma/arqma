@@ -83,7 +83,7 @@ namespace cryptonote {
     return arqma_tx::TRANSACTION_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
-  bool get_base_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, int hard_fork_version, uint64_t height)
+  bool get_base_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t hard_fork_version, uint64_t height)
   {
     if(height == 1)
     {
@@ -102,7 +102,8 @@ namespace cryptonote {
       base_reward = (FINAL_SUBSIDY_PER_MINUTE * target_minutes);
     }
 
-    if(hard_fork_version > 12)
+    cryptonote::network_type nettype;
+    if(hard_fork_version > 12 && nettype == MAINNET)
       already_generated_coins -= arqma_bc::PREMINE_BURN;
 
     uint64_t full_reward_zone = get_min_block_weight(hard_fork_version);

@@ -35,6 +35,7 @@ namespace service_nodes
     }
   }
 
+  static_assert(STAKING_SHARE_PARTS != UINT64_MAX, "UINT64_MAX is used as the invalid value for failing to calculate min_node_contribution");
   uint64_t get_min_node_contribution(uint64_t staking_requirement, uint64_t total_reserved, size_t num_contributions);
   uint64_t get_min_node_contribution_in_portions(uint64_t staking_requirement, uint64_t total_reserved, size_t num_contributions);
 

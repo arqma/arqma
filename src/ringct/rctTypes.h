@@ -232,10 +232,10 @@ namespace rct {
       RCTTypeNull = 0,
       RCTTypeFull = 1,
       RCTTypeSimple = 2,
-      RCTTypeBulletproof = 3,
-      RCTTypeBulletproof2 = 4,
-      RCTTypeFullBulletproof = 5,
-      RCTTypeSimpleBulletproof = 6,
+      RCTTypeFullBulletproof = 3,
+      RCTTypeSimpleBulletproof = 4,
+      RCTTypeBulletproof = 5,
+      RCTTypeBulletproof2 = 6,
     };
     enum RangeProofType { RangeProofBorromean, RangeProofBulletproof, RangeProofMultiOutputBulletproof, RangeProofPaddedBulletproof };
     struct RCTConfig

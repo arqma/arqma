@@ -133,6 +133,18 @@ namespace cryptonote
 namespace cryptonote
 {
   //---------------------------------------------------------------
+  void get_transaction_prefix_hash(const transaction_prefix& tx, crypto::hash& h, hw::device &hwdev)
+  {
+    hwdev.get_transaction_prefix_hash(tx, h);
+  }
+  //---------------------------------------------------------------
+  crypto::hash get_transaction_prefix_hash(const transaction_prefix& tx, hw::device &hwdev)
+  {
+    crypto::hash h = null_hash;
+    get_transaction_prefix_hash(tx, h, hwdev);
+    return h;
+  }
+  //---------------------------------------------------------------
   void get_transaction_prefix_hash(const transaction_prefix& tx, crypto::hash& h)
   {
     std::ostringstream s;
@@ -150,7 +162,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool expand_transaction_1(transaction &tx, bool base_only)
   {
-    if (tx.version >= 2 && !is_coinbase(tx))
+    if (tx.version >= txversion::v2 && !is_coinbase(tx))
     {
       rct::rctSig &rv = tx.rct_signatures;
       if (rv.outPk.size() != tx.vout.size())
@@ -171,7 +183,7 @@ namespace cryptonote
       if(!base_only)
       {
         const bool bulletproof = rct::is_rct_bulletproof(rv.type);
-        if(bulletproof && rv.type == rct::RCTTypeBulletproof)
+        if((bulletproof && rv.type == rct::RCTTypeBulletproof) || (bulletproof && rv.type == rct::RCTTypeBulletproof2))
         {
           if(rv.p.bulletproofs.size() != 1)
           {
@@ -184,7 +196,7 @@ namespace cryptonote
             return false;
           }
           const size_t max_outputs = 1 << (rv.p.bulletproofs[0].L.size() - 6);
-          if(max_outputs < tx.vout.size() && rv.type == rct::RCTTypeBulletproof)
+          if(max_outputs < tx.vout.size())
           {
             LOG_PRINT_L1("Failed to parse transaction from blob, bad bulletproofs max outputs in tx " << get_transaction_hash(tx));
             return false;
@@ -195,17 +207,25 @@ namespace cryptonote
           for (size_t i = 0; i < n_amounts; ++i)
             rv.p.bulletproofs[0].V[i] = rct::scalarmultKey(rv.outPk[i].mask, rct::INV_EIGHT);
         }
-        else if(bulletproof && rv.type != rct::RCTTypeBulletproof)
+        else if(bulletproof)
         {
-          if(rv.p.bulletproofs.size() != tx.vout.size())
+          if(rct::n_bulletproof_v1_amounts(rv.p.bulletproofs) != tx.vout.size())
           {
             LOG_PRINT_L1("Failed to parse transaction from blob, bad bulletproofs size in tx " << get_transaction_hash(tx));
             return false;
           }
+          size_t idx = 0;
           for (size_t n = 0; n < rv.outPk.size(); ++n)
           {
-            rv.p.bulletproofs[n].V.resize(1);
-            rv.p.bulletproofs[n].V[0] = rv.outPk[n].mask;
+            //rv.p.bulletproofs[n].V.resize(1);
+            //rv.p.bulletproofs[n].V[0] = rv.outPk[n].mask;
+            CHECK_AND_ASSERT_MES(rv.p.bulletproofs[n].L.size() >= 6, false, "Bad bulletproofs L size");
+            const size_t n_amounts = rct::n_bulletproof_v1_amounts(rv.p.bulletproofs[n]);
+            CHECK_AND_ASSERT_MES(idx + n_amounts <= rv.outPk.size(), false, "Internal error filling out V");
+            rv.p.bulletproofs[n].V.resize(n_amounts);
+            rv.p.bulletproofs[n].V.clear();
+            for(size_t i = 0; i < n_amounts; ++i)
+              rv.p.bulletproofs[n].V[i] = rv.outPk[idx++].mask;
           }
         }
       }
@@ -272,7 +292,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool is_v1_tx(const blobdata_ref& tx_blob)
   {
-    uint_fast8_t version;
+    uint8_t version;
     const char* begin = static_cast<const char*>(tx_blob.data());
     const char* end = begin + tx_blob.size();
     int read = tools::read_varint(begin, end, version);
@@ -420,10 +440,10 @@ namespace cryptonote
   uint64_t get_transaction_weight(const transaction &tx, size_t blob_size)
   {
     CHECK_AND_ASSERT_MES(!tx.pruned, std::numeric_limits<uint64_t>::max(), "get_transaction_weight does not support pruned txes");
-    if (tx.version <= 1)
+    if (tx.version < txversion::v2)
       return blob_size;
     const rct::rctSig &rv = tx.rct_signatures;
-    if (rv.type != rct::RCTTypeBulletproof)
+    if (!rct::is_rct_bulletproof(rv.type))
       return blob_size;
     const size_t n_padded_outputs = rct::n_bulletproof_max_amounts(rv.p.bulletproofs);
     uint64_t bp_clawback = get_transaction_weight_clawback(tx, n_padded_outputs);
@@ -434,8 +454,8 @@ namespace cryptonote
   uint64_t get_pruned_transaction_weight(const transaction &tx)
   {
     CHECK_AND_ASSERT_MES(tx.pruned, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support non pruned txes");
-    CHECK_AND_ASSERT_MES(tx.version >= 2, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support v1 txes");
-    CHECK_AND_ASSERT_MES(tx.rct_signatures.type >= rct::RCTTypeBulletproof, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support older range proof types");
+    CHECK_AND_ASSERT_MES(tx.version >= txversion::v2, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support v1 txes");
+    CHECK_AND_ASSERT_MES(tx.rct_signatures.type >= rct::RCTTypeBulletproof2, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support older range proof types");
     CHECK_AND_ASSERT_MES(!tx.vin.empty(), std::numeric_limits<uint64_t>::max(), "empty vin");
     CHECK_AND_ASSERT_MES(tx.vin[0].type() == typeid(cryptonote::txin_to_key), std::numeric_limits<uint64_t>::max(), "empty vin");
 
@@ -492,7 +512,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool get_tx_fee(const transaction& tx, uint64_t & fee)
   {
-    if(tx.version >= 2)
+    if(tx.version >= txversion::v2)
     {
       fee = tx.rct_signatures.txnFee;
       return true;
@@ -609,17 +629,11 @@ namespace cryptonote
 
     // sort by:
     if(!pick<tx_extra_pub_key>(nar, tx_extra_fields, TX_EXTRA_TAG_PUBKEY)) return false;
-    if(!pick<tx_extra_service_node_winner>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_WINNER)) return false;
     if(!pick<tx_extra_additional_pub_keys>(nar, tx_extra_fields, TX_EXTRA_TAG_ADDITIONAL_PUBKEYS)) return false;
     if(!pick<tx_extra_nonce>(nar, tx_extra_fields, TX_EXTRA_NONCE)) return false;
     if(!pick<tx_extra_service_node_register>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_REGISTER)) return false;
     if(!pick<tx_extra_service_node_deregister>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_DEREGISTER)) return false;
     if(!pick<tx_extra_service_node_winner>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_WINNER)) return false;
-    if(!pick<tx_extra_service_node_contributor>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_CONTRIBUTOR)) return false;
-    if(!pick<tx_extra_service_node_pubkey>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_PUBKEY)) return false;
-    if(!pick<tx_extra_tx_secret_key>(nar, tx_extra_fields, TX_EXTRA_TAG_TX_SECRET_KEY)) return false;
-    if(!pick<tx_extra_service_node_register>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_REGISTER)) return false;
-    if(!pick<tx_extra_service_node_deregister>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_DEREGISTER)) return false;
     if(!pick<tx_extra_service_node_contributor>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_CONTRIBUTOR)) return false;
     if(!pick<tx_extra_service_node_pubkey>(nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_PUBKEY)) return false;
     if(!pick<tx_extra_tx_secret_key>(nar, tx_extra_fields, TX_EXTRA_TAG_TX_SECRET_KEY)) return false;
@@ -1003,12 +1017,12 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool check_outs_valid(const transaction& tx)
   {
-    if(tx.get_type() != transaction::type_standard)
+    if(tx.type != txtype::standard)
     {
-      CHECK_AND_NO_ASSERT_MES(tx.vout.size() == 0, false, "tx type: " << transaction::type_to_string(tx.type) << " must have 0 outputs, received: " << tx.vout.size() << ", id: " << get_transaction_hash(tx));
+      CHECK_AND_NO_ASSERT_MES(tx.vout.size() == 0, false, "tx type: " << tx.type << " MUST have 0 outputs, received: " << tx.vout.size() << ", id: " << get_transaction_hash(tx));
     }
 
-    if(tx.version >= 3)
+    if(tx.version >= txversion::v3)
     {
       CHECK_AND_NO_ASSERT_MES(tx.vout.size() == tx.output_unlock_times.size(), false, "tx version 3 must have equal number of output unlock times and outputs");
     }
@@ -1017,7 +1031,7 @@ namespace cryptonote
     {
       CHECK_AND_ASSERT_MES(out.target.type() == typeid(txout_to_key), false, "wrong variant type: " << out.target.type().name() << ", expected: " << typeid(txout_to_key).name() << ", in transaction id: " << get_transaction_hash(tx));
 
-      if (tx.version == 1)
+      if (tx.version == txversion::v1)
       {
         CHECK_AND_NO_ASSERT_MES(0 < out.amount, false, "zero amount output in transaction id: " << get_transaction_hash(tx));
       }
@@ -1171,7 +1185,7 @@ namespace cryptonote
 
     if(tx)
     {
-      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction Version: %d", (int)tx->version);
+      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction Version: %d", static_cast<uint16_t>(tx->version));
       bufPtr += snprintf(bufPtr, bufEnd - bufPtr, " Type: %s", transaction::type_to_string(tx->type));
     }
 
@@ -1211,7 +1225,7 @@ namespace cryptonote
     return buf;
   }
   //---------------------------------------------------------------
-  void get_blob_hash(const blobdata& blob, crypto::hash& res)
+  void get_blob_hash(const blobdata_ref& blob, crypto::hash& res)
   {
     cn_fast_hash(blob.data(), blob.size(), res);
   }
@@ -1303,8 +1317,9 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool calculate_transaction_prunable_hash(const transaction& t, const cryptonote::blobdata_ref *blob, crypto::hash& res)
   {
-    if (t.version == 1)
+    if (t.version == txversion::v1)
       return false;
+
     const unsigned int unprunable_size = t.unprunable_size;
     if (blob && unprunable_size)
     {
@@ -1348,7 +1363,7 @@ namespace cryptonote
   crypto::hash get_pruned_transaction_hash(const transaction& t, const crypto::hash &pruned_data_hash)
   {
     // v1 transactions hash the entire blob
-    CHECK_AND_ASSERT_THROW_MES(t.version > 1, "Hash for pruned v1 tx cannot be calculated");
+    CHECK_AND_ASSERT_THROW_MES(t.version >= txversion::v2, "Hash for pruned v1 tx cannot be calculated");
 
     // v2 transactions hash different parts together, than hash the set of those hashes
     crypto::hash hashes[3];
@@ -1386,7 +1401,7 @@ namespace cryptonote
     CHECK_AND_ASSERT_MES(!t.pruned, false, "Cannot calculate hash of a pruned transaction");
 
     // v1 transactions hash the entire blob
-    if (t.version == 1)
+    if (t.version == txversion::v1)
     {
       size_t ignored_blob_size, &blob_size_ref = blob_size ? *blob_size : ignored_blob_size;
       return get_object_hash(t, res, blob_size_ref);
@@ -1398,13 +1413,26 @@ namespace cryptonote
     // prefix
     get_transaction_prefix_hash(t, hashes[0]);
 
+    transaction &tt = const_cast<transaction&>(t);
+
     const blobdata blob = tx_to_blob(t);
     const unsigned int unprunable_size = t.unprunable_size;
     const unsigned int prefix_size = t.prefix_size;
 
-    // base rct
-    CHECK_AND_ASSERT_MES(prefix_size <= unprunable_size && unprunable_size <= blob.size(), false, "Inconsistent transaction prefix, unprunable and blob sizes");
-    cryptonote::get_blob_hash(blobdata_ref(blob.data() + prefix_size, unprunable_size - prefix_size), hashes[1]);
+    // base_rct
+    if(t.type == txtype::standard)
+    {
+      CHECK_AND_ASSERT_MES(prefix_size <= unprunable_size && unprunable_size <= blob.size(), false, "Inconsistent transaction prefix, unprunable and blob sizes");
+      cryptonote::get_blob_hash(blobdata_ref(blob.data() + prefix_size, unprunable_size - prefix_size), hashes[1]);
+    }
+    else
+    {
+      std::stringstream ss;
+      binary_archive<true> ba(ss);
+      bool r = tt.rct_signatures.serialize_rctsig_base(ba, t.vin.size(), t.vout.size());
+      CHECK_AND_ASSERT_MES(r, false, "Failed to serialize rct signature base");
+      cryptonote::get_blob_hash(ss.str(), hashes[1]);
+    }
 
     // prunable rct
     if (t.rct_signatures.type == rct::RCTTypeNull)

@@ -676,7 +676,7 @@ namespace rct {
       char data[38];
       rct::key hash;
       memcpy(data, "amount", 6);
-      memcpy(data + 6, &k, sizeof(data));
+      memcpy(data + 6, &k, sizeof(k));
       cn_fast_hash(hash, data, sizeof(data));
       return hash;
     }

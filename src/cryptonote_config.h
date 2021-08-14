@@ -124,6 +124,7 @@
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT                   24
+#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST              4
 
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // seconds
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
@@ -262,25 +263,25 @@ namespace config
    namespace blockchain_settings
    {
      uint64_t const ARQMA = 1000000000; // Atomic representation of a value 1 ARQMA
-     static uint_fast8_t const ARQMA_DECIMALS = 9;
+     static uint8_t const ARQMA_DECIMALS = 9;
      uint64_t const PREMINE = 7500000000000000; // Premine Reward (already burned).
      uint64_t const PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
      uint64_t const MAXIMUM_BLOCK_SIZE_LIMIT = 2 * 1024 * 1024; // It is set to 2048kB (2MB)
      uint64_t const MINIMUM_BLOCK_SIZE_LIMIT = 1 * 1024 * 1024; // It is set to 1024kB (1MB)
-     static int_fast8_t const ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     static int_fast8_t const ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     static uint_fast8_t const ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+     static uint8_t const ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
+     static uint8_t const ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
+     static uint8_t const ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
    }
 
    namespace tx_settings
    {
-     static uint_fast8_t const ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     uint_fast16_t const ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
+     static uint8_t const ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+     uint64_t const ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
      uint64_t const TRANSACTION_SIZE_LIMIT = 48 * 1024; // I did set it to 48kB for now but it need to be verified.
      uint64_t const MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
 
-     static uint_fast8_t const tx_mixin = 10;
-     static uint_fast8_t const tx_ring_size = tx_mixin + 1;
+     static const uint8_t tx_mixin = 10;
+     static const uint8_t tx_ring_size = tx_mixin + 1;
    }
 
    namespace sync
@@ -292,23 +293,11 @@ namespace config
 
    namespace governance
    {
-     uint64_t const gov_reward_interval = 90;
+     static const uint64_t gr = 15;
+     static const uint64_t sn = 2;
      std::string const mainnet_gov_wallet_address = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
      std::string const testnet_gov_wallet_address = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkY4zCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
      std::string const stagenet_gov_wallet_address = "as2RzktNfxR8y3RgoDmoRFCGez6393Rd97e8c3ctupJu5i3CirGA4MVFzT7fwcSjxn8bV1orETq4eVQzkY2VTjox2TFnGUhgn";
-   }
-
-   namespace base_reward_divisor
-   {
-     static uint_fast8_t const governance = 10;
-     static uint_fast8_t const service_node = 2;
-   }
-
-   namespace governance
-   {
-     static constexpr const char* MAINNET_WALLET_ADDRESS = "";
-     static constexpr const char* TESTNET_WALLET_ADDRESS = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkY4zCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
-     static constexpr const char* STAGENET_WALLET_ADDRESS = "";
    }
 }
 
@@ -356,7 +345,7 @@ namespace cryptonote
     network_version_13,
     network_version_14,
     network_version_15,
-    network_version_16_sn,
+    network_version_16,
   };
 
   enum network_type : uint8_t
@@ -378,10 +367,9 @@ namespace cryptonote
       boost::uuids::uuid NETWORK_ID;
       std::string GENESIS_TX;
       uint32_t GENESIS_NONCE;
-      uint64_t GOVERNANCE_REWARD_INTERVAL;
-      std::string const governance_wallet_address;
+      std::string const *GOVERNANCE_WALLET_ADDRESS;
     };
-    inline const config_t& get_config(network_type nettype, int hard_fork_version = 7)
+    inline const config_t& get_config(network_type nettype)
     {
       static config_t mainnet = {
         ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
@@ -393,8 +381,7 @@ namespace cryptonote
         ::config::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE,
-        ::config::governance::gov_reward_interval,
-        ::config::governance::mainnet_gov_wallet_address
+        &::config::governance::mainnet_gov_wallet_address
       };
 
       static config_t testnet = {
@@ -407,8 +394,7 @@ namespace cryptonote
         ::config::testnet::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE,
-        ::config::governance::gov_reward_interval,
-        ::config::governance::testnet_gov_wallet_address
+        &::config::governance::testnet_gov_wallet_address
       };
 
       static config_t stagenet = {
@@ -421,28 +407,23 @@ namespace cryptonote
         ::config::stagenet::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE,
-        ::config::governance::gov_reward_interval,
-        ::config::governance::stagenet_gov_wallet_address
+        &::config::governance::stagenet_gov_wallet_address
       };
 
       switch (nettype)
       {
         case MAINNET:
+        case FAKECHAIN:
           return mainnet;
         case TESTNET:
         {
-          testnet.GOVERNANCE_REWARD_INTERVAL = 5;
           return testnet;
         }
 
         case STAGENET:
         {
-          stagenet.GOVERNANCE_REWARD_INTERVAL = 5;
           return stagenet;
         }
-
-        case FAKECHAIN:
-          return mainnet;
 
         default: throw std::runtime_error("Invalid network type");
       }

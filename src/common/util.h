@@ -40,6 +40,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <chrono>
 
 #ifdef _WIN32
 #include "windows.h"
@@ -247,7 +248,7 @@ namespace tools
 
   std::string get_human_readable_timestamp(uint64_t ts);
 
-  std::string get_human_readable_timespan(uint64_t seconds);
+  std::string get_human_readable_timespan(std::chrono::seconds seconds);
 
   std::string get_human_readable_bytes(uint64_t bytes);
 

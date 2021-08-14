@@ -34,6 +34,7 @@
 
 #include "crypto/crypto.h"
 #include "cryptonote_basic/cryptonote_basic.h"
+#include "cryptonote_tx_utils.h"
 
 #include "math_helper.h"
 #include "syncobj.h"

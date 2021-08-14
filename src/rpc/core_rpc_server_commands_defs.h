@@ -604,49 +604,17 @@ namespace cryptonote
       std::string status;
       std::string reason;
       bool not_relayed;
-      bool low_mixin;
-      bool double_spend;
-      bool invalid_input;
-      bool invalid_output;
-      bool too_big;
-      bool overspend;
-      bool fee_too_low;
       bool sanity_check_failed;
-      bool invalid_version;
-      bool invalid_type;
-      bool key_image_locked_by_snode;
-      bool key_image_blacklisted;
       bool untrusted;
-      bool invalid_block_height;
-      bool voters_quorum_index_out_of_bounds;
-      bool duplicate_voters;
-      bool service_node_index_out_of_bounds;
-      bool signature_not_valid;
-      bool not_enough_votes;
+      tx_verification_context tvc;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE(reason)
         KV_SERIALIZE(not_relayed)
-        KV_SERIALIZE(low_mixin)
-        KV_SERIALIZE(double_spend)
-        KV_SERIALIZE(invalid_input)
-        KV_SERIALIZE(invalid_output)
-        KV_SERIALIZE(too_big)
-        KV_SERIALIZE(overspend)
-        KV_SERIALIZE(fee_too_low)
         KV_SERIALIZE(sanity_check_failed)
-        KV_SERIALIZE(invalid_version)
-        KV_SERIALIZE(invalid_type)
-        KV_SERIALIZE(key_image_locked_by_snode)
-        KV_SERIALIZE(key_image_blacklisted)
         KV_SERIALIZE(untrusted)
-        KV_SERIALIZE(invalid_block_height)
-        KV_SERIALIZE(voters_quorum_index_out_of_bounds)
-        KV_SERIALIZE(duplicate_voters)
-        KV_SERIALIZE(service_node_index_out_of_bounds)
-        KV_SERIALIZE(signature_not_valid)
-        KV_SERIALIZE(not_enough_votes)
+        KV_SERIALIZE(tvc)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -905,9 +873,11 @@ namespace cryptonote
     struct response_t
     {
       uint64_t count;
+      std::string status;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(count)
+        KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -1297,7 +1267,7 @@ namespace cryptonote
     uint64_t last_seen;
     uint16_t rpc_port;
 
-    public_node(): last_seen(0), rpc_port(0) {}
+    public_node() = delete;
 
     public_node(const peer &peer)
       : host(peer.host), last_seen(peer.last_seen), rpc_port(peer.rpc_port)
@@ -2449,9 +2419,9 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
   {
     struct request_t
     {
-      size_t num_blocks_to_pop;
+      uint64_t nblocks;
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(num_blocks_to_pop)
+        KV_SERIALIZE(nblocks)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -2459,8 +2429,10 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     struct response_t
     {
       std::string status;
+      uint64_t height;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
+        KV_SERIALIZE(height)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -2566,9 +2538,11 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     {
       std::vector<std::string> args;
       bool make_friendly;
+      uint64_t staking_requirement;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(args)
         KV_SERIALIZE(make_friendly)
+        KV_SERIALIZE(staking_requirement)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -2588,23 +2562,25 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
 
   struct COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD
   {
+    struct contribution_t
+    {
+      std::string address;
+      uint64_t amount;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(address)
+        KV_SERIALIZE(amount)
+      END_KV_SERIALIZE_MAP()
+    };
+
     struct request_t
     {
-      struct contribs
-      {
-        std::string address;
-        uint64_t amount;
-        BEGIN_KV_SERIALIZE_MAP()
-          KV_SERIALIZE(address)
-          KV_SERIALIZE(amount)
-        END_KV_SERIALIZE_MAP()
-      };
-
       std::string operator_cut;
-      std::vector<contribs> contributions;
+      std::vector<contribution_t> contributions;
+      uint64_t staking_requirement;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(operator_cut)
         KV_SERIALIZE(contributions)
+        KV_SERIALIZE(staking_requirement)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;

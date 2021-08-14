@@ -82,7 +82,7 @@ typedef struct mdb_txn_cursors
 #define m_cur_block_info            m_cursors->m_txc_block_info
 #define m_cur_output_txs            m_cursors->m_txc_output_txs
 #define m_cur_output_amounts        m_cursors->m_txc_output_amounts
-#define m_cur_output_blabklist      m_cursors->m_txc_output_blacklist;
+#define m_cur_output_blacklist      m_cursors->m_txc_output_blacklist
 #define m_cur_txs                   m_cursors->m_txc_txs
 #define m_cur_txs_pruned            m_cursors->m_txc_txs_pruned
 #define m_cur_txs_prunable          m_cursors->m_txc_txs_prunable
@@ -452,7 +452,7 @@ private:
   void cleanup_batch();
 
   virtual void set_service_node_data(const std::string &data);
-  virtual void get_service_node_data(std::string &data);
+  virtual bool get_service_node_data(std::string &data);
   virtual void clear_service_node_data();
 
 private:

@@ -69,7 +69,7 @@ namespace service_nodes
     return result;
   }
 
-  bool deregister_vote::verify_vote_signature(uint64_t block_height, uint32_t service_node_index, crypto::public_key const &p, crypto::signature const &s)
+  bool deregister_vote::verify_vote_signature(uint64_t block_height, uint32_t service_node_index, crypto::public_key p, crypto::signature s)
   {
     std::vector<std::pair<crypto::public_key, crypto::signature>> keys_and_sigs{ std::make_pair(p, s) };
     return verify_votes_signature(block_height, service_node_index, keys_and_sigs);
@@ -207,7 +207,7 @@ namespace service_nodes
 
   bool deregister_vote_pool::add_vote(const deregister_vote& new_vote, cryptonote::vote_verification_context& vvc, const service_nodes::quorum_state &quorum_state, cryptonote::transaction &tx)
   {
-    if(!deregister_vote::verify_vote(nettype, new_vote, vvc, quorum_state))
+    if(!deregister_vote::verify_vote(m_nettype, new_vote, vvc, quorum_state))
     {
       LOG_PRINT_L1("Signature verification failed for deregister vote");
       return false;
@@ -256,8 +256,8 @@ namespace service_nodes
         vvc.m_full_tx_deregister_made = cryptonote::add_service_node_deregister_to_tx_extra(tx.extra, deregister);
         if(vvc.m_full_tx_deregister_made)
         {
-          tx.version = cryptonote::transaction::version_3;
-          tx.type = cryptonote::transaction::type_deregister;
+          tx.version = cryptonote::txversion::v3;
+          tx.type = cryptonote::txtype::deregister;
         }
         else
         {
@@ -269,16 +269,16 @@ namespace service_nodes
     return true;
   }
 
-  void deregister_vote_pool::remove_used_votes(std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata> const &txs)
+  void deregister_vote_pool::remove_used_votes(std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>> const &txs)
   {
     CRITICAL_REGION_LOCAL(m_lock);
-    for(const cryptonote::transaction &tx : txs)
+    for(const std::pair<cryptonote::transaction, cryptonote::blobdata> &tx : txs)
     {
-      if(tx.get_type() != cryptonote::transaction::type_deregister)
+      if(tx.first.type != cryptonote::txtype::deregister)
         continue;
 
       cryptonote::tx_extra_service_node_deregister deregister;
-      if(!get_service_node_deregister_from_tx_extra(tx.extra, deregister))
+      if(!get_service_node_deregister_from_tx_extra(tx.first.extra, deregister))
       {
         LOG_ERROR("Could not get deregister from tx, possibly corrupt tx");
         continue;

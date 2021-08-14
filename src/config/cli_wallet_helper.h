@@ -101,7 +101,6 @@ namespace command_helper
   const char* USAGE_MARK_OUTPUT_SPENT("mark_output_spent <amount>/<offset> | <filename> [add]");
   const char* USAGE_MARK_OUTPUT_UNSPENT("mark_output_unspent <amount>/<offset>");
   const char* USAGE_IS_OUTPUT_SPENT("is_output_spent <amount>/<offset>");
-  const char* USAGE_PUBLIC_NODES("public_nodes");
   const char* USAGE_SHOW_QR_CODE("show_qr_code [<subaddress_index>]");
   const char* USAGE_NET_STATS("net_stats");
   const char* USAGE_WELCOME("welcome");
@@ -256,7 +255,6 @@ namespace command_helper
   const char* MARK_OUTPUT_SPENT("Mark output(s) as spent so they never get selected as fake outputs in a ring");
   const char* MARK_OUTPUT_UNSPENT("Mark an output as unspent so it may get selected as a fake output in a ring");
   const char* IS_OUTPUT_SPENT("Checks whether an output is marked as spent");
-  const char* PUBLIC_NODES("Lists known public nodes.");
   const char* NET_STATS("Prints simple network stats.");
   const char* WELCOME("Prints basic info about Arqma for first time users");
   const char* VERSION("Returns version information.");
@@ -268,13 +266,10 @@ namespace command_helper
   const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount|percent>");
   const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] <operator cut> <address1> <contribution %> [<address2> <contribution %> [...]] <expiration timestamp> <pubkey> <signature>");
 
-  const char* STAKE("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
-  const char* REGISTER_SN("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used."));
+  const char* STAKE("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used.");
+  const char* REGISTER_SN("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used.");
 
-  const char* AUTOSTAKE_PWD("Can not autostake with ask-password set to true.\nPassword are scrubbed from memory after use.\n\nYou must switch idle password OFF with command \"set ask-password 0\" to allow autostake to work.");
-  const char* AUTOSTAKE_WARN("Auto staking with non-trusted contributors may lock your ArQmA for staking duration if they do not restake after Service Node expiration.\n\nIf this behaviour is not desirable, please reuse stakin command without auto command"); 
-
-  const char* USAGE_UNLOCK_HELPER("request_stake_unlock <service_node_pubkey>");
+  const char* USAGE_REQUEST_STAKE_UNLOCK("request_stake_unlock <service_node_pubkey>");
   const char* UNLOCK_HELPER("");
 
   const char* USAGE_LOCKED_STAKES("");

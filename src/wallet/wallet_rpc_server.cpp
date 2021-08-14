@@ -297,6 +297,8 @@ namespace tools
 
     entry.type = "out";
     entry.subaddr_index = { pd.m_subaddr_account, 0 };
+    for(uint32_t i : pd.m_subaddr_indices)
+      entry.subaddr_indices.push_back({pd.m_subaddr_account, i});
     entry.address = m_wallet->get_subaddress_as_str({pd.m_subaddr_account, 0});
     set_confirmations(entry, m_wallet->get_blockchain_current_height(), m_wallet->get_last_block_reward());
   }
@@ -317,6 +319,8 @@ namespace tools
     entry.note = m_wallet->get_tx_note(txid);
     entry.type = is_failed ? "failed" : "pending";
     entry.subaddr_index = { pd.m_subaddr_account, 0 };
+    for(uint32_t i : pd.m_subaddr_indices)
+      entry.subaddr_indices.push_back({pd.m_subaddr_account, i});
     entry.address = m_wallet->get_subaddress_as_str({pd.m_subaddr_account, 0});
     set_confirmations(entry, m_wallet->get_blockchain_current_height(), m_wallet->get_last_block_reward());
   }
@@ -4153,6 +4157,144 @@ namespace tools
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  bool wallet_rpc_server::on_stake(const wallet_rpc::COMMAND_RPC_STAKE::request& req, wallet_rpc::COMMAND_RPC_STAKE::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    if(!m_wallet)
+      return not_open(er);
+
+    if(m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Staking command not available in restricted mode.";
+      return false;
+    }
+
+    crypto::public_key snode_key = {};
+    cryptonote::address_parse_info addr_info = {};
+    if(!cryptonote::get_account_address_from_str(addr_info, m_wallet->nettype(), req.destination))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
+      er.message = std::string("Unparsable address given: ") + req.destination;
+      return false;
+    }
+
+    if(!epee::string_tools::hex_to_pod(req.service_node_key, snode_key))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_WRONG_KEY;
+      er.message = std::string("Unparsable service node key given: ") + req.service_node_key;
+      return false;
+    }
+
+    tools::wallet2::stake_result stake_result = m_wallet->create_stake_tx(snode_key, addr_info, req.amount, 0, req.priority, 0, req.subaddr_indices);
+    if(stake_result.status != tools::wallet2::stake_result_status::success)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_TX_NOT_POSSIBLE;
+      er.message = stake_result.msg;
+      return false;
+    }
+
+    std::vector<tools::wallet2::pending_tx> ptx_vector = {stake_result.ptx};
+    return fill_response(ptx_vector, req.get_tx_key, res.tx_key, res.amount, res.fee, res.multisig_txset, res.unsigned_txset, req.do_not_relay, res.tx_hash, req.get_tx_hex, res.tx_blob, req.get_tx_metadata, res.tx_metadata, er);
+  }
+
+  bool wallet_rpc_server::on_register_service_node(const wallet_rpc::COMMAND_RPC_REGISTER_SERVICE_NODE::request& req, wallet_rpc::COMMAND_RPC_REGISTER_SERVICE_NODE::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    if(!m_wallet)
+      return not_open(er);
+
+    if(m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Register service node command is unavailable in restricted mode.";
+      return false;
+    }
+
+    std::vector<std::string> args;
+    boost::split(args, req.register_service_node_str, boost::is_any_of(" "));
+
+    if(args.size() > 0)
+    {
+      if(args[0] == "register_service_node")
+        args.erase(args.begin());
+    }
+
+    tools::wallet2::register_service_node_result register_result = m_wallet->create_register_service_node_tx(args, 0 /*subaddr_account*/);
+    if(register_result.status != tools::wallet2::register_service_node_result_status::success)
+    {
+      er.code    = WALLET_RPC_ERROR_CODE_TX_NOT_POSSIBLE;
+      er.message = register_result.msg;
+      return false;
+    }
+
+    std::vector<tools::wallet2::pending_tx> ptx_vector = {register_result.ptx};
+    return fill_response(ptx_vector, req.get_tx_key, res.tx_key, res.amount, res.fee, res.multisig_txset, res.unsigned_txset, req.do_not_relay, res.tx_hash, req.get_tx_hex, res.tx_blob, req.get_tx_metadata, res.tx_metadata, er);
+  }
+
+  bool wallet_rpc_server::on_can_request_stake_unlock(const wallet_rpc::COMMAND_RPC_CAN_REQUEST_STAKE_UNLOCK::request& req, wallet_rpc::COMMAND_RPC_CAN_REQUEST_STAKE_UNLOCK::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    if(!m_wallet)
+      return not_open(er);
+
+    if(m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Stake Unlock Request unavailable in restricted mode.";
+      return false;
+    }
+
+    crypto::public_key snode_key = {};
+    if(!epee::string_tools::hex_to_pod(req.service_node_key, snode_key))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_WRONG_KEY;
+      er.message = std::string("Unparsable service node key given: ") + req.service_node_key;
+      return false;
+    }
+
+    tools::wallet2::request_stake_unlock_result unlock_result = m_wallet->can_request_stake_unlock(snode_key);
+    res.can_unlock = unlock_result.success;
+    res.msg = unlock_result.msg;
+    return true;
+  }
+
+  bool wallet_rpc_server::on_request_stake_unlock(const wallet_rpc::COMMAND_RPC_REQUEST_STAKE_UNLOCK::request& req, wallet_rpc::COMMAND_RPC_REQUEST_STAKE_UNLOCK::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    if(!m_wallet)
+      return not_open(er);
+
+    if(m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Stake Unlock Request unavailable in restricted mode.";
+      return false;
+    }
+
+    crypto::public_key snode_key = {};
+    if(!epee::string_tools::hex_to_pod(req.service_node_key, snode_key))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_WRONG_KEY;
+      er.message = std::string("Unparsable Service Node key given: ") + req.service_node_key;
+      return false;
+    }
+
+    tools::wallet2::request_stake_unlock_result unlock_result = m_wallet->can_request_stake_unlock(snode_key);
+    if(unlock_result.success)
+    {
+      try
+      {
+        m_wallet->commit_tx(unlock_result.ptx);
+      }
+      catch(const std::exception &e)
+      {
+        er.code = WALLET_RPC_ERROR_CODE_GENERIC_TRANSFER_ERROR;
+        er.message = "Failed to commit tx.";
+        return false;
+      }
+    }
+
+    res.unlocked = unlock_result.success;
+    res.msg = unlock_result.msg;
+    return res.unlocked;
+  }
 }
 
 class t_daemon

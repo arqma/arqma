@@ -1,6 +1,6 @@
 #include "cryptonote_config.h"
 #include "common/arqma.h"
-#include "common/int-util.h"
+#include "int-util.h"
 #include <vector>
 #include <boost/lexical_cast.hpp>
 
@@ -20,11 +20,22 @@ namespace service_nodes
     if(height < service_nodes_hard_fork_16)
       height = service_nodes_hard_fork_16;
 
-   uint64_t adjusted_height = height - service_nodes_hard_fork_16;
+    uint64_t adjusted_height = height - service_nodes_hard_fork_16;
+    uint64_t base = 0, variable = 0;
 
-   uint64_t stake_requirement = (arqma_bc::ARQMA * 50000) + ((arqma_bc::ARQMA * 10000.0) / arqma::exp2(adjusted_height/131609.6));
+    if(height >= 1200000)
+    {
+      base = 35000 * arqma_bc::ARQMA;
+      variable = (38503.0 * arqma_bc::ARQMA) / arqma::exp2(adjusted_height/162500.0);
+    }
+    else
+    {
+      base = 25000 * arqma_bc::ARQMA;
+      variable = (71853.5 * arqma_bc::ARQMA) / arqma::exp2(adjusted_height/162500.0);
+    }
 
-   return stake_requirement;
+    uint64_t result = base + variable;
+    return result;
   }
 
   uint64_t portions_to_amount(uint64_t portions, uint64_t staking_requirement)
@@ -61,7 +72,7 @@ namespace service_nodes
     for(size_t i = 0; i < sizeof(result) / sizeof(nonce); ++i)
     {
       memcpy(hash_ptr, nonce_ptr, sizeof(nonce));
-      hash_str += sizeof(nonce);
+      hash_ptr += sizeof(nonce);
     }
 
     assert(hash_ptr == (char *)result.data + sizeof(result));
@@ -71,7 +82,7 @@ namespace service_nodes
   uint64_t get_locked_key_image_unlock_height(cryptonote::network_type nettype, uint64_t node_register_height, uint64_t curr_height)
   {
     uint64_t blocks_to_lock = staking_num_lock_blocks(nettype);
-    uint64_t result = curr_height + (block_to_lock / 2);
+    uint64_t result = curr_height + (blocks_to_lock / 2);
     return result;
   }
 
@@ -81,7 +92,7 @@ namespace service_nodes
     const size_t max_num_of_contributions = MAX_NUMBER_OF_CONTRIBUTORS * MAX_KEY_IMAGES_PER_CONTRIBUTOR;
     assert(max_num_of_contributions > num_contributions);
     if(max_num_of_contributions <= num_contributions)
-      return 0;
+      return UINT64_MAX;
 
     const size_t num_contributions_remaining_avail = max_num_of_contributions - num_contributions;
     return needed / num_contributions_remaining_avail;
@@ -90,7 +101,7 @@ namespace service_nodes
   uint64_t get_min_node_contribution_in_portions(uint64_t staking_requirement, uint64_t total_reserved, size_t num_contributions)
   {
     uint64_t atomic_amount = get_min_node_contribution(staking_requirement, total_reserved, num_contributions);
-    uint64_t result = get_portions_to_make_amount(staking_requirement, atomic_amount);
+    uint64_t result = (atomic_amount == UINT64_MAX) ? UINT64_MAX : (get_portions_to_make_amount(staking_requirement, atomic_amount));
     return result;
   }
 
@@ -105,26 +116,41 @@ namespace service_nodes
     return resultlo;
   }
 
-  static bool get_portions_from_percent(std::string cut_str, uint64_t& portions)
+  static bool get_portions_from_percent(double cur_percent, uint64_t& portions)
   {
-    if(!cut_str.emptry() && cut_str.back() == '%')
+    if(cur_percent < 0.0 || cur_percent > 100.0)
+      return false;
+
+    if(cur_percent == 100.0)
     {
-      cut_str.pop_back{};
+      portions = STAKING_SHARE_PARTS;
+    }
+    else
+    {
+      portions = (cur_percent / 100.0) * (double)STAKING_SHARE_PARTS;
+    }
+
+    return true;
+  }
+
+  bool get_portions_from_percent_str(std::string cut_str, uint64_t& portions)
+  {
+    if(!cut_str.empty() && cut_str.back() == '%')
+    {
+      cut_str.pop_back();
     }
 
     double cut_percent;
     try
     {
-      cut_percent = boost::lexical_cast<double>(cur_str);
+      cut_percent = boost::lexical_cast<double>(cut_str);
     }
     catch(...)
-    return false;
+    {
+      return false;
+    }
+
+    return get_portions_from_percent(cut_percent, portions);
   }
 
-  return get_portions_from_percent
-  bool get_portions_from_percent_str(std::string cut_str, uint64_t& portions)
-  {
-    if(!cut_str.empty() && cur_str.back() == '%')
-    {!cut_str_empty() && cur_str;back();
-  }
 }
