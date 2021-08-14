@@ -422,7 +422,7 @@ private:
 
       confirmed_transfer_details(): m_amount_in(0), m_amount_out(0), m_change((uint64_t)-1), m_block_height(0), m_payment_id(crypto::null_hash), m_timestamp(0), m_unlock_time(0), m_subaddr_account((uint32_t)-1) {}
       confirmed_transfer_details(const unconfirmed_transfer_details &utd, uint64_t height):
-        m_amount_in(utd.m_amount_in), m_amount_out(utd.m_amount_out), m_change(utd.m_change), m_block_height(height), m_dests(utd.m_dests), m_payment_id(utd.m_payment_id), m_timestamp(utd.m_timestamp), m_unlock_time(utd.m_tx.unlock_time), m_unlock_times(utd.m_tx_output_unlock_times), m_subaddr_account(utd.m_subaddr_account), m_subaddr_indices(utd.m_subaddr_indices), m_rings(utd.m_rings) {}
+        m_amount_in(utd.m_amount_in), m_amount_out(utd.m_amount_out), m_change(utd.m_change), m_block_height(height), m_dests(utd.m_dests), m_payment_id(utd.m_payment_id), m_timestamp(utd.m_timestamp), m_unlock_time(utd.m_tx.unlock_time), m_unlock_times(utd.m_tx.output_unlock_times), m_subaddr_account(utd.m_subaddr_account), m_subaddr_indices(utd.m_subaddr_indices), m_rings(utd.m_rings) {}
     };
 
     struct tx_construction_data
@@ -433,7 +433,7 @@ private:
       std::vector<size_t> selected_transfers;
       std::vector<uint8_t> extra;
       uint64_t unlock_time;
-      bool use_rct;
+      bool rct;
       bool use_bulletproofs;
       bool service_nodes;
       std::vector<cryptonote::tx_destination_entry> dests; // original setup, does not include change
@@ -447,7 +447,7 @@ private:
         FIELD(selected_transfers)
         FIELD(extra)
         FIELD(unlock_time)
-        FIELD(use_rct)
+        FIELD(rct)
         FIELD(use_bulletproofs)
         FIELD(service_nodes)
         FIELD(dests)
@@ -832,7 +832,7 @@ private:
       std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs,
       uint64_t unlock_time, uint64_t fee, const std::vector<uint8_t>& extra, cryptonote::transaction& tx, pending_tx &ptx, const rct::RCTConfig &rct_config, bool is_staking_tx = false);
 
-    void commit_deregister_vote(arqma_sn::service_node_deregister::vote& vote);
+//    void commit_deregister_vote(service_nodes::deregister_vote::vote& vote);
     void commit_tx(pending_tx& ptx_vector);
     void commit_tx(std::vector<pending_tx>& ptx_vector);
     std::string save_tx(const std::vector<pending_tx>& ptx_vector) const;
@@ -887,8 +887,6 @@ private:
     bool is_transfer_unlocked(uint64_t unlock_time, uint64_t block_height, crypto::key_image const *key_image = nullptr) const;
 
     uint64_t get_last_block_reward() const { return m_last_block_reward; }
-
-    std::vector<cryptonote::public_node> get_public_nodes(bool white_only = true);
 
     template <class t_archive>
     inline void serialize(t_archive &a, const unsigned int ver)
@@ -1102,7 +1100,9 @@ private:
     const transfer_details &get_transfer_details(size_t idx) const;
 
     void get_hard_fork_info(uint8_t version, uint64_t &earliest_height) const;
-    bool use_fork_rules(uint8_t version, int64_t early_blocks = 0) const;
+    boost::optional<uint8_t> get_hard_fork_version() const { return m_node_rpc_proxy.get_hardfork_version(); }
+
+    bool use_fork_rules(uint8_t version, uint64_t early_blocks = 0) const;
     int get_fee_algorithm() const;
 
     std::string get_wallet_file() const;
@@ -1314,13 +1314,51 @@ private:
     {
       stake_result_status status;
       std::string msg;
-    }
+      pending_tx ptx;
+    };
 
     // Modifies <amount> to maximum allowed and possible if too large specified and rejects if insufficient.
     // <fraction> is only used to determine the amount if zero specified.
     stake_result check_stake_allowed(const crypto::public_key& sn_key, const cryptonote::address_parse_info& addr_info, uint64_t& amount, double fraction = 0);
-    stake_result create_stake_tx(std::vector<pending_tx> &ptx, const crypto::public_key& service_node_key, const cryptonote::address_parse_info& addr_info, uint64_t amount,
-                                 double amount_fraction = 0, uint32_t priority = 0, uint32_t subaddr_account = 0, std::set<uint32_t> subaddr_indices = {});
+    stake_result create_stake_tx(const crypto::public_key& service_node_key, const cryptonote::address_parse_info& addr_info, uint64_t amount, double amount_fraction = 0, uint32_t priority = 0, uint32_t subaddr_account = 0, std::set<uint32_t> subaddr_indices = {});
+
+    enum struct register_service_node_result_status
+    {
+      success,
+      insufficient_num_args,
+      subaddr_indices_parse_fail,
+      network_height_query_failed,
+      network_version_query_failed,
+      convert_registration_args_failed,
+      registration_timestamp_expired,
+      registration_timestamp_parse_fail,
+      service_node_key_parse_fail,
+      service_node_signature_parse_fail,
+      service_node_register_serialize_to_tx_extra_fail,
+      first_address_must_be_primary_address,
+      service_node_list_query_failed,
+      service_node_already_registered,
+      insufficient_portions,
+      wallet_not_synced,
+      too_many_transactions_constructed,
+      exception_thrown,
+    };
+
+    struct register_service_node_result
+    {
+      register_service_node_result_status status;
+      std::string msg;
+      pending_tx ptx;
+    };
+    register_service_node_result create_register_service_node_tx(const std::vector<std::string> &args_, uint32_t subaddr_account = 0);
+
+    struct request_stake_unlock_result
+    {
+      bool success;
+      std::string msg;
+      pending_tx ptx;
+    };
+    request_stake_unlock_result can_request_stake_unlock(const crypto::public_key &sn_key);
 
     bool lock_keys_file();
     bool unlock_keys_file();
@@ -1530,6 +1568,10 @@ private:
     std::shared_ptr<tools::Notify> m_tx_notify;
 
   };
+
+  extern const std::array<const char* const, 5> allowed_priority_strings;
+  bool parse_subaddress_indices(const std::string& arg, std::set<uint32_t>& subaddr_indices, std::string *err_msg = nullptr);
+  bool parse_priority(const std::string& arg, uint32_t& priority);
 }
 BOOST_CLASS_VERSION(tools::wallet2, 25)
 BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 11)
@@ -1904,7 +1946,7 @@ namespace boost
       }
       a & x.extra;
       a & x.unlock_time;
-      a & x.use_rct;
+      a & x.rct;
       a & x.dests;
       if (ver < 1)
       {

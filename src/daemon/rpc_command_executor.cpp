@@ -34,7 +34,7 @@
 #include "common/scoped_message_writer.h"
 #include "common/pruning.h"
 #include "daemon/rpc_command_executor.h"
-#include "common/int-util.h"
+#include "int-util.h"
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/service_node_rules.h"
@@ -1951,10 +1951,10 @@ bool t_rpc_command_executor::alt_chain_info(const std::string &tip, size_t above
       }
       const uint64_t dt = t1 - t0;
       const uint64_t age = std::max(dt, t0 < now ? now - t0 : 0);
-      tools::msg_writer() << "Age: " << tools::get_human_readable_timespan(age);
+      tools::msg_writer() << "Age: " << tools::get_human_readable_timespan(std::chrono::seconds(age));
       if(chain.length > 1)
       {
-        tools::msg_writer() << "Time span: " << tools::get_human_readable_timespan(dt);
+        tools::msg_writer() << "Time span: " << tools::get_human_readable_timespan(std::chrono::seconds(dt));
         cryptonote::difficulty_type start_difficulty = bhres.block_headers.back().difficulty;
         if(start_difficulty > 0)
           tools::msg_writer() << "Approximated " << 100.f * DIFFICULTY_TARGET_V11 * chain.length / dt << "% of network hash rate";
@@ -2325,7 +2325,7 @@ bool t_rpc_command_executor::pop_blocks(uint64_t num_blocks)
   return true;
 }
 
-static std::string make_printable_service_node_list_state(cryptonote::network_type nettype, int hard_fork_version, uint64_t *curr_height, std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *> list)
+static std::string make_printable_service_node_list_state(cryptonote::network_type nettype, uint8_t hard_fork_version, uint64_t curr_height, std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *> list)
 {
   const char indent1[] = "    ";
   const char indent2[] = "        ";
@@ -2375,7 +2375,7 @@ static std::string make_printable_service_node_list_state(cryptonote::network_ty
       {
         if(curr_height)
         {
-          uint64_t delta_height = expiry_height - *curr_height;
+          uint64_t delta_height = expiry_height - curr_height;
           uint64_t expiry_epoch_time = now + (delta_height * DIFFICULTY_TARGET_V16);
 
          result.append(indent2);
@@ -2491,8 +2491,8 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
   cryptonote::COMMAND_RPC_GET_INFO::response get_info_res;
 
   cryptonote::network_type nettype = cryptonote::UNDEFINED;
-  uint64_t *curr_height = nullptr;
-  int hard_fork_version = 7;
+  uint64_t curr_height = 0;
+  uint8_t hard_fork_version = 7;
   if(m_is_rpc)
   {
     if(!m_rpc_client->rpc_request(get_info_req, get_info_res, "/getinfo", fail_message.c_str()))
@@ -2525,12 +2525,12 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
       nettype = cryptonote::STAGENET;
     else if(get_info_res.testnet)
       nettype = cryptonote::TESTNET;
-    curr_height = &get_info_res.height;
+    curr_height = get_info_res.height;
   }
   else
   {
     if(m_rpc_server->on_get_info(get_info_req, get_info_res) || get_info_res.status == CORE_RPC_STATUS_OK)
-      curr_height = $get_info_res.height;
+      curr_height = get_info_res.height;
 
     {
       cryptonote::COMMAND_RPC_HARD_FORK_INFO::request  hard_fork_info_req = {};
@@ -2769,7 +2769,6 @@ bool t_rpc_command_executor::prepare_registration()
   }
 
   uint64_t block_height = 0;
-  int hard_fork_version = cryptonote::network_version_16_sn;
   cryptonote::network_type nettype = cryptonote::UNDEFINED;
   {
     cryptonote::COMMAND_RPC_GET_INFO::request req;
@@ -2778,12 +2777,13 @@ bool t_rpc_command_executor::prepare_registration()
     cryptonote::COMMAND_RPC_HARD_FORK_INFO::response hf_res;
     std::string const info_fail_message = "Could not get current blockchain info";
 
+//    uint8_t hard_fork_version = 7;
     if(m_is_rpc)
     {
       if(!m_rpc_client->rpc_request(req, res, "/getinfo", info_fail_message.c_str()))
         return true;
 
-      if(!m_rpc_client->rpc_request(hf_req, hf_res, "hard_fork_info", info_fail_message.c_str()))
+      if(!m_rpc_client->json_rpc_request(hf_req, hf_res, "hard_fork_info", info_fail_message.c_str()))
         return true;
 
       if(res.mainnet)
@@ -2811,7 +2811,7 @@ bool t_rpc_command_executor::prepare_registration()
       nettype = m_rpc_server->nettype();
     }
 
-    hard_fork_version = hf_res.version;
+    uint8_t hard_fork_version = hf_res.version;
     block_height = std::max(res.height, res.target_height);
   }
 
@@ -2860,7 +2860,7 @@ bool t_rpc_command_executor::prepare_registration()
     }
   }
 
-  const uint64_t staking_requirement = std::max(service_nodes::get_statking_requirement(nettype, block_height), service_nodes::get_staking_requirement(nettype, block_height + 40 * 24)); // allow 1 day
+  const uint64_t staking_requirement = std::max(service_nodes::get_staking_requirement(nettype, block_height), service_nodes::get_staking_requirement(nettype, block_height + 40 * 24)); // allow 1 day
 
   // anythong less than DUST will be added to operator stake
   const uint64_t DUST = MAX_NUMBER_OF_CONTRIBUTORS;
@@ -2868,7 +2868,7 @@ bool t_rpc_command_executor::prepare_registration()
 
   enum struct register_step
   {
-    ask_is_solo_stake = 0;
+    ask_is_solo_stake = 0,
     is_solo_stake__operator_address_to_reserve,
 
     is_open_stake__get_operator_fee,
@@ -2883,7 +2883,7 @@ bool t_rpc_command_executor::prepare_registration()
     cancelled_by_user,
   };
 
-  struct prepare_registration_stake
+  struct prepare_registration_state
   {
     register_step prev_step = register_step::ask_is_solo_stake;
     bool is_solo_stake;
@@ -2951,9 +2951,9 @@ bool t_rpc_command_executor::prepare_registration()
         }
 
         state.addresses.push_back(address_str);
-        state.contributions.push_back(STAKE_SHARE_PARTS);
+        state.contributions.push_back(STAKING_SHARE_PARTS);
         state.portions_remaining = 0;
-        state.total_reserved_contributions += get_actual_amount(staking_requirement, STAKE_SHARE_PARTS);
+        state.total_reserved_contributions += get_actual_amount(staking_requirement, STAKING_SHARE_PARTS);
         state.prev_step = step;
         step = register_step::final_summary;
         state_stack.push(state);
@@ -3120,7 +3120,7 @@ bool t_rpc_command_executor::prepare_registration()
 
       case register_step::is_open_stake__contributor_address_to_reserve:
       {
-        std::string const prompt = "Enter the ARQ address for contributor " + std::to_string(state.contribution.size() + 1);
+        std::string const prompt = "Enter the ARQ address for contributor " + std::to_string(state.contributions.size() + 1);
         std::string address_str;
         lir = input_line_back_cancel_get_input(prompt.c_str(), address_str);
         if(lir == input_line_result::back)
@@ -3303,6 +3303,7 @@ bool t_rpc_command_executor::prepare_registration()
 
     req.args = args;
     req.make_friendly = true;
+    req.staking_requirement = staking_requirement;
     if(m_is_rpc)
     {
       if(!m_rpc_client->json_rpc_request(req, res, "get_service_node_registration_cmd_raw", fail_message))
@@ -3324,62 +3325,6 @@ bool t_rpc_command_executor::prepare_registration()
     tools::success_msg_writer() << res.registration_cmd;
   }
 
-  return true;
-}
-
-bool t_rpc_command_executor::pop_blocks(size_t num_blocks_to_pop)
-{
-  if(m_is_rpc)
-  {
-    std::cout << "Cannot pop_blocks over RPC as this will shut your daemon down." << std::endl;
-    return true;
-  }
-
-#ifdef HAVE_READLINE
-  rdln::suspend_readline pause_readline;
-#endif
-  std::string confirmation;
-  confirmation.reserve(8);
-  std::cout << "This is an advanced command for modifying your blockchain.\n"
-               "This command will only work in offline mode.\n"
-               "Executing this command will shut your daemon down. Please restart it afterwards.\n"
-               "Are you sure you wish to continue? (Y/Yes/N/No): ";
-  std::cin >> confirmation;
-
-  if(!command_line::is_yes(confirmation))
-  {
-    std::cout << "Aborted." << std::endl;
-    return true;
-  }
-
-  // Get Height
-  cryptonote::COMMAND_RPC_GET_HEIGHT::request height_req;
-  cryptonote::COMMAND_RPC_GET_HEIGHT::response height_res;
-  std::string fail_message = "Unsuccessful";
-
-  if(!m_rpc_server->on_get_height(height_req, height_res) || height_res.status != CORE_RPC_STATUS_OK)
-  {
-    tools::fail_msg_writer() << make_error(fail_message, height_res.status);
-    return true;
-  }
-
-  if(num_blocks_to_pop >= height_res.height)
-  {
-    tools::fail_msg_writer() << "Requested to pop too many blocks. Requested: " << num_blocks_to_pop << ", current height: " << height_res.height;
-    return true;
-  }
-
-  // Pop Block
-  cryptonote::COMMAND_RPC_POP_BLOCKS::request req = {};
-  cryptonote::COMMAND_RPC_POP_BLOCKS::response res = {};
-  req.num_blocks_to_pop = num_blocks_to_pop;
-  if(!m_rpc_server->on_pop_blocks(req, res) || res.status != CORE_RPC_STATUS_OK)
-  {
-    tools::fail_msg_writer() << make_error(fail_message, res.status);
-    return true;
-  }
-
-  tools::success_msg_writer() << "Popped: " << num_blocks_to_pop << " blocks";
   return true;
 }
 

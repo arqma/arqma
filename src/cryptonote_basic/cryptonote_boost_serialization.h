@@ -46,9 +46,6 @@
 #include "ringct/rctTypes.h"
 #include "ringct/rctOps.h"
 
-BOOST_CLASS_VERSION(rct::ecdhTuple, 1)
-
-//namespace cryptonote {
 namespace boost
 {
   namespace serialization
@@ -150,13 +147,35 @@ namespace boost
   }
 
   template <class Archive>
+  inline void serialize(Archive &a, cryptonote::txversion &x, const boost::serialization::version_type ver)
+  {
+    uint16_t v = static_cast<uint16_t>(x);
+    a & v;
+    if(v >= static_cast<uint16_t>(cryptonote::txversion::_count))
+      throw boost::archive::archive_exception(boost::archive::archive_exception::other_exception, "Unsupported tx version");
+    x = static_cast<cryptonote::txversion>(v);
+  }
+
+  template <class Archive>
+  inline void serialize(Archive &a, cryptonote::txtype &x, const boost::serialization::version_type ver)
+  {
+    uint16_t txtype = static_cast<uint16_t>(x);
+    a & txtype;
+    if(txtype >= static_cast<uint16_t>(cryptonote::txtype::_count))
+      throw boost::archive::archive_exception(boost::archive::archive_exception::other_exception, "Unsupported tx type");
+    x = static_cast<cryptonote::txtype>(txtype);
+  }
+  template <class Archive>
   inline void serialize(Archive &a, cryptonote::transaction_prefix &x, const boost::serialization::version_type ver)
   {
     a & x.version;
-    if(x.version >= 3)
+    if(x.version >= cryptonote::txversion::v3)
     {
-      a & x.output_unlock_times;
       a & x.type;
+      a & x.output_unlock_times;
+      bool is_deregister = x.type == cryptonote::txtype::deregister;
+      a & is_deregister;
+      x.type = is_deregister ? cryptonote::txtype::deregister : cryptonote::txtype::standard;
     }
     a & x.unlock_time;
     a & x.vin;
@@ -167,17 +186,8 @@ namespace boost
   template <class Archive>
   inline void serialize(Archive &a, cryptonote::transaction &x, const boost::serialization::version_type ver)
   {
-    a & x.version;
-    if(x.version >= 3)
-    {
-      a & x.output_unlock_times;
-      a & x.type;
-    }
-    a & x.unlock_time;
-    a & x.vin;
-    a & x.vout;
-    a & x.extra;
-    if (x.version == 1)
+    serialize(a, static_cast<cryptonote::transaction_prefix &>(x), ver);
+    if(x.version == cryptonote::txversion::v1)
     {
       a & x.signatures;
     }
@@ -258,19 +268,8 @@ namespace boost
   template <class Archive>
   inline void serialize(Archive &a, rct::ecdhTuple &x, const boost::serialization::version_type ver)
   {
-    if(ver < 1)
-    {
-      a & x.mask;
-      a & x.amount;
-      return;
-    }
-    crypto::hash8 &amount = (crypto::hash8&)x.amount;
-    if(!Archive::is_saving::value)
-    {
-      memset(&x.mask, 0, sizeof(x.mask));
-      memset(&x.amount, 0, sizeof(x.amount));
-    }
-    a & amount;
+    a & x.mask;
+    a & x.amount;
   }
 
   template <class Archive>

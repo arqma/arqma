@@ -232,11 +232,6 @@ namespace cryptonote
      virtual void on_transaction_relayed(const cryptonote::blobdata& tx);
 
      /**
-      * @brief mark the deregister vote as having been relayed in the vote pool
-      */
-     virtual void set_deregister_votes_relayed(const std::vector<service_nodes::deregister_vote>& votes);
-
-     /**
       * @brief gets the miner instance
       *
       * @return a reference to the miner instance
@@ -748,7 +743,7 @@ namespace cryptonote
       *
       * @return the number of blocks to sync in one go
       */
-     size_t get_block_sync_size(uint64_t height) const;
+     size_t get_block_sync_size(uint64_t height, cryptonote::network_type nettype) const;
 
      /**
       * @brief get the sum of coinbase tx amounts between blocks
@@ -871,14 +866,6 @@ namespace cryptonote
       * @return 0 if no uptime proof found, otherwise the timestamp it last received in epoch time
       */
      uint64_t get_uptime_proof(const crypto::public_key &key) const;
-
-     /**
-      * @brief Pop 'n' block(s) from the chain
-      *
-      * @param num_blocks_to_pop <- numbers of blocks to pop
-      *
-      */
-     void pop_blocks(size_t num_blocks_to_pop);
 
      /**
       * @brief get the blockchain pruning seed
@@ -1007,7 +994,7 @@ namespace cryptonote
      void set_semantics_failed(const crypto::hash &tx_hash);
 
      bool handle_incoming_tx_pre(const tx_blob_entry& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay);
-     bool handle_incoming_tx_post(const tx_blob_entry& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay);
+     bool handle_incoming_tx_post(const tx_blob_entry &tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay);
      struct tx_verification_batch_info { const cryptonote::transaction *tx; crypto::hash tx_hash; tx_verification_context &tvc; bool &result; };
      bool handle_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool keeped_by_block);
 

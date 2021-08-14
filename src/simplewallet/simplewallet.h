@@ -245,11 +245,10 @@ namespace cryptonote
     bool blackballed(const std::vector<std::string>& args);
     bool show_qr_code(const std::vector<std::string> &args);
     bool net_stats(const std::vector<std::string>& args);
-    bool public_nodes(const std::vector<std::string>& args);
     bool welcome(const std::vector<std::string>& args);
     bool version(const std::vector<std::string>& args);
 
-    bool register_service_node_main(const std::vector<std::string>& service_node_key_as_str, uint64_t expiration_timestamp, const cryptonote::account_public_address& address, uint32_t priority, const std::vector<uint64_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indices);
+    bool register_service_node_main(const std::vector<std::string>& service_node_key_as_str, const cryptonote::account_public_address& address, uint32_t priority, const std::vector<uint64_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indices, uint64_t bc_height, uint64_t staking_requirement);
 
     uint64_t get_daemon_blockchain_height(std::string& err);
     bool try_connect_to_daemon(bool silent = false, uint32_t* version = nullptr);
@@ -410,7 +409,5 @@ namespace cryptonote
     bool m_auto_refresh_refreshing;
     std::atomic<bool> m_in_manual_refresh;
     uint32_t m_current_subaddress_account;
-
-    std::unordered_map<std::string, uint32_t> m_claimed_cph;
   };
 }

@@ -117,7 +117,7 @@ t_command_server::t_command_server(
   m_command_lookup.set_handler(
       "print_sr"
     , std::bind(&t_command_parser_executor::print_sr, &m_parser, p::_1)
-    , "print_sr"
+    , "print_sr <height>"
     , "Print staking requirement for height given."
     );
   m_command_lookup.set_handler(
@@ -335,12 +335,6 @@ t_command_server::t_command_server(
       "version"
     , std::bind(&t_command_parser_executor::version, &m_parser, p::_1)
     , "Print version information."
-    );
-    m_command_lookup.set_handler(
-      "pop_blocks"
-    , std::bind(&t_command_parser_executor::pop_blocks, &m_parser, p::_1)
-    , "pop_blocks <num_blocks_to_pop>"
-    , "Remove a number of blocks from the top of the chain"
     );
     m_command_lookup.set_handler(
       "prune_blockchain"

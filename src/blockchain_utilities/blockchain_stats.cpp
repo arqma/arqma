@@ -124,8 +124,8 @@ int main(int argc, char* argv[])
   bool do_hours = command_line::get_arg(vm, arg_hours);
 
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  blockchain_objects_t blockchain_objects = {};
-  Blockchain *core_storage = &blockchain_objects.m_blockchain;
+  blockchain_objects_t *blockchain_objects = new blockchain_objects_t();
+  Blockchain *core_storage = &blockchain_objects->m_blockchain;
   BlockchainDB *db = new_db();
   if (db == NULL)
   {

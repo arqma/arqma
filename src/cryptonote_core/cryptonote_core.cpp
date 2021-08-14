@@ -650,17 +650,16 @@ namespace cryptonote
       MERROR("Failed to parse reorg notify spec");
     }
 
-    BlockchainDB *initialized_db = db.release();
-    m_service_node_list.set_db_pointer(initialized_db);
-    m_service_node_list.register_hooks(m_quorum_cop);
-
     const std::pair<uint8_t, uint64_t> regtest_hard_forks[3] = {std::make_pair(1, 0), std::make_pair(Blockchain::get_hard_fork_heights(MAINNET).back().version, 1), std::make_pair(0, 0)};
     const cryptonote::test_options regtest_test_options = {
       regtest_hard_forks, 0
     };
     const difficulty_type fixed_difficulty = command_line::get_arg(vm, arg_fixed_difficulty);
+
+    BlockchainDB *initialized_db = db.release();
+    m_service_node_list.set_db_pointer(initialized_db);
+    m_service_node_list.register_hooks(m_quorum_cop);
     r = m_blockchain_storage.init(initialized_db, m_nettype, m_offline, regtest ? &regtest_test_options : test_options, fixed_difficulty, get_checkpoints);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to initialize blockchain storage");
 
     r = m_mempool.init(max_txpool_weight);
     CHECK_AND_ASSERT_MES(r, false, "Failed to initialize memory pool");
@@ -764,6 +763,7 @@ namespace cryptonote
   {
     m_service_node_list.store();
     m_service_node_list.set_db_pointer(nullptr);
+
     m_miner.stop();
     m_mempool.deinit();
     m_blockchain_storage.deinit();
@@ -873,10 +873,10 @@ namespace cryptonote
     // outPk aren't the only thing that need resolving for a fully resolved tx,
     // but outPk (1) are needed now to check range proof semantics, and
     // (2) do not need access to the blockchain to find data
-    if(tx.version >= 2)
+    if(tx.version >= txversion::v2)
     {
       rct::rctSig &rv = tx.rct_signatures;
-      if(rv.type != rct::RCTTypeBulletproof || rv.type != rct::RCTTypeBulletproof2)
+      if(rv.type != rct::RCTTypeBulletproof && rv.type != rct::RCTTypeBulletproof2)
       {
         if(rv.outPk.size() != tx.vout.size())
         {
@@ -887,18 +887,23 @@ namespace cryptonote
         for (size_t n = 0; n < tx.rct_signatures.outPk.size(); ++n)
           rv.outPk[n].dest = rct::pk2rct(boost::get<txout_to_key>(tx.vout[n].target).key);
         const bool bulletproof = rct::is_rct_bulletproof(rv.type);
-        if(bulletproof && rv.type != rct::RCTTypeBulletproof)
+        if(bulletproof)
         {
-          if(rv.p.bulletproofs.size() != tx.vout.size())
+          if(rct::n_bulletproof_v1_amounts(rv.p.bulletproofs) != tx.vout.size())
           {
             LOG_PRINT_L1("WRONG TRANSACTION BLOB, Bad bulletproofs size in tx " << tx_hash << ", rejected");
             tvc.m_verification_failed = true;
             return false;
           }
+          size_t idx = 0;
           for (size_t n = 0; n < rv.p.bulletproofs.size(); ++n)
           {
-            rv.p.bulletproofs[n].V.resize(1);
-            rv.p.bulletproofs[n].V[0] = rv.outPk[n].mask;
+            CHECK_AND_ASSERT_MES(rv.p.bulletproofs[n].L.size() >= 6, false, "Bad bulletproofs L size");
+            const size_t n_amounts = rct::n_bulletproof_v1_amounts(rv.p.bulletproofs[n]);
+            CHECK_AND_ASSERT_MES(idx + n_amounts <= rv.outPk.size(), false, "Internal error filling out V");
+            rv.p.bulletproofs[n].V.clear();
+            for(size_t i = 0; i < n_amounts; ++i)
+              rv.p.bulletproofs[n].V.push_back(rv.outPk[idx++].mask);
           }
         }
       }
@@ -934,16 +939,16 @@ namespace cryptonote
   {
     bool ret = true;
 
-    if (keeped_by_block && get_blockchain_storage().is_within_compiled_block_hash_area())
+    if(keeped_by_block && get_blockchain_storage().is_within_compiled_block_hash_area())
     {
       MTRACE("Skipping semantics check for tx kept by block in embedded hash area");
       return true;
     }
 
     std::vector<const rct::rctSig*> rvv;
-    for (size_t n = 0; n < tx_info.size(); ++n)
+    for(size_t n = 0; n < tx_info.size(); ++n)
     {
-      if (!check_tx_semantic(*tx_info[n].tx, keeped_by_block))
+      if(!check_tx_semantic(*tx_info[n].tx, keeped_by_block))
       {
         set_semantics_failed(tx_info[n].tx_hash);
         tx_info[n].tvc.m_verification_failed = true;
@@ -951,7 +956,7 @@ namespace cryptonote
         continue;
       }
 
-      if(tx_info[n].tx->get_type() != transaction::type_standard)
+      if(tx_info[n].tx->type != txtype::standard)
         continue;
       const rct::rctSig &rv = tx_info[n].tx->rct_signatures;
       switch(rv.type) {
@@ -994,7 +999,7 @@ namespace cryptonote
           }
           break;
         case rct::RCTTypeBulletproof:
-        case rct::RCTTypeBulletproof1:
+        case rct::RCTTypeBulletproof2:
           if(!is_canonical_bulletproof_layout(rv.p.bulletproofs))
           {
             MERROR_VER("Bulletproof does not have canonical form");
@@ -1127,7 +1132,7 @@ namespace cryptonote
       ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i].blob, weight, tvc[i], keeped_by_block, relayed, do_not_relay);
       if(tvc[i].m_verification_failed)
         MERROR_VER("Transaction verification failed: " << results[i].hash);
-      else if(tvc[i].m_verifivation_impossible)
+      else if(tvc[i].m_verification_impossible)
         MERROR_VER("Transaction verification impossible: " << results[i].hash);
 
       if(tvc[i].m_added_to_pool)
@@ -1155,11 +1160,11 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::check_tx_semantic(const transaction& tx, bool keeped_by_block) const
   {
-    if(tx.get_type() != transaction::type_standard)
+    if(tx.type != txtype::standard)
     {
       if(tx.vin.size() != 0)
       {
-        MERROR_VER("tx type: " << transaction::type_to_string(tx.type) << " must have 0 inputs, received: " << tx.vin.size() << ", rejected for tx id = " << get_transaction_hash(tx));
+        MERROR_VER("Transaction type: " << tx.type << " must have 0 inputs, received: " << tx.vin.size() << ", rejected for tx id = " << get_transaction_hash(tx));
         return false;
       }
     }
@@ -1180,7 +1185,7 @@ namespace cryptonote
       MERROR_VER("tx with invalid outputs, rejected for tx id= " << get_transaction_hash(tx));
       return false;
     }
-    if(tx.version >= transaction::version_2)
+    if(tx.version >= txversion::v2)
     {
       if(tx.rct_signatures.outPk.size() != tx.vout.size())
       {
@@ -1195,7 +1200,7 @@ namespace cryptonote
       return false;
     }
 
-    if(tx.version == transaction::version_1)
+    if(tx.version == txversion::v1)
     {
       uint64_t amount_in = 0;
       get_inputs_money_amount(tx, amount_in);
@@ -1250,14 +1255,14 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  size_t core::get_block_sync_size(uint64_t height) const
+  size_t core::get_block_sync_size(uint64_t height, cryptonote::network_type m_nettype) const
   {
     if(block_sync_size > 0)
       return block_sync_size;
-    if(get_current_blockchain_height() <= config::sync::HIGHEST_CHECKPOINT)
+    if(m_nettype == cryptonote::MAINNET && get_current_blockchain_height() <= config::sync::HIGHEST_CHECKPOINT)
       return config::sync::FAST_SYNC;
-    else
-      return config::sync::NORMAL_SYNC;
+
+    return config::sync::NORMAL_SYNC;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::are_key_images_spent_in_pool(const std::vector<crypto::key_image>& key_im, std::vector<bool> &spent) const
@@ -1412,18 +1417,6 @@ namespace cryptonote
     return result;
   }
   //-----------------------------------------------------------------------------------------------
-  void core::pop_blocks(size_t num_blocks_to_pop)
-  {
-    m_blockchain_storege.det_db().batch_start();
-    for(size_t i = 0; i < num_blocks_to_pop; i++)
-    {
-      block blk;
-      std::vector<transaction> txs;
-      m_blockchain_storage.get_db().pop_block(blk, txs);
-    }
-    m_blockchain_storage.get_db().batch_stop();
-  }
-  //-----------------------------------------------------------------------------------------------
   bool core::handle_uptime_proof(const NOTIFY_UPTIME_PROOF::request &proof)
   {
     return m_quorum_cop.handle_uptime_proof(proof);
@@ -1443,11 +1436,6 @@ namespace cryptonote
     m_mempool.set_relayed(txs);
   }
   //-----------------------------------------------------------------------------------------------
-  void core::set_deregister_votes_relayed(const std::vector<service_nodes::deregister_vote>& votes)
-  {
-    m_deregister_vote_pool.set_relayed(votes);
-  }
-  //-----------------------------------------------------------------------------------------------
   bool core::relay_deregister_votes()
   {
     NOTIFY_NEW_DEREGISTER_VOTE::request req;
@@ -1455,7 +1443,8 @@ namespace cryptonote
     if (!req.votes.empty())
     {
       cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
-      get_protocol()->relay_deregister_votes(req, fake_context);
+      if(get_protocol()->relay_deregister_votes(req, fake_context))
+        m_deregister_vote_pool.set_relayed(req.votes);
     }
 
     return true;
@@ -1788,7 +1777,7 @@ namespace cryptonote
       m_check_uptime_proof_interval.do_call([&states, this]()
       {
         uint64_t last_uptime = m_quorum_cop.get_uptime_proof(states[0].pubkey);
-        if(last_uptime <= static_cast(uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
+        if(last_uptime <= static_cast<uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
           this->submit_uptime_proof();
 
         return true;

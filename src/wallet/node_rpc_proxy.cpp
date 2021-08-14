@@ -29,6 +29,7 @@
 
 #include "node_rpc_proxy.h"
 #include "storages/http_abstract_invoke.h"
+#include <boost/thread.hpp>
 
 using namespace epee;
 
@@ -167,6 +168,21 @@ boost::optional<std::string> NodeRPCProxy::get_earliest_height(uint8_t version, 
   return boost::optional<std::string>();
 }
 
+boost::optional<uint8_t> NodeRPCProxy::get_hardfork_version() const
+{
+  cryptonote::COMMAND_RPC_HARD_FORK_INFO::request req = AUTO_VAL_INIT(req);
+  cryptonote::COMMAND_RPC_HARD_FORK_INFO::response resp = AUTO_VAL_INIT(resp);
+
+  m_daemon_rpc_mutex.lock();
+  bool r = net_utils::invoke_http_json_rpc("/json_rpc", "hard_fork_info", req, resp, m_http_client, rpc_timeout);
+  m_daemon_rpc_mutex.unlock();
+  CHECK_AND_ASSERT_MES(r, {}, "Failed to connect to daemon");
+  CHECK_AND_ASSERT_MES(resp.status != CORE_RPC_STATUS_BUSY, {}, "Failed to connect to daemon");
+  CHECK_AND_ASSERT_MES(resp.status == CORE_RPC_STATUS_OK, {}, "Failed to get hard fork status");
+
+  return resp.version;
+}
+
 boost::optional<std::string> NodeRPCProxy::get_dynamic_base_fee_estimate(uint64_t grace_blocks, uint64_t &fee) const
 {
   uint64_t height;
@@ -199,7 +215,7 @@ boost::optional<std::string> NodeRPCProxy::get_dynamic_base_fee_estimate(uint64_
   return boost::optional<std::string>();
 }
 
-boost::optional<std::string> NodeRPCProxy::get_fee_quantization_mask(uint64_t &fee_quantization_mask)
+boost::optional<std::string> NodeRPCProxy::get_fee_quantization_mask(uint64_t &fee_quantization_mask) const
 {
   uint64_t height;
 
@@ -278,13 +294,14 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> NodeRPCP
     return result;
 
   {
-    std::lock_guard<boost::mutex> lock(m_daemon_rpc_mutex);
     if(m_all_service_nodes_cached_height != height)
     {
       cryptonote::COMMAND_RPC_GET_SERVICE_NODES::request req = {};
       cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response res = {};
 
+      m_daemon_rpc_mutex.lock();
       bool r = epee::net_utils::invoke_http_json_rpc("/json_rpc", "get_all_service_nodes", req, res, m_http_client, rpc_timeout);
+      m_daemon_rpc_mutex.unlock();
 
       if(!r)
       {
@@ -324,13 +341,14 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::ent
     return result;
 
   {
-    std::lock_guard<boost::mutex> lock(m_daemon_rpc_mutex);
     if(m_service_node_blacklisted_key_images_cached_height != height)
     {
       cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::request req = {};
       cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::response res = {};
 
+      m_daemon_rpc_mutex.lock();
       bool r = epee::net_utils::invoke_http_json_rpc("/json_rpc", "get_service_node_blacklisted_key_images", req, res, m_http_client, rpc_timeout);
+      m_daemon_rpc_mutex.unlock();
 
       if(!r)
       {

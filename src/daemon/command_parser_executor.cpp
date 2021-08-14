@@ -847,25 +847,4 @@ bool t_command_parser_executor::check_blockchain_pruning(const std::vector<std::
   return m_executor.check_blockchain_pruning();
 }
 
-bool t_command_parser_executor::pop_blocks(const std::vector<std::string>& args)
-{
-  if(args.size() != 1)
-    return false;
-
-  size_t num_blocks_to_pop;
-  if(!epee::string_tools::get_xtype_from_string(num_blocks_to_pop, args[0]))
-  {
-    std::cout << "wrong starter block index parameter" << std::endl;
-    return false;
-  }
-
-  bool result = m_executor.pop_blocks(num_blocks_to_pop);
-  if(result)
-  {
-    raise(SIGTERM);
-  }
-
-  return result;
-}
-
 } // namespace daemonize

@@ -1305,7 +1305,7 @@ namespace nodetool
         if(conn_count < expected_white_connections)
         {
           //start from anchor list
-          size_t anchor_connections = m_nettype == cryptonote::MAINNET ? P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT : P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST;
+          size_t anchor_connections = P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT;
           while (get_outgoing_connections_count(zone.second) < anchor_connections
             && make_expected_connections_count(zone.second, anchor, anchor_connections));
           //then do white list
@@ -2028,7 +2028,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::set_max_out_peers(network_zone& zone, int64_t max)
   {
     if(max == -1) {
-      zone.m_config.m_net_config.max_out_connection_count = P2P_DEFAULT_CONNECTIONS_COUNT_OUT;
+      zone.m_config.m_net_config.max_out_connection_count = m_nettype == cryptonote::MAINNET ? P2P_DEFAULT_CONNECTIONS_COUNT : P2P_DEFAULT_CONNECTIONS_COUNT_TEST;
       return true;
     }
     zone.m_config.m_net_config.max_out_connection_count = max;
@@ -2038,11 +2038,6 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::set_max_in_peers(network_zone& zone, int64_t max)
   {
-    if(max == -1)
-    {
-      zone.m_config.m_net_config.max_in_connection_count = P2P_DEFAULT_CONNECTIONS_COUNT_IN;
-      return true;
-    }
     zone.m_config.m_net_config.max_in_connection_count = max;
     return true;
   }
