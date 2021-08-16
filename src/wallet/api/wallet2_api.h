@@ -957,7 +957,7 @@ struct Wallet
      */
     virtual Device getDeviceType() const = 0;
 
-    virtual PendingTransaction* stakePending(const std::string& service_node_key, const std::string& address, const std::string& amount, std::string& error_msg) = 0;
+    virtual PendingTransaction* stakePending(const std::string& service_node_key, const std::string& amount, std::string& error_msg) = 0;
 };
 
 /**

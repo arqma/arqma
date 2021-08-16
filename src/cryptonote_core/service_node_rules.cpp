@@ -11,28 +11,20 @@ namespace arqma_bc = config::blockchain_settings;
 
 namespace service_nodes
 {
-  uint64_t get_staking_requirement(cryptonote::network_type m_nettype, uint64_t height)
+  uint64_t get_staking_requirement(cryptonote::network_type m_nettype, uint64_t height, uint8_t hard_fork_version)
   {
     if(m_nettype != cryptonote::MAINNET)
       return arqma_bc::ARQMA * 100;
 
-    uint64_t service_nodes_hard_fork_16 = m_nettype == cryptonote::TESTNET ? 900 : m_nettype == cryptonote::MAINNET ? 99999999 : 12800;
+    uint64_t service_nodes_hard_fork_16 = 99999999;
     if(height < service_nodes_hard_fork_16)
       height = service_nodes_hard_fork_16;
 
     uint64_t adjusted_height = height - service_nodes_hard_fork_16;
     uint64_t base = 0, variable = 0;
 
-    if(height >= 1200000)
-    {
-      base = 35000 * arqma_bc::ARQMA;
-      variable = (38503.0 * arqma_bc::ARQMA) / arqma::exp2(adjusted_height/162500.0);
-    }
-    else
-    {
-      base = 25000 * arqma_bc::ARQMA;
-      variable = (71853.5 * arqma_bc::ARQMA) / arqma::exp2(adjusted_height/162500.0);
-    }
+    base = 45000 * arqma_bc::ARQMA;
+    variable = base / arqma::exp2(adjusted_height/356446.0);
 
     uint64_t result = base + variable;
     return result;

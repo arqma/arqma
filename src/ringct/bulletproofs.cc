@@ -90,7 +90,7 @@ static inline rct::key multiexp(const std::vector<MultiexpData> &data, size_t Hi
     return HiGi_size <= 232 && data.size() == HiGi_size ? straus(data, straus_HiGi_cache, 0) : pippenger(data, pippenger_HiGi_cache, HiGi_size, get_pippenger_c(data.size()));
   }
   else
-    return data.size() <= 97 ? straus(data, NULL, 0) : pippenger(data, NULL, 0, get_pippenger_c(data.size()));
+    return data.size() <= 95 ? straus(data, NULL, 0) : pippenger(data, NULL, 0, get_pippenger_c(data.size()));
 }
 
 static inline bool is_reduced(const rct::key &scalar)
@@ -102,7 +102,10 @@ static rct::key get_exponent(const rct::key &base, size_t idx)
 {
   static const std::string salt("bulletproof");
   std::string hashed = std::string((const char*)base.bytes, sizeof(base)) + salt + tools::get_varint_data(idx);
-  const rct::key e = rct::hashToPoint(rct::hash2rct(crypto::cn_fast_hash(hashed.data(), hashed.size())));
+  rct::key e;
+  ge_p3 e_p3;
+  rct::hash_to_p3(e_p3, rct::hash2rct(crypto::cn_fast_hash(hashed.data(), hashed.size())));
+  ge_p3_tobytes(e.bytes, &e_p3);
   CHECK_AND_ASSERT_THROW_MES(!(e == rct::identity()), "Exponent is point at infinity");
   return e;
 }
@@ -598,20 +601,15 @@ try_again:
   rct::keyV l0 = vector_subtract(aL, z);
   const rct::keyV &l1 = sL;
 
-  // This computes the ugly sum/concatenation from PAPER LINE 65
   rct::keyV zero_twos(MN);
   const rct::keyV zpow = vector_powers(z, M+2);
-  for (size_t i = 0; i < MN; ++i)
+  for (size_t j = 0; j < M; ++j)
   {
-    zero_twos[i] = rct::zero();
-    for (size_t j = 1; j <= M; ++j)
+    for(size_t i = 0; i < N; ++i)
     {
-      if (i >= (j-1)*N && i < j*N)
-      {
-        CHECK_AND_ASSERT_THROW_MES(1+j < zpow.size(), "invalid zpow index");
-        CHECK_AND_ASSERT_THROW_MES(i-(j-1)*N < twoN.size(), "invalid twoN index");
-        sc_muladd(zero_twos[i].bytes, zpow[1+j].bytes, twoN[i-(j-1)*N].bytes, zero_twos[i].bytes);
-      }
+      CHECK_AND_ASSERT_THROW_MES(j+2 < zpow.size(), "invalid zpow index");
+      CHECK_AND_ASSERT_THROW_MES(i < twoN.size(), "invalid twoN index");
+      sc_mul(zero_twos[j*N+i].bytes,zpow[j+2].bytes,twoN[i].bytes);
     }
   }
 
@@ -824,7 +822,7 @@ bool bulletproof_VERIFY(const std::vector<const Bulletproof*> &proofs)
   proof_data.reserve(proofs.size());
   size_t inv_offset = 0;
   std::vector<rct::key> to_invert;
-  to_invert.reserve(11 * sizeof(proofs));
+  to_invert.reserve(11 * proofs.size());
   size_t max_logM = 0;
   for (const Bulletproof *p: proofs)
   {

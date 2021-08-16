@@ -38,7 +38,6 @@
 #include "cryptonote_core/cryptonote_tx_utils.h"
 #include "ringct/rctOps.h"
 
-#include "log.hpp"
 #define ENCRYPTED_PAYMENT_ID_TAIL 0x8d
 #define CHACHA8_KEY_TAIL 0x8c
 
@@ -275,23 +274,23 @@ namespace hw {
         /*                               TRANSACTION                               */
         /* ======================================================================= */
 
+        void device_default::generate_tx_proof(const crypto::hash &prefix_hash, const crypto::public_key &R, const crypto::public_key &A, const boost::optional<crypto::public_key> &B, const crypto::public_key &D, const crypto::secret_key &r, crypto::signature &sig) {
+            crypto::generate_tx_proof(prefix_hash, R, A, B, D, r, sig);
+        }
+
         bool device_default::open_tx(crypto::secret_key &tx_key) {
             cryptonote::keypair txkey = cryptonote::keypair::generate(*this);
             tx_key = txkey.sec;
             return true;
         }
 
-        void device_default::get_transaction_prefix_hash(const cryptonote::transaction_prefix& tx, crypto::hash& h)
-        {
-          cryptonote::get_transaction_prefix_hash(tx, h);
-        }
-
-        bool device_default::generate_output_ephemeral_keys(const size_t tx_version, bool &found_change,
-                                                            const cryptonote::account_keys &sender_account_keys, const crypto::public_key &txkey_pub,  const crypto::secret_key &tx_key,
-                                                            const cryptonote::tx_destination_entry &dst_entr, const boost::optional<cryptonote::tx_destination_entry> &change_addr, const size_t output_index,
+        bool device_default::generate_output_ephemeral_keys(const size_t tx_version, bool &found_change, const cryptonote::account_keys &sender_account_keys,
+                                                            const crypto::public_key &txkey_pub, const crypto::secret_key &tx_key,
+                                                            const cryptonote::tx_destination_entry &dst_entr,
+                                                            const boost::optional<cryptonote::tx_destination_entry> &change_addr, const size_t output_index,
                                                             const bool &need_additional_txkeys, const std::vector<crypto::secret_key> &additional_tx_keys,
-                                                            std::vector<crypto::public_key> &additional_tx_public_keys,
-                                                            std::vector<rct::key> &amount_keys,  crypto::public_key &out_eph_public_key) {
+                                                            std::vector<crypto::public_key> &additional_tx_public_keys, std::vector<rct::key> &amount_keys,
+                                                            crypto::public_key &out_eph_public_key) {
 
             // make additional tx pubkey if necessary
             cryptonote::keypair additional_txkey;
@@ -312,7 +311,6 @@ namespace hw {
               // sending change to yourself; derivation = a*R
               r = generate_key_derivation(txkey_pub, sender_account_keys.m_view_secret_key, derivation);
               CHECK_AND_ASSERT_MES(r, false, "at creation outs: failed to generate_key_derivation(" << txkey_pub << ", " << sender_account_keys.m_view_secret_key << ")");
-
             }
             else
             {
@@ -354,6 +352,10 @@ namespace hw {
                 payment_id.data[b] ^= hash.data[b];
 
             return true;
+        }
+
+        rct::key device_default::genCommitmentMask(const rct::key &amount_key) {
+            return rct::genCommitmentMask(amount_key);
         }
 
         bool  device_default::ecdhEncode(rct::ecdhTuple & unmasked, const rct::key & sharedSec, bool short_amount) {

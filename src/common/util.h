@@ -253,4 +253,11 @@ namespace tools
   std::string get_human_readable_bytes(uint64_t bytes);
 
   uint64_t cumulative_block_sync_weight(cryptonote::network_type nettype, uint64_t start_block, uint64_t num_blocks);
+
+  template<typename Enum>
+  constexpr auto enum_count = static_cast<std::underlying_type_t<Enum>>(Enum::_count);
+
+  template<typename Enum>
+  constexpr Enum enum_top = static_cast<Enum>(enum_count<Enum> - 1);
+
 }

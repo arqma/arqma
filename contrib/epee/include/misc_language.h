@@ -106,6 +106,12 @@ namespace misc_utils
 		return true;
 	}
 
+  template<typename T>
+  T get_mid(const T &a, const T &b)
+  {
+    return (a/2) + (b/2) + ((a - 2*(a/2)) + (b - 2*(b/2)))/2;
+  }
+
   template<class type_vec_type>
   type_vec_type median(std::vector<type_vec_type> &v)
   {
@@ -122,7 +128,7 @@ namespace misc_utils
       return v[n];
     }else
     {//2, 4, 6...
-      return (v[n-1] + v[n])/2;
+      return get_mid<type_vec_type>(v[n-1],v[n]);
     }
 
   }

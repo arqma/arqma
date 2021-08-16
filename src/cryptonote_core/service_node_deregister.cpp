@@ -269,16 +269,16 @@ namespace service_nodes
     return true;
   }
 
-  void deregister_vote_pool::remove_used_votes(std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>> const &txs)
+  void deregister_vote_pool::remove_used_votes(std::vector<cryptonote::transaction> const &txs)
   {
     CRITICAL_REGION_LOCAL(m_lock);
-    for(const std::pair<cryptonote::transaction, cryptonote::blobdata> &tx : txs)
+    for(const auto &tx : txs)
     {
-      if(tx.first.type != cryptonote::txtype::deregister)
+      if(tx.type != cryptonote::txtype::deregister)
         continue;
 
       cryptonote::tx_extra_service_node_deregister deregister;
-      if(!get_service_node_deregister_from_tx_extra(tx.first.extra, deregister))
+      if(!get_service_node_deregister_from_tx_extra(tx.extra, deregister))
       {
         LOG_ERROR("Could not get deregister from tx, possibly corrupt tx");
         continue;

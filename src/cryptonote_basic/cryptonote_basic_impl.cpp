@@ -85,30 +85,29 @@ namespace cryptonote {
   //-----------------------------------------------------------------------------------------------
   bool get_base_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t hard_fork_version, uint64_t height)
   {
+    static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
+    const int target_minutes = DIFFICULTY_TARGET_V2 / 60;
+    const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes - 3);
+
     if(height == 1)
     {
       reward = arqma_bc::PREMINE;
       return true;
     }
 
-    static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
-    static_assert(DIFFICULTY_TARGET_V16 % 30 == 0,"After HF-16 we are changing Rules");
-    const int target_minutes = hard_fork_version < 16 ? DIFFICULTY_TARGET_V2 / 60 : DIFFICULTY_TARGET_V16 / 30;
-    const int emission_speed_factor = hard_fork_version >= 16 ? EMISSION_FACTOR_V16 : (EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes - 3));
-
-    uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
-    if(base_reward < (FINAL_SUBSIDY_PER_MINUTE * target_minutes))
+    if(hard_fork_version > 12)
     {
-      base_reward = (FINAL_SUBSIDY_PER_MINUTE * target_minutes);
+      already_generated_coins -= arqma_bc::PREMINE_BURN;
     }
 
-    cryptonote::network_type nettype;
-    if(hard_fork_version > 12 && nettype == MAINNET)
-      already_generated_coins -= arqma_bc::PREMINE_BURN;
+    uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
+    if (base_reward < FINAL_SUBSIDY_PER_MINUTE*target_minutes)
+    {
+      base_reward = FINAL_SUBSIDY_PER_MINUTE*target_minutes;
+    }
 
     uint64_t full_reward_zone = get_min_block_weight(hard_fork_version);
 
-    //make it soft
     if(median_weight < full_reward_zone)
       median_weight = full_reward_zone;
 
@@ -118,9 +117,9 @@ namespace cryptonote {
       return true;
     }
 
-    if(current_block_weight > (2 * median_weight))
+    if(current_block_weight > 2 * median_weight)
     {
-      MERROR("Block cumulative weight is too big: " << current_block_weight << ", expected less than " << (2 * median_weight));
+      MERROR("Block cumulative weight too big: " << current_block_weight << ", expected less than: " << 2 * median_weight);
       return false;
     }
 
@@ -132,13 +131,15 @@ namespace cryptonote {
     multiplicand *= current_block_weight;
     uint64_t product_lo = mul128(base_reward, multiplicand, &product_hi);
 
-    uint64_t reward_hi, reward_lo;
+    uint64_t reward_hi;
+    uint64_t reward_lo;
     div128_32(product_hi, product_lo, static_cast<uint32_t>(median_weight), &reward_hi, &reward_lo);
     div128_32(reward_hi, reward_lo, static_cast<uint32_t>(median_weight), &reward_hi, &reward_lo);
     assert(0 == reward_hi);
     assert(reward_lo < base_reward);
 
     reward = reward_lo;
+
     return true;
   }
   //------------------------------------------------------------------------------------

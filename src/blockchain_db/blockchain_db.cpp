@@ -47,7 +47,7 @@ namespace cryptonote
 const command_line::arg_descriptor<std::string> arg_db_sync_mode = {
   "db-sync-mode"
 , "Specify sync option, using format [safe|fast|fastest]:[sync|async]:[<nblocks_per_sync>[blocks]|<nbytes_per_sync>[bytes]]."
-, "fast:async:250000000bytes"
+, "fast:async:262144000bytes"
 };
 const command_line::arg_descriptor<bool> arg_db_salvage  = {
   "db-salvage"
@@ -73,7 +73,7 @@ void BlockchainDB::pop_block()
   pop_block(blk, txs);
 }
 
-void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, blobdata_ref>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
+void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
 {
   const transaction &tx = txp.first;
 
@@ -117,15 +117,8 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
     }
     else
     {
-      LOG_PRINT_L1("Unsupported input type, removing key images and aborting transaction addition");
-      for (const txin_v& tx_input : tx.vin)
-      {
-        if (tx_input.type() == typeid(txin_to_key))
-        {
-          remove_spent_key(boost::get<txin_to_key>(tx_input).k_image);
-        }
-      }
-      return;
+      LOG_PRINT_L1("Unsupported input type, aborting transaction addition");
+      throw std::runtime_error("Unexpected input type, aborting");
     }
   }
 
@@ -158,8 +151,7 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
     }
     else
     {
-      amount_output_indices[i] = add_output(tx_hash, tx.vout[i], i, unlock_time,
-        tx.version >= cryptonote::txversion::v2 ? &tx.rct_signatures.outPk[i].mask : NULL);
+      amount_output_indices[i] = add_output(tx_hash, tx.vout[i], i, unlock_time, tx.version >= cryptonote::txversion::v2 ? &tx.rct_signatures.outPk[i].mask : NULL);
     }
   }
 
@@ -196,13 +188,12 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
   time1 = epee::misc_utils::get_tick_count();
 
   uint64_t num_rct_outs = 0;
-  blobdata miner_bd = tx_to_blob(blk.miner_tx);
-  add_transaction(blk_hash, std::make_pair(blk.miner_tx, blobdata_ref(miner_bd)));
+  add_transaction(blk_hash, std::make_pair(blk.miner_tx, tx_to_blob(blk.miner_tx)));
   if (blk.miner_tx.version >= cryptonote::txversion::v2)
     num_rct_outs += blk.miner_tx.vout.size();
   int tx_i = 0;
   crypto::hash tx_hash = crypto::null_hash;
-  for (const std::pair<transaction, blobdata_ref>& tx : txs)
+  for (const std::pair<transaction, blobdata>& tx : txs)
   {
     tx_hash = blk.tx_hashes[tx_i];
     add_transaction(blk_hash, tx, &tx_hash);

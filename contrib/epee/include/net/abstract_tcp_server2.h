@@ -59,7 +59,7 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
-#define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 10000
+#define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 3000
 
 namespace epee
 {
@@ -125,7 +125,6 @@ namespace net_utils
     void save_dbg_log();
 
     bool rpc_speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on RPC connections)
-    bool zmq_speed_limit_is_enabled() const; // < tells us should we be sleeping here (e.g. do not sleep on ZMQ connections)
 
     bool cancel();
 
@@ -192,7 +191,6 @@ namespace net_utils
 
   public:
     void setRpcStation();
-    void setZmqStation();
   };
 
 
@@ -211,7 +209,7 @@ namespace net_utils
     };
 
   public:
-    typedef boost::shared_ptr<connection<t_protocol_handler>> connection_ptr;
+    typedef boost::shared_ptr<connection<t_protocol_handler> > connection_ptr;
     typedef typename t_protocol_handler::connection_context t_connection_context;
     // Construct the server to listen on the specified TCP address and port, and
     // serve up files from the given directory.
@@ -275,44 +273,44 @@ namespace net_utils
 
     boost::asio::io_service& get_io_service(){return io_service_;}
 
-    struct idle_callback_context_base
+    struct idle_callback_conext_base
     {
-      virtual ~idle_callback_context_base(){}
+      virtual ~idle_callback_conext_base(){}
 
       virtual bool call_handler(){return true;}
 
-      idle_callback_context_base(boost::asio::io_service& io_service)
-        : m_timer(io_service)
+      idle_callback_conext_base(boost::asio::io_service& io_serice)
+        : m_timer(io_serice), m_period(0)
       {}
       boost::asio::deadline_timer m_timer;
+      uint64_t m_period;
     };
 
     template <class t_handler>
-    struct idle_callback_context: public idle_callback_context_base
+    struct idle_callback_conext: public idle_callback_conext_base
     {
-      idle_callback_context(boost::asio::io_service& io_service, t_handler& h, uint64_t period)
-        : idle_callback_context_base(io_service), m_handler(h){this->m_period = period;}
+      idle_callback_conext(boost::asio::io_service& io_serice, t_handler& h, uint64_t period)
+        : idle_callback_conext_base(io_serice), m_handler(h){this->m_period = period;}
 
       t_handler m_handler;
       virtual bool call_handler()
       {
         return m_handler();
       }
-      uint64_t m_period;
     };
 
     template<class t_handler>
     bool add_idle_handler(t_handler t_callback, uint64_t timeout_ms)
-      {
-        boost::shared_ptr<idle_callback_context<t_handler>> ptr(new idle_callback_context<t_handler>(io_service_, t_callback, timeout_ms));
-        //needed call handler here ?...
-        ptr->m_timer.expires_from_now(boost::posix_time::milliseconds(ptr->m_period));
-        ptr->m_timer.async_wait(boost::bind(&boosted_tcp_server<t_protocol_handler>::global_timer_handler<t_handler>, this, ptr));
-        return true;
-      }
+    {
+      boost::shared_ptr<idle_callback_conext<t_handler> > ptr(new idle_callback_conext<t_handler>(io_service_, t_callback, timeout_ms));
+      //needed call handler here ?...
+      ptr->m_timer.expires_from_now(boost::posix_time::milliseconds(ptr->m_period));
+      ptr->m_timer.async_wait(boost::bind(&boosted_tcp_server<t_protocol_handler>::global_timer_handler<t_handler>, this, ptr));
+      return true;
+    }
 
-      template<class t_handler>
-      bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_context<t_handler>> ptr)
+    template<class t_handler>
+    bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_conext<t_handler>> ptr)
     {
       //if handler return false - he don't want to be called anymore
       if(!ptr->call_handler())

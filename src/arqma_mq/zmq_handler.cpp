@@ -36,6 +36,7 @@
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "cryptonote_basic/blobdatatype.h"
 #include "ringct/rctSigs.h"
+#include "version.h"
 
 namespace arqmaMQ
 {
@@ -51,7 +52,7 @@ namespace arqmaMQ
   {
     std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>> blocks;
 
-    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
+    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT, COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT))
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "core::find_blockchain_supplement() returned false";
@@ -139,7 +140,7 @@ namespace arqmaMQ
 
     auto& chain = m_core.get_blockchain_storage();
 
-    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, NULL, res.start_height, res.current_height, false))
+    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, res.start_height, res.current_height, false))
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "Blockchain::find_blockchain_supplement() returned false";
@@ -336,6 +337,11 @@ namespace arqmaMQ
         if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "fee too low";
       }
+      if(tvc.m_too_few_outputs)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "Not enough outputs used";
+      }
       if(tvc.m_invalid_version)
       {
         if(!res.error_details.empty()) res.error_details += " and ";
@@ -474,6 +480,8 @@ namespace arqmaMQ
     res.info.block_size_limit = res.info.block_weight_limit = m_core.get_blockchain_storage().get_current_cumulative_block_weight_limit();
     res.info.block_size_median = res.info.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
     res.info.start_time = (uint64_t)m_core.get_start_time();
+    res.info.version = ARQMA_VERSION;
+    res.info.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = cryptonote::rpc::Message::STATUS_OK;
     res.error_details = "";

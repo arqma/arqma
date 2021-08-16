@@ -40,6 +40,7 @@
 #define TX_EXTRA_NONCE                        0x02
 #define TX_EXTRA_MERGE_MINING_TAG             0x03
 #define TX_EXTRA_TAG_ADDITIONAL_PUBKEYS       0x04
+
 #define TX_EXTRA_TAG_SERVICE_NODE_REGISTER    0x70
 #define TX_EXTRA_TAG_SERVICE_NODE_DEREGISTER  0x71
 #define TX_EXTRA_TAG_SERVICE_NODE_WINNER      0x72
@@ -48,6 +49,7 @@
 #define TX_EXTRA_TAG_TX_SECRET_KEY            0x75
 #define TX_EXTRA_TAG_TX_KEY_IMAGE_PROOFS      0x76
 #define TX_EXTRA_TAG_TX_KEY_IMAGE_UNLOCK      0x77
+
 #define TX_EXTRA_MYSTERIOUS_MINERGATE_TAG     0xDE
 
 #define TX_EXTRA_NONCE_PAYMENT_ID             0x00
@@ -296,21 +298,21 @@ namespace cryptonote
   //   varint tag;
   //   varint size;
   //   varint data[];
-  typedef boost::variant<tx_extra_padding,
-                         tx_extra_pub_key,
-                         tx_extra_nonce,
-                         tx_extra_merge_mining_tag,
-                         tx_extra_additional_pub_keys,
-                         tx_extra_mysterious_minergate,
-                         tx_extra_service_node_pubkey,
-                         tx_extra_service_node_register,
-                         tx_extra_service_node_contributor,
+  typedef boost::variant<tx_extra_pub_key,
                          tx_extra_service_node_winner,
+                         tx_extra_additional_pub_keys,
+                         tx_extra_nonce,
+                         tx_extra_service_node_register,
                          tx_extra_service_node_deregister,
+                         tx_extra_service_node_contributor,
+                         tx_extra_service_node_pubkey,
                          tx_extra_tx_secret_key,
                          tx_extra_tx_key_image_proofs,
-                         tx_extra_tx_key_image_unlock
-                       > tx_extra_field;
+                         tx_extra_tx_key_image_unlock,
+                         tx_extra_merge_mining_tag,
+                         tx_extra_mysterious_minergate,
+                         tx_extra_padding>
+          tx_extra_field;
 }
 
 BLOB_SERIALIZER(cryptonote::tx_extra_service_node_deregister::vote);

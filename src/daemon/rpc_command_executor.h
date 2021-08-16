@@ -170,7 +170,7 @@ public:
 
   bool print_sn_status();
 
-  bool print_sr(uint64_t height);
+  bool print_stake_requirement(uint64_t height);
 
   bool prepare_registration();
 

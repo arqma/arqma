@@ -45,7 +45,7 @@ namespace daemonize
     typedef ::daemonize::t_daemon t_daemon;
 
     static std::string const NAME;
-    
+
     t_executor(uint16_t public_rpc_port = 0) : public_rpc_port(public_rpc_port)
     {
     }
@@ -67,7 +67,7 @@ namespace daemonize
     bool run_interactive(
         boost::program_options::variables_map const & vm
       );
-      
+
   private:
     uint16_t public_rpc_port;
   };

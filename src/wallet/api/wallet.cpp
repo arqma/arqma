@@ -2348,20 +2348,12 @@ bool WalletImpl::isKeysFileLocked()
     return m_wallet->is_keys_file_locked();
 }
 
-PendingTransaction* WalletImpl::stakePending(const std::string& sn_key_str, const std::string& address_str, const std::string& amount_str, std::string& error_msg)
+PendingTransaction* WalletImpl::stakePending(const std::string& sn_key_str, const std::string& amount_str, std::string& error_msg)
 {
   crypto::public_key sn_key;
   if(!epee::string_tools::hex_to_pod(sn_key_str, sn_key))
   {
     error_msg = "failed to parse service node pubkey";
-    LOG_ERROR(error_msg);
-    return nullptr;
-  }
-
-  cryptonote::address_parse_info addr_info;
-  if(!cryptonote::get_account_address_from_str_or_url(addr_info, m_wallet->nettype(), address_str))
-  {
-    error_msg = "failed to parse address";
     LOG_ERROR(error_msg);
     return nullptr;
   }
@@ -2378,7 +2370,7 @@ PendingTransaction* WalletImpl::stakePending(const std::string& sn_key_str, cons
 
   PendingTransactionImpl * transaction = new PendingTransactionImpl(*this);
 
-  wallet2::stake_result stake_result = m_wallet->create_stake_tx(transaction->m_pending_tx, sn_key, addr_info, amount);
+  wallet2::stake_result stake_result = m_wallet->create_stake_tx(transaction->m_pending_tx, sn_key, amount);
   if(stake_result != wallet2::stake_result::success))
   {
     error_msg = "Failed to create a stake transaction: " + stake_result.msg;

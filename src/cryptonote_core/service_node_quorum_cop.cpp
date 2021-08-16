@@ -60,7 +60,7 @@ namespace service_nodes
     }
   }
 
-  void quorum_cop::block_added(const cryptonote::block& block, const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>>& txs)
+  void quorum_cop::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)
   {
     uint64_t const height = cryptonote::get_block_height(block);
     if(m_core.get_hard_fork_version(height) < 16)
@@ -162,8 +162,8 @@ namespace service_nodes
     // TODO: Will need to be set Valid Version Numbers after test and before Release to Public.
     // if(!(proof.arqma_ver_major == 7 && proof.arqma_ver_minor == 1 && proof.arqma_snode_major == 1 && proof.arqma_snode_minor == 0))
     uint64_t height = m_core.get_current_blockchain_height();
-    int hf_ver = m_core.get_hard_fork_version(height);
-    if(hf_ver >= cryptonote::network_version_16 && proof.arqma_snode_major != 1) // for tests
+    uint8_t hf_ver = m_core.get_hard_fork_version(height);
+    if(hf_ver >= 16 && proof.arqma_snode_major != 1) // for tests
       return false;
 
     CRITICAL_REGION_LOCAL(m_lock);
