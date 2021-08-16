@@ -51,6 +51,7 @@ arqma_add_library(wallet
   ${wallet_private_headers})
 target_link_libraries(wallet
   PUBLIC
+    rpc_base
     multisig
     common
     cryptonote_core
@@ -85,7 +86,6 @@ if(NOT IOS)
   target_link_libraries(wallet_rpc_server
     PRIVATE
       wallet
-      arqma_mq
       rpc_base
       cryptonote_core
       cncrypto

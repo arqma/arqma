@@ -140,7 +140,7 @@ namespace arqmaMQ
 
     auto& chain = m_core.get_blockchain_storage();
 
-    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, NULL, res.start_height, res.current_height, false))
+    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, res.start_height, res.current_height, false))
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "Blockchain::find_blockchain_supplement() returned false";
@@ -336,6 +336,11 @@ namespace arqmaMQ
       {
         if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "fee too low";
+      }
+      if(tvc.m_too_few_outputs)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "Not enough outputs used";
       }
       if(tvc.m_invalid_version)
       {

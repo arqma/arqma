@@ -1,11 +1,16 @@
 // Copyright (c)2020, The Arqma Network
 // Copyright (c)2020, ArqTras
 // Portions of this software are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
+//
 // All rights reserved.
+//
 // Authors and copyright holders give permission for following:
+//
 // 1. Redistribution and use in source and binary forms WITHOUT modification.
 // 2. Modification of the source form for your own personal use.
+//
 // As long as the following conditions are met:
+//
 // 3. You must not distribute modified copies of the work to third parties. This includes
 //    posting the work online, or hosting copies of the modified work for download.
 // 4. Any derivative version of this work is also covered by this license, including point 8.
@@ -16,10 +21,12 @@
 //    with the laws of England and Wales.
 // 7. You agree to submit all disputes arising out of or in connection with this licence
 //    to the exclusive jurisdiction of the Courts of England and Wales.
+//
 // Authors and copyright holders agree that:
+//
 // 8. This licence expires and the work covered by it is released into the
 //    public domain on 1st of March 2021
-
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -43,13 +50,13 @@ namespace command_helper
   const char* USAGE_INCOMING_TRANSFERS("incoming_transfers [available|unavailable] [verbose] [uses] [index=<N1>[,<N2>[,...]]]");
   const char* USAGE_PAYMENTS("payments <PID_1> [<PID_2> ... <PID_N>]");
   const char* USAGE_PAYMENT_ID("payment_id");
-  const char* USAGE_TRANSFER("transfer [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] (<URI> | <address> <amount>) [<payment_id>]");
-  const char* USAGE_LOCKED_TRANSFER("locked_transfer [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] (<URI> | <addr> <amount>) <lockblocks> [<payment_id>]");
-  const char* USAGE_LOCKED_SWEEP_ALL("locked_sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> <lockblocks> [<payment_id>]");
-  const char* USAGE_SWEEP_ALL("sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] [outputs=<N>] <address> [<payment_id>]");
-  const char* USAGE_SWEEP_BELOW("sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]");
-  const char* USAGE_SWEEP_SINGLE("sweep_single [<priority>] [<ring_size>] [outputs=<N>] <key_image> <address> [<payment_id>]");
-  const char* USAGE_DONATE("donate [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <amount> [<payment_id>]");
+  const char* USAGE_TRANSFER("transfer [index=<N1>[,<N2>,...]] [<priority>] (<URI> | <address> <amount>) [<payment_id>]");
+  const char* USAGE_LOCKED_TRANSFER("locked_transfer [index=<N1>[,<N2>,...]] [<priority>] (<URI> | <addr> <amount>) <lockblocks> [<payment_id>]");
+  const char* USAGE_LOCKED_SWEEP_ALL("locked_sweep_all [index=<N1>[,<N2>,...]] [<priority>] <address> <lockblocks> [<payment_id>]");
+  const char* USAGE_SWEEP_ALL("sweep_all [index=<N1>[,<N2>,...]] [<priority>] [outputs=<N>] <address> [<payment_id>]");
+  const char* USAGE_SWEEP_BELOW("sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] <address> [<payment_id>]");
+  const char* USAGE_SWEEP_SINGLE("sweep_single [<priority>] [outputs=<N>] <key_image> <address> [<payment_id>]");
+  const char* USAGE_DONATE("donate [index=<N1>[,<N2>,...]] [<priority>] <amount> [<payment_id>]");
   const char* USAGE_SIGN_TRANSFER("sign_transfer [export_raw]");
   const char* USAGE_SET_LOG("set_log <level>|{+,-,}<categories>");
   const char* USAGE_ACCOUNT("account\n"
@@ -148,55 +155,49 @@ namespace command_helper
   const char* SPENDKEY("Display the private spend key.");
   const char* SEED("Display the Electrum-style mnemonic seed");
   const char* SET("Available options:\n "
-         "seed language\n "
-         "  Set the wallet's seed language.\n "
-         "always-confirm-transfers <1|0>\n "
-         "  Whether to confirm unsplit txes.\n "
-         "print-ring-members <1|0>\n "
-         "  Whether to print detailed information about ring members during confirmation.\n "
-         "store-tx-info <1|0>\n "
-         "  Whether to store outgoing tx info (destination address, payment ID, tx secret key) for future reference.\n "
-         "default-ring-size <n>\n "
-         "  Set the default ring size (obsolete).\n "
-         "auto-refresh <1|0>\n "
-         "  Whether to automatically synchronize new blocks from the daemon.\n "
-         "refresh-type <full|optimize-coinbase|no-coinbase|default>\n "
-         "  Set the wallet's refresh behaviour.\n "
-         "priority [0|1|2|3|4]\n "
-         "  Set the fee to default/unimportant/normal/elevated/priority.\n "
-         "confirm-missing-payment-id <1|0>\n "
-         "ask-password <0|1|2   (or never|action|decrypt)>\n "
-         "unit <arqma|milliarq|microarq|nanoarq>\n "
-         "  Set the default Arqma (sub-)unit.\n "
-         "min-outputs-count [n]\n "
-         "  Try to keep at least that many outputs of value at least min-outputs-value.\n "
-         "min-outputs-value [n]\n "
-         "  Try to keep at least min-outputs-count outputs of at least that value.\n "
-         "merge-destinations <1|0>\n "
-         "  Whether to merge multiple payments to the same destination address.\n "
-         "confirm-backlog <1|0>\n "
-         "  Whether to warn if there is transaction backlog.\n "
-         "confirm-backlog-threshold [n]\n "
-         "  Set a threshold for confirm-backlog to only warn if the transaction backlog is greater than n blocks.\n "
-         "refresh-from-block-height [n]\n "
-         "  Set the height before which to ignore blocks.\n "
-         "auto-low-priority <1|0>\n "
-         "  Whether to automatically use the low priority fee level when it's safe to do so.\n "
-         "segregate-pre-fork-outputs <1|0>\n "
-         "  Set this if you intend to spend outputs on both ArQmA AND a key reusing fork.\n "
-         "key-reuse-mitigation2 <1|0>\n "
-         "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n"
-         "subaddress-lookahead <major>:<minor>\n "
-         "  Set the lookahead sizes for the subaddress hash table.\n "
-         "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n "
-         "segregation-height <n>\n "
-         "  Set to the height of a key reusing fork you want to use, 0 to use default.\n"
-         "persistent-client-id <1|0>\n "
-         "  Whether to keep using the same client id for RPC payment over wallet restarts.\n"
-         "auto-mine-for-rpc-payment-threshold <float>\n "
-         "  Whether to automatically start mining for RPC payment if the daemon requires it.\n"
-         "credits-target <unsigned int>\n"
-         "  The RPC payment credits balance to target.");
+                  "seed language\n "
+                  "  Set the wallet's seed language.\n "
+                  "always-confirm-transfers <1|0>\n "
+                  "  Whether to confirm unsplit txes.\n "
+                  "print-ring-members <1|0>\n "
+                  "  Whether to print detailed information about ring members during confirmation.\n "
+                  "store-tx-info <1|0>\n "
+                  "  Whether to store outgoing tx info (destination address, payment ID, tx secret key) for future reference.\n "
+                  //"default-ring-size <n>\n "
+                  //"  Set the default ring size (obsolete).\n "
+                  "auto-refresh <1|0>\n "
+                  "  Whether to automatically synchronize new blocks from the daemon.\n "
+                  "refresh-type <full|optimize-coinbase|no-coinbase|default>\n "
+                  "  Set the wallet's refresh behaviour.\n "
+                  "priority [0|1|2|3|4]\n "
+                  "  Set the fee to default/unimportant/normal/elevated/priority.\n "
+                  "confirm-missing-payment-id <1|0>\n "
+                  "ask-password <0|1|2   (or never|action|decrypt)>\n "
+                  "unit <arqma|milliarq|microarq|nanoarq>\n "
+                  "  Set the default Arqma (sub-)unit.\n "
+                  "min-outputs-count [n]\n "
+                  "  Try to keep at least that many outputs of value at least min-outputs-value.\n "
+                  "min-outputs-value [n]\n "
+                  "  Try to keep at least min-outputs-count outputs of at least that value.\n "
+                  "merge-destinations <1|0>\n "
+                  "  Whether to merge multiple payments to the same destination address.\n "
+                  "confirm-backlog <1|0>\n "
+                  "  Whether to warn if there is transaction backlog.\n "
+                  "confirm-backlog-threshold [n]\n "
+                  "  Set a threshold for confirm-backlog to only warn if the transaction backlog is greater than n blocks.\n "
+                  "refresh-from-block-height [n]\n "
+                  "  Set the height before which to ignore blocks.\n "
+                  "auto-low-priority <1|0>\n "
+                  "  Whether to automatically use the low priority fee level when it's safe to do so.\n "
+                  "segregate-pre-fork-outputs <1|0>\n "
+                  "  Set this if you intend to spend outputs on both ArQmA AND a key reusing fork.\n "
+                  "key-reuse-mitigation2 <1|0>\n "
+                  "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n"
+                  "subaddress-lookahead <major>:<minor>\n "
+                  "  Set the lookahead sizes for the subaddress hash table.\n "
+                  "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n "
+                  "segregation-height <n>\n "
+                  "  Set to the height of a key reusing fork you want to use, 0 to use default.\n");
   const char* ENCRYPTED_KEY("Display the encrypted Electrum-style mnemonic seed.");
   const char* RESCAN_SPENT("Rescan the blockchain for spent outputs.");
   const char* GET_TX_KEY("Get the transaction key (r) for a given <txid>.");
@@ -207,17 +208,17 @@ namespace command_helper
   const char* GET_SPEND_PROOF("Generate a signature proving that you generated <txid> using the spend secret key, optionally with a challenge string <message>.");
   const char* CHECK_SPEND_PROOF("Check a signature proving that the signer generated <txid>, optionally with a challenge string <message>.");
   const char* GET_RESERVE_PROOF("Generate a signature proving that you own at least this much, optionally with a challenge string <message>.\n"
-     "If 'all' is specified, you prove the entire sum of all of your existing accounts' balances.\n"
-     "Otherwise, you prove the reserve of the smallest possible amount above <amount> available in your current account.");
+                                "If 'all' is specified, you prove the entire sum of all of your existing accounts' balances.\n"
+                                "Otherwise, you prove the reserve of the smallest possible amount above <amount> available in your current account.");
   const char* CHECK_RESERVE_PROOF("Check a signature proving that the owner of <address> holds at least this much, optionally with a challenge string <message>.");
   const char* SHOW_TRANSFERS("Show the incoming/outgoing transfers within an optional height range.\n\n"
-     "Output format:\n"
-     "In or Coinbase:    Block Number, \"block\"|\"in\",              Time, Amount,  Transaction Hash, Payment ID, Subaddress Index,                     \"-\", Note\n"
-     "Out:               Block Number, \"out\",                     Time, Amount*, Transaction Hash, Payment ID, Fee, Destinations, Input addresses**, \"-\", Note\n"
-     "Pool:                            \"pool\", \"in\",              Time, Amount,  Transaction Hash, Payment Id, Subaddress Index,                     \"-\", Note, Double Spend Note\n"
-     "Pending or Failed:               \"failed\"|\"pending\", \"out\", Time, Amount*, Transaction Hash, Payment ID, Fee, Input addresses**,               \"-\", Note\n\n"
-     "* Excluding change and fee.\n"
-     "** Set of address indices used as inputs in this transfer.");
+                             "Output format:\n"
+                             "In or Coinbase:    Block Number, \"block\"|\"in\",              Time, Amount,  Transaction Hash, Payment ID, Subaddress Index,                     \"-\", Note\n"
+                             "Out:               Block Number, \"out\",                     Time, Amount*, Transaction Hash, Payment ID, Fee, Destinations, Input addresses**, \"-\", Note\n"
+                             "Pool:                            \"pool\", \"in\",              Time, Amount,  Transaction Hash, Payment Id, Subaddress Index,                     \"-\", Note, Double Spend Note\n"
+                             "Pending or Failed:               \"failed\"|\"pending\", \"out\", Time, Amount*, Transaction Hash, Payment ID, Fee, Input addresses**,               \"-\", Note\n\n"
+                             "* Excluding change and fee.\n"
+                             "** Set of address indices used as inputs in this transfer.");
   const char* EXPORT_TRANSFERS("Export to CSV the incoming/outgoing transfers within an optional height range.");
   const char* UNSPENT_OUTPUTS("Show the unspent outputs of a specified address within an optional amount range.");
   const char* RESCAN_BC("Rescan the blockchain from scratch. If \"hard\" is specified, you will lose any information which can not be recovered from the blockchain itself.");
@@ -248,8 +249,8 @@ namespace command_helper
   const char* SUBMIT_MULTISIG("Submit a signed multisig transaction from a file");
   const char* EXPORT_RAW_MULTISIG_TX("Export a signed multisig transaction to a file");
   const char* PRINT_RING("Print the ring(s) used to spend a given key image or transaction (if the ring size is > 1)\n\n"
-     "Output format:\n"
-     "Key Image, \"absolute\", list of rings");
+                         "Output format:\n"
+                         "Key Image, \"absolute\", list of rings");
   const char* SET_RING("Set the ring used for a given key image, so it can be reused in a fork");
   const char* SAVE_KNOWN_RINGS("Save known rings to the shared rings database");
   const char* MARK_OUTPUT_SPENT("Mark output(s) as spent so they never get selected as fake outputs in a ring");
@@ -263,15 +264,13 @@ namespace command_helper
 
   // Service-Nodes
 
-  const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [priority] <service node pubkey> <amount|percent>");
-  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [priority] <operator cut> <address1> <contribution %> [<address2> <contribution %> [...]] <expiration timestamp> <pubkey> <signature>");
-
-  const char* STAKE("Send all unlocked balance to the same address. Lock it for (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used.");
-  const char* REGISTER_SN("Send all unlocked balance to the same address. Lock it for [lockblocks] (max. 1000000). If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet stakes outputs received by those address indices. <priority> is the priority of the stake. The higher the priority, the higher the transaction fee. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command \"set priority\") is used.");
-
+  const char* USAGE_STAKE("stake [index=<N1>[,<N2>,...]] [<priority>] <service node pubkey> <amount|percent_%>");
+  const char* USAGE_REGISTER_SERVICE_NODE("register_service_node [index=<N1>[,<N2>,...]] [<priority>] <operator cut> <address_1> <%-contribution_1> [<address2> <%-contribution_2> [...]] <expiration timestamp> <pubkey> <signature>");
   const char* USAGE_REQUEST_STAKE_UNLOCK("request_stake_unlock <service_node_pubkey>");
-  const char* UNLOCK_HELPER("");
+  const char* USAGE_PRINT_LOCKED_STAKES("print_locked_stakes");
 
-  const char* USAGE_LOCKED_STAKES("");
-  const char* LOCKED_STAKES_HELPER("Print stakes that currently locked on the ArQmA Service Node Network");
+  const char* STAKE("Send a transfer to this wallet's main account and lock it as a contribution stake to the given Service Node (which must be registered and awaiting contributions). The stake amount may be specified either as a fixed amount or as a percentage of the Service Node's total stake. The optional index= and <priority> parameters work as in the `transfer' command.");
+  const char* REGISTER_SERVICE_NODE("Send <amount> to this wallet's main account and lock it as an Operator Stake for newly registered Service Node. This command is normally generated at the Service Node with \"prepare_registration\" command used. Optional parameters such \"index=\" and \"<priority>\" works in the same way like on \"transfer\" command.");
+  const char* REQUEST_STAKE_UNLOCK("Request currently locked Stake in the given Service Node to be unlocked");
+  const char* PRINT_LOCKED_STAKES("Print currently locked Stakes at the Service Node");
 }

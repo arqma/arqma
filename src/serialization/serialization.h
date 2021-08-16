@@ -213,7 +213,7 @@ inline bool do_serialize(Archive &ar, bool &v)
  * \brief self-explanatory
  */
 #define END_SERIALIZE()				\
-  return true;					\
+  return ar.stream().good();					\
   }
 
 /*! \macro VALUE(f)

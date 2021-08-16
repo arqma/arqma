@@ -33,6 +33,7 @@
 
 #include <string>
 
+#define ARQMA_ARRAY_COUNT(array) sizeof(array)/sizeof(array[0])
 namespace arqma
 {
   double round(double);

@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <string>
 #include "device.hpp"
+#include "log.hpp"
 #include "device_io_hid.hpp"
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/recursive_mutex.hpp>
@@ -41,6 +42,18 @@
 namespace hw {
 
     namespace ledger {
+
+    /* Minimal supported version */
+    #define MINIMAL_APP_VERSION_MAJOR 1
+    #define MINIMAL_APP_VERSION_MINOR 3
+    #define MINIMAL_APP_VERSION_MICRO 1
+
+    #define VERSION(M,m,u) ((M)<<16|(m)<<8|(u))
+    #define VERSION_MAJOR(v) (((v)>>16)&0xFF)
+    #define VERSION_MINOR(v) (((v)>>8)&0xFF)
+    #define VERSION_MICRO(v) (((v)>>0)&0xFF)
+
+    #define MINIMAL_APP_VERSION VERSION(MINIMAL_APP_VERSION_MAJOR, MINIMAL_APP_VERSION_MINOR, MINIMAL_APP_VERSION_MICRO)
 
     void register_all(std::map<std::string, std::unique_ptr<device>> &registry);
 
@@ -191,20 +204,23 @@ namespace hw {
         /*                               TRANSACTION                               */
         /* ======================================================================= */
 
+        void generate_tx_proof(const crypto::hash &prefix_hash, const crypto::public_key &R, const crypto::public_key &A, const boost::optional<crypto::public_key> &B, const crypto::public_key &D, const crypto::secret_key &r, crypto::signature &sig) override;
+
         bool  open_tx(crypto::secret_key &tx_key) override;
 
-        void  get_transaction_prefix_hash(const cryptonote::transaction_prefix& tx, crypto::hash& h) override;
-
         bool  encrypt_payment_id(crypto::hash8 &payment_id, const crypto::public_key &public_key, const crypto::secret_key &secret_key) override;
+
+        rct::key genCommitmentMask(const rct::key &amount_key) override;
 
         bool  ecdhEncode(rct::ecdhTuple & unmasked, const rct::key & sharedSec, bool short_amount) override;
         bool  ecdhDecode(rct::ecdhTuple & masked, const rct::key & sharedSec, bool short_amount) override;
 
-        bool  generate_output_ephemeral_keys(const size_t tx_version, bool &found_change, const cryptonote::account_keys &sender_account_keys, const crypto::public_key &txkey_pub,  const crypto::secret_key &tx_key,
-                                             const cryptonote::tx_destination_entry &dst_entr, const boost::optional<cryptonote::tx_destination_entry> &change_addr, const size_t output_index,
+        bool  generate_output_ephemeral_keys(const size_t tx_version, bool &found_change, const cryptonote::account_keys &sender_account_keys,
+                                             const crypto::public_key &txkey_pub, const crypto::secret_key &tx_key,
+                                             const cryptonote::tx_destination_entry &dst_entr,
+                                             const boost::optional<cryptonote::tx_destination_entry> &change_addr, const size_t output_index,
                                              const bool &need_additional_txkeys, const std::vector<crypto::secret_key> &additional_tx_keys,
-                                             std::vector<crypto::public_key> &additional_tx_public_keys,
-                                             std::vector<rct::key> &amount_keys,
+                                             std::vector<crypto::public_key> &additional_tx_public_keys, std::vector<rct::key> &amount_keys,
                                              crypto::public_key &out_eph_public_key) override;
 
         bool  mlsag_prehash(const std::string &blob, size_t inputs_size, size_t outputs_size, const rct::keyV &hashes, const rct::ctkeyV &outPk, rct::key &prehash) override;

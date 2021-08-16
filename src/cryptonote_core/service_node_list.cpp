@@ -53,8 +53,8 @@ namespace service_nodes
   static uint8_t get_minimum_sn_info_version(uint8_t hard_fork_version)
   {
     if(hard_fork_version < cryptonote::network_version_16)
-      return service_node_info::version_0;
-    return service_node_info::version_1;
+      return service_node_info::v0;
+    return service_node_info::v1;
   }
 
   static uint64_t uniform_distribution_portable(std::mt19937_64& mersenne_twister, uint64_t n)
@@ -68,6 +68,11 @@ namespace service_nodes
 
   service_node_list::service_node_list(cryptonote::Blockchain& blockchain) : m_blockchain(blockchain), m_hooks_registered(false), m_height(0), m_db(nullptr), m_service_node_pubkey(nullptr)
   {
+  }
+
+  service_node_list::~service_node_list()
+  {
+    store();
   }
 
   void service_node_list::register_hooks(service_nodes::quorum_cop &quorum_cop)
@@ -91,7 +96,7 @@ namespace service_nodes
   void service_node_list::init()
   {
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
-    if(m_blockchain.get_current_hard_fork_version() < 16)
+    if(m_blockchain.get_current_hard_fork_version() < cryptonote::network_version_16)
     {
       clear(true);
       return;
@@ -99,7 +104,6 @@ namespace service_nodes
 
     uint64_t current_height = m_blockchain.get_current_blockchain_height();
     bool loaded = load();
-
     if(loaded && m_height == current_height)
       return;
 
@@ -119,28 +123,21 @@ namespace service_nodes
         return;
       }
 
+      std::vector<cryptonote::transaction> txs;
+      std::vector<crypto::hash> missed_txs;
       for(const auto& block_pair : blocks)
       {
+        txs.clear();
+        missed_txs.clear();
+
         const cryptonote::block& block = block_pair.second;
-        std::vector<cryptonote::transaction> txs;
-        std::vector<crypto::hash> missed_txs;
         if(!m_blockchain.get_transactions(block.tx_hashes, txs, missed_txs))
         {
           MERROR("Unable to get transactions for block " << block.hash);
           return;
         }
 
-        std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>> arq_txs;
-        arq_txs.reserve(txs.size());
-
-        for(const cryptonote::transaction tx : txs)
-        {
-          cryptonote::blobdata bl;
-          t_serializable_object_to_blob(tx, bl);
-          arq_txs.push_back(std::make_pair(std::move(tx), std::move(bl)));
-        }
-
-        block_added_generic(block, arq_txs);
+        process_block(block, txs);
       }
     }
   }
@@ -294,12 +291,16 @@ namespace service_nodes
     {
       switch(tx.rct_signatures.type)
       {
+        case rct::RCTTypeSimple:
         case rct::RCTTypeBulletproof:
         case rct::RCTTypeBulletproof2:
           money_transferred = rct::decodeRctSimple(tx.rct_signatures, rct::sk2rct(scalar1), i, mask, hwdev);
           break;
+        case rct::RCTTypeFull:
+          money_transferred = rct::decodeRct(tx.rct_signatures, rct::sk2rct(scalar1), i, mask, hwdev);
+          break;
         default:
-          LOG_ERROR("Unsupported rct type: " << tx.rct_signatures.type);
+          LOG_PRINT_L0("Unsupported rct type: " << tx.rct_signatures.type);
           return 0;
       }
     }
@@ -355,7 +356,7 @@ namespace service_nodes
 
     m_rollback_events.push_back(std::unique_ptr<rollback_event>(new rollback_change(block_height, key, iter->second)));
 
-    int hard_fork_version = m_blockchain.get_hard_fork_version(block_height);
+    uint8_t hard_fork_version = m_blockchain.get_hard_fork_version(block_height);
     if(hard_fork_version >= cryptonote::network_version_16)
     {
       for(const auto &contributor : iter->second.contributors)
@@ -474,7 +475,6 @@ namespace service_nodes
         if(!can_continue)
           break;
       }
-
     }
 
     /// 3. Fill in "unsaturated" swarms (with fewer than max nodes) starting from smallest
@@ -596,6 +596,21 @@ namespace service_nodes
       return false;
     }
 
+    // An cryptonote transaction is constructed as follows
+    //
+    // P = Hs(aR)G + B
+    //   where:
+    //     P := Stealth Address
+    //     a := Receiver's secret view key
+    //     B := Receiver's public spend key
+    //     R := TX Public Key
+    //     G := Elliptic Curve
+    //
+    // At ArQmA we pack into the tx extra information to reveal information about the TX
+    //   A := Public View Key (we pack contributor into tx extra, 'parsed_contribution.address')
+    //   r := TX Secret Key   (we pack secret key into tx extra,  'parsed_contribution.tx_key`)
+
+    // Calulate 'Derivation := Hs(Ar)G'
     crypto::key_derivation derivation;
     if(!crypto::generate_key_derivation(parsed_contribution.address.m_view_public_key, parsed_contribution.tx_key, derivation))
     {
@@ -605,6 +620,18 @@ namespace service_nodes
 
     hw::device& hwdev = hw::get_device("default");
     parsed_contribution.transferred = 0;
+
+    // While fulifing Infinite Staking, we lock the key image that would
+    // be generated if you tried to send your stake and prevent it from
+    // being transacted on the network whilst you are a Service Node.
+    // To do this, we calculate the future key image that would be
+    // generated when they user tries to spend the staked funds.
+    // A key image is derived from the ephemeral, one time transaction
+    // private key, 'x' in the Cryptonote Whitepaper.
+    //
+    // This is only possible to generate if they are the staking to themselves
+    // as you need the recipients private keys to generate the key image that
+    // would be generated, when they want to spend it in the future.
 
     cryptonote::tx_extra_tx_key_image_proofs key_image_proofs;
     if(!get_tx_key_image_proofs_from_tx_extra(tx.extra, key_image_proofs))
@@ -619,14 +646,30 @@ namespace service_nodes
       if(transferred == 0)
         continue;
 
+      // So prove that the destination stealth address can be decoded using the
+      // staker's packed address, which means that the recipient of the
+      // contribution is themselves (and hence they have the necessary secrets
+      // to generate the future key image).
+      //
+      // i.e Verify the packed information is valid by computing the stealth
+      // address P' (which should equal P if matching) using
+      //
+      // 'Derivation := Hs(Ar)G' (we calculated earlier) instead of 'Hs(aR)G'
+      // P' = Hs(Ar)G + B
+      //    = Hs(aR)G + B
+      //    = Derivation + B
+      //    = P
+
       crypto::public_key ephemeral_pub_key;
       {
+        // P' := Derivation + B
         if(!hwdev.derive_public_key(derivation, output_index, parsed_contribution.address.m_spend_public_key, ephemeral_pub_key))
         {
           MERROR("Contribution TX: Could not derive TX ephemeral key on height: " << block_height << " for tx: " << get_transaction_hash(tx) << " for output: " << output_index);
           continue;
         }
 
+        // Stealth address public key should match the public key referenced at the TX only if valid information is given);
         const auto& out_to_key = boost::get<cryptonote::txout_to_key>(tx.vout[output_index].target);
         if(out_to_key.key != ephemeral_pub_key)
         {
@@ -634,6 +677,17 @@ namespace service_nodes
           continue;
         }
       }
+
+      // To prevent the staker locking any arbitrary key image, the provided
+      // key image is included and verified in a ring signature which
+      // guarantees that 'the staker proves that he knows such 'x' (one time
+      // ephemeral secret key) and that (the future key image) P = xG'.
+      // Consequently the key image is not falsified and actually the future
+      // key image.
+
+      // The signer can try falsify the key image, but the equation used to
+      // construct the key image is re-derived by the verifier, false key
+      // images will not match the re-derived key image.
 
       crypto::public_key const *ephemeral_pub_key_ptr = &ephemeral_pub_key;
       for(auto proof = key_image_proofs.proofs.begin(); proof != key_image_proofs.proofs.end(); proof++)
@@ -671,6 +725,8 @@ namespace service_nodes
     if(service_node_portions.size() != service_node_addresses.size() || service_node_portions.empty())
       return false;
 
+    uint8_t hard_fork_version = m_blockchain.get_hard_fork_version(block_height);
+
     if(!check_service_node_portions(service_node_portions))
       return false;
 
@@ -685,7 +741,7 @@ namespace service_nodes
     if(expiration_timestamp < block_timestamp)
       return false;
 
-    info.staking_requirement = get_staking_requirement(m_blockchain.nettype(), block_height);
+    info.staking_requirement = get_staking_requirement(m_blockchain.nettype(), block_height, hard_fork_version);
 
     cryptonote::account_public_address address;
 
@@ -704,6 +760,7 @@ namespace service_nodes
     if(total_num_of_addr > MAX_NUMBER_OF_CONTRIBUTORS)
       return false;
 
+
     key = service_node_key;
 
     info.operator_address = service_node_addresses[0];
@@ -713,7 +770,7 @@ namespace service_nodes
     info.last_reward_transaction_index = index;
     info.total_contributed = 0;
     info.total_reserved = 0;
-    info.version = service_node_info::version_1;
+    info.version = get_minimum_sn_info_version(hard_fork_version);
     info.swarm_id = QUEUE_SWARM_ID;
     info.contributors.clear();
 
@@ -728,6 +785,7 @@ namespace service_nodes
       div128_64(hi, lo, STAKING_SHARE_PARTS, &resulthi, &resultlo);
 
       service_node_info::contributor_t contributor = {};
+      contributor.version = get_minimum_sn_info_version(hard_fork_version);
       contributor.reserved = resultlo;
       contributor.address = service_node_addresses[i];
       info.contributors.push_back(contributor);
@@ -765,6 +823,8 @@ namespace service_nodes
 
     if(!cryptonote::get_service_node_pubkey_from_tx_extra(tx.extra, pubkey))
       return;
+
+    uint8_t hard_fork_version = m_blockchain.get_hard_fork_version(block_height);
 
     parsed_tx_contribution parsed_contribution = {};
     if(!get_contribution(m_blockchain.nettype(), tx, block_height, parsed_contribution))
@@ -822,7 +882,7 @@ namespace service_nodes
     if(new_contributor)
     {
       service_node_info::contributor_t new_contributor = {};
-      new_contributor.version = service_node_info::version_1;
+      new_contributor.version = get_minimum_sn_info_version(hard_fork_version);
       new_contributor.address = parsed_contribution.address;
       info.contributors.push_back(new_contributor);
       contrib_iter = --contributors.end();
@@ -866,26 +926,25 @@ namespace service_nodes
     LOG_PRINT_L1("Contribution of " << parsed_contribution.transferred << " received for service node " << pubkey);
   }
   //----------------------------------------------------------------------------
-  void service_node_list::block_added(const cryptonote::block& block, const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>>& txs)
+  void service_node_list::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)
   {
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
-    block_added_generic(block, txs);
+    process_block(block, txs);
     store();
   }
 
-  void service_node_list::block_added_generic(const cryptonote::block& block, const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>>& txs)
+  void service_node_list::process_block(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)
   {
     uint64_t block_height = cryptonote::get_block_height(block);
     uint8_t hard_fork_version = m_blockchain.get_hard_fork_version(block_height);
 
-    if(hard_fork_version < 16)
+    if(hard_fork_version < cryptonote::network_version_16)
       return;
-
-    assert(m_height == block_height);
-    m_height++;
 
     // Remove old rollback events
     {
+      assert(m_height == block_height);
+      ++m_height;
       const size_t ROLLBACK_EVENT_EXPIRATION_BLOCKS = 30;
       uint64_t cull_height = (block_height < ROLLBACK_EVENT_EXPIRATION_BLOCKS) ? block_height : block_height - ROLLBACK_EVENT_EXPIRATION_BLOCKS;
 
@@ -948,9 +1007,8 @@ namespace service_nodes
     size_t deregistrations = 0;
     for(uint32_t index = 0; index < txs.size(); ++index)
     {
-      //const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>>& tx = txs[index];
-      const auto& tx = txs[index].first;
-      if(tx.type == cryptonote::txtype::standard)
+      const cryptonote::transaction& tx = txs[index];
+      if(tx.is_transfer())
       {
         if(process_registration_tx(tx, block.timestamp, block_height, index))
           registrations++;
@@ -1004,6 +1062,7 @@ namespace service_nodes
               break;
             }
 
+            m_rollback_events.push_back(std::unique_ptr<rollback_event>(new rollback_key_image_unlock(block_height, snode_key)));
             node_info.requested_unlock_height = unlock_height;
             early_exit = true;
           }
@@ -1086,6 +1145,20 @@ namespace service_nodes
         }
         break;
 
+        case rollback_event::key_image_unlock:
+        {
+          auto *rollback = reinterpret_cast<rollback_key_image_unlock *>(event);
+          auto iter = m_service_nodes_infos.find(rollback->m_key);
+          if(iter == m_service_nodes_infos.end())
+          {
+            MERROR("Could not find service node pubkey in rollback key image unlock");
+            rollback_applied = false;
+            break;
+          }
+          iter->second.requested_unlock_height = KEY_IMAGE_AWAITING_UNLOCK_HEIGHT;
+        }
+        break;
+
         default:
         {
           MERROR("Unhandled rollback type");
@@ -1110,7 +1183,7 @@ namespace service_nodes
     store();
   }
   //----------------------------------------------------------------------------
-  std::vector<crypto::public_key> service_node_list::update_and_get_expired_nodes(const std::vector<std::pair<cryptonote::transaction, cryptonote::blobdata>> &txs, uint64_t block_height)
+  std::vector<crypto::public_key> service_node_list::update_and_get_expired_nodes(const std::vector<cryptonote::transaction> &txs, uint64_t block_height)
   {
     std::vector<crypto::public_key> expired_nodes;
 
@@ -1151,7 +1224,6 @@ namespace service_nodes
       return { std::make_pair(null_address, STAKING_SHARE_PARTS) };
 
     std::vector<std::pair<cryptonote::account_public_address, uint64_t>> winners;
-
     const service_node_info& info = m_service_nodes_infos.at(key);
 
     const uint64_t remaining_portions = STAKING_SHARE_PARTS - info.portions_for_operator;
@@ -1164,7 +1236,6 @@ namespace service_nodes
 
       if(contributor.address == info.operator_address)
         resultlo += info.portions_for_operator;
-
       winners.push_back(std::make_pair(contributor.address, resultlo));
     }
     return winners;
@@ -1176,6 +1247,7 @@ namespace service_nodes
     auto oldest_waiting = std::pair<uint64_t, uint32_t>(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint32_t>::max());
     crypto::public_key key = crypto::null_pkey;
     for(const auto& info : m_service_nodes_infos)
+    {
       if(info.second.is_fully_funded())
       {
         auto waiting_since = std::make_pair(info.second.last_reward_block_height, info.second.last_reward_transaction_index);
@@ -1185,10 +1257,11 @@ namespace service_nodes
           key = info.first;
         }
       }
+    }
     return key;
   }
   //----------------------------------------------------------------------------
-  bool service_node_list::validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &reward_parts) const
+  bool service_node_list::validate_miner_tx(const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &reward_parts) const
   {
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     if(hard_fork_version < cryptonote::network_version_16)
@@ -1201,16 +1274,19 @@ namespace service_nodes
 
     crypto::public_key check_winner_pubkey = cryptonote::get_service_node_winner_from_tx_extra(miner_tx.extra);
     if(check_winner_pubkey != winner)
+    {
+      MERROR("Service Node reward winner is incorrect! Expected: " << winner << ", block has: " << check_winner_pubkey);
       return false;
+    }
 
     const std::vector<std::pair<cryptonote::account_public_address, uint64_t>> addresses_and_portions = get_winner_addresses_and_portions();
 
-    if(miner_tx.vout.size() - 1 < addresses_and_portions.size())
+    if(miner_tx.vout.size() - 2 < addresses_and_portions.size())
       return false;
 
     for(size_t i = 0; i < addresses_and_portions.size(); i++)
     {
-//      size_t vout_index = miner_tx.vout.size() - 1 - addresses_and_portions.size() + i;
+//      size_t vout_index = miner_tx.vout.size() - 2 - addresses_and_portions.size() + i;
       size_t vout_index = i + 1;
       uint64_t reward = cryptonote::get_portion_of_reward(addresses_and_portions[i].second, total_service_node_reward);
 
@@ -1226,7 +1302,7 @@ namespace service_nodes
         return false;
       }
 
-      crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);;
+      crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
       crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
       cryptonote::keypair gov_key = cryptonote::get_deterministic_keypair_from_height(height);
 
@@ -1340,12 +1416,20 @@ namespace service_nodes
   {
   }
   //----------------------------------------------------------------------------
+  service_node_list::rollback_key_image_unlock::rollback_key_image_unlock(uint64_t block_height, crypto::public_key const &key)
+    : service_node_list::rollback_event(block_height, key_image_unlock), m_key(key)
+  {
+  }
+  //----------------------------------------------------------------------------
   bool service_node_list::store()
   {
-    if(m_blockchain.get_current_hard_fork_version() < cryptonote::network_version_16)
+    if(!m_db)
+      return false;
+
+    uint8_t hard_fork_version = m_blockchain.get_current_hard_fork_version();
+    if(hard_fork_version < cryptonote::network_version_16)
       return true;
 
-    CHECK_AND_ASSERT_MES(m_db != nullptr, false, "Failed to store service node info, m_db == nullptr");
     data_members_for_serialization data_to_store;
     {
       std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
@@ -1382,6 +1466,9 @@ namespace service_nodes
           case rollback_event::key_image_blacklist_type:
             data_to_store.events.push_back(*reinterpret_cast<rollback_key_image_blacklist *>(event_ptr.get()));
             break;
+          case rollback_event::key_image_unlock:
+            data_to_store.events.push_back(*reinterpret_cast<rollback_key_image_unlock *>(event_ptr.get()));
+            break;
           default:
             MERROR("On storing service node data, unknown rollback event type encountered");
             return false;
@@ -1392,7 +1479,6 @@ namespace service_nodes
     }
 
     data_to_store.height = m_height;
-    uint8_t hard_fork_version = m_blockchain.get_hard_fork_version(m_height - 1);
     data_to_store.version = get_minimum_sn_info_version(hard_fork_version);
 
     std::stringstream ss;
@@ -1402,9 +1488,8 @@ namespace service_nodes
     CHECK_AND_ASSERT_MES(r, false, "Failed to store service node info: failed to serialize data");
 
     std::string blob = ss.str();
-    m_db->block_wtxn_start();
+    cryptonote::db_wtxn_guard txn_guard(m_db);
     m_db->set_service_node_data(blob);
-    m_db->block_wtxn_stop();
 
     return true;
   }
@@ -1444,13 +1529,11 @@ namespace service_nodes
     data_members_for_serialization data_in;
     std::string blob;
 
-    m_db->block_wtxn_start();
+    cryptonote::db_rtxn_guard txn_guard(m_db);
     if(!m_db->get_service_node_data(blob))
     {
-      m_db->block_wtxn_stop();
       return false;
     }
-    m_db->block_wtxn_stop();
 
     ss << blob;
     binary_archive<false> ba(ss);
@@ -1500,6 +1583,13 @@ namespace service_nodes
         *i = from;
         m_rollback_events.push_back(std::unique_ptr<rollback_event>(i));
       }
+      else if(event.type() == typeid(rollback_key_image_unlock))
+      {
+        const auto& from = boost::get<rollback_key_image_unlock>(event);
+        auto *i = new rollback_key_image_unlock();
+        *i = from;
+        m_rollback_events.push_back(std::unique_ptr<rollback_event>(i));
+      }
       else
       {
         MERROR("Unhandled rollback event in restoring data to service node list.");
@@ -1521,9 +1611,8 @@ namespace service_nodes
 
     if(m_db && delete_db_entry)
     {
-      m_db->block_wtxn_start();
+      cryptonote::db_wtxn_guard txn_guard(m_db);
       m_db->clear_service_node_data();
-      m_db->block_wtxn_stop();
     }
 
     m_quorum_states.clear();
@@ -1553,7 +1642,7 @@ namespace service_nodes
       result.err_msg = tr("Usage: <operator cut> <address> <contribution %> [<address> <contribution %> [...]]");
       return result;
     }
-    if((args.size()-1) / 2 > MAX_NUMBER_OF_CONTRIBUTORS)
+    if((args.size() - 1) / 2 > MAX_NUMBER_OF_CONTRIBUTORS)
     {
       result.err_msg = tr("Exceeds the maximum number of contributors, which is: ") + std::to_string(MAX_NUMBER_OF_CONTRIBUTORS);
       return result;
@@ -1574,9 +1663,14 @@ namespace service_nodes
       return result;
     }
 
+    struct addr_to_portion_t
+    {
+      cryptonote::address_parse_info info;
+      uint64_t portions;
+    };
+
+    std::vector<addr_to_portion_t> addr_to_portions;
     size_t const OPERATOR_ARG_INDEX = 1;
-    uint64_t amount_payable_by_operator = 0;
-    uint64_t total_reserved = 0;
     for(size_t i = OPERATOR_ARG_INDEX, num_contributions = 0; i < args.size(); i += 2, ++num_contributions)
     {
       cryptonote::address_parse_info info;
@@ -1601,23 +1695,7 @@ namespace service_nodes
       try
       {
         uint64_t num_portions = boost::lexical_cast<uint64_t>(args[i+1]);
-        uint64_t min_portions = get_min_node_contribution_in_portions(staking_requirement, total_reserved, num_contributions);
-        if(num_portions < min_portions)
-        {
-          result.err_msg = tr("Invalid amount for contributor: ") + args[i] + tr(", with contribution amount: ") + args[i+1] + tr(". Each contributor must have minimum 25%, except for the last one which may have remaining amount");
-          return result;
-        }
-
-        if(min_portions == UINT64_MAX)
-        {
-          result.err_msg = tr("Too many contributors specified, you can only split a node with up to: ") + std::to_string(MAX_NUMBER_OF_CONTRIBUTORS) + tr(" people.");
-          return result;
-        }
-
-        result.addresses.push_back(info.address);
-        result.portions.push_back(num_portions);
-        uint64_t arqma_amount = service_nodes::portions_to_amount(num_portions, staking_requirement);
-        total_reserved += arqma_amount;
+        addr_to_portions.push_back({info, num_portions});
       }
       catch (const std::exception &e)
       {
@@ -1626,16 +1704,92 @@ namespace service_nodes
       }
     }
 
-    uint64_t amount_left = staking_requirement - total_reserved;
-    const uint64_t DUST = MAX_NUMBER_OF_CONTRIBUTORS;
-    if(amount_left <= DUST)
-      result.portions[0] += amount_left;
+    std::array<uint64_t, MAX_NUMBER_OF_CONTRIBUTORS * service_nodes::MAX_KEY_IMAGES_PER_CONTRIBUTOR> excess_portions;
+    std::array<uint64_t, MAX_NUMBER_OF_CONTRIBUTORS * service_nodes::MAX_KEY_IMAGES_PER_CONTRIBUTOR> min_contributions;
+    {
+      uint64_t arqma_reserved = 0;
+      for(size_t index = 0; index < addr_to_portions.size(); ++index)
+      {
+        addr_to_portion_t const &addr_to_portion = addr_to_portions[index];
+        uint64_t min_contribution_portions = service_nodes::get_min_node_contribution_in_portions(staking_requirement, arqma_reserved, index);
+        uint64_t arqma_amount = service_nodes::portions_to_amount(staking_requirement, addr_to_portion.portions);
+        arqma_reserved += arqma_amount;
+
+        uint64_t excess = 0;
+        if(addr_to_portion.portions > min_contribution_portions)
+          excess = addr_to_portion.portions - min_contribution_portions;
+
+        min_contributions[index] = min_contribution_portions;
+        excess_portions[index] = excess;
+      }
+    }
+
+    uint64_t portions_left = STAKING_SHARE_PARTS;
+    uint64_t total_reserved = 0;
+    for(size_t i = 0; i < addr_to_portions.size(); ++i)
+    {
+      addr_to_portion_t &addr_to_portion = addr_to_portions[i];
+      uint64_t min_portions = get_min_node_contribution_in_portions(staking_requirement, total_reserved, i);
+
+      uint64_t portions_to_steal = 0;
+      if(addr_to_portion.portions < min_portions)
+      {
+        uint64_t needed = min_portions - addr_to_portion.portions;
+        const uint64_t FUDGE_FACTOR = 10;
+        const uint64_t DUST_UNIT = (STAKING_SHARE_PARTS / staking_requirement);
+        const uint64_t DUST = DUST_UNIT * FUDGE_FACTOR;
+        if(needed > DUST)
+          continue;
+
+        for(size_t sub_index = 0; sub_index < addr_to_portions.size(); sub_index++)
+        {
+          if(i == sub_index)
+            continue;
+          uint64_t &contributor_excess = excess_portions[sub_index];
+          if(contributor_excess > 0)
+          {
+            portions_to_steal = std::min(needed, contributor_excess);
+            addr_to_portion.portions += portions_to_steal;
+            contributor_excess -= portions_to_steal;
+            needed -= portions_to_steal;
+            result.portions[sub_index] -= portions_to_steal;
+
+            if(needed == 0)
+              break;
+          }
+        }
+
+        if(needed > 0 && addr_to_portions.size() < MAX_NUMBER_OF_CONTRIBUTORS * service_nodes::MAX_KEY_IMAGES_PER_CONTRIBUTOR)
+          addr_to_portion.portions += needed;
+      }
+
+      if(addr_to_portion.portions < min_portions || addr_to_portion.portions > portions_left)
+      {
+        result.err_msg = tr("Invalid contributor amount: ") + args[i] + tr(", with portion amount: ") + args[i+1] + tr(". \n") +
+                         tr("Each contributor must have at least 25% required stake to last contributor be allowed less contributions\n") +
+                         tr("than required 25% minimum.");
+        return result;
+      }
+
+      if(min_portions == UINT64_MAX)
+      {
+        result.err_msg = tr("Too many contributors specified. You can only allowed to split between: ") + std::to_string(MAX_NUMBER_OF_CONTRIBUTORS) + tr(" people.");
+        return result;
+      }
+
+      portions_left -= addr_to_portion.portions;
+      portions_left += portions_to_steal;
+      result.addresses.push_back(addr_to_portion.info.address);
+      result.portions.push_back(addr_to_portion.portions);
+      uint64_t arqma_amount = service_nodes::portions_to_amount(addr_to_portion.portions, staking_requirement);
+      total_reserved += arqma_amount;
+    }
 
     result.success = true;
     return result;
   }
   //----------------------------------------------------------------------------
-  bool make_registration_cmd(cryptonote::network_type nettype, uint64_t staking_requirement, const std::vector<std::string>& args, const crypto::public_key& service_node_pubkey, const crypto::secret_key &service_node_key, std::string &cmd, bool make_friendly, boost::optional<std::string&> err_msg)
+  bool make_registration_cmd(cryptonote::network_type nettype, uint64_t staking_requirement, const std::vector<std::string> &args, const crypto::public_key& service_node_pubkey, const crypto::secret_key &service_node_key, std::string &cmd, bool make_friendly, boost::optional<std::string&> err_msg)
   {
     converted_registration_args converted_args = convert_registration_args(nettype, args, staking_requirement);
     if(!converted_args.success)

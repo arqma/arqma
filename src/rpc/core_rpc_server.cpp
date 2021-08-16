@@ -217,7 +217,7 @@ namespace cryptonote
     }
     res.database_size = m_core.get_blockchain_storage().get_db().get_database_size();
     res.update_available = m_core.is_update_available();
-    res.version = ARQMA_VERSION_FULL;
+    res.version = restricted ? "" : ARQMA_VERSION_FULL;
     res.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = CORE_RPC_STATUS_OK;
@@ -287,8 +287,9 @@ namespace cryptonote
       }
     }
 
+    size_t max_blocks = COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT;
     std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>> bs;
-    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, bs, res.current_height, res.start_height, req.prune, !req.no_miner_tx, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
+    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, bs, res.current_height, res.start_height, req.prune, !req.no_miner_tx, max_blocks, COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT))
     {
       res.status = "Failed";
       return false;
@@ -300,7 +301,6 @@ namespace cryptonote
     for(auto& bd: bs)
     {
       res.blocks.resize(res.blocks.size()+1);
-      res.blocks.back().pruned = req.prune;
       res.blocks.back().block = bd.first.first;
       pruned_size += bd.first.first.size();
       unpruned_size += bd.first.first.size();
@@ -313,10 +313,10 @@ namespace cryptonote
       for (std::vector<std::pair<crypto::hash, cryptonote::blobdata>>::iterator i = bd.second.begin(); i != bd.second.end(); ++i)
       {
         unpruned_size += i->second.size();
-        res.blocks.back().txs.push_back({std::move(i->second), crypto::null_hash});
+        res.blocks.back().txs.push_back(std::move(i->second));
         i->second.clear();
         i->second.shrink_to_fit();
-        pruned_size += res.blocks.back().txs.back().blob.size();
+        pruned_size += res.blocks.back().txs.back().size();
       }
 
       const size_t n_txes_to_lookup = bd.second.size() + (req.no_miner_tx ? 0 : 1);
@@ -399,7 +399,7 @@ namespace cryptonote
       res.blocks.resize(res.blocks.size() + 1);
       res.blocks.back().block = block_to_blob(blk);
       for (auto& tx : txs)
-        res.blocks.back().txs.push_back({tx_to_blob(tx), crypto::null_hash});
+        res.blocks.back().txs.push_back(tx_to_blob(tx));
     }
     res.status = CORE_RPC_STATUS_OK;
     return true;
@@ -413,7 +413,7 @@ namespace cryptonote
       return r;
 
     res.start_height = req.start_height;
-    if(!m_core.get_blockchain_storage().find_blockchain_supplement(req.block_ids, res.m_block_ids, NULL, res.start_height, res.current_height, false))
+    if(!m_core.get_blockchain_storage().find_blockchain_supplement(req.block_ids, res.m_block_ids, res.start_height, res.current_height, false))
     {
       res.status = "Failed";
       return false;
@@ -834,33 +834,13 @@ namespace cryptonote
 
     cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
     tx_verification_context tvc = AUTO_VAL_INIT(tvc);
-    if(!m_core.handle_incoming_tx({tx_blob, crypto::null_hash}, tvc, false, false, req.do_not_relay) || tvc.m_verification_failed)
+    if(!m_core.handle_incoming_tx(tx_blob, tvc, false, false, req.do_not_relay) || tvc.m_verification_failed)
     {
       const vote_verification_context &vvc = tvc.m_vote_ctx;
       res.status = "Failed";
       std::string reason = print_tx_verification_context(tvc);
       reason += print_vote_verification_context(vvc);
       res.tvc = tvc;
-
-/*      res.low_mixin = tvc.m_low_mixin;
-      res.double_spend = tvc.m_double_spend;
-      res.invalid_input = tvc.m_invalid_input;
-      res.invalid_output = tvc.m_invalid_output;
-      res.too_big = tvc.m_too_big;
-      res.overspend = tvc.m_overspend;
-      res.fee_too_low = tvc.m_fee_too_low;
-      res.invalid_version = tvc.m_invalid_version;
-      res.invalid_type = tvc.m_invalid_type;
-      res.key_image_locked_by_snode = tvc.m_key_image_locked_by_snode;
-      res.key_image_blacklisted = tvc.m_key_image_blacklisted;
-      res.not_enough_votes = vvc.m_not_enough_votes;
-      res.invalid_block_height = vvc.m_invalid_block_height;
-      res.duplicate_voters = vvc.m_duplicate_voters;
-      res.voters_quorum_index_out_of_bounds = vvc.m_voters_quorum_index_out_of_bounds;
-      res.service_node_index_out_of_bounds = vvc.m_service_node_index_out_of_bounds;
-      res.signature_not_valid = vvc.m_signature_not_valid;
-      res.not_enough_votes = vvc.m_not_enough_votes;
-*/
       const std::string punctuation = res.reason.empty() ? "" : ": ";
       if (tvc.m_verification_failed)
       {
@@ -2852,7 +2832,8 @@ namespace cryptonote
 
     std::vector<std::string> args;
 
-    uint64_t staking_requirement = service_nodes::get_staking_requirement(m_core.get_nettype(), m_core.get_current_blockchain_height());
+    uint64_t const curr_height = m_core.get_current_blockchain_height();
+    uint64_t staking_requirement = service_nodes::get_staking_requirement(m_core.get_nettype(), curr_height, m_core.get_hard_fork_version(curr_height));
 
     {
       uint64_t portions_cut;
@@ -2964,7 +2945,7 @@ namespace cryptonote
   bool core_rpc_server::on_get_staking_requirement(const COMMAND_RPC_GET_STAKING_REQUIREMENT::request& req, COMMAND_RPC_GET_STAKING_REQUIREMENT::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
   {
     PERF_TIMER(on_get_staking_requirement);
-    res.staking_requirement = service_nodes::get_staking_requirement(nettype(), req.height);
+    res.staking_requirement = service_nodes::get_staking_requirement(nettype(), req.height, m_core.get_hard_fork_version(req.height));
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }

@@ -115,9 +115,9 @@ t_command_server::t_command_server(
     , "Print this daemon's service_node key, if launched in service_node_mode and is service_node."
     );
   m_command_lookup.set_handler(
-      "print_sr"
-    , std::bind(&t_command_parser_executor::print_sr, &m_parser, p::_1)
-    , "print_sr <height>"
+      "print_stake_requirement"
+    , std::bind(&t_command_parser_executor::print_stake_requirement, &m_parser, p::_1)
+    , "print_stake_requirement <height>"
     , "Print staking requirement for height given."
     );
   m_command_lookup.set_handler(

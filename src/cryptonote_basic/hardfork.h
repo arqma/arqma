@@ -40,8 +40,7 @@ namespace cryptonote
   {
   public:
     typedef enum {
-      LikelyForked,
-      Ready,
+      Ready
     } State;
 
     static const time_t DEFAULT_FORKED_TIME = 31557600; // a year in seconds

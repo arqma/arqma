@@ -576,7 +576,7 @@ namespace nodetool
           }
           ++i;
         }
-        if(full_addrs.size() < arqma_nodes::seed_nodes_qty)
+        if(full_addrs.size() < arqma::seed_nodes_qty)
         {
           if(full_addrs.empty())
             MINFO("DNS seed node lookup either timed out or failed, falling back to defaults");

@@ -171,7 +171,6 @@ namespace boost
     a & x.version;
     if(x.version >= cryptonote::txversion::v3)
     {
-      a & x.type;
       a & x.output_unlock_times;
       bool is_deregister = x.type == cryptonote::txtype::deregister;
       a & is_deregister;
@@ -181,6 +180,8 @@ namespace boost
     a & x.vin;
     a & x.vout;
     a & x.extra;
+    if(x.version >= cryptonote::txversion::v3)
+      a & x.type;
   }
 
   template <class Archive>
@@ -359,6 +360,13 @@ namespace boost
     a & x.p.MGs;
     if (x.type == rct::RCTTypeBulletproof || x.type == rct::RCTTypeSimpleBulletproof || x.type == rct::RCTTypeBulletproof2)
       a & x.p.pseudoOuts;
+  }
+
+  template <class Archive>
+  inline void serialize(Archive &a, rct::RCTConfig &x, const boost::serialization::version_type ver)
+  {
+    a & x.range_proof_type;
+    a & x.bp_version;
   }
 }
 }

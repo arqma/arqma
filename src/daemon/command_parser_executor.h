@@ -82,7 +82,7 @@ public:
 
   bool print_sn_key(const std::vector<std::string>& args);
 
-  bool print_sr(const std::vector<std::string>& args);
+  bool print_stake_requirement(const std::vector<std::string>& args);
 
   bool prepare_registration();
 

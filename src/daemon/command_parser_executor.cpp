@@ -173,7 +173,8 @@ bool t_command_parser_executor::print_quorum_state(const std::vector<std::string
     return false;
   }
 
-  return m_executor.print_quorum_state(height);
+  bool result = m_executor.print_quorum_state(height);
+  return result;
 }
 
 bool t_command_parser_executor::print_sn_key(const std::vector<std::string>& args)
@@ -184,11 +185,11 @@ bool t_command_parser_executor::print_sn_key(const std::vector<std::string>& arg
   return result;
 }
 
-bool t_command_parser_executor::print_sr(const std::vector<std::string>& args)
+bool t_command_parser_executor::print_stake_requirement(const std::vector<std::string>& args)
 {
   if(args.size() != 1)
   {
-    std::cout << "Expected 1 argument, <height>, received: " << args.size() << std::endl;
+    std::cout << "Expected 1 argument, <height>" << std::endl;
     return false;
   }
 
@@ -199,7 +200,7 @@ bool t_command_parser_executor::print_sr(const std::vector<std::string>& args)
     return false;
   }
 
-  bool result = m_executor.print_sr(height);
+  bool result = m_executor.print_stake_requirement(height);
   return result;
 }
 
@@ -264,7 +265,7 @@ bool t_command_parser_executor::print_block(const std::vector<std::string>& args
   if (args.empty())
   {
     std::cout << "expected: print_block (<block_hash> | <block_height>)" << std::endl;
-    return false;
+    return true;
   }
 
   const std::string& arg = args.front();
@@ -282,7 +283,7 @@ bool t_command_parser_executor::print_block(const std::vector<std::string>& args
     }
   }
 
-  return false;
+  return true;
 }
 
 bool t_command_parser_executor::print_transaction(const std::vector<std::string>& args)

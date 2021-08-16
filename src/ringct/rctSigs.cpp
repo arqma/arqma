@@ -80,12 +80,12 @@ namespace
 }
 
 namespace rct {
-    Bulletproof proveRangeBulletproof(keyV &C, keyV &masks, const std::vector<uint64_t> &amounts, epee::span<const key> sk)
+    Bulletproof proveRangeBulletproof(keyV &C, keyV &masks, const std::vector<uint64_t> &amounts, epee::span<const key> sk, hw::device &hwdev)
     {
         CHECK_AND_ASSERT_THROW_MES(amounts.size() == sk.size(), "Invalid amounts/sk sizes");
         masks.resize(amounts.size());
         for(size_t i = 0; i < masks.size(); ++i)
-          masks[i] = genCommitmentMask(sk[i]);
+          masks[i] = hwdev.genCommitmentMask(sk[i]);
         Bulletproof proof = bulletproof_PROVE(amounts, masks);
         CHECK_AND_ASSERT_THROW_MES(proof.V.size() == amounts.size(), "V does not have the expected size");
         C = proof.V;
@@ -196,14 +196,11 @@ namespace rct {
       return verifyBorromean(bb, P1_p3, P2_p3);
     }
 
-    //Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
-    //This is a just slghtly more efficient version than the ones described below
-    //(will be explained in more detail in Ring Multisig paper
-    //These are aka MG signatutes in earlier drafts of the ring ct paper
-    // c.f. http://eprint.iacr.org/2015/1098 section 2.
-    // Gen creates a signature which proves that for some column in the keymatrix "pk"
-    //   the signer knows a secret key for each row in that column
-    // Ver verifies that the MG sig was created correctly
+    // MLSAG signatures
+    // See paper by Noether (https://eprint.iacr.org/2015/1098)
+    // This generalization allows for some dimensions not to require linkability;
+    //   this is used in practice for commitment data within signatures
+    // Note that using more than one linkable dimension is not recommended.
     mgSig MLSAG_Gen(const key &message, const keyM & pk, const keyV & xx, const multisig_kLRki *kLRki, key *mscout, const unsigned int index, size_t dsRows, hw::device &hwdev) {
         mgSig rv;
         size_t cols = pk.size();
@@ -221,6 +218,7 @@ namespace rct {
 
         size_t i = 0, j = 0, ii = 0;
         key c, c_old, L, R, Hi;
+        ge_p3 Hi_p3;
         sc_0(c_old.bytes);
         vector<geDsmp> Ip(dsRows);
         rv.II = keyV(dsRows);
@@ -241,7 +239,8 @@ namespace rct {
               rv.II[i] = kLRki->ki;
             }
             else {
-              Hi = hashToPoint(pk[index][i]);
+              hash_to_p3(Hi_p3, pk[index][i]);
+              ge_p3_tobytes(Hi.bytes, &Hi_p3);
               hwdev.mlsag_prepare(Hi, xx[i], alpha[i] , aG[i] , aHP[i] , rv.II[i]);
               toHash[3 * i + 2] = aG[i];
               toHash[3 * i + 3] = aHP[i];
@@ -268,7 +267,8 @@ namespace rct {
             sc_0(c.bytes);
             for (j = 0; j < dsRows; j++) {
                 addKeys2(L, rv.ss[i][j], c_old, pk[i][j]);
-                hashToPoint(Hi, pk[i][j]);
+                hash_to_p3(Hi_p3, pk[i][j]);
+                ge_p3_tobytes(Hi.bytes, &Hi_p3);
                 addKeys3(R, rv.ss[i][j], Hi, c_old, Ip[j].k);
                 toHash[3 * j + 1] = pk[i][j];
                 toHash[3 * j + 2] = L;
@@ -293,42 +293,42 @@ namespace rct {
         return rv;
     }
 
-    //Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
-    //This is a just slghtly more efficient version than the ones described below
-    //(will be explained in more detail in Ring Multisig paper
-    //These are aka MG signatutes in earlier drafts of the ring ct paper
-    // c.f. http://eprint.iacr.org/2015/1098 section 2.
-    // Gen creates a signature which proves that for some column in the keymatrix "pk"
-    //   the signer knows a secret key for each row in that column
-    // Ver verifies that the MG sig was created correctly
+    // MLSAG signatures
+    // See paper by Noether (https://eprint.iacr.org/2015/1098)
+    // This generalization allows for some dimensions not to require linkability;
+    //   this is used in practice for commitment data within signatures
+    // Note that using more than one linkable dimension is not recommended.
     bool MLSAG_Ver(const key &message, const keyM & pk, const mgSig & rv, size_t dsRows) {
         size_t cols = pk.size();
-        CHECK_AND_ASSERT_MES(cols >= 2, false, "Error! What is c if cols = 1!");
+        CHECK_AND_ASSERT_MES(cols >= 2, false, "Signature must contain more than one public key");
         size_t rows = pk[0].size();
-        CHECK_AND_ASSERT_MES(rows >= 1, false, "Empty pk");
+        CHECK_AND_ASSERT_MES(rows >= 1, false, "Bad total row number");
         for (size_t i = 1; i < cols; ++i) {
-          CHECK_AND_ASSERT_MES(pk[i].size() == rows, false, "pk is not rectangular");
+          CHECK_AND_ASSERT_MES(pk[i].size() == rows, false, "Bad public key matrix dimensions");
         }
-        CHECK_AND_ASSERT_MES(rv.II.size() == dsRows, false, "Bad II size");
-        CHECK_AND_ASSERT_MES(rv.ss.size() == cols, false, "Bad rv.ss size");
+        CHECK_AND_ASSERT_MES(rv.II.size() == dsRows, false, "Wrong number of key images present");
+        CHECK_AND_ASSERT_MES(rv.ss.size() == cols, false, "Bad scalar matrix dimensions");
         for (size_t i = 0; i < cols; ++i) {
-          CHECK_AND_ASSERT_MES(rv.ss[i].size() == rows, false, "rv.ss is not rectangular");
+          CHECK_AND_ASSERT_MES(rv.ss[i].size() == rows, false, "Bad scalar matrix dimensions");
         }
-        CHECK_AND_ASSERT_MES(dsRows <= rows, false, "Bad dsRows value");
+        CHECK_AND_ASSERT_MES(dsRows <= rows, false, "Non-double-spend rows can not exceed total rows");
 
-        for (size_t i = 0; i < rv.ss.size(); ++i)
-          for (size_t j = 0; j < rv.ss[i].size(); ++j)
-            CHECK_AND_ASSERT_MES(sc_check(rv.ss[i][j].bytes) == 0, false, "Bad ss slot");
-        CHECK_AND_ASSERT_MES(sc_check(rv.cc.bytes) == 0, false, "Bad cc");
+        for (size_t i = 0; i < rv.ss.size(); ++i) {
+          for (size_t j = 0; j < rv.ss[i].size(); ++j) {
+            CHECK_AND_ASSERT_MES(sc_check(rv.ss[i][j].bytes) == 0, false, "Bad signature scalar");
+          }
+        }
+        CHECK_AND_ASSERT_MES(sc_check(rv.cc.bytes) == 0, false, "Bad initial signature hash");
 
         size_t i = 0, j = 0, ii = 0;
-        key c,  L, R, Hi;
+        key c,  L, R;
         key c_old = copy(rv.cc);
         vector<geDsmp> Ip(dsRows);
         for (i = 0 ; i < dsRows ; i++) {
+            CHECK_AND_ASSERT_MES(!(rv.II[i] == rct::identity()), false, "Bad key image");
             precomp(Ip[i].k, rv.II[i]);
         }
-        size_t ndsRows = 3 * dsRows; //non Double Spendable Rows (see identity chains paper
+        size_t ndsRows = 3 * dsRows; // number of dimensions not requiring linkability
         keyV toHash(1 + 3 * dsRows + 2 * (rows - dsRows));
         toHash[0] = message;
         i = 0;
@@ -336,9 +336,15 @@ namespace rct {
             sc_0(c.bytes);
             for (j = 0; j < dsRows; j++) {
                 addKeys2(L, rv.ss[i][j], c_old, pk[i][j]);
-                hashToPoint(Hi, pk[i][j]);
-                CHECK_AND_ASSERT_MES(!(Hi == rct::identity()), false, "Data hashed to point at infinity");
-                addKeys3(R, rv.ss[i][j], Hi, c_old, Ip[j].k);
+
+                // Compute R directly
+
+                ge_p3 hash8_p3;
+                hash_to_p3(hash8_p3, pk[i][j]);
+                ge_p2 R_p2;
+                ge_double_scalarmult_precomp_vartime(&R_p2, rv.ss[i][j].bytes, &hash8_p3, c_old.bytes, Ip[j].k);
+                ge_tobytes(R.bytes, &R_p2);
+
                 toHash[3 * j + 1] = pk[i][j];
                 toHash[3 * j + 2] = L;
                 toHash[3 * j + 3] = R;
@@ -349,6 +355,7 @@ namespace rct {
                 toHash[ndsRows + 2 * ii + 2] = L;
             }
             c = hash_to_scalar(toHash);
+            CHECK_AND_ASSERT_MES(!(c == rct::zero()), false, "Bad signature hash");
             copy(c_old, c);
             i = (i + 1);
         }
@@ -837,7 +844,7 @@ namespace rct {
         rv.p.bulletproofs.clear();
         if(bulletproof)
         {
-            std::vector<uint64_t> proof_amounts;
+            //std::vector<uint64_t> proof_amounts;
             size_t n_amounts = outamounts.size();
             size_t amounts_proved = 0;
             if(rct_config.range_proof_type == RangeProofPaddedBulletproof)
@@ -851,7 +858,7 @@ namespace rct {
                 else
                 {
                     const epee::span<const key> keys{&amount_keys[0], amount_keys.size()};
-                    rv.p.bulletproofs.push_back(proveRangeBulletproof(C, masks, outamounts, keys));
+                    rv.p.bulletproofs.push_back(proveRangeBulletproof(C, masks, outamounts, keys, hwdev));
                     #ifdef DBG
                     CHECK_AND_ASSERT_THROW_MES(verBulletproof(rv.p.bulletproofs.back()), "verBulletproof failed on newly created proof");
                     #endif
@@ -880,7 +887,7 @@ namespace rct {
                 else
                 {
                     const epee::span<const key> keys(&amount_keys[amounts_proved], batch_size);
-                    rv.p.bulletproofs.push_back(proveRangeBulletproof(C, masks, batch_amounts, keys));
+                    rv.p.bulletproofs.push_back(proveRangeBulletproof(C, masks, batch_amounts, keys, hwdev));
                 #ifdef DBG
                     CHECK_AND_ASSERT_THROW_MES(verBulletproof(rv.p.bulletproofs.back()), "verBulletproof failed on newly created proof");
                 #endif

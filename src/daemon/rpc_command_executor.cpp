@@ -541,7 +541,7 @@ bool t_rpc_command_executor::show_status()
     % get_mining_speed(ires.difficulty / ires.target)
     % (unsigned)hfres.version
     % get_fork_extra_info(hfres.earliest_height, net_height, ires.target)
-    % (hfres.state == cryptonote::HardFork::LikelyForked ? "out of date, likely forked" : "up to date")
+    % (hfres.state == cryptonote::HardFork::Ready ? "up to date" : "it might be an Hard-Fork soon")
     % (unsigned)ires.outgoing_connections_count
     % (unsigned)ires.incoming_connections_count
   ;
@@ -865,8 +865,7 @@ bool t_rpc_command_executor::print_block_by_hash(crypto::hash block_hash) {
     {
       tools::fail_msg_writer() << make_error(fail_message, res.status);
       return true;
-    }
-  }
+    }  }
 
   print_block_header(res.block_header);
   tools::success_msg_writer() << res.json << ENDL;
@@ -2325,7 +2324,7 @@ bool t_rpc_command_executor::pop_blocks(uint64_t num_blocks)
   return true;
 }
 
-static std::string make_printable_service_node_list_state(cryptonote::network_type nettype, uint8_t hard_fork_version, uint64_t curr_height, std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *> list)
+static std::string make_printable_service_node_list_state(cryptonote::network_type nettype, uint8_t hard_fork_version, uint64_t *curr_height, std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *> list)
 {
   const char indent1[] = "    ";
   const char indent2[] = "        ";
@@ -2375,7 +2374,7 @@ static std::string make_printable_service_node_list_state(cryptonote::network_ty
       {
         if(curr_height)
         {
-          uint64_t delta_height = expiry_height - curr_height;
+          uint64_t delta_height = expiry_height - *curr_height;
           uint64_t expiry_epoch_time = now + (delta_height * DIFFICULTY_TARGET_V16);
 
          result.append(indent2);
@@ -2491,7 +2490,7 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
   cryptonote::COMMAND_RPC_GET_INFO::response get_info_res;
 
   cryptonote::network_type nettype = cryptonote::UNDEFINED;
-  uint64_t curr_height = 0;
+  uint64_t *curr_height = nullptr;
   uint8_t hard_fork_version = 7;
   if(m_is_rpc)
   {
@@ -2525,12 +2524,12 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
       nettype = cryptonote::STAGENET;
     else if(get_info_res.testnet)
       nettype = cryptonote::TESTNET;
-    curr_height = get_info_res.height;
+    curr_height = &get_info_res.height;
   }
   else
   {
     if(m_rpc_server->on_get_info(get_info_req, get_info_res) || get_info_res.status == CORE_RPC_STATUS_OK)
-      curr_height = get_info_res.height;
+      curr_height = &get_info_res.height;
 
     {
       cryptonote::COMMAND_RPC_HARD_FORK_INFO::request  hard_fork_info_req = {};
@@ -2659,7 +2658,7 @@ bool t_rpc_command_executor::print_sn_status()
   return result;
 }
 
-bool t_rpc_command_executor::print_sr(uint64_t height)
+bool t_rpc_command_executor::print_stake_requirement(uint64_t height)
 {
   cryptonote::COMMAND_RPC_GET_STAKING_REQUIREMENT::request req = {};
   cryptonote::COMMAND_RPC_GET_STAKING_REQUIREMENT::response res = {};
@@ -2769,6 +2768,7 @@ bool t_rpc_command_executor::prepare_registration()
   }
 
   uint64_t block_height = 0;
+  uint8_t hard_fork_version = cryptonote::network_version_16;
   cryptonote::network_type nettype = cryptonote::UNDEFINED;
   {
     cryptonote::COMMAND_RPC_GET_INFO::request req;
@@ -2777,7 +2777,6 @@ bool t_rpc_command_executor::prepare_registration()
     cryptonote::COMMAND_RPC_HARD_FORK_INFO::response hf_res;
     std::string const info_fail_message = "Could not get current blockchain info";
 
-//    uint8_t hard_fork_version = 7;
     if(m_is_rpc)
     {
       if(!m_rpc_client->rpc_request(req, res, "/getinfo", info_fail_message.c_str()))
@@ -2860,7 +2859,7 @@ bool t_rpc_command_executor::prepare_registration()
     }
   }
 
-  const uint64_t staking_requirement = std::max(service_nodes::get_staking_requirement(nettype, block_height), service_nodes::get_staking_requirement(nettype, block_height + 40 * 24)); // allow 1 day
+  const uint64_t staking_requirement = std::max(service_nodes::get_staking_requirement(nettype, block_height, hard_fork_version), service_nodes::get_staking_requirement(nettype, block_height + 40 * 24, hard_fork_version)); // allow 1 day
 
   // anythong less than DUST will be added to operator stake
   const uint64_t DUST = MAX_NUMBER_OF_CONTRIBUTORS;
@@ -2953,7 +2952,7 @@ bool t_rpc_command_executor::prepare_registration()
         state.addresses.push_back(address_str);
         state.contributions.push_back(STAKING_SHARE_PARTS);
         state.portions_remaining = 0;
-        state.total_reserved_contributions += get_actual_amount(staking_requirement, STAKING_SHARE_PARTS);
+        state.total_reserved_contributions += STAKING_SHARE_PARTS;
         state.prev_step = step;
         step = register_step::final_summary;
         state_stack.push(state);
@@ -3143,13 +3142,13 @@ bool t_rpc_command_executor::prepare_registration()
       {
         const uint64_t amount_left = staking_requirement - state.total_reserved_contributions;
         uint64_t min_contribution_portions = service_nodes::get_min_node_contribution_in_portions(staking_requirement, state.total_reserved_contributions, state.contributions.size());
-        const uint64_t min_contribution = get_amount_to_make_portions(staking_requirement, min_contribution_portions);
+        const uint64_t min_contribution = service_nodes::portions_to_amount(staking_requirement, min_contribution_portions);
 
         std::cout << "The minimum amount possible to contribute is " << cryptonote::print_money(min_contribution) << " " << cryptonote::get_unit() << std::endl;
         std::cout << "There is " << cryptonote::print_money(amount_left) << " " << cryptonote::get_unit() << " left to meet the staking requirement." << std::endl;
 
         std::string contribution_str;
-        std::string const prompt = "How much ARQ does contributor " + std::to_string(state.contributions.size() + 1) + " want to reserve in the stake?";
+        std::string const prompt = "How much ARQ does the contributor " + std::to_string(state.contributions.size() + 1) + " want to reserve in the stake?";
         lir = input_line_back_cancel_get_input(prompt.c_str(), contribution_str);
         if(lir == input_line_result::back)
           continue;
