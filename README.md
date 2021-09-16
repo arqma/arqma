@@ -221,13 +221,13 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Build:
 
-	`$ make release`
+	`$ make release-rpi`
 
 * Wait 4-6 hours
 
-* The resulting executables can be found in `build/release/bin`
+* The resulting executables can be found in `build/release-rpi/bin`
 
-* Add `PATH="$PATH:$HOME/arqma/build/release/bin"` to `.profile`
+* Add `PATH="$PATH:$HOME/arqma/build/release-rpi/bin"` to `.profile`
 
 * Run Arqma with `arqmad --detach`
 
@@ -439,6 +439,9 @@ Using `depends` might also be easier to compile Arqma on Windows than using MSYS
 
 * `make depends-compat target=x86_64-linux-gnu` for 64-bit linux binaries.
 
+### Compability with NO_AES Linux Versions for RPI Ubuntu 64
+
+* `make depends-noaes target=aarch64-linux-gnu` for 64-bit linux binaries.
 
 ## Running arqmad
 
