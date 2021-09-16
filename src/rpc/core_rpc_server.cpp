@@ -330,12 +330,12 @@ namespace cryptonote
     res.tx_count = m_core.get_blockchain_storage().get_total_transactions() - res.height; //without coinbase
     res.tx_pool_size = m_core.get_pool_transactions_count();
     res.alt_blocks_count = restricted ? 0 : m_core.get_blockchain_storage().get_alternative_blocks_count();
-    uint64_t total_conn = restricted ? 0 : m_p2p.get_public_connections_count();
-    res.outgoing_connections_count = restricted ? 0 : m_p2p.get_public_outgoing_connections_count();
-    res.incoming_connections_count = restricted ? 0 : (total_conn - res.outgoing_connections_count);
-    res.rpc_connections_count = restricted ? 0 : get_connections_count();
-    res.white_peerlist_size = restricted ? 0 : m_p2p.get_public_white_peers_count();
-    res.grey_peerlist_size = restricted ? 0 : m_p2p.get_public_gray_peers_count();
+    uint64_t total_conn =  m_p2p.get_public_connections_count();
+    res.outgoing_connections_count =  m_p2p.get_public_outgoing_connections_count();
+    res.incoming_connections_count = (total_conn - res.outgoing_connections_count);
+    res.rpc_connections_count = get_connections_count();
+    res.white_peerlist_size = m_p2p.get_public_white_peers_count();
+    res.grey_peerlist_size = m_p2p.get_public_gray_peers_count();
 
     cryptonote::network_type net_type = nettype();
     res.mainnet = net_type == MAINNET;
@@ -358,9 +358,9 @@ namespace cryptonote
       boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
       res.was_bootstrap_ever_used = m_was_bootstrap_ever_used;
     }
-    res.database_size = restricted ? 0 : m_core.get_blockchain_storage().get_db().get_database_size();
+    res.database_size = m_core.get_blockchain_storage().get_db().get_database_size();
     res.update_available = m_core.is_update_available();
-    res.version = restricted ? "" : ARQMA_VERSION_FULL;
+    res.version = ARQMA_VERSION_FULL;
     res.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = CORE_RPC_STATUS_OK;

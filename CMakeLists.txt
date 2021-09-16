@@ -528,7 +528,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "(SunOS|Solaris)")
 endif()
 
 if(APPLE AND NOT IOS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=x86-64 -fvisibility=default")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -std=c++11")
   if(NOT OpenSSL_DIR)
       EXECUTE_PROCESS(COMMAND brew --prefix openssl
         OUTPUT_VARIABLE OPENSSL_ROOT_DIR
@@ -763,7 +763,7 @@ else()
   endif()
 
   # linker
-  if(NOT WIN32 AND NOT (CMAKE_C_COMPILER_ID STREQUAL "Clang") AND NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1))
+if(NOT WIN32 AND NOT (CMAKE_C_COMPILER_ID STREQUAL "Clang") AND NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1))
     # Windows binaries die on startup with PIE compiled with GCC < 9.x
     add_linker_flag_if_supported(-pie LD_SECURITY_FLAGS)
   endif()
@@ -927,14 +927,14 @@ else()
   if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -DGTEST_HAS_TR1_TUPLE=0")
   endif()
- 
+
   set(DEBUG_FLAGS "-g3")
   if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT (CMAKE_C_COMPILER_VERSION VERSION_LESS 4.8))
     set(DEBUG_FLAGS "${DEBUG_FLAGS} -O2 ")
   else()
     set(DEBUG_FLAGS "${DEBUG_FLAGS} -O0 ")
   endif()
-  
+
   # At least some CLANGs default to not enough for Arqma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth=900")
 
@@ -1044,7 +1044,7 @@ endif()
 if(HIDAPI_FOUND OR LibUSB_COMPILE_TEST_PASSED)
   if(APPLE)
     if(DEPENDS)
-      list(APPEND EXTRA_LIBRARIES "-framework Foundation -framework IOKit")
+      list(APPEND EXTRA_LIBRARIES "-framework Foundation -framework AppKit -framework IOKit")
     else()
       find_library(COREFOUNDATION CoreFoundation)
       find_library(IOKIT IOKit)
