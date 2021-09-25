@@ -330,12 +330,12 @@ namespace cryptonote
     res.tx_count = m_core.get_blockchain_storage().get_total_transactions() - res.height; //without coinbase
     res.tx_pool_size = m_core.get_pool_transactions_count();
     res.alt_blocks_count = restricted ? 0 : m_core.get_blockchain_storage().get_alternative_blocks_count();
-    uint64_t total_conn = restricted ? 0 : m_p2p.get_public_connections_count();
-    res.outgoing_connections_count = restricted ? 0 : m_p2p.get_public_outgoing_connections_count();
-    res.incoming_connections_count = restricted ? 0 : (total_conn - res.outgoing_connections_count);
-    res.rpc_connections_count = restricted ? 0 : get_connections_count();
-    res.white_peerlist_size = restricted ? 0 : m_p2p.get_public_white_peers_count();
-    res.grey_peerlist_size = restricted ? 0 : m_p2p.get_public_gray_peers_count();
+    uint64_t total_conn =  m_p2p.get_public_connections_count();
+    res.outgoing_connections_count =  m_p2p.get_public_outgoing_connections_count();
+    res.incoming_connections_count = (total_conn - res.outgoing_connections_count);
+    res.rpc_connections_count = get_connections_count();
+    res.white_peerlist_size = m_p2p.get_public_white_peers_count();
+    res.grey_peerlist_size = m_p2p.get_public_gray_peers_count();
 
     cryptonote::network_type net_type = nettype();
     res.mainnet = net_type == MAINNET;
