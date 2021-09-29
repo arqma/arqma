@@ -252,7 +252,7 @@ namespace cryptonote
       fee = tx.rct_signatures.txnFee;
     }
 
-    if(!kept_by_block && tx.is_transfer() && !m_blockchain.check_fee(tx_weight, fee))
+    if(!kept_by_block && tx.is_transfer() && !m_blockchain.check_fee(tx, tx_weight, fee))
     {
       tvc.m_verification_failed = true;
       tvc.m_fee_too_low = true;

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+  // Copyright (c) 2018-2019, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -2785,7 +2785,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     //success_msg_writer() << "default-ring-size = " << (m_wallet->default_mixin() ? m_wallet->default_mixin() + 1 : 0);
     success_msg_writer() << "auto-refresh = " << m_wallet->auto_refresh();
     success_msg_writer() << "refresh-type = " << get_refresh_type_name(m_wallet->get_refresh_type());
-    success_msg_writer() << "priority = " << priority<< " (" << priority_string << ")";
+    success_msg_writer() << "priority = " << priority << " (" << priority_string << ")";
     success_msg_writer() << "confirm-missing-payment-id = " << m_wallet->confirm_missing_payment_id();
     success_msg_writer() << "ask-password = " << m_wallet->ask_password() << " (" << ask_password_string << ")";
     success_msg_writer() << "unit = " << cryptonote::get_unit(cryptonote::get_default_decimal_point());
@@ -4418,13 +4418,14 @@ bool simple_wallet::refresh_main(uint64_t start_height, enum ResetType reset, bo
   message_writer() << tr("Starting refresh...");
 
   uint64_t fetched_blocks = 0;
+  bool received_money = false;
   bool ok = false;
   std::ostringstream ss;
   try
   {
     m_in_manual_refresh.store(true, std::memory_order_relaxed);
     epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){m_in_manual_refresh.store(false, std::memory_order_relaxed);});
-    m_wallet->refresh(m_wallet->is_trusted_daemon(), start_height, fetched_blocks);
+    m_wallet->refresh(m_wallet->is_trusted_daemon(), start_height, fetched_blocks, received_money, true);
 
     if(reset == ResetSoftKeepKI)
     {
@@ -4437,6 +4438,7 @@ bool simple_wallet::refresh_main(uint64_t start_height, enum ResetType reset, bo
       }
     }
 
+    m_has_locked_key_images = query_locked_stakes(false);
     ok = true;
     // Clear line "Height xxx of xxx"
     std::cout << "\r                                                                \r";

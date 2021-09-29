@@ -1013,7 +1013,7 @@ wallet2::wallet2(network_type nettype, uint64_t kdf_rounds, bool unattended):
   m_always_confirm_transfers(true),
   m_print_ring_members(false),
   m_store_tx_info(true),
-  m_default_mixin(10),
+  m_default_mixin(0),
   m_default_priority(0),
   m_refresh_type(RefreshOptimizeCoinbase),
   m_auto_refresh(true),
@@ -2875,7 +2875,7 @@ void wallet2::fast_refresh(uint64_t stop_height, uint64_t &blocks_start_height, 
     uint64_t missing_blocks = m_checkpoints.get_max_height() - m_blockchain.size();
     while (missing_blocks-- > 0)
       m_blockchain.push_back(crypto::null_hash); // maybe a bit suboptimal, but deque won't do huge reallocs like vector
-    m_blockchain.push_back(m_checkpoints.get_points().at(checkpoint_height));
+    m_blockchain.push_back(m_checkpoints.get_points().at(checkpoint_height).block_hash);
     m_blockchain.trim(checkpoint_height);
     short_chain_history.clear();
     get_short_chain_history(short_chain_history);
@@ -7481,8 +7481,6 @@ wallet2::register_service_node_result wallet2::create_register_service_node_tx(c
 wallet2::request_stake_unlock_result wallet2::can_request_stake_unlock(const crypto::public_key &sn_key)
 {
   request_stake_unlock_result result = {};
-  result.ptx.tx.version = cryptonote::txversion::v3;
-  result.ptx.tx.type = cryptonote::txtype::key_image_unlock;
 
   std::string const sn_key_as_str = epee::string_tools::pod_to_hex(sn_key);
   {
@@ -7589,8 +7587,26 @@ wallet2::request_stake_unlock_result wallet2::can_request_stake_unlock(const cry
       }
     }
 
-    add_service_node_pubkey_to_tx_extra(result.ptx.tx.extra, sn_key);
-    add_tx_key_image_unlock_to_tx_extra(result.ptx.tx.extra, unlock);
+
+    std::vector<cryptonote::tx_destination_entry> dsts;
+    cryptonote::tx_destination_entry de = {};
+    de.addr = this->get_address();
+    de.is_subaddress = false;
+    de.amount = 0;
+    dsts.push_back(de);
+
+    boost::optional<uint8_t> hard_fork_version = get_hard_fork_version();
+    std::vector<uint8_t> extra;
+    uint32_t priority = 0;
+    std::set<uint32_t> subaddr_indices = {};
+    arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::key_image_unlock);
+
+    add_service_node_pubkey_to_tx_extra(extra, sn_key);
+    add_tx_key_image_unlock_to_tx_extra(extra, unlock);
+    auto ptx_vector = create_transactions_2(dsts, config::tx_settings::tx_mixin, 0, priority, extra, 0, subaddr_indices, tx_params);
+
+    result.ptx = ptx_vector[0];
+
   }
 
   result.success = true;
@@ -8358,7 +8374,8 @@ void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry
   // throw if total amount overflows uint64_t
   for(auto& dt: dsts)
   {
-    THROW_WALLET_EXCEPTION_IF(0 == dt.amount, error::zero_destination);
+    THROW_WALLET_EXCEPTION_IF(0 == dt.amount && (tx_params.tx_type != txtype::key_image_unlock), error::zero_destination);
+    THROW_WALLET_EXCEPTION_IF(dt.amount < config::tx_settings::min_tx_amount && (tx_params.tx_type != txtype::key_image_unlock), error::tx_amount_too_low);
     needed_money += dt.amount;
     LOG_PRINT_L2("transfer: adding " << print_money(dt.amount) << ", for a total of " << print_money(needed_money));
     THROW_WALLET_EXCEPTION_IF(needed_money < dt.amount, error::tx_sum_overflow, dsts, fee, m_nettype);
@@ -9320,6 +9337,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   boost::unique_lock<hw::device> hwdev_lock (hwdev);
   hw::reset_mode rst(hwdev);
 
+  bool const is_unstake_tx = (tx_params.tx_type == txtype::key_image_unlock);
   auto original_dsts = dsts;
 
   if(m_light_wallet) {
@@ -9386,14 +9404,15 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   needed_money = 0;
   for(auto& dt: dsts)
   {
-    THROW_WALLET_EXCEPTION_IF(0 == dt.amount, error::zero_destination);
+    THROW_WALLET_EXCEPTION_IF(0 == dt.amount && !is_unstake_tx, error::zero_destination);
+    THROW_WALLET_EXCEPTION_IF(dt.amount < config::tx_settings::min_tx_amount && !is_unstake_tx, error::tx_amount_too_low);
     needed_money += dt.amount;
     LOG_PRINT_L2("transfer: adding " << print_money(dt.amount) << ", for a total of " << print_money (needed_money));
     THROW_WALLET_EXCEPTION_IF(needed_money < dt.amount, error::tx_sum_overflow, dsts, 0, m_nettype);
   }
 
   // throw if attempting a transaction with no money
-  THROW_WALLET_EXCEPTION_IF(needed_money == 0, error::zero_destination);
+  THROW_WALLET_EXCEPTION_IF(needed_money == 0 && !is_unstake_tx, error::zero_destination);
 
   std::map<uint32_t, std::pair<uint64_t, uint64_t>> unlocked_balance_per_subaddr = unlocked_balance_per_subaddress(subaddr_account, false);
   std::map<uint32_t, uint64_t> balance_per_subaddr = balance_per_subaddress(subaddr_account, false);
@@ -9407,8 +9426,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   // early out if we know we can't make it anyway
   // we could also check for being within FEE_PER_KB, but if the fee calculation
   // ever changes, this might be missed, so let this go through
-  uint64_t min_fee = (fee_multiplier * base_fee * estimate_tx_size(1, fake_outs_count, 2, extra.size()));
-
+  const uint64_t min_fee = (fee_multiplier * base_fee * estimate_tx_size(1, fake_outs_count, 2, extra.size()));
   uint64_t balance_subtotal = 0;
   uint64_t unlocked_balance_subtotal = 0;
   for (uint32_t index_minor : subaddr_indices)
@@ -9416,11 +9434,9 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
     balance_subtotal += balance_per_subaddr[index_minor];
     unlocked_balance_subtotal += unlocked_balance_per_subaddr[index_minor].first;
   }
-  THROW_WALLET_EXCEPTION_IF(needed_money + min_fee > balance_subtotal, error::not_enough_money,
-    balance_subtotal, needed_money, 0);
+  THROW_WALLET_EXCEPTION_IF(needed_money + min_fee > balance_subtotal, error::not_enough_money, balance_subtotal, needed_money, 0);
   // first check overall balance is enough, then unlocked one, so we throw distinct exceptions
-  THROW_WALLET_EXCEPTION_IF(needed_money + min_fee > unlocked_balance_subtotal, error::not_enough_unlocked_money,
-      unlocked_balance_subtotal, needed_money, 0);
+  THROW_WALLET_EXCEPTION_IF(needed_money + min_fee > unlocked_balance_subtotal, error::not_enough_unlocked_money, unlocked_balance_subtotal, needed_money, 0);
 
   for (uint32_t i : subaddr_indices)
     LOG_PRINT_L2("Candidate subaddress index for spending: " << i);
@@ -9678,11 +9694,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
       cryptonote::transaction test_tx;
       pending_tx test_ptx;
 
-      needed_fee = estimate_fee(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size()+1, extra.size(), base_fee, fee_multiplier, fee_quantization_mask);
-
-      for(const auto &bm : tx.dsts)
-        if(bm.amount < config::tx_settings::min_tx_amount)
-          needed_fee += config::tx_settings::min_amount_blockage_fee;
+      needed_fee = estimate_fee(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size() + 1, extra.size(), base_fee, fee_multiplier, fee_quantization_mask);
 
       for(const auto &bm : tx.dsts)
         if(bm.amount < config::tx_settings::min_tx_amount)
@@ -9765,6 +9777,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
 
           txBlob = t_serializable_object_to_blob(test_ptx.tx);
           needed_fee = calculate_fee(test_ptx.tx, txBlob.size(), base_fee, fee_multiplier, fee_quantization_mask);
+
           LOG_PRINT_L2("Made an attempt at a  final " << get_weight_string(test_ptx.tx, txBlob.size()) << " tx, with " << print_money(test_ptx.fee) <<
             " fee  and " << print_money(test_ptx.change_dts.amount) << " change");
         }
@@ -9939,7 +9952,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_all(uint64_t below
   for (size_t i = 0; i < m_transfers.size(); ++i)
   {
     const transfer_details& td = m_transfers[i];
-    if (!is_spent(td, false) && !td.m_key_image_partial && (is_transfer_unlocked(td) && td.m_subaddr_index.major == subaddr_account && (subaddr_indices.empty() || subaddr_indices.count(td.m_subaddr_index.minor) == 1)))
+    if (!is_spent(td, false) && !td.m_key_image_partial && is_transfer_unlocked(td) && td.m_subaddr_index.major == subaddr_account && (subaddr_indices.empty() || subaddr_indices.count(td.m_subaddr_index.minor) == 1))
     {
       fund_found = true;
       if (below == 0 || td.amount() < below)
@@ -9986,7 +9999,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_single(const crypt
   for (size_t i = 0; i < m_transfers.size(); ++i)
   {
     const transfer_details& td = m_transfers[i];
-    if (td.m_key_image_known && td.m_key_image == ki && !is_spent(td, false) && (is_transfer_unlocked(td)))
+    if (td.m_key_image_known && td.m_key_image == ki && !is_spent(td, false) && is_transfer_unlocked(td))
     {
       if (td.is_rct() || is_valid_decomposed_amount(td.amount()))
         unused_transfers_indices.push_back(i);
@@ -10031,6 +10044,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
   THROW_WALLET_EXCEPTION_IF(!hard_fork_version, error::get_hard_fork_version_error, "Failed to query current hard fork version");
 
   arqma_construct_tx_params arqma_tx_params = tools::wallet2::construct_params(*hard_fork_version, tx_type);
+
   LOG_PRINT_L2("Starting with " << unused_transfers_indices.size() << " non-dust outputs and " << unused_dust_indices.size() << " dust outputs");
 
   if (unused_dust_indices.empty() && unused_transfers_indices.empty())
@@ -10142,6 +10156,8 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
       tx.ptx = test_ptx;
       tx.weight = get_transaction_weight(test_tx, txBlob.size());
       tx.outs = outs;
+      tx.needed_fee = test_ptx.fee;
+      accumulated_fee += test_ptx.fee;
       accumulated_change += test_ptx.change_dts.amount;
       if (!unused_transfers_indices.empty() || !unused_dust_indices.empty())
       {

@@ -85,6 +85,7 @@ namespace tools
     //         tx_rejected
     //         tx_sum_overflow
     //         tx_too_big
+    //         tx_amount_too_low
     //         zero_destination
     //       wallet_rpc_error *
     //         daemon_busy
@@ -767,6 +768,12 @@ namespace tools
       bool m_tx_valid;
       uint64_t m_tx_weight;
       uint64_t m_tx_weight_limit;
+    };
+    //----------------------------------------------------------------------------------------------------
+    struct tx_amount_too_low : public transfer_error
+    {
+      explicit tx_amount_too_low(std::string&& loc)
+        :  transfer_error(std::move(loc), "ARQ Amount is too low") { }
     };
     //----------------------------------------------------------------------------------------------------
     struct zero_destination : public transfer_error

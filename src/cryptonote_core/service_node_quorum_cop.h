@@ -29,6 +29,7 @@
 #pragma once
 
 #include "blockchain.h"
+#include "serialization/serialization.h"
 #include "cryptonote_protocol/cryptonote_protocol_handler_common.h"
 #include "cryptonote_basic/blobdatatype.h"
 
@@ -39,6 +40,38 @@ namespace cryptonote
 
 namespace service_nodes
 {
+  struct quorum_checkpointing
+  {
+    std::vector<crypto::public_key> quorum_nodes;
+    BEGIN_SERIALIZE()
+      FIELD(quorum_nodes)
+    END_SERIALIZE()
+  };
+
+  struct quorum_uptime_proof
+  {
+    std::vector<crypto::public_key> quorum_nodes;
+    std::vector<crypto::public_key> nodes_to_test;
+
+    BEGIN_SERIALIZE()
+      FIELD(quorum_nodes)
+      FIELD(nodes_to_test)
+    END_SERIALIZE()
+  };
+
+  struct quorum_manager
+  {
+    std::shared_ptr<const quorum_uptime_proof>  uptime_proof;
+    std::shared_ptr<const quorum_checkpointing> checkpointing;
+  };
+
+  enum struct quorum_type
+  {
+    uptime_proof = 0,
+    checkpointing,
+    count,
+  };
+
   class quorum_cop
     : public cryptonote::Blockchain::BlockAddedHook,
       public cryptonote::Blockchain::BlockchainDetachedHook,
@@ -50,6 +83,9 @@ namespace service_nodes
     void init() override;
     void block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs) override;
     void blockchain_detached(uint64_t height) override;
+
+    void process_uptime_quorum(cryptonote::block const &block);
+    void process_checkpoint_quorum(cryptonote::block const &block);
 
     bool handle_uptime_proof(const cryptonote::NOTIFY_UPTIME_PROOF::request &proof);
 
@@ -63,7 +99,7 @@ namespace service_nodes
   private:
 
     cryptonote::core& m_core;
-    uint64_t m_last_height;
+    uint64_t m_uptime_proof_height;
 
     using timestamp = uint64_t;
     std::unordered_map<crypto::public_key, timestamp> m_uptime_proof_seen;

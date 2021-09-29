@@ -118,6 +118,23 @@ namespace cryptonote
   class Blockchain
   {
   public:
+    void debug__print_checkpoints()
+    {
+      const std::map<uint64_t, checkpoint_t> &checkpoint_map = m_checkpoints.get_points();
+      if(checkpoint_map.empty())
+      {
+        std::cout << "Checkpoint: None available" << std::endl;
+      }
+      else
+      {
+        for(auto const &it : checkpoint_map)
+        {
+          checkpoint_t const &checkpoint = it.second;
+          std::cout << "Checkpoint [" << it.first << "]" << ((checkpoint.type == checkpoint_type::service_node) ? "Service Node" : "Predefined") << std::endl;
+        }
+      }
+    }
+
     /**
      * @brief container for passing a block and metadata about it on the blockchain
      */
@@ -670,7 +687,7 @@ namespace cryptonote
      *
      * @return true if the fee is enough, false otherwise
      */
-    bool check_fee(size_t tx_weight, uint64_t fee) const;
+    bool check_fee(const transaction& tx, size_t tx_weight, uint64_t fee) const;
 
     /**
      * @brief check that a transaction's outputs conform to current standards
@@ -728,8 +745,7 @@ namespace cryptonote
      *
      * @return false if an unexpected exception occurs, else true
      */
-    template<class t_ids_container, class t_blocks_container, class t_missed_container>
-    bool get_blocks(const t_ids_container& block_ids, t_blocks_container& blocks, t_missed_container& missed_bs) const;
+    bool get_blocks(const std::vector<crypto::hash>& block_ids, std::vector<std::pair<cryptonote::blobdata,block>>& blocks, std::vector<crypto::hash>& missed_bs) const;
 
     /**
      * @brief gets transactions based on a list of transaction hashes
@@ -744,12 +760,9 @@ namespace cryptonote
      *
      * @return false if an unexpected exception occurs, else true
      */
-    template<class t_ids_container, class t_tx_container, class t_missed_container>
-    bool get_transactions_blobs(const t_ids_container& txs_ids, t_tx_container& txs, t_missed_container& missed_txs, bool pruned = false) const;
-    template<class t_ids_container, class t_tx_container, class t_missed_container>
-    bool get_split_transactions_blobs(const t_ids_container& txs_ids, t_tx_container& txs, t_missed_container& missed_txs) const;
-    template<class t_ids_container, class t_tx_container, class t_missed_container>
-    bool get_transactions(const t_ids_container& txs_ids, t_tx_container& txs, t_missed_container& missed_txs) const;
+    bool get_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<blobdata>& txs, std::vector<crypto::hash>& missed_txs, bool pruned = false) const;
+    bool get_split_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>>& txs, std::vector<crypto::hash>& missed_txs) const;
+    bool get_transactions(const std::vector<crypto::hash>& txs_ids, std::vector<transaction>& txs, std::vector<crypto::hash>& missed_txs) const;
 
     //debug functions
 
@@ -782,6 +795,15 @@ namespace cryptonote
      * @return false if any enforced checkpoint type fails to load, otherwise true
      */
     bool update_checkpoints(const std::string& file_path, bool check_dns);
+
+    struct service_node_checkpoint_pool_entry
+    {
+      uint64_t height;
+      std::vector<service_nodes::checkpoint_vote> votes;
+    };
+
+    std::vector<service_node_checkpoint_pool_entry> m_checkpoint_pool;
+    bool add_checkpoint_vote(service_nodes::checkpoint_vote const &vote);
 
 
     // user options, must be called before calling init()
