@@ -245,21 +245,6 @@ namespace cryptonote
       m_pprotocol = &m_protocol_stub;
   }
   //-----------------------------------------------------------------------------------
-  void core::set_checkpoints(checkpoints&& chk_pts)
-  {
-    m_blockchain_storage.set_checkpoints(std::move(chk_pts));
-  }
-  //-----------------------------------------------------------------------------------
-  void core::set_checkpoints_file_path(const std::string& path)
-  {
-    m_checkpoints_path = path;
-  }
-  //-----------------------------------------------------------------------------------
-  void core::set_enforce_dns_checkpoints(bool enforce_dns)
-  {
-    m_blockchain_storage.set_enforce_dns_checkpoints(enforce_dns);
-  }
-  //-----------------------------------------------------------------------------------------------
   bool core::update_checkpoints(const bool skip_dns/* = false*/)
   {
     if (m_nettype != MAINNET || m_disable_dns_checkpoints) return true;
@@ -352,22 +337,21 @@ namespace cryptonote
 
     auto data_dir = boost::filesystem::path(m_config_folder);
 
-    if (m_nettype == MAINNET)
     {
       cryptonote::checkpoints checkpoints;
       if (!checkpoints.init_default_checkpoints(m_nettype))
       {
         throw std::runtime_error("Failed to initialize checkpoints");
       }
-      set_checkpoints(std::move(checkpoints));
+      m_blockchain_storage.set_checkpoints(std::move(checkpoints));
 
       boost::filesystem::path json(JSON_HASH_FILE_NAME);
       boost::filesystem::path checkpoint_json_hashfile_fullpath = data_dir / json;
 
-      set_checkpoints_file_path(checkpoint_json_hashfile_fullpath.string());
+      m_checkpoints_path = checkpoint_json_hashfile_fullpath.string();
     }
 
-    set_enforce_dns_checkpoints(command_line::get_arg(vm, arg_dns_checkpoints));
+    m_blockchain_storage.set_enforce_dns_checkpoints(command_line::get_arg(vm, arg_dns_checkpoints));
     test_drop_download_height(command_line::get_arg(vm, arg_test_drop_download_height));
     m_fluffy_blocks_enabled = !get_arg(vm, arg_no_fluffy_blocks);
     m_pad_transactions = get_arg(vm, arg_pad_transactions);
@@ -1450,6 +1434,40 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
+  bool core::relay_checkpoint_votes()
+  {
+    const time_t now = time(nullptr);
+
+    NOTIFY_NEW_CHECKPOINT_VOTE::request req = {};
+
+    std::vector<service_nodes::checkpoint_vote *> relayed_votes;
+    for(Blockchain::service_node_checkpoint_pool_entry &pool_entry : m_blockchain_storage.m_checkpoint_pool)
+    {
+      for(service_nodes::checkpoint_vote &vote : pool_entry.votes)
+      {
+        const time_t elapsed = now - vote.time_last_sent_p2p;
+        const time_t RELAY_THRESHOLD = 60 * 2;
+        if(elapsed > RELAY_THRESHOLD)
+        {
+          relayed_votes.push_back(&vote);
+          req.votes.push_back(vote);
+        }
+      }
+    }
+
+    if(!req.votes.empty())
+    {
+      cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
+      if(get_protocol()->relay_checkpoint_votes(req, fake_context))
+      {
+        for(service_nodes::checkpoint_vote *vote : relayed_votes)
+          vote->time_last_sent_p2p = now;
+      }
+    }
+
+    return true;
+  }
+  //-----------------------------------------------------------------------------------------------
   bool core::get_block_template(block& b, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash)
   {
     return m_blockchain_storage.create_block_template(b, adr, diffic, height, expected_reward, ex_nonce, seed_height, seed_hash);
@@ -1599,7 +1617,6 @@ namespace cryptonote
     }
     return true;
   }
-
   //-----------------------------------------------------------------------------------------------
   bool core::cleanup_handle_incoming_blocks(bool force_sync)
   {
@@ -1611,7 +1628,6 @@ namespace cryptonote
     m_incoming_tx_lock.unlock();
     return success;
   }
-
   //-----------------------------------------------------------------------------------------------
   bool core::handle_incoming_block(const blobdata& block_blob, const block *b, block_verification_context& bvc, bool update_miner_blocktemplate)
   {
@@ -1644,6 +1660,7 @@ namespace cryptonote
       }
       b = &lb;
     }
+
     add_new_block(*b, bvc);
     if(update_miner_blocktemplate && bvc.m_added_to_main_chain)
        update_miner_block_template();
@@ -1807,6 +1824,7 @@ namespace cryptonote
 
     m_txpool_auto_relayer.do_call(boost::bind(&core::relay_txpool_transactions, this));
     m_deregisters_auto_relayer.do_call(boost::bind(&core::relay_deregister_votes, this));
+    m_checkpoint_auto_relayer.do_call(boost::bind(&core::relay_checkpoint_votes, this));
     m_check_updates_interval.do_call(boost::bind(&core::check_updates, this));
     m_check_disk_space_interval.do_call(boost::bind(&core::check_disk_space, this));
     m_blockchain_pruning_interval.do_call(boost::bind(&core::update_blockchain_pruning, this));
@@ -2028,9 +2046,14 @@ namespace cryptonote
     return get_blockchain_storage().prune_blockchain(pruning_seed);
   }
   //-----------------------------------------------------------------------------------------------
-  const std::shared_ptr<const service_nodes::quorum_state> core::get_quorum_state(uint64_t height) const
+  const std::shared_ptr<const service_nodes::quorum_uptime_proof> core::get_uptime_quorum(uint64_t height) const
   {
-    return m_service_node_list.get_quorum_state(height);
+    return m_service_node_list.get_uptime_quorum(height);
+  }
+  //-----------------------------------------------------------------------------------------------
+  const std::shared_ptr<const service_nodes::quorum_checkpointing> core::get_checkpointing_quorum(uint64_t height) const
+  {
+    return m_service_node_list.get_checkpointing_quorum(height);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::is_service_node(const crypto::public_key& pubkey) const
@@ -2078,8 +2101,8 @@ namespace cryptonote
       return false;
     }
 
-    const auto quorum_state = m_service_node_list.get_quorum_state(vote.block_height);
-    if(!quorum_state)
+    const auto uptime_quorum = m_service_node_list.get_uptime_quorum(vote.block_height);
+    if(!uptime_quorum)
     {
       vvc.m_verification_failed  = true;
       vvc.m_invalid_block_height = true;
@@ -2088,7 +2111,7 @@ namespace cryptonote
     }
 
     cryptonote::transaction deregister_tx;
-    bool result = m_deregister_vote_pool.add_vote(vote, vvc, *quorum_state, deregister_tx);
+    bool result = m_deregister_vote_pool.add_vote(vote, vvc, *uptime_quorum, deregister_tx);
     if(result && vvc.m_full_tx_deregister_made)
     {
       tx_verification_context tvc = AUTO_VAL_INIT(tvc);
@@ -2104,6 +2127,69 @@ namespace cryptonote
     }
 
     return result;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::add_checkpoint_vote(const service_nodes::checkpoint_vote& vote, vote_verification_context &vvc)
+  {
+    {
+      uint64_t const latest_height = std::max(get_current_blockchain_height(), get_target_blockchain_height());
+      if(vote.block_height >= latest_height)
+        return false;
+
+      uint64_t vote_age = latest_height - vote.block_height;
+      if(vote_age > ((service_nodes::CHECKPOINT_INTERVAL * 3) - 1))
+        return false;
+    }
+
+    {
+      const std::shared_ptr<const service_nodes::quorum_uptime_proof> state = get_uptime_quorum(vote.block_height);
+      if(!state)
+      {
+        LOG_ERROR("Quorum state for height: " << vote.block_height << " was not cached in daemon!");
+        return false;
+      }
+
+      if(vote.voters_quorum_index >= state->quorum_nodes.size())
+      {
+        LOG_PRINT_L1("Too many votes for nodes");
+        return false;
+      }
+
+      crypto::public_key const &voters_pub_key = state->quorum_nodes[vote.voters_quorum_index];
+      if(!crypto::check_signature(vote.block_hash, voters_pub_key, vote.signature))
+      {
+        LOG_PRINT_L1("Incorrect vote signature");
+        return false;
+      }
+    }
+
+    std::vector<Blockchain::service_node_checkpoint_pool_entry> &checkpoint_pool = m_blockchain_storage.m_checkpoint_pool;
+    auto it = std::find_if(checkpoint_pool.begin(), checkpoint_pool.end(), [&vote](Blockchain::service_node_checkpoint_pool_entry const &checkpoint)
+    {
+        return (checkpoint.height == vote.block_height);
+    });
+
+    if(it == checkpoint_pool.end())
+    {
+      Blockchain::service_node_checkpoint_pool_entry pool_entry = {};
+      pool_entry.height = vote.block_height;
+      checkpoint_pool.push_back(pool_entry);
+      it = (checkpoint_pool.end() - 1);
+    }
+
+    Blockchain::service_node_checkpoint_pool_entry &pool_entry = (*it);
+    auto vote_it = std::find_if(pool_entry.votes.begin(), pool_entry.votes.end(), [&vote](service_nodes::checkpoint_vote const &preexisting_vote)
+    {
+        return (preexisting_vote.voters_quorum_index == vote.voters_quorum_index);
+    });
+
+    if(vote_it == pool_entry.votes.end())
+    {
+      m_blockchain_storage.add_checkpoint_vote(vote);
+      pool_entry.votes.push_back(vote);
+    }
+
+    return true;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_service_node_keys(crypto::public_key &pub_key, crypto::secret_key &sec_key) const

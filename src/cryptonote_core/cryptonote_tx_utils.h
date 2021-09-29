@@ -181,7 +181,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   struct arqma_construct_tx_params
   {
-    uint8_t hard_fork_version = cryptonote::network_version_7;
+    uint8_t hard_fork_version = cryptonote::network_version_1;
     txtype tx_type = txtype::standard;
   };
   //---------------------------------------------------------------

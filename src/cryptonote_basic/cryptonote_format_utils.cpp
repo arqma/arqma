@@ -1522,15 +1522,8 @@ namespace cryptonote
     return blob;
   }
   //---------------------------------------------------------------
-  bool calculate_block_hash(const block& b, crypto::hash& res, const blobdata *blob)
+  bool calculate_block_hash(const block& b, crypto::hash& res)
   {
-    blobdata bd;
-    if(!blob)
-    {
-      bd = block_to_blob(b);
-      blob = &bd;
-    }
-
     bool hash_result = get_object_hash(get_block_hashing_blob(b), res);
     return hash_result;
   }
@@ -1593,7 +1586,7 @@ namespace cryptonote
     b.miner_tx.invalidate_hashes();
     if(block_hash)
     {
-      calculate_block_hash(b, *block_hash, &b_blob);
+      calculate_block_hash(b, *block_hash);
       ++block_hashes_calculated_count;
       b.hash = *block_hash;
       b.set_hash_valid(true);

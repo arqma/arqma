@@ -258,6 +258,8 @@ namespace cryptonote
     bool on_prune_blockchain(const COMMAND_RPC_PRUNE_BLOCKCHAIN::request& req, COMMAND_RPC_PRUNE_BLOCKCHAIN::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     //------------------------------
 
+    void on_get_checkpoints() { m_core.debug__print_checkpoints(); }
+
 private:
     bool check_core_busy();
     bool check_core_ready();

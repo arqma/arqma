@@ -977,10 +977,8 @@ namespace tools
         er.message = tools::ERR_MSG_NETWORK_VERSION_QUERY_FAILED;
         return false;
       }
-
       cryptonote::arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, cryptonote::txtype::standard);
       LOG_PRINT_L2("on_transfer_split calling create_transactions_2");
-
       std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_2(dsts, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices, tx_params);
 
       LOG_PRINT_L2("on_transfer_split called create_transactions_2");

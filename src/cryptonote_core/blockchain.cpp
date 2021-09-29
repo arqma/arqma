@@ -151,6 +151,7 @@ Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list
   m_batch_success(true),
   m_prepare_height(0)
 {
+  m_checkpoint_pool.reserve(service_nodes::QUORUM_SIZE * 4);
   LOG_PRINT_L3("Blockchain::" << __func__);
 }
 //------------------------------------------------------------------
@@ -1994,8 +1995,8 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
       return false;
     }
 
-    bool is_a_checkpoint;
-    if(!m_checkpoints.check_block(bei.height, id, is_a_checkpoint))
+    bool is_a_checkpoint = false;
+    if(!m_checkpoints.check_block(bei.height, id, &is_a_checkpoint))
     {
       LOG_ERROR("CHECKPOINT VALIDATION FAILED");
       bvc.m_verification_failed = true;
@@ -2438,18 +2439,14 @@ uint64_t Blockchain::block_difficulty(uint64_t i) const
   return 0;
 }
 //------------------------------------------------------------------
-template<typename T> void reserve_container(std::vector<T> &v, size_t N) { v.reserve(N); }
-template<typename T> void reserve_container(std::list<T> &v, size_t N) { }
-//------------------------------------------------------------------
 //TODO: return type should be void, throw on exception
 //       alternatively, return true only if no blocks missed
-template<class t_ids_container, class t_blocks_container, class t_missed_container>
-bool Blockchain::get_blocks(const t_ids_container& block_ids, t_blocks_container& blocks, t_missed_container& missed_bs) const
+bool Blockchain::get_blocks(const std::vector<crypto::hash>& block_ids, std::vector<std::pair<cryptonote::blobdata, block>>& blocks, std::vector<crypto::hash>& missed_bs) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
 
-  reserve_container(blocks, block_ids.size());
+  blocks.reserve(block_ids.size());
   for (const auto& block_hash : block_ids)
   {
     try
@@ -2478,13 +2475,12 @@ bool Blockchain::get_blocks(const t_ids_container& block_ids, t_blocks_container
 //------------------------------------------------------------------
 //TODO: return type should be void, throw on exception
 //       alternatively, return true only if no transactions missed
-template<class t_ids_container, class t_tx_container, class t_missed_container>
-bool Blockchain::get_transactions_blobs(const t_ids_container& txs_ids, t_tx_container& txs, t_missed_container& missed_txs, bool pruned) const
+bool Blockchain::get_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<cryptonote::blobdata>& txs, std::vector<crypto::hash>& missed_txs, bool pruned) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
 
-  reserve_container(txs, txs_ids.size());
+  txs.reserve(txs_ids.size());
   for (const auto& tx_hash : txs_ids)
   {
     try
@@ -2516,13 +2512,12 @@ size_t get_transaction_version(const cryptonote::blobdata &bd)
   return version;
 }
 //------------------------------------------------------------------
-template<class t_ids_container, class t_tx_container, class t_missed_container>
-bool Blockchain::get_split_transactions_blobs(const t_ids_container& txs_ids, t_tx_container& txs, t_missed_container& missed_txs) const
+bool Blockchain::get_split_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>>& txs, std::vector<crypto::hash>& missed_txs) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
 
-  reserve_container(txs, txs_ids.size());
+  txs.reserve(txs_ids.size());
   for (const auto& tx_hash : txs_ids)
   {
     try
@@ -2550,13 +2545,12 @@ bool Blockchain::get_split_transactions_blobs(const t_ids_container& txs_ids, t_
   return true;
 }
 //------------------------------------------------------------------
-template<class t_ids_container, class t_tx_container, class t_missed_container>
-bool Blockchain::get_transactions(const t_ids_container& txs_ids, t_tx_container& txs, t_missed_container& missed_txs) const
+bool Blockchain::get_transactions(const std::vector<crypto::hash>& txs_ids, std::vector<transaction>& txs, std::vector<crypto::hash>& missed_txs) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
 
-  reserve_container(txs, txs_ids.size());
+  txs.reserve(txs_ids.size());
   for (const auto& tx_hash : txs_ids)
   {
     try
@@ -3420,6 +3414,16 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
           }
         }
       }
+      if(tx.type == txtype::key_image_unlock)
+      {
+        cryptonote::tx_extra_field data;
+        std::string fail_reason;
+        if(!service_nodes::validate_unstake_tx(get_current_blockchain_height(), tx, data, &fail_reason))
+        {
+          MERROR_VER("Failed to validate Unstake Transaction: " << fail_reason);
+          return false;
+        }
+      }
     }
   }
   else
@@ -3443,14 +3447,14 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
         return false;
       }
 
-      const std::shared_ptr<const service_nodes::quorum_state> quorum_state = m_service_node_list.get_quorum_state(deregister.block_height);
-      if(!quorum_state)
+      const std::shared_ptr<const service_nodes::quorum_uptime_proof> uptime_quorum = m_service_node_list.get_uptime_quorum(deregister.block_height);
+      if(!uptime_quorum)
       {
         MERROR_VER("Deregister TX could not get quorum for height: " << deregister.block_height);
         return false;
       }
 
-      if(!service_nodes::deregister_vote::verify_deregister(nettype(), deregister, tvc.m_vote_ctx, *quorum_state))
+      if(!service_nodes::deregister_vote::verify_deregister(nettype(), deregister, tvc.m_vote_ctx, *uptime_quorum))
       {
         tvc.m_verification_failed = true;
         MERROR_VER("Transaction: " << get_transaction_hash(tx) << " could not be completely verified. Reason: " << print_vote_verification_context(tvc.m_vote_ctx));
@@ -3509,14 +3513,14 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
           continue;
         }
 
-        const std::shared_ptr<const service_nodes::quorum_state> existing_deregister_quorum_state = m_service_node_list.get_quorum_state(existing_deregister.block_height);
-        if(!existing_deregister_quorum_state)
+        const std::shared_ptr<const service_nodes::quorum_uptime_proof> existing_uptime_quorum = m_service_node_list.get_uptime_quorum(existing_deregister.block_height);
+        if(!existing_uptime_quorum)
         {
-          MERROR_VER("could not get quorum state for recent deregister tx");
+          MERROR_VER("could not get uptime quorum for recent deregister tx");
           continue;
         }
 
-        if(existing_deregister_quorum_state->nodes_to_test[existing_deregister.service_node_index] == quorum_state->nodes_to_test[deregister.service_node_index])
+        if(existing_uptime_quorum->nodes_to_test[existing_deregister.service_node_index] == uptime_quorum->nodes_to_test[deregister.service_node_index])
         {
           MERROR_VER("Already seen this deregister tx (aka double spend)");
           tvc.m_double_spend = true;
@@ -3618,7 +3622,7 @@ uint64_t Blockchain::get_dynamic_base_fee(uint64_t block_reward, size_t median_b
 }
 
 //------------------------------------------------------------------
-bool Blockchain::check_fee(size_t tx_weight, uint64_t fee) const
+bool Blockchain::check_fee(const transaction& tx, size_t tx_weight, uint64_t fee) const
 {
   const uint8_t version = get_current_hard_fork_version();
 
@@ -3663,10 +3667,13 @@ bool Blockchain::check_fee(size_t tx_weight, uint64_t fee) const
     needed_fee *= fee_per_kb;
   }
 
-  if (fee < needed_fee - needed_fee / 50) // keep a little 2% buffer on acceptance - no integer overflow
+  if(tx.type == txtype::key_image_unlock || tx.type == txtype::deregister)
   {
-    MERROR_VER("transaction fee is not enough: " << print_money(fee) << ", minimum fee: " << print_money(needed_fee));
-    return false;
+    if (fee < needed_fee - needed_fee / 50) // keep a little 2% buffer on acceptance - no integer overflow
+    {
+      MERROR_VER("transaction fee is not enough: " << print_money(fee) << ", minimum fee: " << print_money(needed_fee));
+      return false;
+    }
   }
   return true;
 }
@@ -4496,28 +4503,25 @@ bool Blockchain::add_new_block(const block& bl, block_verification_context& bvc)
 //      caller decide course of action.
 void Blockchain::check_against_checkpoints(const checkpoints& points, bool enforce)
 {
-  const auto& pts = points.get_points();
-  bool stop_batch;
-
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  stop_batch = m_db->batch_start();
-  const uint64_t blockchain_height = m_db->height();
-  for (const auto& pt : pts)
-  {
-    // if the checkpoint is for a block we don't have yet, move on
-    if (pt.first >= blockchain_height)
-    {
-      continue;
-    }
+  bool stop_batch = m_db->batch_start();
 
-    if (!points.check_block(pt.first, m_db->get_block_hash_from_height(pt.first)))
+  for(const auto& checkpoint_it : points.get_points())
+  {
+    uint64_t block_height = checkpoint_it.first;
+    checkpoint_t const &checkpoint = checkpoint_it.second;
+
+    if(block_height >= m_db->height())
+      break;
+
+    if (!points.check_block(block_height, m_db->get_block_hash_from_height(block_height), nullptr))
     {
       // if asked to enforce checkpoints, roll back to a couple of blocks before the checkpoint
       if (enforce)
       {
         LOG_ERROR("Local blockchain failed to pass a checkpoint, rolling back!");
         std::list<block> empty;
-        rollback_blockchain_switching(empty, pt.first - 2);
+        rollback_blockchain_switching(empty, block_height - 2);
       }
       else
       {
@@ -4563,7 +4567,16 @@ bool Blockchain::update_checkpoints(const std::string& file_path, bool check_dns
   }
 
   check_against_checkpoints(m_checkpoints, true);
+  return true;
+}
+//------------------------------------------------------------------
+bool Blockchain::add_checkpoint_vote(service_nodes::checkpoint_vote const &vote)
+{
+  crypto::hash const canonical_block_hash = get_block_id_by_height(vote.block_height);
+  if(vote.block_hash != canonical_block_hash)
+    return false;
 
+  m_checkpoints.add_checkpoint_vote(vote);
   return true;
 }
 //------------------------------------------------------------------
@@ -5500,10 +5513,4 @@ void Blockchain::cache_block_template(const block &b, const cryptonote::account_
   m_btc_seed_height = seed_height;
   m_btc_pool_cookie = pool_cookie;
   m_btc_valid = true;
-}
-
-namespace cryptonote {
-template bool Blockchain::get_transactions(const std::vector<crypto::hash>&, std::vector<transaction>&, std::vector<crypto::hash>&) const;
-template bool Blockchain::get_transactions_blobs(const std::vector<crypto::hash>&, std::vector<cryptonote::blobdata>&, std::vector<crypto::hash>&, bool) const;
-template bool Blockchain::get_split_transactions_blobs(const std::vector<crypto::hash>&, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>>&, std::vector<crypto::hash>&) const;
 }

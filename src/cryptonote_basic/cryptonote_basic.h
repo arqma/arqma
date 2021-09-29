@@ -165,11 +165,11 @@ namespace cryptonote
     _count,
   };
   enum class txtype : uint16_t {
-    standard = 0,
+    standard,
     deregister,
     key_image_unlock,
     stake,
-    _count,
+    _count
   };
 
 
@@ -188,7 +188,7 @@ namespace cryptonote
     txversion version;
     txtype type;
 
-    bool is_transfer() const { return type == txtype::standard || type == txtype::stake; }
+    bool is_transfer() const { return type == txtype::standard || type == txtype::stake || type == txtype::key_image_unlock; }
 
     uint64_t unlock_time;  // number of block (or time), used as a limitation like: spend this tx not early then block/time
 

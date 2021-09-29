@@ -350,4 +350,18 @@ namespace cryptonote
     typedef epee::misc_utils::struct_init<request_t> request;
   };
 
+  struct NOTIFY_NEW_CHECKPOINT_VOTE
+  {
+    const static int ID = BC_COMMANDS_POOL_BASE + 12;
+
+    struct request_t
+    {
+      std::vector<service_nodes::checkpoint_vote> votes;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(votes)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+  };
+
 }

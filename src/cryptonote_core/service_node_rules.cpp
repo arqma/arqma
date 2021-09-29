@@ -1,8 +1,11 @@
 #include "cryptonote_config.h"
 #include "common/arqma.h"
 #include "int-util.h"
+#include "cryptonote_basic/cryptonote_format_utils.h"
+#include <limits>
 #include <vector>
 #include <boost/lexical_cast.hpp>
+#include <cfenv>
 
 #include "blockchain.h"
 #include "service_node_rules.h"
@@ -143,6 +146,35 @@ namespace service_nodes
     }
 
     return get_portions_from_percent(cut_percent, portions);
+  }
+
+  uint64_t uniform_distribution_portable(std::mt19937_64& mersenne_twister, uint64_t n)
+  {
+    uint64_t secureMax = mersenne_twister.max() - mersenne_twister.max() % n;
+    uint64_t x;
+    do x = mersenne_twister();
+    while(x >= secureMax);
+    return x / (secureMax / n);
+  }
+
+  template<typename... Args>
+  static bool check_condition(bool condition, std::string* reason, Args&&... args)
+  {
+    if(condition && reason)
+    {
+      std::ostringstream os;
+      (os << ... << std::forward<Args>(args));
+      *reason = os.str();
+    }
+    return condition;
+  }
+
+  bool validate_unstake_tx(uint64_t blockchain_height, cryptonote::transaction const &tx, cryptonote::tx_extra_field &extra, std::string *reason)
+  {
+    if(check_condition(tx.type != cryptonote::txtype::key_image_unlock, reason, tx, ", uses wrong transaction type, expected: ", cryptonote::txtype::key_image_unlock))
+      return false;
+
+    return true;
   }
 
 }

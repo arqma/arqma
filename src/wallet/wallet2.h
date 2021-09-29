@@ -84,6 +84,7 @@ namespace tools
   static const char *ERR_MSG_SERVICE_NODE_LIST_QUERY_FAILED = "Failed to query daemon for service node list";
   static const char *ERR_MSG_TOO_MANY_TXS_CONSTRUCTED = "Constructed too many transations, please sweep_all first";
   static const char *ERR_MSG_EXCEPTION_THROWN = "Exception thrown, staking process could not be completed: ";
+  static const char *ERR_MSG_TX_CONSTRUCT_FAILED = "Could not contruct Transaction";
 
   class ringdb;
   class wallet2;
@@ -182,6 +183,16 @@ private:
         return "xxxxx";
     }
   }
+
+  enum tx_priority
+  {
+    tx_priority_default = 0,
+    tx_priority_low = 1,
+    tx_priority_normal = 2,
+    tx_priority_high = 3,
+    tx_priority_asap = 4,
+    tx_priority_last
+  };
 
   struct tx_money_got_in_out
   {
@@ -1375,7 +1386,7 @@ private:
       std::string msg;
       pending_tx ptx;
     };
-    request_stake_unlock_result can_request_stake_unlock(const crypto::public_key &sn_key);
+    request_stake_unlock_result can_request_stake_unlock(const crypto::public_key& sn_key);
 
     bool lock_keys_file();
     bool unlock_keys_file();
@@ -1619,41 +1630,10 @@ namespace boost
     template <class Archive>
     inline typename std::enable_if<Archive::is_loading::value, void>::type initialize_transfer_details(Archive &a, tools::wallet2::transfer_details &x, const boost::serialization::version_type ver)
     {
-        if(ver < 1)
-        {
-          x.m_mask = rct::identity();
-          x.m_amount = x.m_tx.vout[x.m_internal_output_index].amount;
-        }
-        if(ver < 2)
-        {
-          x.m_spent_height = 0;
-        }
-        if(ver < 4)
-        {
-          x.m_rct = x.m_tx.vout[x.m_internal_output_index].amount == 0;
-        }
-        if(ver < 6)
-        {
-          x.m_key_image_known = true;
-        }
-        if(ver < 7)
-        {
-          x.m_pk_index = 0;
-        }
-        if(ver < 8)
-        {
-          x.m_subaddr_index = {};
-        }
-        if(ver < 9)
-        {
-          x.m_key_image_partial = false;
-          x.m_multisig_k.clear();
-          x.m_multisig_info.clear();
-        }
-        if(ver < 11)
-        {
-          x.m_key_image_request = false;
-        }
+      if(ver < 11)
+      {
+        x.m_key_image_request = false;
+      }
     }
 
     template <class Archive>
@@ -1662,88 +1642,26 @@ namespace boost
       a & x.m_block_height;
       a & x.m_global_output_index;
       a & x.m_internal_output_index;
-      if(ver < 3)
-      {
-        cryptonote::transaction tx;
-        a & tx;
-        x.m_tx = (const cryptonote::transaction_prefix&)tx;
-        x.m_txid = cryptonote::get_transaction_hash(tx);
-      }
-      else
-      {
-        a & x.m_tx;
-      }
+      a & x.m_tx;
       a & x.m_spent;
       a & x.m_key_image;
-      if(ver < 1)
-      {
-        // ensure mask and amount are set
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
       a & x.m_mask;
       a & x.m_amount;
-      if(ver < 2)
-      {
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
       a & x.m_spent_height;
-      if(ver < 3)
-      {
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
       a & x.m_txid;
-      if(ver < 4)
-      {
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
       a & x.m_rct;
-      if(ver < 5)
-      {
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
-      if(ver < 6)
-      {
-        // v5 did not properly initialize
-        uint8_t u;
-        a & u;
-        x.m_key_image_known = true;
-        return;
-      }
       a & x.m_key_image_known;
-      if(ver < 7)
-      {
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
       a & x.m_pk_index;
-      if(ver < 8)
-      {
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
       a & x.m_subaddr_index;
-      if(ver < 9)
-      {
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
       a & x.m_multisig_info;
       a & x.m_multisig_k;
       a & x.m_key_image_partial;
-      if(ver < 10)
-        return;
-      a & x.m_uses;
-      if(ver < 11)
-      {
-        initialize_transfer_details(a, x, ver);
-        return;
-      }
-      a & x.m_key_image_request;
+      if(ver > 9)
+        a & x.m_uses;
+      if(ver > 10)
+        a & x.m_key_image_request;
+
+      initialize_transfer_details(a, x, ver);
     }
 
     template <class Archive>
@@ -1876,27 +1794,25 @@ namespace boost
       a & x.m_block_height;
       a & x.m_unlock_time;
       if (ver < 1)
+        x.m_timestamp = 0;
+      if (ver < 2)
+        x.m_subaddr_index = {};
+      if (ver < 3)
+        x.m_fee = 0;
+      if (ver < 4)
+        x.m_type = tools::pay_type::unspecified;
+
+      if(ver < 1)
         return;
       a & x.m_timestamp;
-      if (ver < 2)
-      {
-        x.m_type = tools::pay_type::unspecified;
-        x.m_subaddr_index = {};
+      if(ver < 2)
         return;
-      }
       a & x.m_subaddr_index;
-      if (ver < 3)
-      {
-        x.m_type = tools::pay_type::unspecified;
-        x.m_fee = 0;
+      if(ver < 3)
         return;
-      }
       a & x.m_fee;
-      if (ver < 4)
-      {
-        x.m_type = tools::pay_type::unspecified;
+      if(ver < 4)
         return;
-      }
       a & x.m_type;
     }
 
@@ -1978,12 +1894,11 @@ namespace boost
         if(ver < 5)
         {
           x.tx_type = cryptonote::txtype::standard;
-          x.hard_fork_version = cryptonote::network_version_15;
+          x.hard_fork_version = cryptonote::network_version_16;
         }
       }
       if(ver < 2)
         return;
-      a & x.selected_transfers;
       if(ver < 3)
       {
         if(!typename Archive::is_saving())
@@ -1998,13 +1913,8 @@ namespace boost
           x.rct_config = { use_bulletproofs ? rct::RangeProofBulletproof : rct::RangeProofBorromean, 0 };
         return;
       }
-      a & x.rct_config;
       if(ver < 5)
-      {
-        if(!typename Archive::is_saving())
-          x.rct_config = { rct::RangeProofPaddedBulletproof, 1 };
         return;
-      }
       a & x.rct_config;
       a & x.tx_type;
       a & x.hard_fork_version;
