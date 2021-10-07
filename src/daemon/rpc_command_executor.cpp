@@ -45,7 +45,7 @@
 #include <ctime>
 #include <string>
 #include <numeric>
-#include <state>
+#include <stack>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
