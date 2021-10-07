@@ -28,12 +28,27 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+
+/* Note about debug:
+ * To debug Device you can def the following :
+ * #define DEBUG_HWDEVICE
+ *   Activate debug mechanism:
+ *     - Add more trace
+ *     - All computation done by device are checked by default device.
+ *       Required IODUMMYCRYPT_HWDEVICE or IONOCRYPT_HWDEVICE for fully working
+ * #define IODUMMYCRYPT_HWDEVICE 1
+ *     - It assumes sensitive data encryption is is off on device side. a XOR with 0x55. This allow Ledger Class to make check on clear value
+ * #define IONOCRYPT_HWDEVICE 1
+ *     - It assumes sensitive data encryption is off on device side.
+ */
+
+
 #pragma once
 
 #include "crypto/crypto.h"
 #include "crypto/chacha.h"
 #include "ringct/rctTypes.h"
-#include "cryptonote_config.h"
+
 
 #ifndef USE_DEVICE_LEDGER
 #define USE_DEVICE_LEDGER 1
@@ -54,8 +69,6 @@ namespace cryptonote
     struct account_public_address;
     struct account_keys;
     struct subaddress_index;
-    struct tx_destination_entry;
-    struct keypair;
 }
 
 namespace hw {
@@ -167,8 +180,6 @@ namespace hw {
         /*                               TRANSACTION                               */
         /* ======================================================================= */
 
-        virtual void generate_tx_proof(const crypto::hash &prefix_hash, const crypto::public_key &R, const crypto::public_key &A, const boost::optional<crypto::public_key> &B, const crypto::public_key &D, const crypto::secret_key &r, crypto::signature &sig) = 0;
-
         virtual bool  open_tx(crypto::secret_key &tx_key) = 0;
 
         virtual bool  encrypt_payment_id(crypto::hash8 &payment_id, const crypto::public_key &public_key, const crypto::secret_key &secret_key) = 0;
@@ -178,18 +189,12 @@ namespace hw {
             return encrypt_payment_id(payment_id, public_key, secret_key);
         }
 
-        virtual rct::key genCommitmentMask(const rct::key &amount_key) = 0;
+        virtual bool  ecdhEncode(rct::ecdhTuple & unmasked, const rct::key & sharedSec) = 0;
+        virtual bool  ecdhDecode(rct::ecdhTuple & masked, const rct::key & sharedSec) = 0;
 
-        virtual bool  ecdhEncode(rct::ecdhTuple & unmasked, const rct::key & sharedSec, bool short_amount) = 0;
-        virtual bool  ecdhDecode(rct::ecdhTuple & masked, const rct::key & sharedSec, bool short_amount) = 0;
+        virtual bool  add_output_key_mapping(const crypto::public_key &Aout, const crypto::public_key &Bout, const bool is_subaddress, const size_t real_output_index,
+                                             const rct::key &amount_key,  const crypto::public_key &out_eph_public_key) = 0;
 
-        virtual bool  generate_output_ephemeral_keys(const size_t tx_version, bool &found_change, const cryptonote::account_keys &sender_account_keys,
-                                                     const crypto::public_key &txkey_pub, const crypto::secret_key &tx_key,
-                                                     const cryptonote::tx_destination_entry &dst_entr,
-                                                     const boost::optional<cryptonote::tx_destination_entry> &change_addr, const size_t output_index,
-                                                     const bool &need_additional_txkeys, const std::vector<crypto::secret_key> &additional_tx_keys,
-                                                     std::vector<crypto::public_key> &additional_tx_public_keys, std::vector<rct::key> &amount_keys,
-                                                     crypto::public_key &out_eph_public_key) = 0;
 
         virtual bool  mlsag_prehash(const std::string &blob, size_t inputs_size, size_t outputs_size, const rct::keyV &hashes, const rct::ctkeyV &outPk, rct::key &prehash) = 0;
         virtual bool  mlsag_prepare(const rct::key &H, const rct::key &xx, rct::key &a, rct::key &aG, rct::key &aHP, rct::key &rvII) = 0;
@@ -200,7 +205,7 @@ namespace hw {
         virtual bool  close_tx(void) = 0;
 
     protected:
-        device_mode mode;
+        device_mode mode;        
     } ;
 
     struct reset_mode {

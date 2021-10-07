@@ -76,7 +76,7 @@ namespace
   const command_line::arg_descriptor<bool, false> arg_stagenet = {"stagenet", genms::tr("Create stagenet multisig wallets"), false};
   const command_line::arg_descriptor<bool, false> arg_create_address_file = {"create-address-file", genms::tr("Create an address file for new wallets"), false};
 
-  const command_line::arg_descriptor< std::vector<std::string>> arg_command = {"command", ""};
+  const command_line::arg_descriptor< std::vector<std::string> > arg_command = {"command", ""};
 }
 
 static bool generate_multisig(uint32_t threshold, uint32_t total, const std::string &basename, network_type nettype, bool create_address_file)

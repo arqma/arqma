@@ -45,6 +45,7 @@ target_link_libraries(simplewallet
   PRIVATE
     wallet
     rpc_base
+    rpc_sig
     cryptonote_core
     cncrypto
     common

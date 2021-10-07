@@ -30,43 +30,16 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
-#include "serialization/keyvalue_serialization.h"
-
 namespace cryptonote
 {
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
-  struct vote_verification_context
-  {
-    bool m_verification_failed;
-    bool m_invalid_block_height;
-    bool m_duplicate_voters;
-    bool m_voters_quorum_index_out_of_bounds;
-    bool m_service_node_index_out_of_bounds;
-    bool m_signature_not_valid;
-    bool m_added_to_pool;
-    bool m_full_tx_deregister_made;
-    bool m_not_enough_votes;
-
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE(m_verification_failed)
-      KV_SERIALIZE(m_invalid_block_height)
-      KV_SERIALIZE(m_duplicate_voters)
-      KV_SERIALIZE(m_voters_quorum_index_out_of_bounds)
-      KV_SERIALIZE(m_service_node_index_out_of_bounds)
-      KV_SERIALIZE(m_signature_not_valid)
-      KV_SERIALIZE(m_added_to_pool)
-      KV_SERIALIZE(m_full_tx_deregister_made)
-      KV_SERIALIZE(m_not_enough_votes)
-    END_KV_SERIALIZE_MAP()
-  };
-
   struct tx_verification_context
   {
     bool m_should_be_relayed;
-    bool m_verification_failed; // bad tx, should drop connection
-    bool m_verification_impossible; // the transaction is related with an alternative blockchain
+    bool m_verifivation_failed; //bad tx, should drop connection
+    bool m_verifivation_impossible; //the transaction is related with an alternative blockchain
     bool m_added_to_pool;
     bool m_low_mixin;
     bool m_double_spend;
@@ -75,41 +48,12 @@ namespace cryptonote
     bool m_too_big;
     bool m_overspend;
     bool m_fee_too_low;
-    bool m_not_rct;
-    bool m_too_few_outputs;
-    bool m_invalid_version;
-    bool m_invalid_type;
-    bool m_key_image_locked_by_snode;
-    bool m_key_image_blacklisted;
-
-    vote_verification_context m_vote_ctx;
-
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE(m_should_be_relayed)
-      KV_SERIALIZE(m_verification_failed)
-      KV_SERIALIZE(m_verification_impossible)
-      KV_SERIALIZE(m_added_to_pool)
-      KV_SERIALIZE(m_low_mixin)
-      KV_SERIALIZE(m_double_spend)
-      KV_SERIALIZE(m_invalid_input)
-      KV_SERIALIZE(m_invalid_output)
-      KV_SERIALIZE(m_too_big)
-      KV_SERIALIZE(m_overspend)
-      KV_SERIALIZE(m_fee_too_low)
-      KV_SERIALIZE(m_not_rct)
-      KV_SERIALIZE(m_too_few_outputs)
-      KV_SERIALIZE(m_invalid_version)
-      KV_SERIALIZE(m_invalid_type)
-      KV_SERIALIZE(m_key_image_locked_by_snode)
-      KV_SERIALIZE(m_key_image_blacklisted)
-      KV_SERIALIZE(m_vote_ctx)
-    END_KV_SERIALIZE_MAP()
   };
 
   struct block_verification_context
   {
     bool m_added_to_main_chain;
-    bool m_verification_failed; //bad block, should drop connection
+    bool m_verifivation_failed; //bad block, should drop connection
     bool m_marked_as_orphaned;
     bool m_already_exists;
     bool m_partial_block_reward;

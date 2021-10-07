@@ -32,7 +32,6 @@
 #include "misc_log_ex.h"
 #include "cryptonote_config.h"
 #include "rctTypes.h"
-#include "int-util.h"
 using namespace crypto;
 using namespace std;
 
@@ -120,22 +119,40 @@ namespace rct {
     //uint long long to 32 byte key
     void d2h(key & amounth, const xmr_amount in) {
         sc_0(amounth.bytes);
-        memcpy_swap64le(amounth.bytes, &in, 1);
+        xmr_amount val = in;
+        int i = 0;
+        while (val != 0) {
+            amounth[i] = (unsigned char)(val & 0xFF);
+            i++;
+            val /= (xmr_amount)256;
+        }
     }
 
     //uint long long to 32 byte key
     key d2h(const xmr_amount in) {
         key amounth;
-        d2h(amounth, in);
+        sc_0(amounth.bytes);
+        xmr_amount val = in;
+        int i = 0;
+        while (val != 0) {
+            amounth[i] = (unsigned char)(val & 0xFF);
+            i++;
+            val /= (xmr_amount)256;
+        }
         return amounth;
     }
 
     //uint long long to int[64]
     void d2b(bits  amountb, xmr_amount val) {
         int i = 0;
-        while (i < 64) {
-            amountb[i++] = val & 1;
+        while (val != 0) {
+            amountb[i] = val & 1;
+            i++;
             val >>= 1;
+        }
+        while (i < 64) {
+            amountb[i] = 0;
+            i++;
         }
     }
 
@@ -156,10 +173,15 @@ namespace rct {
         int val = 0, i = 0, j = 0;
         for (j = 0; j < 8; j++) {
             val = (unsigned char)test.bytes[j];
-            i = 0;
-            while (i < 8) {
-                amountb2[j*8+i++] = val & 1;
+            i = 8 * j;
+            while (val != 0) {
+                amountb2[i] = val & 1;
+                i++;
                 val >>= 1;
+            }
+            while (i < 8 * (j + 1)) {
+                amountb2[i] = 0;
+                i++;
             }
         }
     }
@@ -196,7 +218,6 @@ namespace rct {
             case RCTTypeSimple:
             case RCTTypeSimpleBulletproof:
             case RCTTypeBulletproof:
-            case RCTTypeBulletproof2:
                 return true;
             default:
                 return false;
@@ -210,7 +231,6 @@ namespace rct {
             case RCTTypeSimpleBulletproof:
             case RCTTypeFullBulletproof:
             case RCTTypeBulletproof:
-            case RCTTypeBulletproof2:
                 return true;
             default:
                 return false;

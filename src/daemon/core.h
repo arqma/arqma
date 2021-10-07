@@ -60,15 +60,6 @@ public:
     : m_core{nullptr}
     , m_vm_HACK{vm}
   {
-  }
-
-  void set_protocol(t_protocol_raw & protocol)
-  {
-    m_core.set_cryptonote_protocol(&protocol);
-  }
-
-  bool run()
-  {
     //initialize core here
     MGINFO("Initializing core...");
 #if defined(PER_BLOCK_CHECKPOINT)
@@ -81,6 +72,16 @@ public:
       throw std::runtime_error("Failed to initialize core");
     }
     MGINFO("Core initialized OK");
+  }
+
+  // TODO - get rid of circular dependencies in internals
+  void set_protocol(t_protocol_raw & protocol)
+  {
+    m_core.set_cryptonote_protocol(&protocol);
+  }
+
+  bool run()
+  {
     return true;
   }
 

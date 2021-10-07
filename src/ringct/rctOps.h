@@ -173,15 +173,17 @@ namespace rct {
     key cn_fast_hash(const key64 keys);
     key hash_to_scalar(const key64 keys);
 
-    void hash_to_p3(ge_p3 &hash8_p3, const key &k);
+    //returns hashToPoint as described in https://github.com/ShenNoether/ge_fromfe_writeup
+    key hashToPointSimple(const key &in);
+    key hashToPoint(const key &in);
+    void hashToPoint(key &out, const key &in);
 
     //sums a vector of curve points (for scalars use sc_add)
     void sumKeys(key & Csum, const key &Cis);
 
     //Elliptic Curve Diffie Helman: encodes and decodes the amount b and mask a
     // where C= aG + bH
-    key genCommitmentMask(const key &sk);
-    void ecdhEncode(ecdhTuple & unmasked, const key & sharedSec, bool v2);
-    void ecdhDecode(ecdhTuple & masked, const key & sharedSec, bool v2);
+    void ecdhEncode(ecdhTuple & unmasked, const key & sharedSec);
+    void ecdhDecode(ecdhTuple & masked, const key & sharedSec);
 }
 #endif  /* RCTOPS_H */

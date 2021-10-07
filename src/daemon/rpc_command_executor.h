@@ -70,8 +70,6 @@ public:
 
   ~t_rpc_command_executor();
 
-  bool print_checkpoints() { m_rpc_server->on_get_checkpoints(); return true; }
-
   bool print_peer_list(bool white = true, bool gray = true, size_t limit = 0);
 
   bool print_peer_list_stats();
@@ -89,8 +87,6 @@ public:
   bool print_connections();
 
   bool print_blockchain_info(uint64_t start_block_index, uint64_t end_block_index);
-
-  bool print_quorum_state(uint64_t height);
 
   bool set_log_level(int8_t level);
 
@@ -166,17 +162,9 @@ public:
 
   bool check_blockchain_pruning();
 
+  bool rpc_payments();
+  
   bool print_net_stats();
-
-  bool print_sn_key();
-
-  bool print_sn_status();
-
-  bool print_stake_requirement(uint64_t height);
-
-  bool prepare_registration();
-
-  bool print_sn(const std::vector<std::string> &args);
 };
 
 } // namespace daemonize
