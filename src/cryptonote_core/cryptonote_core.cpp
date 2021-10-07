@@ -60,6 +60,8 @@ using namespace epee;
 #include "wipeable_string.h"
 #include "common/i18n.h"
 
+#include "config/ascii.h"
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
 

@@ -110,7 +110,6 @@ namespace cryptonote {
 
     if(median_weight < full_reward_zone)
       median_weight = full_reward_zone;
-    }
 
     if(current_block_weight <= median_weight)
     {
