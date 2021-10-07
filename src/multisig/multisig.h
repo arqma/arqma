@@ -33,11 +33,7 @@
 #include <unordered_map>
 #include "crypto/crypto.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
-
-namespace rct
-{
-  struct key;
-};
+#include "ringct/rctTypes.h"
 
 namespace cryptonote
 {

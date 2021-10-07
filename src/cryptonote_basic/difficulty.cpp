@@ -34,8 +34,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+#include <boost/math/special_functions/round.hpp>
 
-#include "common/arqma.h"
 #include "int-util.h"
 #include "crypto/hash.h"
 #include "cryptonote_config.h"
@@ -244,7 +244,7 @@ namespace cryptonote {
     harmonic_mean_D = N / sum_inverse_D;
 
     // Keep LWMA sane in case something unforeseen occurs.
-    if (static_cast<int64_t>(arqma::round(LWMA)) < T / 20)
+    if (static_cast<int64_t>(boost::math::round(LWMA)) < T / 20)
       LWMA = static_cast<double>(T / 20);
 
     nextDifficulty = harmonic_mean_D * T / LWMA * adjust;
@@ -386,7 +386,7 @@ namespace cryptonote {
     // If it's a new coin, do startup code. Do not remove in case other coins copy your code.
     uint64_t difficulty_guess = 80000;
     if ( timestamps.size() <= 16 ) {   return difficulty_guess;   }
-    if ( timestamps.size() < N + 1 ) { N = timestamps.size()-1;  }
+    if ( timestamps.size()  < N + 1 ) { N = timestamps.size()-1;  }
 
     // If hashrate/difficulty ratio after a fork is < 1/3 prior ratio, hardcode D for N+1 blocks after fork.
     // This will also cover up a very common type of backwards-incompatible fork.
@@ -403,11 +403,11 @@ namespace cryptonote {
 
     for ( i = 1; i <= N; i++) {
       // Temper long solvetime drops if they were preceded by 3 or 6 fast solves.
-      if ( i > 4 && TS[i]-TS[i-1] > 3*T  && TS[i-1] - TS[i-4] < (14*T)/10 ) {   ST = 2*T; }
-      else if ( i > 7 && TS[i]-TS[i-1] > 3*T  && TS[i-1] - TS[i-7] < 4*T ) {   ST = 2*T; }
+      if ( i > 4 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-4] < (14*T)/10 ) {   ST = 2*T; }
+      else if ( i > 7 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-7] < 4*T ) {   ST = 2*T; }
       else { // Assume normal conditions, so get ST.
-        // LWMA drops too much from long ST, so limit drops with a 3*T limit
-        ST = std::min(3*T ,TS[i] - TS[i-1]);
+        // LWMA drops too much from long ST, so limit drops with a 5*T limit
+        ST = std::min(5*T ,TS[i] - TS[i-1]);
       }
       L +=  ST * i ;
     }

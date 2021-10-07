@@ -221,7 +221,7 @@ namespace nodetool
       : m_payload_handler(payload_handler),
         m_external_port(0),
         m_rpc_port(0),
-        m_zmq_port(0),
+        m_rpc_credits_per_hash(0),
         m_allow_local_ip(false),
         m_hide_my_port(false),
         m_igd(no_igd),
@@ -409,6 +409,11 @@ namespace nodetool
       m_zmq_port = zmq_port;
     }
 
+    void set_rpc_credits_per_hash(uint32_t rpc_credits_per_hash)
+    {
+      m_rpc_credits_per_hash = rpc_credits_per_hash;
+    }
+
   private:
     std::string m_config_folder;
 
@@ -420,6 +425,7 @@ namespace nodetool
     uint16_t m_zmq_port;
     uint16_t m_zmq_max_clients;
     bool m_zmq_enabled;
+    uint32_t m_rpc_credits_per_hash;
     bool m_allow_local_ip;
     bool m_hide_my_port;
     igd_t m_igd;

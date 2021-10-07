@@ -40,9 +40,6 @@
 #include "common_defines.h"
 #include "common/util.h"
 
-#include "cryptonote_config.h"
-#include "cryptonote_core/service_node_rules.h"
-
 #include "mnemonics/electrum-words.h"
 #include "mnemonics/english.h"
 #include <boost/format.hpp>
@@ -64,6 +61,7 @@ namespace Monero {
 
 namespace {
     // copy-pasted from simplewallet
+    static const size_t DEFAULT_MIXIN = 10;
     static const int    DEFAULT_REFRESH_INTERVAL_MILLIS = 1000 * 10;
     // limit maximum refresh interval as one minute
     static const int    MAX_REFRESH_INTERVAL_MILLIS = 1000 * 60 * 1;
@@ -289,12 +287,6 @@ bool Wallet::paymentIdValid(const string &paiment_id)
     if (tools::wallet2::parse_long_payment_id(paiment_id, pid))
         return true;
     return false;
-}
-
-bool Wallet::serviceNodePubkeyValid(const std::string &str)
-{
-  crypto::public_key sn_key;
-  return epee::string_tools::hex_to_pod(str, sn_key);
 }
 
 bool Wallet::addressValid(const std::string &str, NetworkType nettype)
@@ -571,72 +563,51 @@ bool WalletImpl::recoverFromKeysWithPassword(const std::string &path,
     }
 
     // parse view secret key
-    bool has_viewkey = true;
-    crypto::secret_key viewkey;
-    if(viewkey_string.empty())
-    {
-      if(has_spendkey)
-      {
-        has_viewkey = false;
-      }
-      else
-      {
+    if (viewkey_string.empty()) {
         setStatusError(tr("No view key supplied, cancelled"));
         return false;
-      }
     }
-    if(has_viewkey)
+    cryptonote::blobdata viewkey_data;
+    if(!epee::string_tools::parse_hexstr_to_binbuff(viewkey_string, viewkey_data) || viewkey_data.size() != sizeof(crypto::secret_key))
     {
-      cryptonote::blobdata viewkey_data;
-      if(!epee::string_tools::parse_hexstr_to_binbuff(viewkey_string, viewkey_data) || viewkey_data.size() != sizeof(crypto::secret_key))
-      {
         setStatusError(tr("failed to parse secret view key"));
         return false;
-      }
-      viewkey = *reinterpret_cast<const crypto::secret_key*>(viewkey_data.data());
     }
+    crypto::secret_key viewkey = *reinterpret_cast<const crypto::secret_key*>(viewkey_data.data());
+
     // check the spend and view keys match the given address
     crypto::public_key pkey;
     if(has_spendkey) {
-        if(!crypto::secret_key_to_public_key(spendkey, pkey)) {
+        if (!crypto::secret_key_to_public_key(spendkey, pkey)) {
             setStatusError(tr("failed to verify secret spend key"));
             return false;
         }
-        if(info.address.m_spend_public_key != pkey) {
+        if (info.address.m_spend_public_key != pkey) {
             setStatusError(tr("spend key does not match address"));
             return false;
         }
     }
-    if(has_viewkey)
-    {
-      if(!crypto::secret_key_to_public_key(viewkey, pkey)) {
+    if (!crypto::secret_key_to_public_key(viewkey, pkey)) {
         setStatusError(tr("failed to verify secret view key"));
         return false;
-      }
-      if(info.address.m_view_public_key != pkey) {
+    }
+    if (info.address.m_view_public_key != pkey) {
         setStatusError(tr("view key does not match address"));
         return false;
-      }
     }
 
     try
     {
-      if(has_spendkey && has_viewkey)
-      {
-        m_wallet->generate(path, password, info.address, spendkey, viewkey);
-        LOG_PRINT_L1("Generated new wallet from keys with seed language: ");
-      }
-      if(!has_spendkey && has_viewkey
-      {
-        m_wallet->generate(path, password, info.address, viewkey);
-        LOG_PRINT_L1("Generated new view only wallet from keys");
-      }
-      if(has_spendkey && !has_viewkey)
-      {
-        m_wallet->generate(path, password, spendkey, true, false, false);
-        setSeedLanguage(language);
-        LOG_PRINT_L1("Generated deterministic wallet from spendkey with seed language: " + language);
-      }
+        if (has_spendkey) {
+            m_wallet->generate(path, password, info.address, spendkey, viewkey);
+            setSeedLanguage(language);
+            LOG_PRINT_L1("Generated new wallet from keys with seed language: " + language);
+        }
+        else {
+            m_wallet->generate(path, password, info.address, viewkey);
+            LOG_PRINT_L1("Generated new view only wallet from keys");
+        }
+
     }
     catch (const std::exception& e) {
         setStatusError(string(tr("failed to generate new wallet: ")) + e.what());
@@ -1375,7 +1346,7 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
     // TODO:  (https://bitcointalk.org/index.php?topic=753252.msg9985441#msg9985441)
     size_t fake_outs_count = mixin_count > 0 ? mixin_count : m_wallet->default_mixin();
     if (fake_outs_count == 0)
-        fake_outs_count = config::tx_settings::tx_mixin;;
+        fake_outs_count = DEFAULT_MIXIN;
 
     uint32_t adjusted_priority = m_wallet->adjust_priority(static_cast<uint32_t>(priority));
 
@@ -2347,39 +2318,6 @@ bool WalletImpl::isKeysFileLocked()
 {
     return m_wallet->is_keys_file_locked();
 }
-
-PendingTransaction* WalletImpl::stakePending(const std::string& sn_key_str, const std::string& amount_str, std::string& error_msg)
-{
-  crypto::public_key sn_key;
-  if(!epee::string_tools::hex_to_pod(sn_key_str, sn_key))
-  {
-    error_msg = "failed to parse service node pubkey";
-    LOG_ERROR(error_msg);
-    return nullptr;
-  }
-
-  uint64_t amount;
-  if(!cryptonote::parse_amount(amount, amount_str))
-  {
-    stringstream str;
-    str << boost::format("Incorrect amount: %1%, expected a number from %2% to %3%") % amount_str % print_money(1) % print_money(std::numeric_limits<uint64_t>::max());
-    error_msg = str.str();
-    LOG_ERROR(error_msg);
-    return nullptr;
-  }
-
-  PendingTransactionImpl * transaction = new PendingTransactionImpl(*this);
-
-  wallet2::stake_result stake_result = m_wallet->create_stake_tx(transaction->m_pending_tx, sn_key, amount);
-  if(stake_result != wallet2::stake_result::success))
-  {
-    error_msg = "Failed to create a stake transaction: " + stake_result.msg;
-    return nullptr;
-  }
-
-  return transaction;
-}
-
 } // namespace
 
 namespace Bitmonero = Monero;

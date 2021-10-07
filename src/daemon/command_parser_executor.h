@@ -60,8 +60,6 @@ public:
     , cryptonote::core_rpc_server* rpc_server = NULL
     );
 
-  bool print_checkpoints(const std::vector<std::string>& args) { m_executor.print_checkpoints(); return true; }
-
   bool print_peer_list(const std::vector<std::string>& args);
 
   bool print_peer_list_stats(const std::vector<std::string>& args);
@@ -79,18 +77,6 @@ public:
   bool print_connections(const std::vector<std::string>& args);
 
   bool print_blockchain_info(const std::vector<std::string>& args);
-
-  bool print_quorum_state(const std::vector<std::string>& args);
-
-  bool print_sn_key(const std::vector<std::string>& args);
-
-  bool print_stake_requirement(const std::vector<std::string>& args);
-
-  bool prepare_registration();
-
-  bool print_sn(const std::vector<std::string>& args);
-
-  bool print_sn_status(const std::vector<std::string>& args);
 
   bool set_log_level(const std::vector<std::string>& args);
 
@@ -157,6 +143,8 @@ public:
   bool sync_info(const std::vector<std::string>& args);
 
   bool pop_blocks(const std::vector<std::string>& args);
+
+  bool rpc_payments(const std::vector<std::string>& args);
 
   bool version(const std::vector<std::string>& args);
 

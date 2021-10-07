@@ -47,8 +47,8 @@
 // whether they can talk to a given wallet without having to know in
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
-#define WALLET_RPC_VERSION_MAJOR 2
-#define WALLET_RPC_VERSION_MINOR 0
+#define WALLET_RPC_VERSION_MAJOR 1
+#define WALLET_RPC_VERSION_MINOR 17
 #define MAKE_WALLET_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define WALLET_RPC_VERSION MAKE_WALLET_RPC_VERSION(WALLET_RPC_VERSION_MAJOR, WALLET_RPC_VERSION_MINOR)
 namespace tools
@@ -1377,7 +1377,6 @@ namespace wallet_rpc
     uint64_t unlock_time;
     cryptonote::subaddress_index subaddr_index;
     std::string address;
-    std::vector<cryptonote::subaddress_index> subaddr_indices;
     bool double_spend_seen;
     uint64_t confirmations;
     uint64_t suggested_confirmations_threshold;
@@ -1394,7 +1393,6 @@ namespace wallet_rpc
       KV_SERIALIZE(type);
       KV_SERIALIZE(unlock_time)
       KV_SERIALIZE(subaddr_index);
-      KV_SERIALIZE(subaddr_indices);
       KV_SERIALIZE(address);
       KV_SERIALIZE(double_spend_seen)
       KV_SERIALIZE_OPT(confirmations, (uint64_t)0)
@@ -2433,96 +2431,6 @@ namespace wallet_rpc
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
-  struct COMMAND_RPC_REGISTER_SERVICE_NODE
-  {
-    struct request_t
-    {
-      std::string register_service_node_str;
-      bool get_tx_key;
-      bool do_not_relay;
-      bool get_tx_hex;
-      bool get_tx_metadata;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(register_service_node_str)
-        KV_SERIALIZE(get_tx_key)
-        KV_SERIALIZE_OPT(do_not_relay, false)
-        KV_SERIALIZE_OPT(get_tx_hex, false)
-        KV_SERIALIZE_OPT(get_tx_metadata, false)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      std::string tx_hash;
-      std::string tx_key;
-      uint64_t amount;
-      uint64_t fee;
-      std::string tx_blob;
-      std::string tx_metadata;
-      std::string multisig_txset;
-      std::string unsigned_txset;
-
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(tx_hash)
-        KV_SERIALIZE(tx_key)
-        KV_SERIALIZE(amount)
-        KV_SERIALIZE(fee)
-        KV_SERIALIZE(tx_blob)
-        KV_SERIALIZE(tx_metadata)
-        KV_SERIALIZE(multisig_txset)
-        KV_SERIALIZE(unsigned_txset)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_REQUEST_STAKE_UNLOCK
-  {
-    struct request_t
-    {
-      std::string service_node_key;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(service_node_key)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      bool unlocked;
-      std::string msg;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(unlocked)
-        KV_SERIALIZE(msg)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_CAN_REQUEST_STAKE_UNLOCK
-  {
-    struct request_t
-    {
-      std::string service_node_key;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(service_node_key)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      bool can_unlock;
-      std::string msg;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(can_unlock)
-        KV_SERIALIZE(msg)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
   struct COMMAND_RPC_VALIDATE_ADDRESS
   {
     struct request_t
@@ -2630,57 +2538,6 @@ namespace wallet_rpc
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(categories)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_STAKE
-  {
-    struct request_t
-    {
-      std::string destination;
-      uint64_t amount;
-      std::set<uint32_t> subaddr_indices;
-      std::string service_node_key;
-      uint32_t priority;
-      bool get_tx_key;
-      bool do_not_relay;
-      bool get_tx_hex;
-      bool get_tx_metadata;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_OPT(subaddr_indices, {});
-        KV_SERIALIZE(destination);
-        KV_SERIALIZE(amount);
-        KV_SERIALIZE(service_node_key);
-        KV_SERIALIZE_OPT(priority, (uint32_t)0);
-        KV_SERIALIZE(get_tx_key)
-        KV_SERIALIZE_OPT(do_not_relay, false)
-        KV_SERIALIZE_OPT(get_tx_hex, false)
-        KV_SERIALIZE_OPT(get_tx_metadata, false)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      std::string tx_hash;
-      std::string tx_key;
-      uint64_t amount;
-      uint64_t fee;
-      std::string tx_blob;
-      std::string tx_metadata;
-      std::string multisig_txset;
-      std::string unsigned_txset;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(tx_hash)
-        KV_SERIALIZE(tx_key)
-        KV_SERIALIZE(amount)
-        KV_SERIALIZE(fee)
-        KV_SERIALIZE(tx_blob)
-        KV_SERIALIZE(tx_metadata)
-        KV_SERIALIZE(multisig_txset)
-        KV_SERIALIZE(unsigned_txset)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;

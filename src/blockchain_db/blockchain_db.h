@@ -155,7 +155,8 @@ struct txpool_tx_meta_t
   uint8_t relayed;
   uint8_t do_not_relay;
   uint8_t double_spend_seen: 1;
-  uint8_t bf_padding: 7;
+  uint8_t pruned: 1;
+  uint8_t bf_padding: 6;
 
   uint8_t padding[76]; // till 192 bytes
 };
@@ -1177,22 +1178,6 @@ public:
    */
   virtual uint64_t get_tx_unlock_time(const crypto::hash& h) const = 0;
 
-  // return unlock time of output with the given amount and output amount index
-  /**
-   * @brief fetch an output's unlock time/height
-   *
-   * The subclass should return the stored unlock time for the output
-   * with the given amount and output amount index.
-   *
-   * If no such output exists, the subclass should throw OUTPUT_DNE.
-   *
-   * @param amount the amount of the requested output
-   * @param amount_index the amount index of the requested output
-   *
-   * @return the unlock time/height
-   */
-  uint64_t get_output_unlock_time(const uint64_t amount, const uint64_t global_index) const;
-
   // return tx with hash <h>
   // throw if no such tx exists
   /**
@@ -1803,9 +1788,6 @@ public:
 
   virtual bool get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, std::vector<uint64_t> &distribution, uint64_t &base) const = 0;
 
-  virtual bool get_output_blacklist(std::vector<uint64_t> &blacklist) const = 0;
-  virtual void add_output_blacklist(std::vector<uint64_t> const &blacklist) = 0;
-
   /**
    * @brief is BlockchainDB in read-only mode?
    *
@@ -1826,10 +1808,6 @@ public:
    * @brief fix up anything that may be wrong due to past bugs
    */
   virtual void fixup();
-
-  virtual void set_service_node_data(const std::string &data) = 0;
-  virtual bool get_service_node_data(std::string &data) = 0;
-  virtual void clear_service_node_data() = 0;
 
   /**
    * @brief set whether or not to automatically remove logs

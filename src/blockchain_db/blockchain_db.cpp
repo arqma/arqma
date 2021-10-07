@@ -89,24 +89,17 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
   {
     tx_hash = *tx_hash_ptr;
   }
-
-  bool has_blacklisted_outputs = false;
-  if(tx.version >= cryptonote::txversion::v2)
+  if (tx.version >= 2)
   {
     if (!tx_prunable_hash_ptr)
       tx_prunable_hash = get_transaction_prunable_hash(tx, &txp.second);
     else
       tx_prunable_hash = *tx_prunable_hash_ptr;
-
-    crypto::secret_key secret_tx_key;
-    cryptonote::account_public_address address;
-    if(get_tx_secret_key_from_tx_extra(tx.extra, secret_tx_key) && get_service_node_contributor_from_tx_extra(tx.extra, address))
-      has_blacklisted_outputs = true;
   }
 
   for (const txin_v& tx_input : tx.vin)
   {
-    if(tx_input.type() == typeid(txin_to_key))
+    if (tx_input.type() == typeid(txin_to_key))
     {
       add_spent_key(boost::get<txin_to_key>(tx_input).k_image);
     }
@@ -130,34 +123,20 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
   // we need the index
   for (uint64_t i = 0; i < tx.vout.size(); ++i)
   {
-    uint64_t unlock_time = 0;
-    if(tx.version >= cryptonote::txversion::v3)
-    {
-      unlock_time = tx.output_unlock_times[i];
-    }
-    else
-    {
-      unlock_time = tx.unlock_time;
-    }
-
     // miner v2 txes have their coinbase output in one single out to save space,
     // and we store them as rct outputs with an identity mask
-    if (miner_tx && tx.version >= cryptonote::txversion::v2)
+    if (miner_tx && tx.version >= 2)
     {
       cryptonote::tx_out vout = tx.vout[i];
       rct::key commitment = rct::zeroCommit(vout.amount);
       vout.amount = 0;
-      amount_output_indices[i] = add_output(tx_hash, vout, i, unlock_time, &commitment);
+      amount_output_indices[i] = add_output(tx_hash, vout, i, tx.unlock_time, &commitment);
     }
     else
     {
-      amount_output_indices[i] = add_output(tx_hash, tx.vout[i], i, unlock_time, tx.version >= cryptonote::txversion::v2 ? &tx.rct_signatures.outPk[i].mask : NULL);
+      amount_output_indices[i] = add_output(tx_hash, tx.vout[i], i, tx.unlock_time, &tx.rct_signatures.outPk[i].mask);
     }
   }
-
-  if(has_blacklisted_outputs)
-    add_output_blacklist(amount_output_indices);
-
   add_tx_amount_output_indices(tx_id, amount_output_indices);
 }
 
@@ -188,8 +167,9 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
   time1 = epee::misc_utils::get_tick_count();
 
   uint64_t num_rct_outs = 0;
-  add_transaction(blk_hash, std::make_pair(blk.miner_tx, tx_to_blob(blk.miner_tx)));
-  if (blk.miner_tx.version >= cryptonote::txversion::v2)
+  blobdata miner_bd = tx_to_blob(blk.miner_tx);
+  add_transaction(blk_hash, std::make_pair(blk.miner_tx, blobdata_ref(miner_bd)));
+  if (blk.miner_tx.version >= 2)
     num_rct_outs += blk.miner_tx.vout.size();
   int tx_i = 0;
   crypto::hash tx_hash = crypto::null_hash;
@@ -319,13 +299,6 @@ transaction BlockchainDB::get_pruned_tx(const crypto::hash& h) const
   if (!get_pruned_tx(h, tx))
     throw TX_DNE(std::string("pruned tx with hash ").append(epee::string_tools::pod_to_hex(h)).append(" not found in db").c_str());
   return tx;
-}
-
-uint64_t BlockchainDB::get_output_unlock_time(const uint64_t amount, const uint64_t amount_index) const
-{
-  output_data_t odata = get_output_key(amount, amount_index);
-
-  return odata.unlock_time;
 }
 
 void BlockchainDB::reset_stats()

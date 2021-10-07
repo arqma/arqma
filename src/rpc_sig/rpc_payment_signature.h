@@ -1,6 +1,5 @@
-// Copyright (c) 2014-2020, The Monero Project
-// Copyright (c) 2018-2020, The Loki Project
-// Copyright (c)      2020, The Arqma Network
+// Copyright (c) 2019, The Arqma Network
+// Copyright (c) 2018-2019, The Monero Project
 //
 // All rights reserved.
 //
@@ -28,17 +27,14 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ARQMA_H
-#define ARQMA_H
+#pragma once
 
+#include <stdint.h>
 #include <string>
+#include "crypto/crypto.h"
 
-#define ARQMA_ARRAY_COUNT(array) sizeof(array)/sizeof(array[0])
-namespace arqma
+namespace cryptonote
 {
-  double round(double);
-  double exp2(double);
-  std::string hex64_to_base32z(std::string const& src);
-}; // namespace arqma
-
-#endif // ARQMA_H
+  std::string make_rpc_payment_signature(const crypto::secret_key &skey);
+  bool verify_rpc_payment_signature(const std::string &message, crypto::public_key &pkey, uint64_t &ts);
+}

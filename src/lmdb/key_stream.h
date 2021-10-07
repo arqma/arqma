@@ -262,3 +262,4 @@ namespace lmdb
         return !lhs.equal(rhs);
     }
 } // lmdb
+

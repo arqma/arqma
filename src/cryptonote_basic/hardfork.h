@@ -40,7 +40,8 @@ namespace cryptonote
   {
   public:
     typedef enum {
-      Ready
+      LikelyForked,
+      Ready,
     } State;
 
     static const time_t DEFAULT_FORKED_TIME = 31557600; // a year in seconds
@@ -146,14 +147,14 @@ namespace cryptonote
     bool reorganize_from_block_height(uint64_t height);
     bool reorganize_from_chain_height(uint64_t height);
 
-     /**
-      * @brief called when one or more blocks are popped from the blockchain
-      *
-      * The current fork will be updated by looking up the db,
-      * which is much cheaper than recomputing everything
-      *
-      * @param new_chain_height the height of the chain after popping
-      */
+    /**
+     * @brief called when one or more blocks are popped from the blockchain
+     *
+     * The current fork will be updated by looking up the db,
+     * which is much cheaper than recomputing everything
+     *
+     * @param new_chain_height the height of the chain after popping
+     */
     void on_block_popped(uint64_t new_chain_height);
 
     /**
