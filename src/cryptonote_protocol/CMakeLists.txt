@@ -27,6 +27,9 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+cmake_minimum_required(VERSION 3.10)
+project(arqma CXX)
+
 set(cryptonote_protocol_sources
   block_queue.cpp
   cryptonote_protocol_handler-base.cpp
@@ -52,4 +55,6 @@ target_link_libraries(cryptonote_protocol
   PUBLIC
     p2p
   PRIVATE
+    miniupnpc
+    easylogging
     ${EXTRA_LIBRARIES})

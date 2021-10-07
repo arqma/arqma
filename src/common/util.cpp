@@ -87,6 +87,7 @@ using namespace epee;
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <openssl/sha.h>
+#include "i18n.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "util"
@@ -1071,38 +1072,20 @@ void closefrom(int fd)
     return std::string(buffer);
   }
 
-  std::string get_human_readable_timespan(uint64_t seconds)
+  std::string get_human_readable_timespan(std::chrono::seconds seconds)
   {
-    if (seconds < 60)
-      return std::to_string(seconds) + " seconds";
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(1);
-    if (seconds < 3600)
-    {
-      ss << seconds / 60.f;
-      return ss.str() + " minutes";
-    }
-    if (seconds < 3600 * 24)
-    {
-      ss << seconds / 3600.f;
-      return ss.str() + " hours";
-    }
-    if (seconds < 3600 * 24 * 30.5f)
-    {
-      ss << seconds / (3600 * 24.f);
-      return ss.str() + " days";
-    }
-    if (seconds < 3600 * 24 * 365.25f)
-    {
-      ss << seconds / (3600 * 24 * 30.5f);
-      return ss.str() + " months";
-    }
-    if (seconds < 3600 * 24 * 365.25f * 100)
-    {
-      ss << seconds / (3600 * 24 * 365.25f);
-      return ss.str() + " years";
-    }
-    return "a long time";
+    uint64_t ts = seconds.count();
+    if (ts < 60)
+      return std::to_string(ts) + tr(" seconds");
+    if (ts < 3600)
+      return std::to_string((uint64_t)(ts / 60)) + tr(" minutes");
+    if (ts < 3600 * 24)
+      return std::to_string((uint64_t)(ts / 3600)) + tr(" hours");
+    if (ts < 3600 * 24 * 30.5)
+      return std::to_string((uint64_t)(ts / (3600 * 24))) + tr(" days");
+    if (ts < 3600 * 24 * 365.25)
+      return std::to_string((uint64_t)(ts / (3600 * 24 * 30.5))) + tr(" months");
+    return tr("a long time");
   }
 
   std::string get_human_readable_bytes(uint64_t bytes)
@@ -1143,7 +1126,7 @@ void closefrom(int fd)
   // calculating sync time estimates
   uint64_t cumulative_block_sync_weight(cryptonote::network_type nettype, uint64_t start_block, uint64_t num_blocks)
   {
-    if (nettype != cryptonote::MAINNET)
+    if(nettype != cryptonote::MAINNET)
     {
       // No detailed data available except for Mainnet: Give back the number of blocks
       // as a very simple and non-varying block sync weight for ranges of Testnet and

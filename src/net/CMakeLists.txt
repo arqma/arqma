@@ -51,8 +51,4 @@ target_link_libraries(net
   PUBLIC
     common
     epee
-    miniupnpc
-    libunbound
-    ${Boost_ASIO_LIBRARY}
-  PRIVATE
-    ${EXTRA_LIBRARIES})
+    ${Boost_ASIO_LIBRARY})

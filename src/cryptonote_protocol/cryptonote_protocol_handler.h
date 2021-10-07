@@ -37,6 +37,7 @@
 
 #include <boost/program_options/variables_map.hpp>
 #include <string>
+#include <unordered_map>
 
 #include "math_helper.h"
 #include "storages/levin_abstract_invoke2.h"
@@ -90,6 +91,9 @@ namespace cryptonote
       HANDLE_NOTIFY_T2(NOTIFY_RESPONSE_CHAIN_ENTRY, &cryptonote_protocol_handler::handle_response_chain_entry)
       HANDLE_NOTIFY_T2(NOTIFY_NEW_FLUFFY_BLOCK, &cryptonote_protocol_handler::handle_notify_new_fluffy_block)
       HANDLE_NOTIFY_T2(NOTIFY_REQUEST_FLUFFY_MISSING_TX, &cryptonote_protocol_handler::handle_request_fluffy_missing_tx)
+      HANDLE_NOTIFY_T2(NOTIFY_NEW_DEREGISTER_VOTE, &cryptonote_protocol_handler::handle_notify_new_deregister_vote)
+      HANDLE_NOTIFY_T2(NOTIFY_UPTIME_PROOF, &cryptonote_protocol_handler::handle_uptime_proof)
+      HANDLE_NOTIFY_T2(NOTIFY_NEW_CHECKPOINT_VOTE, &cryptonote_protocol_handler::handle_notify_new_checkpoint_vote)
     END_INVOKE_MAP2()
 
     bool on_idle();
@@ -124,10 +128,17 @@ namespace cryptonote
     int handle_response_chain_entry(int command, NOTIFY_RESPONSE_CHAIN_ENTRY::request& arg, cryptonote_connection_context& context);
     int handle_notify_new_fluffy_block(int command, NOTIFY_NEW_FLUFFY_BLOCK::request& arg, cryptonote_connection_context& context);
     int handle_request_fluffy_missing_tx(int command, NOTIFY_REQUEST_FLUFFY_MISSING_TX::request& arg, cryptonote_connection_context& context);
+    int handle_notify_new_deregister_vote(int command, NOTIFY_NEW_DEREGISTER_VOTE::request& arg, cryptonote_connection_context& context);
+		int handle_uptime_proof(int command, NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& context);
+		int handle_notify_new_checkpoint_vote(int command, NOTIFY_NEW_CHECKPOINT_VOTE::request& arg, cryptonote_connection_context& context);
 
     //----------------- i_bc_protocol_layout ---------------------------------------
     virtual bool relay_block(NOTIFY_NEW_BLOCK::request& arg, cryptonote_connection_context& exclude_context);
     virtual bool relay_transactions(NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& exclude_context);
+    virtual bool relay_deregister_votes(NOTIFY_NEW_DEREGISTER_VOTE::request& arg, cryptonote_connection_context& exclude_context);
+		//----------------- uptime proof ---------------------------------------
+    virtual bool relay_uptime_proof(NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& exclude_context);
+    virtual bool relay_checkpoint_votes(NOTIFY_NEW_CHECKPOINT_VOTE::request& arg, cryptonote_connection_context& exclude_context);
     //----------------------------------------------------------------------------------
     //bool get_payload_sync_data(HANDSHAKE_DATA::request& hshd, cryptonote_connection_context& context);
     bool should_drop_connection(cryptonote_connection_context& context, uint32_t next_stripe);
@@ -135,7 +146,6 @@ namespace cryptonote
     size_t get_synchronizing_connections_count();
     bool on_connection_synchronized();
     bool should_download_next_span(cryptonote_connection_context& context, bool standby);
-    bool should_ask_for_pruned_data(cryptonote_connection_context& context, uint64_t first_block_height, uint64_t nblocks, bool check_block_weights) const;
     void drop_connection(cryptonote_connection_context &context, bool add_fail, bool flush_all_spans);
     bool kick_idle_peers();
     bool check_standby_peers();
@@ -162,7 +172,6 @@ namespace cryptonote
     uint64_t m_sync_spans_downloaded, m_sync_old_spans_downloaded, m_sync_bad_spans_downloaded;
     uint64_t m_sync_download_chain_size, m_sync_download_objects_size;
     size_t m_block_download_max_size;
-    bool m_sync_pruned_blocks;
 
     // Values for sync time estimates
     boost::posix_time::ptime m_sync_start_time;
@@ -177,14 +186,14 @@ namespace cryptonote
     boost::circular_buffer<size_t> m_avg_buffer = boost::circular_buffer<size_t>(10);
 
     template<class t_parameter>
-      bool post_notify(typename t_parameter::request& arg, cryptonote_connection_context& context)
-      {
-        LOG_PRINT_L2("[" << epee::net_utils::print_connection_context_short(context) << "] post " << typeid(t_parameter).name() << " -->");
-        std::string blob;
-        epee::serialization::store_t_to_binary(arg, blob);
-        //handler_response_blocks_now(blob.size()); // XXX
-        return m_p2p->invoke_notify_to_peer(t_parameter::ID, epee::strspan<uint8_t>(blob), context);
-      }
+    bool post_notify(typename t_parameter::request& arg, cryptonote_connection_context& context)
+    {
+      LOG_PRINT_L2("[" << epee::net_utils::print_connection_context_short(context) << "] post " << typeid(t_parameter).name() << " -->");
+      std::string blob;
+      epee::serialization::store_t_to_binary(arg, blob);
+      //handler_response_blocks_now(blob.size()); // XXX
+      return m_p2p->invoke_notify_to_peer(t_parameter::ID, epee::strspan<uint8_t>(blob), context);
+    }
   };
 
 } // namespace

@@ -35,8 +35,10 @@
 #include "string_tools.h"
 #include "storages/portable_storage_template_helper.h" // epee json include
 #include "serialization/keyvalue_serialization.h"
+#include "cryptonote_core/service_node_rules.h"
 #include <functional>
 #include <vector>
+#include "syncobj.h"
 
 using namespace epee;
 
@@ -69,22 +71,134 @@ namespace cryptonote
   };
 
   //---------------------------------------------------------------------------
-  checkpoints::checkpoints()
-  {
-  }
-  //---------------------------------------------------------------------------
   bool checkpoints::add_checkpoint(uint64_t height, const std::string& hash_str)
   {
     crypto::hash h = crypto::null_hash;
     bool r = epee::string_tools::hex_to_pod(hash_str, h);
     CHECK_AND_ASSERT_MES(r, false, "Failed to parse checkpoint hash string into binary representation!");
 
-    // return false if adding at a height we already have AND the hash is different
+    CRITICAL_REGION_LOCAL(m_lock);
     if (m_points.count(height))
     {
-      CHECK_AND_ASSERT_MES(h == m_points[height], false, "Checkpoint at given height already exists, and hash for new checkpoint was different!");
+      checkpoint_t const &checkpoint = m_points[height];
+      crypto::hash const &curr_hash = checkpoint.block_hash;
+      CHECK_AND_ASSERT_MES(h == curr_hash, false, "Checkpoint at given height already exists, and hash for new checkpoint was different!");
     }
-    m_points[height] = h;
+    else
+    {
+      checkpoint_t checkpoint = {};
+      checkpoint.type = checkpoint_type::predefined_or_dns;
+      checkpoint.block_hash = h;
+      m_points[height] = checkpoint;
+    }
+
+    return true;
+  }
+  //---------------------------------------------------------------------------
+  static bool add_vote_if_unique(checkpoint_t &checkpoint, service_nodes::checkpoint_vote const &vote)
+  {
+    CHECK_AND_ASSERT_MES(checkpoint.block_hash == vote.block_hash, false, "DEV Error");
+
+    CHECK_AND_ASSERT_MES(vote.voters_quorum_index < service_nodes::QUORUM_SIZE, false, "Vote is indexing out of bounds");
+
+    const auto signature_it = std::find_if(checkpoint.signatures.begin(), checkpoint.signatures.end(), [&vote](service_nodes::voter_to_signature const &check)
+    {
+      return vote.voters_quorum_index == check.quorum_index;
+    });
+
+    if(signature_it == checkpoint.signatures.end())
+    {
+      service_nodes::voter_to_signature new_voter_to_signature = {};
+      new_voter_to_signature.quorum_index = vote.voters_quorum_index;
+      new_voter_to_signature.signature = vote.signature;
+      checkpoint.signatures.push_back(new_voter_to_signature);
+      return true;
+    }
+
+    return false;
+  }
+  //---------------------------------------------------------------------------
+  bool checkpoints::add_checkpoint_vote(service_nodes::checkpoint_vote const &vote)
+  {
+#if 0
+    uint64_t newest_checkpoint_height = get_max_height();
+    if(vote.block_height < newest_checkpoint_height)
+      return true;
+#endif
+
+    CRITICAL_REGION_LOCAL(m_lock);
+    std::array<int, service_nodes::QUORUM_SIZE> unique_vote_set = {};
+    auto pre_existing_checkpoint_it = m_points.find(vote.block_height);
+    if (pre_existing_checkpoint_it != m_points.end())
+    {
+      checkpoint_t &checkpoint = pre_existing_checkpoint_it->second;
+      if(checkpoint.type == checkpoint_type::predefined_or_dns)
+        return true;
+
+      if(checkpoint.block_hash == vote.block_hash)
+      {
+        bool added = add_vote_if_unique(checkpoint, vote);
+        return added;
+      }
+
+      for(service_nodes::voter_to_signature const &vote_to_sig : checkpoint.signatures)
+      {
+        if(vote_to_sig.quorum_index > unique_vote_set.size())
+          return false;
+        ++unique_vote_set[vote_to_sig.quorum_index];
+      }
+
+    }
+
+    std::vector<checkpoint_t> &candidate_checkpoints    = m_staging_points[vote.block_height];
+    std::vector<checkpoint_t>::iterator curr_checkpoint = candidate_checkpoints.end();
+    for(auto it = candidate_checkpoints.begin(); it != candidate_checkpoints.end(); it++)
+    {
+      checkpoint_t const &checkpoint = *it;
+      if(checkpoint.block_hash == vote.block_hash)
+        curr_checkpoint = it;
+
+      for(service_nodes::voter_to_signature const &vote_to_sig : checkpoint.signatures)
+      {
+        if(vote_to_sig.quorum_index > unique_vote_set.size())
+          return false;
+
+        if(++unique_vote_set[vote_to_sig.quorum_index] > 1)
+        {
+          return false;
+        }
+      }
+    }
+
+    if(curr_checkpoint == candidate_checkpoints.end())
+    {
+      checkpoint_t new_checkpoint = {};
+      new_checkpoint.type = checkpoint_type::service_node;
+      new_checkpoint.block_hash = vote.block_hash;
+      candidate_checkpoints.push_back(new_checkpoint);
+      curr_checkpoint = (candidate_checkpoints.end() - 1);
+    }
+
+    if(add_vote_if_unique(*curr_checkpoint, vote))
+    {
+      if(curr_checkpoint->signatures.size() > service_nodes::MIN_VOTES_TO_CHECKPOINT)
+      {
+        uint64_t reorg_sentinel_height = 0;
+        int num_checkpoints = 0;
+        for(auto it = m_points.rbegin(); it != m_points.rend() && num_checkpoints < 2; it++, num_checkpoints++)
+        {
+          reorg_sentinel_height = it->first;
+          checkpoint_t const &reorg_sentinel_checkpoint = it->second;
+          if(reorg_sentinel_checkpoint.type == checkpoint_type::predefined_or_dns)
+            break;
+        }
+
+        m_oldest_possible_reorg_limit = reorg_sentinel_height + 1;
+        m_points[vote.block_height] = *curr_checkpoint;
+        candidate_checkpoints.erase(curr_checkpoint);
+      }
+    }
+
     return true;
   }
   //---------------------------------------------------------------------------
@@ -93,66 +207,58 @@ namespace cryptonote
     return !m_points.empty() && (height <= (--m_points.end())->first);
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::check_block(uint64_t height, const crypto::hash& h, bool& is_a_checkpoint) const
+  bool checkpoints::check_block(uint64_t height, const crypto::hash& h, bool* is_a_checkpoint) const
   {
     auto it = m_points.find(height);
-    is_a_checkpoint = it != m_points.end();
-    if(!is_a_checkpoint)
+    bool found  = (it != m_points.end());
+    if(is_a_checkpoint) *is_a_checkpoint = found;
+
+    if(!found)
       return true;
 
-    if(it->second == h)
-    {
+    checkpoint_t const &checkpoint = it->second;
+    bool result = checkpoint.block_hash == h;
+    if(result)
       MINFO("CHECKPOINT PASSED FOR HEIGHT " << height << " " << h);
-      return true;
-    }
     else
-    {
-      MWARNING("CHECKPOINT FAILED FOR HEIGHT " << height << ". EXPECTED HASH: " << it->second << ", FETCHED HASH: " << h);
-      return false;
-    }
+      MWARNING("CHECKPOINT FAILED FOR HEIGHT " << height << ". EXPECTED HASH " << checkpoint.block_hash << "FETCHED HASH: " << h);
+    return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::check_block(uint64_t height, const crypto::hash& h) const
-  {
-    bool ignored;
-    return check_block(height, h, ignored);
-  }
-  //---------------------------------------------------------------------------
-  //FIXME: is this the desired behavior?
   bool checkpoints::is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height) const
   {
-    if (0 == block_height)
+    if(0 == block_height)
       return false;
 
     auto it = m_points.upper_bound(blockchain_height);
-    // Is blockchain_height before the first checkpoint?
-    if (it == m_points.begin())
+    if(it == m_points.begin())
       return true;
 
-    --it;
-    uint64_t checkpoint_height = it->first;
-    return checkpoint_height < block_height;
+    bool result = block_height >= m_oldest_possible_reorg_limit;
+    return result;
   }
   //---------------------------------------------------------------------------
   uint64_t checkpoints::get_max_height() const
   {
-    if(m_points.empty())
-      return 0;
-    return m_points.rbegin()->first;
+    uint64_t result = 0;
+    if(m_points.size() > 0)
+    {
+      auto last_it = m_points.rbegin();
+      result = last_it->first;
+    }
+
+    return result;
   }
   //---------------------------------------------------------------------------
-  const std::map<uint64_t, crypto::hash>& checkpoints::get_points() const
-  {
-    return m_points;
-  }
-
   bool checkpoints::check_for_conflicts(const checkpoints& other) const
   {
-    for (auto& pt : other.get_points())
+    for(auto& pt : other.get_points())
     {
-      if (m_points.count(pt.first))
+      if(m_points.count(pt.first))
       {
-        CHECK_AND_ASSERT_MES(pt.second == m_points.at(pt.first), false, "Checkpoint at given height already exists, and hash for new checkpoint was different!");
+        checkpoint_t const &our_checkpoint = m_points.at(pt.first);
+        checkpoint_t const &their_checkpoint = pt.second;
+        CHECK_AND_ASSERT_MES(our_checkpoint.block_hash == their_checkpoint.block_hash, false, "Checkpoint at given height already exists, and hash for new checkpoint was different!");
       }
     }
     return true;

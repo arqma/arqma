@@ -103,6 +103,42 @@ t_command_server::t_command_server(
     , "Print a given transaction."
     );
   m_command_lookup.set_handler(
+      "print_quorum_state"
+    , std::bind(&t_command_parser_executor::print_quorum_state, &m_parser, p::_1)
+    , "print_quorum_state <height>"
+    , "Print the quorum state at given block height."
+    );
+  m_command_lookup.set_handler(
+      "print_sn_key"
+    , std::bind(&t_command_parser_executor::print_sn_key, &m_parser, p::_1)
+    , "print_sn_key"
+    , "Print this daemon's service_node key, if launched in service_node_mode and is service_node."
+    );
+  m_command_lookup.set_handler(
+      "print_stake_requirement"
+    , std::bind(&t_command_parser_executor::print_stake_requirement, &m_parser, p::_1)
+    , "print_stake_requirement <height>"
+    , "Print staking requirement for height given."
+    );
+  m_command_lookup.set_handler(
+      "prepare_registration"
+    , std::bind(&t_command_parser_executor::prepare_registration, &m_parser)
+    , "prepare_registration"
+    , "Interactive prompt to prepare Service Node registration command, Resulting registration command can be run in command-line wallet to send the registration to the blockchain."
+    );
+  m_command_lookup.set_handler(
+      "print_sn"
+    , std::bind(&t_command_parser_executor::print_sn, &m_parser, p::_1)
+    , "print_sn [<pubkey> [...]]"
+    , "Print Service_node registration info for the current height"
+    );
+  m_command_lookup.set_handler(
+      "print_sn_status"
+    , std::bind(&t_command_parser_executor::print_sn_status, &m_parser, p::_1)
+    , "print_sn_status"
+    , "Print Service Node registration info for this Service Node"
+    );
+  m_command_lookup.set_handler(
       "is_key_image_spent"
     , std::bind(&t_command_parser_executor::is_key_image_spent, &m_parser, p::_1)
     , "is_key_image_spent <key_image>"
@@ -296,11 +332,6 @@ t_command_server::t_command_server(
     , "Remove blocks from the end of the blockchain"
     );
     m_command_lookup.set_handler(
-      "rpc_payments"
-    , std::bind(&t_command_parser_executor::rpc_payments, &m_parser, p::_1)
-    , "Print information about RPC payments."
-    );
-    m_command_lookup.set_handler(
       "version"
     , std::bind(&t_command_parser_executor::version, &m_parser, p::_1)
     , "Print version information."
@@ -314,6 +345,11 @@ t_command_server::t_command_server(
       "check_blockchain_pruning"
     , std::bind(&t_command_parser_executor::check_blockchain_pruning, &m_parser, p::_1)
     , "Check the blockchain pruning."
+    );
+    m_command_lookup.set_handler(
+      "print_checkpoints"
+    , std::bind(&t_command_parser_executor::print_checkpoints, &m_parser, p::_1)
+    , ""
     );
 }
 

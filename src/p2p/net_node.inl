@@ -463,12 +463,12 @@ namespace nodetool
     std::set<std::string> full_addrs;
     if (nettype == cryptonote::TESTNET)
     {
-      for(const auto &m_seed_nodes : arqma_nodes::TESTNET_NODES)
+      for(const auto &m_seed_nodes : arqma::testnet_core_nodes)
         full_addrs.insert(m_seed_nodes);
     }
     else if (nettype == cryptonote::STAGENET)
     {
-      for(const auto &m_seed_nodes : arqma_nodes::STAGENET_NODES)
+      for(const auto &m_seed_nodes : arqma::stagenet_core_nodes)
         full_addrs.insert(m_seed_nodes);
     }
     else if (nettype == cryptonote::FAKECHAIN)
@@ -476,7 +476,7 @@ namespace nodetool
     }
     else
     {
-      for(const auto &m_seed_nodes : arqma_nodes::MAINNET_NODES)
+      for(const auto &m_seed_nodes : arqma::mainnet_core_nodes)
         full_addrs.insert(m_seed_nodes);
     }
     return full_addrs;
@@ -576,7 +576,7 @@ namespace nodetool
           }
           ++i;
         }
-        if(full_addrs.size() < arqma_nodes::seed_nodes_qty)
+        if(full_addrs.size() < arqma::seed_nodes_qty)
         {
           if(full_addrs.empty())
             MINFO("DNS seed node lookup either timed out or failed, falling back to defaults");
@@ -876,8 +876,7 @@ namespace nodetool
 
         pi = context.peer_id = rsp.node_data.peer_id;
         context.m_rpc_port = rsp.node_data.rpc_port;
-        context.m_rpc_credits_per_hash = rsp.node_data.rpc_credits_per_hash;
-  	    m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(rsp.node_data.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port, context.m_rpc_credits_per_hash);
+        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(rsp.node_data.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port);
 
         // move
         for (auto const& zone : m_network_zones)
@@ -945,7 +944,7 @@ namespace nodetool
         add_host_fail(context.m_remote_address);
       }
       if(!context.m_is_income)
-        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(context.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port, context.m_rpc_credits_per_hash);
+        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(context.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port);
       if(!m_payload_handler.process_payload_sync_data(rsp.payload_data, context, false))
       {
         m_network_zones.at(context.m_remote_address.get_zone()).m_net_server.get_config_object().close(context.m_connection_id);
@@ -1109,7 +1108,7 @@ namespace nodetool
     pe_local.last_seen = static_cast<int64_t>(last_seen);
     pe_local.pruning_seed = con->m_pruning_seed;
     pe_local.rpc_port = con->m_rpc_port;
-    pe_local.rpc_credits_per_hash = con->m_rpc_credits_per_hash;
+    pe_local.zmq_port = con->m_zmq_port;
     zone.m_peerlist.append_with_peer_white(pe_local);
     //update last seen and push it to peerlist manager
 
@@ -1384,8 +1383,9 @@ namespace nodetool
         if(conn_count < expected_white_connections)
         {
           //start from anchor list
-          while (get_outgoing_connections_count(zone.second) < P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT
-            && make_expected_connections_count(zone.second, anchor, P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT));
+          size_t anchor_connections = P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT;
+          while (get_outgoing_connections_count(zone.second) < anchor_connections
+            && make_expected_connections_count(zone.second, anchor, anchor_connections));
           //then do white list
           while (get_outgoing_connections_count(zone.second) < expected_white_connections
             && make_expected_connections_count(zone.second, white, expected_white_connections));
@@ -1582,7 +1582,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::peer_sync_idle_maker()
   {
     MDEBUG("STARTED PEERLIST IDLE HANDSHAKE");
-    typedef std::list<std::pair<epee::net_utils::connection_context_base, peerid_type> > local_connects_type;
+    typedef std::list<std::pair<epee::net_utils::connection_context_base, peerid_type>> local_connects_type;
     local_connects_type cncts;
     for(auto& zone : m_network_zones)
     {
@@ -1668,7 +1668,7 @@ namespace nodetool
     else
       node_data.my_port = 0;
     node_data.rpc_port = zone.m_can_pingback ? m_rpc_port : 0;
-    node_data.rpc_credits_per_hash = zone.m_can_pingback ? m_rpc_credits_per_hash : 0;
+    node_data.zmq_port = zone.m_can_pingback ? m_zmq_port : 0;
     node_data.network_id = m_network_id;
     return true;
   }
@@ -1962,7 +1962,7 @@ namespace nodetool
     context.peer_id = arg.node_data.peer_id;
     context.m_in_timedsync = false;
     context.m_rpc_port = arg.node_data.rpc_port;
-    context.m_rpc_credits_per_hash = arg.node_data.rpc_credits_per_hash;
+    context.m_zmq_port = arg.node_data.zmq_port;
 
     if(arg.node_data.my_port && zone.m_can_pingback)
     {
@@ -1983,7 +1983,7 @@ namespace nodetool
         pe.id = peer_id_l;
         pe.pruning_seed = context.m_pruning_seed;
         pe.rpc_port = context.m_rpc_port;
-        pe.rpc_credits_per_hash = context.m_rpc_credits_per_hash;
+        pe.zmq_port = context.m_zmq_port;
         this->m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.append_with_peer_white(pe);
         LOG_DEBUG_CC(context, "PING SUCCESS " << context.m_remote_address.host_str() << ":" << port_l);
       });
@@ -2098,7 +2098,7 @@ namespace nodetool
   }
 
   template<class t_payload_net_handler> template <class Container>
-  bool node_server<t_payload_net_handler>::parse_peers_and_add_to_container(const boost::program_options::variables_map& vm, const command_line::arg_descriptor<std::vector<std::string> > & arg, Container& container)
+  bool node_server<t_payload_net_handler>::parse_peers_and_add_to_container(const boost::program_options::variables_map& vm, const command_line::arg_descriptor<std::vector<std::string>> & arg, Container& container)
   {
     std::vector<std::string> perrs = command_line::get_arg(vm, arg);
 
@@ -2128,7 +2128,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::set_max_out_peers(network_zone& zone, int64_t max)
   {
     if(max == -1) {
-      zone.m_config.m_net_config.max_out_connection_count = P2P_DEFAULT_CONNECTIONS_COUNT;
+      zone.m_config.m_net_config.max_out_connection_count = m_nettype == cryptonote::MAINNET ? P2P_DEFAULT_CONNECTIONS_COUNT : P2P_DEFAULT_CONNECTIONS_COUNT_TEST;
       return true;
     }
     zone.m_config.m_net_config.max_out_connection_count = max;
@@ -2192,7 +2192,7 @@ namespace nodetool
     if(flag == -1){
       return true;
     }
-    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_tos_flag(flag);
+    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_tos_flag(flag);
     _dbg1("Set ToS flag  " << flag);
     return true;
   }
@@ -2206,7 +2206,7 @@ namespace nodetool
       limit = default_limit_up;
     }
 
-    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_up_limit( limit );
+    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_rate_up_limit( limit );
     MINFO("Set limit-up to " << limit << " kB/s");
     return true;
   }
@@ -2218,7 +2218,7 @@ namespace nodetool
     if(limit == -1) {
       limit = default_limit_down;
     }
-    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_down_limit( limit );
+    epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_rate_down_limit( limit );
     MINFO("Set limit-down to " << limit << " kB/s");
     return true;
   }
@@ -2240,11 +2240,11 @@ namespace nodetool
       limit_down = limit;
     }
     if(!this->islimitup) {
-      epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_up_limit(limit_up);
+      epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_rate_up_limit(limit_up);
       MINFO("Set limit-up to " << limit_up << " kB/s");
     }
     if(!this->islimitdown) {
-      epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_down_limit(limit_down);
+      epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context>>::set_rate_down_limit(limit_down);
       MINFO("Set limit-down to " << limit_down << " kB/s");
     }
 
@@ -2301,7 +2301,7 @@ namespace nodetool
       }
       else
       {
-        zone.second.m_peerlist.set_peer_just_seen(pe.id, pe.adr, pe.pruning_seed, pe.rpc_port, pe.rpc_credits_per_hash);
+        zone.second.m_peerlist.set_peer_just_seen(pe.id, pe.adr, pe.pruning_seed, pe.rpc_port);
         LOG_PRINT_L2("PEER PROMOTED TO WHITE PEER LIST IP address: " << pe.adr.host_str() << " Peer ID: " << peerid_type(pe.id));
       }
     }

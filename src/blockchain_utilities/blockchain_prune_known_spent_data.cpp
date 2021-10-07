@@ -30,9 +30,8 @@
 #include <boost/algorithm/string.hpp>
 #include "common/command_line.h"
 #include "serialization/crypto.h"
-#include "cryptonote_core/tx_pool.h"
 #include "cryptonote_core/cryptonote_core.h"
-#include "cryptonote_core/blockchain.h"
+#include "blockchain_objects.h"
 #include "blockchain_db/blockchain_db.h"
 #include "version.h"
 
@@ -161,9 +160,8 @@ int main(int argc, char* argv[])
   const std::string input = command_line::get_arg(vm, arg_input);
 
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  std::unique_ptr<Blockchain> core_storage;
-  tx_memory_pool m_mempool(*core_storage);
-  core_storage.reset(new Blockchain(m_mempool));
+  blockchain_objects_t *blockchain_objects = new blockchain_objects_t();
+  Blockchain *core_storage = &blockchain_objects->m_blockchain;
   BlockchainDB *db = new_db();
   if (db == NULL)
   {
@@ -210,7 +208,7 @@ int main(int argc, char* argv[])
       for (const auto &out: tx.vout)
       {
         uint64_t amount = out.amount;
-        if (miner_tx && tx.version >= 2)
+        if (miner_tx && tx.version >= cryptonote::txversion::v2)
           amount = 0;
         if (amount == 0)
           continue;

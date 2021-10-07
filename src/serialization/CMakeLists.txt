@@ -43,6 +43,7 @@ arqma_add_library(serialization
   ${serialization_private_headers})
 target_link_libraries(serialization
   PRIVATE
+    cryptonote_basic
     cryptonote_core
     cryptonote_protocol
     epee

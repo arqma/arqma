@@ -29,13 +29,6 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-
-# This is broken up into two parts: first we check for miniupnp, compile it if we can't
-# find it, and thereafter we check for libunbound, and compile it if we can't find it.
-# We always compile if we are building statically to reduce static dependency issues...
-# ...except for FreeBSD, because FreeBSD is a special case that doesn't play well with
-# others.
-
 if(DEPENDS)
   add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
   set_target_properties(libzmq_vendor PROPERTIES IMPORTED_LOCATION ${ZMQ_LIBRARIES})
@@ -46,12 +39,9 @@ else()
   include(ProcessorCount)
 
   set(zmq_prefix ${CMAKE_BINARY_DIR}/external/libzmq)
-  set(zmq_patch git stash && patch -p0 < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
+  set(zmq_patch git stash && patch -p1 < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
   set(zmq_autogen ./autogen.sh)
   set(zmq_configure ./configure --prefix=${zmq_prefix})
-  if(APPLE OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    set(zmq_configure ${zmq_configure} --host=x86_64-apple-darwin)
-  endif()
 
   set(zmq_configure ${zmq_configure} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
 

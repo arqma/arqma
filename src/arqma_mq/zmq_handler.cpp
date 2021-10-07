@@ -140,7 +140,7 @@ namespace arqmaMQ
 
     auto& chain = m_core.get_blockchain_storage();
 
-    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, NULL, res.start_height, res.current_height, false))
+    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, res.start_height, res.current_height, false))
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "Blockchain::find_blockchain_supplement() returned false";
@@ -290,9 +290,9 @@ namespace arqmaMQ
     cryptonote::cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
     cryptonote::tx_verification_context tvc = AUTO_VAL_INIT(tvc);
 
-    if(!m_core.handle_incoming_tx(tx_blob, tvc, false, false, !relay) || tvc.m_verifivation_failed)
+    if(!m_core.handle_incoming_tx(tx_blob, tvc, false, false, !relay) || tvc.m_verification_failed)
     {
-      if (tvc.m_verifivation_failed)
+      if (tvc.m_verification_failed)
       {
         MERROR("[SendRawTx]: tx verification failed");
       }
@@ -303,41 +303,66 @@ namespace arqmaMQ
       res.status = cryptonote::rpc::Message::STATUS_FAILED;
       res.error_details = "";
 
-      if (tvc.m_low_mixin)
+      if(tvc.m_low_mixin)
       {
         res.error_details = "mixin too low";
       }
-      if (tvc.m_double_spend)
+      if(tvc.m_double_spend)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "double spend";
       }
-      if (tvc.m_invalid_input)
+      if(tvc.m_invalid_input)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "invalid input";
       }
-      if (tvc.m_invalid_output)
+      if(tvc.m_invalid_output)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "invalid output";
       }
-      if (tvc.m_too_big)
+      if(tvc.m_too_big)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "too big";
       }
-      if (tvc.m_overspend)
+      if(tvc.m_overspend)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "overspend";
       }
-      if (tvc.m_fee_too_low)
+      if(tvc.m_fee_too_low)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "fee too low";
       }
-      if (res.error_details.empty())
+      if(tvc.m_too_few_outputs)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "Not enough outputs used";
+      }
+      if(tvc.m_invalid_version)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx version below 2 is invalid and forbidden";
+      }
+      if(tvc.m_invalid_type)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx has an invalid type";
+      }
+      if(tvc.m_key_image_locked_by_snode)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx uses outputs that are locked by the service node network";
+      }
+      if(tvc.m_key_image_blacklisted)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx uses a key image that has been temporarily blacklisted by the service node network";
+      }
+      if(res.error_details.empty())
       {
         res.error_details = "an unknown issue was found with the transaction";
       }
@@ -818,7 +843,7 @@ namespace arqmaMQ
 
   void ZmqHandler::handle(const cryptonote::rpc::GetOutputHistogram::Request& req, cryptonote::rpc::GetOutputHistogram::Response& res)
   {
-    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t> > histogram;
+    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> histogram;
     try
     {
       histogram = m_core.get_blockchain_storage().get_output_histogram(req.amounts, req.unlocked, req.recent_cutoff);

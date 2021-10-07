@@ -1,5 +1,4 @@
-// Copyright (c) 2019, The Arqma Network
-// Copyright (c) 2019, The Monero Project
+// Copyright (c)      2018, The Loki Project
 //
 // All rights reserved.
 //
@@ -26,26 +25,14 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#pragma once
+namespace cryptonote
+{
+  namespace rules
+  {
+    bool is_output_unlocked(uint64_t unlock_time, uint64_t height);
+  } // namespace rules
 
-#define COST_PER_BLOCK 0.0005
-#define COST_PER_TX_RELAY 0.01
-#define COST_PER_OUT 0.01
-#define COST_PER_OUTPUT_INDEXES 0.01
-#define COST_PER_TX 0.005
-#define COST_PER_KEY_IMAGE 0.0001
-#define COST_PER_POOL_HASH 0.0001
-#define COST_PER_TX_POOL_STATS 0.002
-#define COST_PER_BLOCK_HEADER 0.001
-#define COST_PER_GET_INFO 0.001
-#define COST_PER_OUTPUT_HISTOGRAM 25
-#define COST_PER_FULL_OUTPUT_HISTOGRAM 5000
-#define COST_PER_OUTPUT_DISTRIBUTION_0 0.2
-#define COST_PER_OUTPUT_DISTRIBUTION 50
-#define COST_PER_COINBASE_TX_SUM_BLOCK 0.02
-#define COST_PER_BLOCK_HASH 0.00002
-#define COST_PER_FEE_ESTIMATE 0.001
-#define COST_PER_SYNC_INFO 0.002
-#define COST_PER_HARD_FORK_INFO 0.001
-#define COST_PER_PEER_LIST 0.02
+} // namespace cryptonote
