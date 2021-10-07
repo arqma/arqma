@@ -3,7 +3,7 @@
 #define DEF_ARQMA_VERSION_MAJOR 7
 #define DEF_ARQMA_VERSION_MINOR 0
 
-#define DEF_ARQMA_PATCH_VER 10
+#define DEF_ARQMA_PATCH_VER 0 // patch_ver MUST not be higher than 9. If so -> increase MINOR_VER and set 0 to patch_ver.
 
 #define DEF_ARQMA_SNODE_MAJOR 1
 #define DEF_ARQMA_SNODE_MINOR 0
