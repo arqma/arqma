@@ -64,7 +64,9 @@ namespace cryptonote
     uint64_t delayed_rewards;
   };
 
+  class Blockchain;
   bool construct_miner_tx(
+    const Blockchain *pbc,
     uint64_t height,
     size_t median_weight,
     uint64_t already_generated_coins,
