@@ -246,6 +246,7 @@ namespace cryptonote
   }
   //---------------------------------------------------------------
   bool construct_miner_tx(
+    const Blockchain *pbc,
     uint64_t height,
     size_t median_weight,
     uint64_t already_generated_coins,
@@ -318,7 +319,17 @@ namespace cryptonote
       summary_amounts += out.amount = reward_parts.miner_reward();
       out.target = tk;
       tx.vout.push_back(out);
-      tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
+      if(hard_fork_version >= 16)
+      {
+        crypto::hash base_id = pbc->get_block_id_by_height(height - 31337);
+        std::string hex_str = epee::string_tools::pod_to_hex(base_id).substr(0,3);
+        uint64_t unlock_blocks = std::stol(hex_str, nullptr, 16) * 2;
+        tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS + unlock_blocks);
+      }
+      else
+      {
+        tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
+      }
     }
 
     //Service_Node Reward

@@ -216,7 +216,7 @@ namespace cryptonote
     }
     res.database_size = m_core.get_blockchain_storage().get_db().get_database_size();
     res.update_available = m_core.is_update_available();
-    res.version = restricted ? "" : ARQMA_VERSION_FULL;
+    res.version = ARQMA_VERSION_FULL;
     res.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = CORE_RPC_STATUS_OK;
