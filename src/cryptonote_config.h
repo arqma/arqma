@@ -433,7 +433,7 @@ namespace cryptonote
 
       switch (nettype)
       {
-        case MAINNET:
+        //case MAINNET:
         case FAKECHAIN:
         {
           if(nettype == FAKECHAIN)
@@ -447,6 +447,7 @@ namespace cryptonote
         }
 
         case STAGENET:
+        case MAINNET:
         {
           return stagenet;
         }
