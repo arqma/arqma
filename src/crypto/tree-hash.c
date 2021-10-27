@@ -30,17 +30,11 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "hash-ops.h"
 
-#ifdef _MSC_VER
-#include <malloc.h>
-#elif !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__DragonFly__)
- #include <alloca.h>
-#else
- #include <stdlib.h>
-#endif
 /***
 * Round to power of two, for count>=3 and for count being not too large (as reasonable for tree hash calculations)
 */
@@ -89,24 +83,24 @@ void tree_hash(const char (*hashes)[HASH_SIZE], size_t count, char *root_hash) {
 
     size_t cnt = tree_hash_cnt( count );
 
-    char (*ints)[HASH_SIZE];
-    size_t ints_size = cnt * HASH_SIZE;
-    ints = alloca(ints_size); 	memset( ints , 0 , ints_size);
+    char *ints = calloc(cnt, HASH_SIZE);
+    assert(ints);
 
     memcpy(ints, hashes, (2 * cnt - count) * HASH_SIZE);
 
     for (i = 2 * cnt - count, j = 2 * cnt - count; j < cnt; i += 2, ++j) {
-      cn_fast_hash(hashes[i], 64, ints[j]);
+      cn_fast_hash(hashes[i], 64, ints + j * HASH_SIZE);
     }
     assert(i == count);
 
     while (cnt > 2) {
       cnt >>= 1;
       for (i = 0, j = 0; j < cnt; i += 2, ++j) {
-        cn_fast_hash(ints[i], 64, ints[j]);
+        cn_fast_hash(ints + i * HASH_SIZE, 64, ints + j * HASH_SIZE);
       }
     }
 
-    cn_fast_hash(ints[0], 64, root_hash);
+    cn_fast_hash(ints, 64, root_hash);
+    free(ints);
   }
 }
