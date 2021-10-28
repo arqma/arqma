@@ -8,7 +8,7 @@ if test -z $with_boost; then
   with_boost=$depends_prefix
 fi
 
-if test x@host_os@ = xdarwin; then
+if test @host_os@ = darwin; then
   BREW=no
   PORT=no
 fi

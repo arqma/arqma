@@ -14,17 +14,15 @@ $(package)_config_opts_linux=target-os=linux threadapi=pthread runtime-link=stat
 $(package)_config_opts_darwin=target-os=darwin runtime-link=static
 $(package)_config_opts_mingw32=binary-format=pe target-os=windows threadapi=win32 runtime-link=static
 $(package)_config_opts_x86_64_mingw32=address-model=64
-$(package)_toolset_$(host_os)=gcc
-$(package)_toolset_darwin=clang
 ifneq (,$(findstring clang,$($(package)_cxx)))
    $(package)_toolset_$(host_os)=clang
+else
+   $(package)_toolset_$(host_os)=gcc
 endif
 $(package)_archiver_$(host_os)=$($(package)_ar)
 $(package)_config_libraries=chrono,filesystem,program_options,system,thread,test,date_time,regex,serialization,locale,atomic
-$(package)_cxxflags_linux=-std=c++14
-$(package)_cxxflags_mingw32=-std=c++14
+$(package)_cxxflags+=-std=c++17 -fvisibility=hidden
 $(package)_cxxflags_linux=-fPIC
-$(package)_cxxflags_darwin=-std=c++14 -fvisibility=default
 endef
 
 define $(package)_preprocess_cmds
