@@ -161,7 +161,9 @@ service-nodes:
 	read -r -p "Continue (y/N)?: " CONTINUE; \
 	[ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] || (echo "Exiting."; exit 1;)
 	mkdir -p $(builddir)/release
-	git fetch origin pull/297/head:s_n && git merge s_n
+	git config --local user.name "user" && git config --local user.email "user@github.com"
+	git fetch origin pull/297/head:s_n && git merge s_n --no-verify
+	git submodule init && git submodule update
 	cd $(builddir)/release && cmake -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
 
 #fuzz:
