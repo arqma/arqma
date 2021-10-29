@@ -221,7 +221,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Build:
 
-	`$ make release`
+	`$ make release-rpi`
 
 * Wait 4-6 hours
 
