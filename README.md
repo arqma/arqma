@@ -141,7 +141,7 @@ build the library binary manually. This can be done with the following command:
 
 Debian / Ubuntu one liner for all dependencies
 
-`$ sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind8-dev liblzma-dev libreadline8-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
+`$ sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
 
 Install all dependencies at once on OSX:
 
@@ -221,7 +221,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Build:
 
-	`$ make release`
+	`$ make release-rpi`
 
 * Wait 4-6 hours
 
@@ -424,12 +424,12 @@ By default, in either dynamically or statically linked builds, binaries target t
 You can also cross-compile Arqma static binaries on Linux for Windows and macOS with the `depends` system.
 * `make depends target=x86_64-linux-gnu` for 64-bit linux binaries.
 * `make depends target=x86_64-w64-mingw32` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
-* `make depends target=x86_64-apple-darwin19.2.0` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools curl bsdmainutils python3-setuptools
+* `make depends target=x86_64-apple-darwin19` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools curl bsdmainutils python3-setuptools
 * `make depends target=arm-linux-gnueabihf` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * `make depends target=aarch64-linux-gnu` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 
 *** For `x86_64-apple-darwin19.2.0` you need to download SDK first ***
-* `git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDK`
+* `git clone -b arqma https://github.com/malbit/MacOSX-SDKs.git contrib/depends/SDKs --depth=1`
 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
