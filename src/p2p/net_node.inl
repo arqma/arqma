@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2018-2021, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -475,6 +475,7 @@ namespace nodetool
       full_addrs.insert("86.24.233.79:39993");
       full_addrs.insert("139.99.106.122:39993");
       full_addrs.insert("144.217.242.16:39993");
+      full_addrs.insert("209.126.84.37:39993");
     }
     else if (nettype == cryptonote::FAKECHAIN)
     {
@@ -489,6 +490,7 @@ namespace nodetool
       full_addrs.insert("51.15.50.83:19993");
       full_addrs.insert("164.68.123.118:19993");
       full_addrs.insert("51.15.253.177:19993");
+      full_addrs.insert("209.126.84.37:19993");
     }
     return full_addrs;
   }
