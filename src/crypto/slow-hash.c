@@ -709,7 +709,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 
   // this isn't supposed to happen, but guard just in case.
   if(hp_state == NULL)
-    cn_slow_hash_allocate_state();
+    cn_slow_hash_allocate_state(page_size);
 
   // locals to avoid constant TLS dereferencing.
   uint8_t *local_hp_state = hp_state;
