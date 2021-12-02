@@ -33,7 +33,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#if !defined(__APPLE__)
 #include <malloc.h>
+#endif
 
 #ifdef WIN32
 #include <process.h>
