@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -292,6 +292,7 @@ namespace arqma_nodes
     "207.244.249.105",
     "139.99.106.122",
     "164.68.123.118"
+    "209.126.84.37"
   };
 
   const char *const TESTNET_NODES[] =
@@ -310,6 +311,7 @@ namespace arqma_nodes
     "it-support.mal-bit.com",
     "164.68.123.118",
     "144.217.242.16"
+    "209.126.84.37"
   };
 }
 
