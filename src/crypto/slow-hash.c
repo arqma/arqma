@@ -862,13 +862,13 @@ void cn_slow_hash_free_state(uint32_t page_size)
   hp_malloced = 0;
 }
 #else
-void cn_slow_hash_allocate_state(void)
+void cn_slow_hash_allocate_state(uint32_t page_size)
 {
   // Do nothing, this is just to maintain compatibility with the upgraded slow-hash.c
   return;
 }
 
-void cn_slow_hash_free_state(void)
+void cn_slow_hash_free_state(uint32_t page_size)
 {
   // As above
   return;
@@ -1496,13 +1496,13 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 #else
 // Portable implementation as a fallback
 
-void cn_slow_hash_allocate_state(void)
+void cn_slow_hash_allocate_state(uint32_t page_size)
 {
   // Do nothing, this is just to maintain compatibility with the upgraded slow-hash.c
   return;
 }
 
-void cn_slow_hash_free_state(void)
+void cn_slow_hash_free_state(uint32_t page_size)
 {
   // As above
   return;
