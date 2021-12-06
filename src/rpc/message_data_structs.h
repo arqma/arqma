@@ -168,6 +168,8 @@ namespace rpc
     crypto::hash hash;
     uint64_t difficulty;
     uint64_t reward;
+    uint64_t miner_reward;
+    uint64_t miner_reward_unlock_block;
   };
 
   struct DaemonInfo

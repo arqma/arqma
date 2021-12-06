@@ -145,7 +145,8 @@ namespace {
       << "block weight: " << header.block_weight << std::endl
       << "long term weight: " << header.long_term_weight << std::endl
       << "num txes: " << header.num_txes << std::endl
-      << "reward: " << cryptonote::print_money(header.reward);
+      << "reward: " << cryptonote::print_money(header.reward) << std::endl
+      << "miner_reward: " << cryptonote::print_money(header.miner_reward);
   }
 
   std::string get_human_time_ago(time_t t, time_t now)
@@ -710,7 +711,8 @@ bool t_rpc_command_executor::print_blockchain_info(uint64_t start_block_index, u
       << ", size: " << header.block_size << ", weight: " << header.block_weight << " (long_term " << header.long_term_weight << "), transactions: " << header.num_txes << std::endl
       << "major version: " << (unsigned)header.major_version << ", minor version: " << (unsigned)header.minor_version << std::endl
       << "block id: " << header.hash << ", previous block id: " << header.prev_hash << std::endl
-      << "difficulty: " << header.difficulty << ", nonce " << header.nonce << ", reward " << cryptonote::print_money(header.reward) << std::endl;
+      << "difficulty: " << header.difficulty << ", nonce: " << header.nonce << ", reward: " << cryptonote::print_money(header.reward) << std::endl
+      << "miner_reward: " << cryptonote::print_money(header.miner_reward) << std::endl;
     first = false;
   }
 

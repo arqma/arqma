@@ -321,7 +321,8 @@ namespace cryptonote
       tx.vout.push_back(out);
       if(hard_fork_version >= 16)
       {
-        crypto::hash base_id = pbc->get_block_id_by_height(height - 31337);
+        uint64_t eleet = miner_context.nettype == cryptonote::MAINNET ? 31337 : 3137;
+        crypto::hash base_id = pbc->get_block_id_by_height(height - eleet);
         std::string hex_str = epee::string_tools::pod_to_hex(base_id).substr(0,3);
         uint64_t unlock_blocks = std::stol(hex_str, nullptr, 16) * 2;
         tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS + unlock_blocks);

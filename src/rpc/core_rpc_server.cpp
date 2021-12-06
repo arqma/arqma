@@ -1517,6 +1517,17 @@ namespace cryptonote
     return reward;
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  uint64_t core_rpc_server::get_miner_reward_unlock_block(const block& blk)
+  {
+    uint64_t unlock_block = 0;
+    if(blk.major_version >= 16)
+      unlock_block = blk.miner_tx.output_unlock_times[0];
+    else
+      unlock_block = blk.miner_tx.unlock_time;
+
+    return unlock_block;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::fill_block_header_response(const block& blk, bool orphan_status, uint64_t height, const crypto::hash& hash, block_header_response& response, bool fill_pow_hash)
   {
     PERF_TIMER(fill_block_header_response);
@@ -1533,10 +1544,12 @@ namespace cryptonote
     response.cumulative_difficulty = response.block_size = m_core.get_blockchain_storage().get_db().get_block_cumulative_difficulty(height);
     response.reward = get_block_reward(blk);
     response.miner_reward = blk.miner_tx.vout[0].amount;
+    response.miner_reward_unlock_block = get_miner_reward_unlock_block(blk);
     response.block_size = response.block_weight = m_core.get_blockchain_storage().get_db().get_block_weight(height);
     response.num_txes = blk.tx_hashes.size();
     response.pow_hash = fill_pow_hash ? string_tools::pod_to_hex(get_block_longhash(&(m_core.get_blockchain_storage()), blk, height, 0)) : "";
     response.long_term_weight = m_core.get_blockchain_storage().get_db().get_block_long_term_weight(height);
+    response.miner_tx_hash = string_tools::pod_to_hex(cryptonote::get_transaction_hash(blk.miner_tx));
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
