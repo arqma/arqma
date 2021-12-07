@@ -971,11 +971,14 @@ namespace arqmaMQ
     {
       header.reward += out.amount;
     }
-    header.miner_reward = b.miner_tx.vout[0].amount;
     if(b.major_version >= 16)
+    {
+      header.miner_reward = b.miner_tx.vout[0].amount;
       header.miner_reward_unlock_block = b.miner_tx.output_unlock_times[0];
-    else
+    } else {
+      header.miner_reward = header.reward;
       header.miner_reward_unlock_block = b.miner_tx.unlock_time;
+    }
 
     header.difficulty = m_core.get_blockchain_storage().block_difficulty(header.height);
 
