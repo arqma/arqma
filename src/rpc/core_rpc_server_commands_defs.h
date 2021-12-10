@@ -2581,8 +2581,10 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     struct request_t
     {
       std::vector<std::string> service_node_pubkeys;
+      bool include_json;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(service_node_pubkeys)
+        KV_SERIALIZE(include_json);
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -2647,9 +2649,11 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
 
       std::vector<entry> service_node_states;
       std::string status;
+      std::string as_json;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(service_node_states)
         KV_SERIALIZE(status)
+        KV_SERIALIZE(as_json)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;

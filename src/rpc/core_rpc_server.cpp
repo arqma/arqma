@@ -2783,9 +2783,20 @@ namespace cryptonote
 
     res.status = CORE_RPC_STATUS_OK;
     res.service_node_states.reserve(pubkey_info_list.size());
+
+    if(req.include_json)
+    {
+      res.as_json = "{\n}";
+      if(pubkey_info_list.size() > 0)
+      {
+        res.as_json = cryptonote::obj_to_json_str(pubkey_info_list);
+      }
+    }
+
     for(const auto &pubkey_info : pubkey_info_list)
     {
       COMMAND_RPC_GET_SERVICE_NODES::response::entry entry = {};
+
       entry.service_node_pubkey = string_tools::pod_to_hex(pubkey_info.pubkey);
       entry.registration_height = pubkey_info.info.registration_height;
       entry.requested_unlock_height = pubkey_info.info.requested_unlock_height;

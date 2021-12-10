@@ -46,7 +46,7 @@ namespace service_nodes
       crypto::key_image key_image{};
       uint64_t amount = 0;
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         VARINT_FIELD(version)
         FIELD(key_image_pub_key)
         FIELD(key_image)
@@ -76,7 +76,7 @@ namespace service_nodes
         address = address_;
       }
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         VARINT_FIELD(version)
         VARINT_FIELD(amount)
         VARINT_FIELD(reserved)
@@ -105,7 +105,7 @@ namespace service_nodes
     size_t total_num_locked_contributions() const;
 
     int dummy; // forced sn_list rescan
-    BEGIN_SERIALIZE()
+    BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(version)
       VARINT_FIELD(registration_height)
       VARINT_FIELD(requested_unlock_height)
@@ -127,7 +127,7 @@ namespace service_nodes
     crypto::public_key pubkey;
     service_node_info info;
 
-    BEGIN_SERIALIZE()
+    BEGIN_SERIALIZE_OBJECT()
       FIELD(pubkey)
       FIELD(info)
     END_SERIALIZE()
@@ -139,7 +139,7 @@ namespace service_nodes
     crypto::key_image key_image;
     uint64_t unlock_height;
 
-    BEGIN_SERIALIZE()
+    BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(version)
       FIELD(key_image)
       VARINT_FIELD(unlock_height)
@@ -213,7 +213,7 @@ namespace service_nodes
 
       uint64_t m_block_height;
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         VARINT_FIELD(m_block_height)
       END_SERIALIZE()
     };
@@ -225,7 +225,7 @@ namespace service_nodes
       crypto::public_key m_key;
       service_node_info m_info;
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         FIELDS(*static_cast<rollback_event *>(this))
         FIELD(m_key)
         FIELD(m_info)
@@ -238,7 +238,7 @@ namespace service_nodes
       rollback_new(uint64_t block_height, const crypto::public_key& key);
       crypto::public_key m_key;
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         FIELDS(*static_cast<rollback_event *>(this))
         FIELD(m_key)
       END_SERIALIZE()
@@ -249,7 +249,7 @@ namespace service_nodes
       prevent_rollback() { type = prevent_type; }
       prevent_rollback(uint64_t block_height);
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         FIELDS(*static_cast<rollback_event *>(this))
       END_SERIALIZE()
     };
@@ -262,7 +262,7 @@ namespace service_nodes
       key_image_blacklist_entry m_entry;
       bool m_was_adding_to_blacklist;
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         FIELDS(*static_cast<rollback_event *>(this))
         FIELD(m_entry)
         FIELD(m_was_adding_to_blacklist)
@@ -277,7 +277,7 @@ namespace service_nodes
       quorum_uptime_proof uptime_quorum;
       quorum_checkpointing checkpointing_quorum;
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         FIELD(version)
         FIELD(height)
         FIELD(checkpointing_quorum)
@@ -293,7 +293,7 @@ namespace service_nodes
       std::vector<rollback_event_variant> events;
       std::vector<key_image_blacklist_entry> key_image_blacklist;
 
-      BEGIN_SERIALIZE()
+      BEGIN_SERIALIZE_OBJECT()
         VARINT_FIELD(version)
         FIELD(quorum_states)
         FIELD(infos)
