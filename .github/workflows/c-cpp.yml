@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build-macos:
-    runs-on: macOS-latest
+    runs-on: macOS-11
     env:
       CCACHE_COMPRESS: 1
       CCACHE_TEMPDIR: /tmp/.ccache-temp
