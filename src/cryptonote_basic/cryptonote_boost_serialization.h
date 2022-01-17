@@ -248,7 +248,7 @@ namespace boost
   {
     a & x.mask;
     a & x.amount;
-    // a & x.senderPk; // not serialized, as we do not use it in Arqma currently
+    // a & x.senderPk; // not serialized, as we do not use it in Evolution currently
   }
 
   template <class Archive>

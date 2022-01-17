@@ -66,8 +66,8 @@
 #include <miniupnp/miniupnpc/upnpcommands.h>
 #include <miniupnp/miniupnpc/upnperrors.h>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net.p2p"
+#undef EVOLUTION_DEFAULT_LOG_CATEGORY
+#define EVOLUTION_DEFAULT_LOG_CATEGORY "net.p2p"
 
 #define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
 
@@ -463,12 +463,12 @@ namespace nodetool
     std::set<std::string> full_addrs;
     if (nettype == cryptonote::TESTNET)
     {
-      for(const auto &m_seed_nodes : arqma_nodes::TESTNET_NODES)
+      for(const auto &m_seed_nodes : evolution_nodes::TESTNET_NODES)
         full_addrs.insert(m_seed_nodes);
     }
     else if (nettype == cryptonote::STAGENET)
     {
-      for(const auto &m_seed_nodes : arqma_nodes::STAGENET_NODES)
+      for(const auto &m_seed_nodes : evolution_nodes::STAGENET_NODES)
         full_addrs.insert(m_seed_nodes);
     }
     else if (nettype == cryptonote::FAKECHAIN)
@@ -476,7 +476,7 @@ namespace nodetool
     }
     else
     {
-      for(const auto &m_seed_nodes : arqma_nodes::MAINNET_NODES)
+      for(const auto &m_seed_nodes : evolution_nodes::MAINNET_NODES)
         full_addrs.insert(m_seed_nodes);
     }
     return full_addrs;
@@ -576,7 +576,7 @@ namespace nodetool
           }
           ++i;
         }
-        if(full_addrs.size() < arqma_nodes::seed_nodes_qty)
+        if(full_addrs.size() < evolution_nodes::seed_nodes_qty)
         {
           if(full_addrs.empty())
             MINFO("DNS seed node lookup either timed out or failed, falling back to defaults");
@@ -847,7 +847,7 @@ namespace nodetool
       {
         MINFO("Peer " << context.m_remote_address.str() << " did not provide version info. It is probably Old Version");
       }
-      else if(rsp.node_data.version.size() != 0 && rsp.node_data.version != ARQMA_VERSION)
+      else if(rsp.node_data.version.size() != 0 && rsp.node_data.version != EVOLUTION_VERSION)
       {
         MINFO("Peer " << context.m_remote_address.str() << " has a different version than ours: " << rsp.node_data.version.substr(0,12));
       }
@@ -1662,7 +1662,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::get_local_node_data(basic_node_data& node_data, const network_zone& zone)
   {
     node_data.peer_id = zone.m_config.m_peer_id;
-    node_data.version = ARQMA_VERSION;
+    node_data.version = EVOLUTION_VERSION;
     if(!m_hide_my_port && zone.m_can_pingback)
       node_data.my_port = m_external_port ? m_external_port : m_listening_port;
     else
@@ -1897,7 +1897,7 @@ namespace nodetool
   //    block_host(context.m_remote_address);
     }
 
-    if(arg.node_data.version.size() != 0 && arg.node_data.version != ARQMA_VERSION)
+    if(arg.node_data.version.size() != 0 && arg.node_data.version != EVOLUTION_VERSION)
     {
       MGINFO("Peer " << context.m_remote_address.str() << " has a different version than ours: " << arg.node_data.version.substr(0,12));
   //  drop_connection(context);

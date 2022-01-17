@@ -30,7 +30,7 @@
 set(gen_multisig_sources
   gen_multisig.cpp)
 
-arqma_add_executable(gen_multisig
+evolution_add_executable(gen_multisig
   ${gen_multisig_sources})
 target_link_libraries(gen_multisig
   PRIVATE
@@ -50,5 +50,5 @@ add_dependencies(gen_multisig
   version)
 set_property(TARGET gen_multisig
   PROPERTY
-    OUTPUT_NAME "arqma-generate-trusted-multisig-wallets")
+    OUTPUT_NAME "evolution-generate-trusted-multisig-wallets")
 install(TARGETS gen_multisig DESTINATION bin)

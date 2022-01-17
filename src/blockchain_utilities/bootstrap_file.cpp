@@ -33,8 +33,8 @@
 
 #include "bootstrap_file.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "bcutil"
+#undef EVOLUTION_DEFAULT_LOG_CATEGORY
+#define EVOLUTION_DEFAULT_LOG_CATEGORY "bcutil"
 
 namespace po = boost::program_options;
 
@@ -44,7 +44,7 @@ using namespace epee;
 namespace
 {
   // This number was picked by taking the leading 4 bytes from this output:
-  // echo Arqma bootstrap file | sha1sum
+  // echo Evolution bootstrap file | sha1sum
   const uint32_t blockchain_raw_magic = 0x17e66914;
   const uint32_t header_size = 1024;
 

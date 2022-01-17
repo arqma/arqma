@@ -56,8 +56,8 @@ using namespace epee;
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "daemonizer/daemonizer.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "wallet.rpc"
+#undef EVOLUTION_DEFAULT_LOG_CATEGORY
+#define EVOLUTION_DEFAULT_LOG_CATEGORY "wallet.rpc"
 
 #define DEFAULT_AUTO_REFRESH_PERIOD 20 // seconds
 
@@ -69,7 +69,7 @@ namespace
   const command_line::arg_descriptor<std::string> arg_wallet_dir = {"wallet-dir", "Directory for newly created wallets"};
   const command_line::arg_descriptor<bool> arg_prompt_for_password = {"prompt-for-password", "Prompts for password when not provided", false};
 
-  constexpr const char default_rpc_username[] = "arqma";
+  constexpr const char default_rpc_username[] = "evolution";
 
   boost::optional<tools::password_container> password_prompter(const char *prompt, bool verify)
   {
@@ -213,7 +213,7 @@ namespace tools
           string_encoding::base64_encode(rand_128bit.data(), rand_128bit.size())
         );
 
-        std::string temp = "arqma-wallet-rpc." + bind_port + ".login";
+        std::string temp = "evolution-wallet-rpc." + bind_port + ".login";
         rpc_login_file = tools::private_file::create(temp);
         if (!rpc_login_file.handle())
         {
@@ -666,7 +666,7 @@ namespace tools
           }
           if (addresses.empty())
           {
-            er.message = std::string("No ArQmA address found at ") + url;
+            er.message = std::string("No Evolution address found at ") + url;
             return {};
           }
           return addresses[0];
@@ -1941,7 +1941,7 @@ namespace tools
         }
         if (addresses.empty())
         {
-          er.message = std::string("No ArQmA address found at ") + url;
+          er.message = std::string("No Evolution address found at ") + url;
           return {};
         }
         return addresses[0];
@@ -2732,7 +2732,7 @@ namespace tools
         }
         if (addresses.empty())
         {
-          er.message = std::string("No ArQmA address found at ") + url;
+          er.message = std::string("No Evolution address found at ") + url;
           return {};
         }
         return addresses[0];
@@ -4030,7 +4030,7 @@ namespace tools
             }
             if (addresses.empty())
             {
-              er.message = std::string("No Arqma Wallet Address found at: ") + url;
+              er.message = std::string("No Evolution Wallet Address found at: ") + url;
               return {};
             }
             address = addresses[0];
@@ -4149,7 +4149,7 @@ namespace tools
   bool wallet_rpc_server::on_get_version(const wallet_rpc::COMMAND_RPC_GET_VERSION::request& req, wallet_rpc::COMMAND_RPC_GET_VERSION::response& res, epee::json_rpc::error& er, const connection_context *ctx)
   {
     res.version = WALLET_RPC_VERSION;
-    res.release = ARQMA_VERSION_IS_RELEASE;
+    res.release = EVOLUTION_VERSION_IS_RELEASE;
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -4333,7 +4333,7 @@ public:
   }
 };
 
-std::string const t_executor::NAME = "Arqma Wallet RPC Daemon";
+std::string const t_executor::NAME = "Evolution Wallet RPC Daemon";
 
 int main(int argc, char** argv) {
 
@@ -4365,12 +4365,12 @@ int main(int argc, char** argv) {
   bool should_terminate = false;
   std::tie(vm, should_terminate) = wallet_args::main(
     argc, argv,
-    "arqma-wallet-rpc [--wallet-file=<file>|--generate-from-json=<file>|--wallet-dir=<directory>] [--rpc-bind-port=<port>]",
-    tools::wallet_rpc_server::tr("This is the RPC Arqma wallet. It needs to connect to a Arqma\ndaemon to work correctly."),
+    "evolution-wallet-rpc [--wallet-file=<file>|--generate-from-json=<file>|--wallet-dir=<directory>] [--rpc-bind-port=<port>]",
+    tools::wallet_rpc_server::tr("This is the RPC Evolution wallet. It needs to connect to a Evolution\ndaemon to work correctly."),
     desc_params,
     po::positional_options_description(),
     [](const std::string &s, bool emphasis){ epee::set_console_color(emphasis ? epee::console_color_white : epee::console_color_default, true); std::cout << s << std::endl; if (emphasis) epee::reset_console_color(); },
-    "arqma-wallet-rpc.log",
+    "evolution-wallet-rpc.log",
     true
   );
   if (!vm)

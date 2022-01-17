@@ -87,9 +87,9 @@ set(common_private_headers
   aligned.h
   combinator.h)
 
-arqma_private_headers(common
+evolution_private_headers(common
   ${common_private_headers})
-arqma_add_library(common
+evolution_add_library(common
   ${common_sources}
   ${common_headers}
   ${common_private_headers}

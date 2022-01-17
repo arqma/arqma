@@ -35,9 +35,9 @@ set(simplewallet_headers)
 set(simplewallet_private_headers
   simplewallet.h)
 
-arqma_private_headers(simplewallet
+evolution_private_headers(simplewallet
   ${simplewallet_private_headers})
-arqma_add_executable(simplewallet
+evolution_add_executable(simplewallet
   ${simplewallet_sources}
   ${simplewallet_headers}
   ${simplewallet_private_headers})
@@ -64,5 +64,5 @@ target_link_libraries(simplewallet
     ${EXTRA_LIBRARIES})
 set_property(TARGET simplewallet
   PROPERTY
-    OUTPUT_NAME "arqma-wallet-cli")
+    OUTPUT_NAME "evolution-wallet-cli")
 install(TARGETS simplewallet DESTINATION bin)

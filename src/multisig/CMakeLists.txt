@@ -35,10 +35,10 @@ set(multisig_headers)
 set(multisig_private_headers
   multisig.h)
 
-arqma_private_headers(multisig
+evolution_private_headers(multisig
   ${multisig_private_headers})
 
-arqma_add_library(multisig
+evolution_add_library(multisig
   ${multisig_sources}
   ${multisig_headers}
   ${multisig_private_headers})

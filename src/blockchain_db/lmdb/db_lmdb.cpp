@@ -51,8 +51,8 @@
 #include "profile_tools.h"
 #include "ringct/rctOps.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "blockchain.db.lmdb"
+#undef EVOLUTION_DEFAULT_LOG_CATEGORY
+#define EVOLUTION_DEFAULT_LOG_CATEGORY "blockchain.db.lmdb"
 
 
 #if defined(__i386) || defined(__x86_64)
@@ -1484,7 +1484,7 @@ void BlockchainLMDB::open(const std::string& filename, const int db_flags)
         mdb_env_close(m_env);
         m_open = false;
         MFATAL("Existing lmdb database needs to be converted, which cannot be done on a read-only database.");
-        MFATAL("Please run arqmad once to convert the database.");
+        MFATAL("Please run evolutiond once to convert the database.");
         return;
       }
       // Note that there was a schema change within version 0 as well.
@@ -4180,7 +4180,7 @@ std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> BlockchainLMDB::get
       while (num_elems > 0) {
         const tx_out_index toi = get_output_tx_and_index(amount, num_elems - 1);
         const uint64_t height = get_tx_block_height(toi.first);
-        if (height + config::tx_settings::ARQMA_TX_CONFIRMATIONS_REQUIRED <= blockchain_height)
+        if (height + config::tx_settings::EVOLUTION_TX_CONFIRMATIONS_REQUIRED <= blockchain_height)
           break;
         --num_elems;
       }

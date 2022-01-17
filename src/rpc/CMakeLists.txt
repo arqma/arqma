@@ -75,29 +75,29 @@ set(daemon_rpc_server_private_headers
   daemon_handler.h)
 
 
-arqma_private_headers(rpc
+evolution_private_headers(rpc
   ${rpc_private_headers})
 
-arqma_private_headers(daemon_rpc_server
+evolution_private_headers(daemon_rpc_server
   ${daemon_rpc_server_private_headers})
 
 
-arqma_add_library(rpc_base
+evolution_add_library(rpc_base
   ${rpc_base_sources}
   ${rpc_base_headers}
   ${rpc_base_private_headers})
 
-arqma_add_library(rpc
+evolution_add_library(rpc
   ${rpc_sources}
   ${rpc_headers}
   ${rpc_private_headers})
 
-arqma_add_library(daemon_messages
+evolution_add_library(daemon_messages
   ${daemon_messages_sources}
   ${daemon_messages_headers}
   ${daemon_messages_private_headers})
 
-arqma_add_library(daemon_rpc_server
+evolution_add_library(daemon_rpc_server
   ${daemon_rpc_server_sources}
   ${daemon_rpc_server_headers}
   ${daemon_rpc_server_private_headers})
@@ -116,7 +116,7 @@ target_link_libraries(rpc_base
 
 target_link_libraries(rpc
   PUBLIC
-    arqma_mq
+    evolution_mq
     rpc_base
     rpc_sig
     common
@@ -131,7 +131,7 @@ target_link_libraries(rpc
 
 target_link_libraries(daemon_messages
   PRIVATE
-    arqma_mq
+    evolution_mq
     cryptonote_core
     cryptonote_protocol
     version

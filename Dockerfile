@@ -183,23 +183,23 @@ RUN set -ex && \
 COPY --from=builder /src/build/release/bin /usr/local/bin/
 
 # Below command is creating Arqma user to do not run daemon as a root
-RUN adduser --system --group --disabled-password arqma && \
-	mkdir -p /wallet /home/arqma/.arqma && \
-	chown -R arqma:arqma /home/arqma/.arqma && \
-	chown -R arqma:arqma /wallet
+RUN adduser --system --group --disabled-password evolution && \
+	mkdir -p /wallet /home/evolution/.evolution && \
+	chown -R evolution:evolution /home/evolution/.evolution && \
+	chown -R evolution:evolution /wallet
 
 # Contains the blockchain
-VOLUME /home/arqma/.arqma
+VOLUME /home/evolution/.evolution
 
 # Generate your wallet via accessing the container and run:
 # cd /wallet
-# arqma-wallet-cli
+# evolution-wallet-cli
 VOLUME /wallet
 
-EXPOSE 19993
-EXPOSE 19994
+EXPOSE 52921
+EXPOSE 52922
 
-# switch to user arqma
-USER arqma
+# switch to user Evolutionma
+USER Evolutionma
 
-ENTRYPOINT ["arqmad", "--p2p-bind-ip=0.0.0.0", "--p2p-bind-port=19993", "--rpc-bind-ip=0.0.0.0", "--rpc-bind-port=19994", "--non-interactive", "--confirm-external-bind"]
+ENTRYPOINT ["evolutiond", "--p2p-bind-ip=0.0.0.0", "--p2p-bind-port=52921", "--rpc-bind-ip=0.0.0.0", "--rpc-bind-port=52922", "--non-interactive", "--confirm-external-bind"]

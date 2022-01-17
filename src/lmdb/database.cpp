@@ -78,20 +78,20 @@ namespace lmdb
 
     expect<environment> open_environment(const char* path, MDB_dbi max_dbs) noexcept
     {
-        ARQMA_PRECOND(path != nullptr);
+        EVOLUTION_PRECOND(path != nullptr);
 
         MDB_env* obj = nullptr;
-        ARQMA_LMDB_CHECK(mdb_env_create(std::addressof(obj)));
+        EVOLUTION_LMDB_CHECK(mdb_env_create(std::addressof(obj)));
         environment out{obj};
 
-        ARQMA_LMDB_CHECK(mdb_env_set_maxdbs(out.get(), max_dbs));
-        ARQMA_LMDB_CHECK(mdb_env_open(out.get(), path, 0, open_flags));
+        EVOLUTION_LMDB_CHECK(mdb_env_set_maxdbs(out.get(), max_dbs));
+        EVOLUTION_LMDB_CHECK(mdb_env_open(out.get(), path, 0, open_flags));
         return {std::move(out)};
     }
 
     expect<write_txn> database::do_create_txn(unsigned int flags) noexcept
     {
-        ARQMA_PRECOND(handle() != nullptr);
+        EVOLUTION_PRECOND(handle() != nullptr);
 
         for (unsigned attempts = 0; attempts < 3; ++attempts)
         {
@@ -105,7 +105,7 @@ namespace lmdb
             release_context(ctx);
             if (err != MDB_MAP_RESIZED)
                 return {lmdb::error(err)};
-            ARQMA_CHECK(this->resize());
+            EVOLUTION_CHECK(this->resize());
         }
         return {lmdb::error(MDB_MAP_RESIZED)};
     }
@@ -117,7 +117,7 @@ namespace lmdb
         {
             const int err = mdb_env_set_userctx(handle(), std::addressof(ctx));
             if (err)
-                ARQMA_THROW(lmdb::error(err), "Failed to set user context");
+                EVOLUTION_THROW(lmdb::error(err), "Failed to set user context");
         }
     }
 
@@ -128,13 +128,13 @@ namespace lmdb
 
     expect<void> database::resize() noexcept
     {
-        ARQMA_PRECOND(handle() != nullptr);
+        EVOLUTION_PRECOND(handle() != nullptr);
 
         while (ctx.lock.test_and_set());
         while (ctx.active);
 
         MDB_envinfo info{};
-        ARQMA_LMDB_CHECK(mdb_env_info(handle(), &info));
+        EVOLUTION_LMDB_CHECK(mdb_env_info(handle(), &info));
 
         const mdb_size_t resize = std::min(info.me_mapsize, max_resize);
         const int err = mdb_env_set_mapsize(handle(), info.me_mapsize + resize);
@@ -165,7 +165,7 @@ namespace lmdb
 
     expect<suspended_txn> database::reset_txn(read_txn txn) noexcept
     {
-        ARQMA_PRECOND(txn != nullptr);
+        EVOLUTION_PRECOND(txn != nullptr);
         mdb_txn_reset(txn.get());
         release_context(ctx);
         return suspended_txn{txn.release()};
@@ -178,8 +178,8 @@ namespace lmdb
 
     expect<void> database::commit(write_txn txn) noexcept
     {
-        ARQMA_PRECOND(txn != nullptr);
-        ARQMA_LMDB_CHECK(mdb_txn_commit(txn.get()));
+        EVOLUTION_PRECOND(txn != nullptr);
+        EVOLUTION_LMDB_CHECK(mdb_txn_commit(txn.get()));
         txn.release();
         release_context(ctx);
         return success();

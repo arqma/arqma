@@ -47,10 +47,10 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include "arqma_mq/zmq.hpp"
+#include "evolution_mq/zmq.hpp"
 #include <map>
 #include <iterator>
-#include "arqma_mq/INotifier.h"
+#include "evolution_mq/INotifier.h"
 #include <boost/utility/string_ref.hpp>
 
 #include <boost/algorithm/string.hpp>
@@ -60,7 +60,7 @@
 
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 
-#include "arqma_mq/zmq_handler.h"
+#include "evolution_mq/zmq_handler.h"
 #include "daemon/command_line_args.h"
 
 #include "rapidjson/stringbuffer.h"
@@ -71,7 +71,7 @@ using namespace rpc;
 using namespace boost::placeholders;
 
 
-namespace arqmaMQ
+namespace evolutionMQ
 {
   constexpr auto QUIT = "QUIT";
   constexpr auto EVICT = "EVICT";
@@ -131,21 +131,21 @@ namespace arqmaMQ
   typename std::map<K, V>::const_iterator cbegin() const {return clients.cbegin();}
   typename std::map<K, V>::const_iterator cend() const {return clients.cend();}
 
-}; // namespace arqmaMQ
+}; // namespace evolutionMQ
 
 
-class ArqmaNotifier: public INotifier
+class EvolutionNotifier: public INotifier
 {
   public:
 
-    ArqmaNotifier(ZmqHandler& h);
+    EvolutionNotifier(ZmqHandler& h);
 
-    ~ArqmaNotifier();
+    ~EvolutionNotifier();
 
-    ArqmaNotifier(const ArqmaNotifier&) = delete;
-    ArqmaNotifier& operator=(const ArqmaNotifier&) = delete;
-    ArqmaNotifier(ArqmaNotifier&&) = delete;
-    ArqmaNotifier& operator=(ArqmaNotifier&&) = delete;
+    EvolutionNotifier(const EvolutionNotifier&) = delete;
+    EvolutionNotifier& operator=(const EvolutionNotifier&) = delete;
+    EvolutionNotifier(EvolutionNotifier&&) = delete;
+    EvolutionNotifier& operator=(EvolutionNotifier&&) = delete;
     bool addTCPSocket(boost::string_ref address, boost::string_ref port, uint16_t max_clients);
     void run();
     void stop();
@@ -165,6 +165,6 @@ class ArqmaNotifier: public INotifier
     bool m_enabled = false;
     zmq::message_t create_message(std::string &&data);
 
-}; // class ArqmaNotifier
+}; // class EvolutionNotifier
 
-}  // arqmaMQ.h
+}  // evolutionMQ.h

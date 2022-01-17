@@ -34,7 +34,7 @@
 #include "string_tools.h"
 using namespace epee;
 
-#include "arqma_mq/arqmaMQ.h"
+#include "evolution_mq/evolutionMQ.h"
 
 #include <unordered_set>
 #include "cryptonote_core.h"
@@ -58,8 +58,8 @@ using namespace epee;
 #include "version.h"
 #include "config/ascii.h"
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "cn"
+#undef EVOLUTION_DEFAULT_LOG_CATEGORY
+#define EVOLUTION_DEFAULT_LOG_CATEGORY "cn"
 
 DISABLE_VS_WARNINGS(4355)
 
@@ -70,7 +70,7 @@ DISABLE_VS_WARNINGS(4355)
 // basically at least how many bytes the block itself serializes to without the miner tx
 #define BLOCK_SIZE_SANITY_LEEWAY 100
 
-using namespace arqmaMQ;
+using namespace evolutionMQ;
 
 namespace cryptonote
 {
@@ -165,7 +165,7 @@ namespace cryptonote
   };
   static const command_line::arg_descriptor<std::string> arg_check_updates = {
     "check-updates"
-  , "Check for new versions of arqma: [disabled|notify|download|update]"
+  , "Check for new versions of evolution: [disabled|notify|download|update]"
   , "notify"
   };
   static const command_line::arg_descriptor<bool> arg_fluffy_blocks = {
@@ -475,8 +475,8 @@ namespace cryptonote
       if (boost::filesystem::exists(old_files / "blockchain.bin"))
       {
         MWARNING("Found old-style blockchain.bin in " << old_files.string());
-        MWARNING("ArQmA now uses a new format. You can either remove blockchain.bin to start syncing");
-        MWARNING("the blockchain anew, or use arqma-blockchain-export and arqma-blockchain-import to");
+        MWARNING("Evolution now uses a new format. You can either remove blockchain.bin to start syncing");
+        MWARNING("the blockchain anew, or use evolution-blockchain-export and evolution-blockchain-import to");
         MWARNING("convert your existing blockchain.bin to the new format. See README.md for instructions.");
         return false;
       }
@@ -799,9 +799,9 @@ namespace cryptonote
     }
     bad_semantics_txes_lock.unlock();
 
-    if (tx.version == 0 || tx.version > config::tx_settings::ARQMA_TX_VERSION)
+    if (tx.version == 0 || tx.version > config::tx_settings::EVOLUTION_TX_VERSION)
     {
-      MERROR_VER("Bad tx version (" << tx.version << ", max is " << config::tx_settings::ARQMA_TX_VERSION << ")");
+      MERROR_VER("Bad tx version (" << tx.version << ", max is " << config::tx_settings::EVOLUTION_TX_VERSION << ")");
       tvc.m_verifivation_failed = true;
       return false;
     }
@@ -1695,8 +1695,8 @@ namespace cryptonote
   {
     if(!m_starter_message_showed)
      {
-      MGINFO_RED(ENDL << ascii_arqma_logo << ENDL);
-      MGINFO_CYAN(ENDL << ascii_arqma_info << ENDL);
+      MGINFO_RED(ENDL << ascii_evolution_logo << ENDL);
+      MGINFO_CYAN(ENDL << ascii_evolution_info << ENDL);
       if (m_offline)
        MGINFO_GREEN(ENDL << main_message_true << ENDL);
      else
@@ -1737,7 +1737,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::check_updates()
   {
-    static const char software[] = "arqma";
+    static const char software[] = "evolution";
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
 //    static const char subdir[] = "cli"; // because it can never be simple
@@ -1757,7 +1757,7 @@ namespace cryptonote
     if (!tools::check_updates(software, buildtag, version, hash))
       return false;
 
-    if (tools::vercmp(version.c_str(), ARQMA_VERSION) <= 0)
+    if (tools::vercmp(version.c_str(), EVOLUTION_VERSION) <= 0)
     {
       m_update_available = false;
       return true;

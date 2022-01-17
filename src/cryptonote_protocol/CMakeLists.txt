@@ -40,10 +40,10 @@ set(cryptonote_protocol_private_headers
   cryptonote_protocol_handler.h
   cryptonote_protocol_handler_common.h)
 
-arqma_private_headers(cryptonote_protocol
+evolution_private_headers(cryptonote_protocol
   ${cryptonote_protocol_private_headers})
 
-arqma_add_library(cryptonote_protocol
+evolution_add_library(cryptonote_protocol
   ${cryptonote_protocol_sources}
   ${cryptonote_protocol_headers}
   ${cryptonote_protocol_private_headers})

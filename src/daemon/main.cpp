@@ -45,15 +45,15 @@
 #include "rpc/core_rpc_server.h"
 #include "rpc/rpc_args.h"
 #include "daemon/command_line_args.h"
-#include "arqma_mq/arqmaMQ.h"
+#include "evolution_mq/evolutionMQ.h"
 #include "version.h"
 
 #ifdef STACK_TRACE
 #include "common/stack_trace.h"
 #endif // STACK_TRACE
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
+#undef EVOLUTION_DEFAULT_LOG_CATEGORY
+#define EVOLUTION_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;
@@ -175,16 +175,16 @@ int main(int argc, char const * argv[])
 
     if (command_line::get_arg(vm, command_line::arg_help))
     {
-      std::cout << "Arqma '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL << ENDL;
+      std::cout << "Evolution '" << EVOLUTION_RELEASE_NAME << "' (v" << EVOLUTION_VERSION_FULL << ")" << ENDL << ENDL;
       std::cout << "Usage: " + std::string{argv[0]} + " [options|settings] [daemon_command...]" << std::endl << std::endl;
       std::cout << visible_options << std::endl;
       return 0;
     }
 
-    // Arqma Version
+    // Evolution Version
     if (command_line::get_arg(vm, command_line::arg_version))
     {
-      std::cout << "Arqma '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL;
+      std::cout << "Evolution '" << EVOLUTION_RELEASE_NAME << "' (v" << EVOLUTION_VERSION_FULL << ")" << ENDL;
       return 0;
     }
 
@@ -227,7 +227,7 @@ int main(int argc, char const * argv[])
     }
 
     // data_dir
-    //   default: e.g. ~/.arqma/ or ~/.arqma/testnet
+    //   default: e.g. ~/.evolution/ or ~/.evolution/testnet
     //   if data-dir argument given:
     //     absolute path
     //     relative path: relative to cwd
@@ -270,7 +270,7 @@ int main(int argc, char const * argv[])
 	  tools::set_max_concurrency(command_line::get_arg(vm, daemon_args::arg_max_concurrency));
 
 	// logging is now set up
-	MGINFO("Arqma '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")");
+	MGINFO("Evolution '" << EVOLUTION_RELEASE_NAME << "' (v" << EVOLUTION_VERSION_FULL << ")");
 
 
     // If there are positional options, we're running a daemon command

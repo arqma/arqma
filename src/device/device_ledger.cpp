@@ -43,8 +43,8 @@ namespace hw {
 
   #ifdef WITH_DEVICE_LEDGER
 
-    #undef ARQMA_DEFAULT_LOG_CATEGORY
-    #define ARQMA_DEFAULT_LOG_CATEGORY "device.ledger"
+    #undef EVOLUTION_DEFAULT_LOG_CATEGORY
+    #define EVOLUTION_DEFAULT_LOG_CATEGORY "device.ledger"
 
     /* ===================================================================== */
     /* ===                           Debug                              ==== */

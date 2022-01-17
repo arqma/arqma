@@ -43,7 +43,7 @@ set(net_headers
   socks_connect.h
   tor_address.h)
 
-arqma_add_library(net
+evolution_add_library(net
   ${net_sources}
   ${net_headers})
 

@@ -1,9 +1,9 @@
 Gitian building
 ================
 
-*Setup instructions for a Gitian build of Arqma using a VM or physical system.*
+*Setup instructions for a Gitian build of Evolution using a VM or physical system.*
 
-Gitian is the deterministic build process that is used to build the Arqma CLI
+Gitian is the deterministic build process that is used to build the Evolution CLI
 executables. It provides a way to be reasonably sure that the
 executables are really built from the git source. It also makes sure that
 the same, tested dependencies are used and statically built into the executable.

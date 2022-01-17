@@ -47,14 +47,14 @@
 #include "net/net_ssl.h"
 #include "version.h"
 
-#include "arqma_mq/arqmaMQ.h"
+#include "evolution_mq/evolutionMQ.h"
 
 using namespace epee;
 
 #include <functional>
 
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
+#undef EVOLUTION_DEFAULT_LOG_CATEGORY
+#define EVOLUTION_DEFAULT_LOG_CATEGORY "daemon"
 
 namespace daemonize {
 
@@ -166,8 +166,8 @@ bool t_daemon::run(bool interactive)
       rpc_commands->start_handling(std::bind(&daemonize::t_daemon::stop_p2p, this));
     }
 
-    arqmaMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
-    arqmaMQ::ArqmaNotifier arqmaNotifier{zmq_daemon_handler};
+    evolutionMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
+    evolutionMQ::EvolutionNotifier evolutionNotifier{zmq_daemon_handler};
 
     if(zmq_enabled)
     {
@@ -187,19 +187,19 @@ bool t_daemon::run(bool interactive)
         return false;
       }
 
-      if(!arqmaNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
+      if(!evolutionNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
       {
-        LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to Arqma ZMQ Server");
+        LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to Evolution ZMQ Server");
         return false;
       }
 
-      MINFO("Starting Arqma ZMQ server...");
-      arqmaNotifier.run();
+      MINFO("Starting Evolution ZMQ server...");
+      evolutionNotifier.run();
 
-      MGINFO_GREEN(std::string("Arqma ZMQ server started at ") << zmq_ip_str + ":" + zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
+      MGINFO_GREEN(std::string("Evolution ZMQ server started at ") << zmq_ip_str + ":" + zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
     }
     else
-      MGINFO_GREEN(std::string("Arqma ZMQ Server Disabled"));
+      MGINFO_GREEN(std::string("Evolution ZMQ Server Disabled"));
 
     if (public_rpc_port > 0)
     {
@@ -214,8 +214,8 @@ bool t_daemon::run(bool interactive)
 
     if(zmq_enabled)
     {
-      MGINFO_GREEN(std::string("Stopping Arqma ZMQ Server."));
-      arqmaNotifier.stop();
+      MGINFO_GREEN(std::string("Stopping Evolution ZMQ Server."));
+      evolutionNotifier.stop();
     }
 
 

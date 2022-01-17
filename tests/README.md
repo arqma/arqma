@@ -3,7 +3,7 @@
 To run all tests, run:
 
 ```
-cd /path/to/arqma
+cd /path/to/evolution
 make [-jn] debug-test # where n is number of compiler processes
 ```
 

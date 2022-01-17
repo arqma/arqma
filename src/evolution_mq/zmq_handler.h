@@ -47,7 +47,7 @@ namespace
 }  // anonymous namespace
 
 
-namespace arqmaMQ
+namespace evolutionMQ
 {
 
 class ZmqHandler : public cryptonote::rpc::RpcHandler
@@ -155,4 +155,4 @@ class ZmqHandler : public cryptonote::rpc::RpcHandler
 
 };
 
-}  // namespace arqmaMQ
+}  // namespace evolutionMQ

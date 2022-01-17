@@ -34,7 +34,7 @@
 #include <string>
 
 //cryptonote_core strings
-const std::string ascii_arqma_logo_win =
+const std::string ascii_evolution_logo_win =
     "\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWWWWW@=WWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWW@+::.--+@WWWWWWWWWWWWWWWWWWWWWWWWW\n"
@@ -67,7 +67,7 @@ const std::string ascii_arqma_logo_win =
     "WWWWWWWWWWWWWWWWWWWWWWW@=++++=****#WWWWWWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWWWW#*:*@WWWWWWWWWWWWWWWWWWWWWWWWWWW";
 
-  const std::string ascii_arqma_logo_nowin =
+  const std::string ascii_evolution_logo_nowin =
     "\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWWWWW@=WWWWWWWWWWWWWWWWWWWWWWWWWWWWW\n"
     "WWWWWWWWWWWWWWWWWWWWWWWWW@+::.--+@WWWWWWWWWWWWWWWWWWWWWWWWW\n"
@@ -111,13 +111,13 @@ const std::string ascii_arqma_logo_win =
     "       ░  ░   ░         ░           ░         ░  ░  ";
 
  #ifdef _WIN32
- const std::string ascii_arqma_logo = ascii_arqma_logo_win;
+ const std::string ascii_evolution_logo = ascii_evolution_logo_win;
  #else
- const std::string ascii_arqma_logo = ascii_arqma_logo_nowin;
+ const std::string ascii_evolution_logo = ascii_evolution_logo_nowin;
  #endif
 
 
-const std::string ascii_arqma_info =
+const std::string ascii_evolution_info =
     "\n"
     "**********************************************************************\n"
     "You can set the level of process detailization through \"set_log <level|categories>\"\n"
@@ -136,6 +136,6 @@ const std::string main_message_false =
 //cryptonote_protocol_handler
 const std::string crypto_synced =
     "**********************************************************************\n"
-    "You are now synchronized with the network. You may now start arqma-wallet-cli.\n"
+    "You are now synchronized with the network. You may now start evolution-wallet-cli.\n"
     "Use the \"help\" command to see the list of available commands.\n"
     "**********************************************************************";

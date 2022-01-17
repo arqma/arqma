@@ -56,9 +56,9 @@ set(wallet_api_private_headers
   subaddress_account.h
   unsigned_transaction.h)
 
-arqma_private_headers(wallet_api
+evolution_private_headers(wallet_api
   ${wallet_api_private_headers})
-arqma_add_library(wallet_api
+evolution_add_library(wallet_api
   ${wallet_api_sources}
   ${wallet_api_headers}
   ${wallet_api_private_headers})

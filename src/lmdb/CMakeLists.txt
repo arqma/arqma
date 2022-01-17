@@ -42,7 +42,7 @@ set(lmdb_headers
   util.h
   value_stream.h)
 
-arqma_add_library(lmdb_lib
+evolution_add_library(lmdb_lib
   ${lmdb_sources}
   ${lmdb_headers})
 

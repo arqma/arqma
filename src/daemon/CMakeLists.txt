@@ -62,9 +62,9 @@ set(daemon_private_headers
   ../p2p/p2p_protocol_defs.h
   ../p2p/stdafx.h)
 
-arqma_private_headers(daemon
+evolution_private_headers(daemon
   ${daemon_private_headers})
-arqma_add_executable(daemon
+evolution_add_executable(daemon
   ${daemon_sources}
   ${daemon_headers}
   ${daemon_private_headers})
@@ -94,5 +94,5 @@ target_link_libraries(daemon
     blocks)
 set_property(TARGET daemon
   PROPERTY
-    OUTPUT_NAME "arqmad")
+    OUTPUT_NAME "evolutiond")
 install(TARGETS daemon DESTINATION bin)

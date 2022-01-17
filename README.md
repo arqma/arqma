@@ -30,7 +30,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 ## Arqma Social-Media Websites
 
 - Twitter: [https://twitter.com/ArQmA_Network](https://twitter.com/ArQmA_Network)
-- FaceBook: [https://www.facebook.com/ARQMAnetwork](https://www.facebook.com/ARQMAnetwork)
+- FaceBook: [https://www.facebook.com/EVOLUTIONnetwork](https://www.facebook.com/EVOLUTIONnetwork)
 - Medium: [https://medium.com/@ArQmANetwork](https://medium.com/@ArQmANetwork)
 - YouTube: [https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA](https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA)
 
@@ -244,7 +244,7 @@ If you are using the older Raspbian Jessie image, compiling Arqma is a bit more 
 	`$ CONF_SWAPSIZE=1024`
 	`$ sudo /etc/init.d/dphys-swapfile start`
 
-* Then, install the dependencies for ArQmA except `libunwind` and `libboost-all-dev`
+* Then, install the dependencies for Evolution except `libunwind` and `libboost-all-dev`
 
 * Install the latest version of boost (this may first require invoking `$ apt-get remove --purge libboost*` to remove a previous version if you're not using a clean install):
 
@@ -512,7 +512,7 @@ TAILS ships with a very restrictive set of firewall rules. Therefore, you need
 to add a rule to allow this connection too, in addition to telling torsocks to
 allow inbound connections. Full example:
 
-`$ sudo iptables -I OUTPUT 2 -p tcp -d 127.0.0.1 -m tcp --dport 19994 -j ACCEPT`
+`$ sudo iptables -I OUTPUT 2 -p tcp -d 127.0.0.1 -m tcp --dport 52922 -j ACCEPT`
 `$ DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
         --data-dir /home/amnesia/Persistent/your/directory/to/the/blockchain`
 ## Debugging

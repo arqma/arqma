@@ -36,4 +36,4 @@ add_custom_command(OUTPUT checkpoints.c MAIN_DEPENDENCY checkpoints.dat
       echo "'};'" >> checkpoints.c &&
       echo "'const\tsize_t\tcheckpoints_len\t=\tsizeof(checkpoints);'" >> checkpoints.c)
 
-arqma_add_library(blocks blocks.cpp checkpoints.c)
+evolution_add_library(blocks blocks.cpp checkpoints.c)

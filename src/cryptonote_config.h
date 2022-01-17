@@ -50,8 +50,8 @@
 #define BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V9            BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2
 
 // MONEY_SUPPLY - total number coins to be generated
-#define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define MONEY_PREMINE                                   ((uint64_t)7500000000000000)
+#define MONEY_SUPPLY                                    ((uint64_t)55000000000000000)
+#define MONEY_PREMINE                                   ((uint64_t)100000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define EMISSION_FACTOR_V16                             (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
@@ -153,7 +153,7 @@
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
 
-#define CRYPTONOTE_NAME                                 "arqma"
+#define CRYPTONOTE_NAME                                 "evolution"
 #define CRYPTONOTE_POOLDATA_FILENAME                    "poolstate.bin"
 #define CRYPTONOTE_BLOCKCHAINDATA_FILENAME              "data.mdb"
 #define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
@@ -201,49 +201,49 @@ namespace config
    uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)20000); // Deprecated
    uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
 
-   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
-   uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
-   uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
-   uint16_t const P2P_DEFAULT_PORT = 19993;
-   uint16_t const RPC_DEFAULT_PORT = 19994;
-   uint16_t const ZMQ_DEFAULT_PORT = 19995;
+   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x6362; // Wallet prefix: ev... // decimal prefix: ......
+   uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x60e2; // Wallet prefix: evo... // decimal prefix: .....
+   uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x5e62; // Wallet prefix: evc... // decimal prefix: ......
+   uint16_t const P2P_DEFAULT_PORT = 52921;
+   uint16_t const RPC_DEFAULT_PORT = 52922;
+   uint16_t const ZMQ_DEFAULT_PORT = 52923;
    boost::uuids::uuid const NETWORK_ID = { {
-       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
+       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x66, 0x11, 0xFF, 0xFF, 0xFF, 0x88, 0x11, 0x1F
      } }; // Bender's nightmare
    std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
-   uint32_t const GENESIS_NONCE = 19993;
+   uint32_t const GENESIS_NONCE = 52921;
 
    const unsigned char HASH_KEY_MM_SLOT = 'm';
 
    namespace testnet
    {
-     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x53ca; // Wallet prefix: at... // decimal prefix: 21450
-     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x504a; // Wallet prefix: ati... // decimal prefix: 20554
-     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x524a; // Wallet prefix: ats... // decimal prefix: 21066
-     uint16_t const P2P_DEFAULT_PORT = 29993;
-     uint16_t const RPC_DEFAULT_PORT = 29994;
-     uint16_t const ZMQ_DEFAULT_PORT = 29995;
+     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x7de2; // Wallet prefix: ex... // decimal prefix: 21450
+     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x7c62; // Wallet prefix: ext... // decimal prefix: 20554
+     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x198762; // Wallet prefix: ett... // decimal prefix: 21066
+     uint16_t const P2P_DEFAULT_PORT = 53921;
+     uint16_t const RPC_DEFAULT_PORT = 53922;
+     uint16_t const ZMQ_DEFAULT_PORT = 53923;
      boost::uuids::uuid const NETWORK_ID = { {
-         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
+         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x66, 0x11, 0xFF, 0xFF, 0xFF, 0x88, 0x11, 0x1B
        } }; // Bender's daydream
    }
 
    namespace stagenet
    {
-     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x39ca; // Wallet prefix: as... // decimal prefix: 14794
-     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1742ca; // Wallet prefix: asi... // decimal prefix: 1524426
-     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1d84ca; // Wallet prefix: ass... // decimal prefix: 1934538
-     uint16_t const P2P_DEFAULT_PORT = 39993;
-     uint16_t const RPC_DEFAULT_PORT = 39994;
-     uint16_t const ZMQ_DEFAULT_PORT = 39995;
+     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x361; // Wallet prefix: ee... // decimal prefix: 14794
+     uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x62e2; // Wallet prefix: evx... // decimal prefix: 1524426
+     uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x5a262; // Wallet prefix: evv... // decimal prefix: 1934538
+     uint16_t const P2P_DEFAULT_PORT = 54921;
+     uint16_t const RPC_DEFAULT_PORT = 54922;
+     uint16_t const ZMQ_DEFAULT_PORT = 54923;
      boost::uuids::uuid const NETWORK_ID = { {
-         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
+         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x66, 0x11, 0xFF, 0xFF, 0xFF, 0x88, 0x11, 0x1C
        } }; // Bender's daydream
    }
 
    namespace blockchain_settings
    {
-     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+     const uint64_t PREMINE_BURN = 0; // Will need to be set after knowing exact amount.
      const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2097152; // It is set to 2048kB (2MB)
      const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1048576; // It is set to 1024kB (1MB)
      const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
@@ -266,16 +266,16 @@ namespace config
 
    namespace sync
    {
-     static constexpr size_t NORMAL_SYNC = 32;
-     static constexpr size_t FAST_SYNC = 128;
+     static constexpr size_t NORMAL_SYNC = 32; // Amount of Blocks to download and Validate at ones while Synchronizung with Evolution Network.
+     static constexpr size_t FAST_SYNC = 128; // Amount of Blocks to download at ones from already known by Evolution Daemon and Checkpoint are hardcoded into codebase
      static constexpr size_t MAX_SYNC = 2048;
    }
 
    namespace governance
    {
-    static constexpr const char* MAINNET_WALLET_ADDRESS = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
+    static constexpr const char* MAINNET_WALLET_ADDRESS = "evzEFYNxCVhAAMTJiEVRi4EN39ox6W7BaQkwkwd7jitEhfHQ6zv3tQXSDcUwoUeLhyhqbNJNZvgvqPGvnBa7umRd3XWKx6rxeE";
     static constexpr const char* TESTNET_WALLET_ADDRESS = "";
-    static constexpr const char* STAGENET_WALLET_ADDRESS = "as2RzktNfxR8y3RgoDmoRFCGez6393Rd97e8c3ctupJu5i3CirGA4MVFzT7fwcSjxn8bV1orETq4eVQzkY2VTjox2TFnGUhgn";
+    static constexpr const char* STAGENET_WALLET_ADDRESS = "";
    }
 
 }
@@ -286,32 +286,32 @@ namespace arqma_nodes
   
   const char *const MAINNET_NODES[] =
   {
-    "144.217.242.16",
-    "161.97.102.172",
-    "it-support.mal-bit.com",
-    "207.244.249.105",
-    "139.99.106.122",
-    "164.68.123.118",
-    "209.126.84.37"
+    "62.171.142.111", // node1-GB
+    "164.68.127.234", // node2-GB
+    "79.143.181.203", // node3-GB
+    "92.118.188.152", // node4-US-Jason
+    "49.234.122.53",  // node5-China-Jason
+    "68.168.100.206" // node6-US-Eadrom
   };
 
   const char *const TESTNET_NODES[] =
   {
-    "161.97.102.172",
-    "139.99.106.122",
-    "77.93.206.172",
-    "it-support.mal-bit.com"
+    "62.171.142.111", // node1-GB
+    "164.68.127.234", // node2-GB
+    "79.143.181.203", // node3-GB
+    "92.118.188.152", // node4-US-Jason
+    "49.234.122.53",  // node5-China-Jason
+    "68.168.100.206" // node6-US-Eadrom
   };
 
   const char *const STAGENET_NODES[] =
   {
-    "161.97.102.172",
-    "139.99.106.122",
-    "77.93.206.172",
-    "it-support.mal-bit.com",
-    "164.68.123.118",
-    "144.217.242.16",
-    "209.126.84.37"
+    "62.171.142.111", // node1-GB
+    "164.68.127.234", // node2-GB
+    "79.143.181.203", // node3-GB
+    "92.118.188.152", // node4-US-Jason
+    "49.234.122.53",  // node5-China-Jason
+    "68.168.100.206" // node6-US-Eadrom
   };
 }
 

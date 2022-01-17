@@ -132,7 +132,7 @@ namespace command_helper
   const char* SWEEP_ALL("Send all unlocked balance to an address. If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used. If the parameter \"outputs=<N>\" is specified and  N > 0, wallet splits the transaction into N even outputs.");
   const char* SWEEP_BELOW("Send all unlocked outputs below the threshold to an address.");
   const char* SWEEP_SINGLE("Send a single output of the given key image to an address without change.");
-  const char* DONATE("Donate <amount> to the development team (donations.arqma.com).");
+  const char* DONATE("Donate <amount> to the development team (donations.evolution.com).");
   const char* SIGN_TRANSFER("Sign a transaction from a file. If the parameter \"export_raw\" is specified, transaction raw hex data suitable for the daemon RPC /sendrawtransaction is exported.");
   const char* SUBMIT_TRANSFER("Submit a signed transaction from a file.");
   const char* SET_LOG("Change the current log detail (level must be <0-4>).");
@@ -170,8 +170,8 @@ namespace command_helper
          "  Set the fee to default/unimportant/normal/elevated/priority.\n "
          "confirm-missing-payment-id <1|0>\n "
          "ask-password <0|1|2   (or never|action|decrypt)>\n "
-         "unit <arqma|milliarq|microarq|nanoarq>\n "
-         "  Set the default Arqma (sub-)unit.\n "
+         "unit <evolution|millievox|microevox|nanoevox>\n "
+         "  Set the default Evolution (sub-)unit.\n "
          "min-outputs-count [n]\n "
          "  Try to keep at least that many outputs of value at least min-outputs-value.\n "
          "min-outputs-value [n]\n "
@@ -187,12 +187,12 @@ namespace command_helper
          "auto-low-priority <1|0>\n "
          "  Whether to automatically use the low priority fee level when it's safe to do so.\n "
          "segregate-pre-fork-outputs <1|0>\n "
-         "  Set this if you intend to spend outputs on both ArQmA AND a key reusing fork.\n "
+         "  Set this if you intend to spend outputs on both Evolution AND a key reusing fork.\n "
          "key-reuse-mitigation2 <1|0>\n "
-         "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n"
+         "  Set this if you are not sure whether you will spend on a key reusing Evolution fork later.\n"
          "subaddress-lookahead <major>:<minor>\n "
          "  Set the lookahead sizes for the subaddress hash table.\n "
-         "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n "
+         "  Set this if you are not sure whether you will spend on a key reusing Evolution fork later.\n "
          "segregation-height <n>\n "
          "  Set to the height of a key reusing fork you want to use, 0 to use default.\n"
          "persistent-client-id <1|0>\n "
@@ -261,7 +261,7 @@ namespace command_helper
   const char* IS_OUTPUT_SPENT("Checks whether an output is marked as spent");
   const char* PUBLIC_NODES("Lists known public nodes.");
   const char* NET_STATS("Prints simple network stats.");
-  const char* WELCOME("Prints basic info about Arqma for first time users");
+  const char* WELCOME("Prints basic info about Evolution for first time users");
   const char* VERSION("Returns version information.");
   const char* RPC_PAYMENT_INFO("Get info about RPC payments to current node");
   const char* START_MINING_FOR_RPC("Start mining to pay for RPC access");

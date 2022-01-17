@@ -36,7 +36,7 @@
 
 namespace daemon_args
 {
-  std::string const WINDOWS_SERVICE_NAME = "ArQmA-Network Node";
+  std::string const WINDOWS_SERVICE_NAME = "Evolution-Network Node";
 
   const command_line::arg_descriptor<std::string, false, true, 2> arg_config_file = {
     "config-file"
@@ -99,13 +99,13 @@ namespace daemon_args
 
   const command_line::arg_descriptor<bool> arg_public_node = {
     "public-node"
-  , "Allow Arq-Net Users to use this Arqma Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
+  , "Allow Arq-Net Users to use this Evolution Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
   , false
   };
 
   const command_line::arg_descriptor<bool> arg_zmq_enabled = {
     "zmq-enabled"
-  , "Enable Arqma ZMQ server"
+  , "Enable Evolution ZMQ server"
   , false
   };
 
@@ -117,7 +117,7 @@ namespace daemon_args
 
   const command_line::arg_descriptor<std::string> arg_zmq_bind_ip = {
     "zmq-bind-ip"
-  , "IP Address for Arqma ZMQ server to bind on"
+  , "IP Address for Evolution ZMQ server to bind on"
   , "127.0.0.1"
   };
 

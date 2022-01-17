@@ -157,7 +157,7 @@ release-static-win:
 	cd $(builddir)/release && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D_FORTIFY_SOURCE=0 -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="win-x64" -D CMAKE_TOOLCHAIN_FILE=$(topdir)/cmake/64-bit-toolchain.cmake -D MSYS2_FOLDER=$(shell cd ${MINGW_PREFIX}/.. && pwd -W) $(topdir) && $(MAKE)
 
 service-nodes:
-	@echo "\n\033[6;31mYou are wiling to build ArQmA Service Node daemon. This means you want to contribute to Public Tests. \nRunning that command it will fetch, merge and compile Pull Request made by Devs.\033[0m\n" ; \
+	@echo "\n\033[6;31mYou are wiling to build Evolution Service Node daemon. This means you want to contribute to Public Tests. \nRunning that command it will fetch, merge and compile Pull Request made by Devs.\033[0m\n" ; \
 	read -r -p "Continue (y/N)?: " CONTINUE; \
 	[ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] || (echo "Exiting."; exit 1;)
 	mkdir -p $(builddir)/release

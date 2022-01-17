@@ -42,26 +42,26 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(arqma_mq_sources
-  arqmaMQ.cpp
+set(evolution_mq_sources
+  evolutionMQ.cpp
   zmq_handler.cpp)
 
-set(arqma_mq_headers)
+set(evolution_mq_headers)
 
-set(arqma_mq_private_headers
-  arqmaMQ.h
+set(evolution_mq_private_headers
+  evolutionMQ.h
   INotifier.h
   zmq_handler.h)
 
-arqma_private_headers(arqma_mq
-  ${arqma_mq_private_headers})
+evolution_private_headers(evolution_mq
+  ${evolution_mq_private_headers})
 
-arqma_add_library(arqma_mq
-  ${arqma_mq_sources}
-  ${arqma_mq_headers}
-  ${arqma_mq_private_headers})
+evolution_add_library(evolution_mq
+  ${evolution_mq_sources}
+  ${evolution_mq_headers}
+  ${evolution_mq_private_headers})
 
-target_link_libraries(arqma_mq
+target_link_libraries(evolution_mq
   PUBLIC
     common
     epee
@@ -78,5 +78,5 @@ target_link_libraries(arqma_mq
   PRIVATE
     ${EXTRA_LIBRARIES})
 
-add_dependencies(arqma_mq
+add_dependencies(evolution_mq
   version)

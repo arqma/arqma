@@ -34,9 +34,9 @@ set(rpc_sig_headers
 
 set(rpc_sig_private_headers)
 
-arqma_private_headers(rpc_sig
+evolution_private_headers(rpc_sig
   ${rpc_sig_private_headers})
-arqma_add_library(rpc_sig
+evolution_add_library(rpc_sig
   ${rpc_sig_sources}
   ${rpc_sig_headers}
   ${rpc_sig_private_headers})

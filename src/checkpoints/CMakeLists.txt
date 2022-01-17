@@ -45,9 +45,9 @@ set(checkpoints_headers)
 set(checkpoints_private_headers
   checkpoints.h)
 
-arqma_private_headers(checkpoints
+evolution_private_headers(checkpoints
   ${checkpoints_private_headers})
-arqma_add_library(checkpoints
+evolution_add_library(checkpoints
   ${checkpoints_sources}
   ${checkpoints_headers}
   ${checkpoints_private_headers})

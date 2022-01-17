@@ -51,7 +51,7 @@
 using namespace cryptonote;
 
 
-namespace arqmaMQ {
+namespace evolutionMQ {
 
     class INotifier {
         public:
