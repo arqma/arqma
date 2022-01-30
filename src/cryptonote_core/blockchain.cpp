@@ -99,7 +99,7 @@ const forks_t mainnet_hard_forks[] = {
  { network_version_12, 183700, 0, 1558656000 },
  { network_version_13, 248200, 0, 1566511680 },
  { network_version_14, 248920, 0, 1566598080 },
- { network_version_15, 303666, 0, 1573257000 },
+ { network_version_15, 303666, 0, 1573257000 }
 };
 
 const forks_t testnet_hard_forks[] = {
@@ -113,21 +113,21 @@ const forks_t testnet_hard_forks[] = {
  { network_version_13,    600, 0, 1566511680 },
  { network_version_14,    700, 0, 1566598080 },
  { network_version_15,    800, 0, 1566598080 },
- { network_version_16,    900, 0, 1566598280 },
+ { network_version_16,    900, 0, 1566598280 }
 };
 
 const forks_t stagenet_hard_forks[] = {
- { network_version_1,         0, 0, 1341378000 },
- { network_version_7,         1, 0, 1528750800 },
- { network_version_8,       100, 0, 1528751200 },
- { network_version_9,       200, 0, 1530248400 },
- { network_version_10,      500, 0, 1538352000 },
- { network_version_11,      800, 0, 1552424400 },
- { network_version_12,     1500, 0, 1554336000 },
- { network_version_13,     2000, 0, 1560348000 },
- { network_version_14,     2720, 0, 1560351600 },
- { network_version_15,    12100, 0, 1570414500 },
- { network_version_16,    12800, 0, 1570414510 },
+ { network_version_1,       0, 0, 1341378000 },
+ { network_version_7,       1, 0, 1528750800 },
+ { network_version_8,     100, 0, 1528751200 },
+ { network_version_9,     200, 0, 1530248400 },
+ { network_version_10,    500, 0, 1538352000 },
+ { network_version_11,    800, 0, 1552424400 },
+ { network_version_12,   1500, 0, 1554336000 },
+ { network_version_13,   2000, 0, 1560348000 },
+ { network_version_14,   2720, 0, 1560351600 },
+ { network_version_15,  12100, 0, 1570414500 },
+ { network_version_16,  12800, 0, 1570414510 }
 };
 
 const size_t num_mainnet_hard_forks = sizeof(mainnet_hard_forks) / sizeof(mainnet_hard_forks[0]);
@@ -1368,7 +1368,7 @@ bool Blockchain::prevalidate_miner_transaction(const block& b, uint64_t height, 
 }
 //------------------------------------------------------------------
 // This function validates the miner transaction reward
-bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_block_weight, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, uint8_t hard_fork_version, uint64_t height)
+bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_block_weight, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, uint8_t hard_fork_version)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   //validate reward
@@ -1382,20 +1382,13 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
     return false;
   }
 
+  uint64_t height = cryptonote::get_block_height(b);
   std::vector<uint64_t> last_blocks_weights;
   get_last_n_blocks_weights(last_blocks_weights, CRYPTONOTE_REWARD_BLOCKS_WINDOW);
 
-  miner_reward_context block_reward_context = {};
+  arqma_block_reward_context block_reward_context = {};
   block_reward_context.fee = fee;
   block_reward_context.height = height;
-  if(hard_fork_version >= 16)
-  {
-    if(!calculate_delayed_rewards(hard_fork_version, height, block_reward_context.delayed_rewards))
-    {
-      MERROR_VER("Failed to calculate delayed block rewards");
-      return false;
-    }
-  }
 
   block_reward_parts reward_parts;
   if(!get_arqma_block_reward(epee::misc_utils::median(last_blocks_weights), cumulative_block_weight, already_generated_coins, hard_fork_version, reward_parts, block_reward_context))
@@ -1406,7 +1399,7 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
 
   for(ValidateMinerTxHook* hook : m_validate_miner_tx_hooks)
   {
-    if(!hook->validate_miner_tx(b.miner_tx, m_db->height(), hard_fork_version, reward_parts))
+    if(!hook->validate_miner_tx(b.prev_id, b.miner_tx, height, hard_fork_version, reward_parts))
       return false;
   }
 
@@ -1414,9 +1407,9 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
   {
     size_t vout_end = b.miner_tx.vout.size();
 
-    if(b.miner_tx.vout[vout_end - 2].amount != reward_parts.gov_reward())
+    if(b.miner_tx.vout[vout_end - 2].amount != reward_parts.governance)
     {
-      MERROR("Governance reward amount incorrect. Should be: " << print_money(reward_parts.gov_reward()) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 2].amount));
+      MERROR("Governance reward amount incorrect. Should be: " << print_money(reward_parts.governance) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 2].amount));
       return false;
     }
 
@@ -1426,9 +1419,9 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
       return false;
     }
 
-    if(b.miner_tx.vout[vout_end - 1].amount != reward_parts.dev_reward())
+    if(b.miner_tx.vout[vout_end - 1].amount != reward_parts.development)
     {
-      MERROR_VER("Dev_Fund reward amount incorrect. Should be: " << print_money(reward_parts.dev_reward()) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 1].amount));
+      MERROR_VER("Dev_Fund reward amount incorrect. Should be: " << print_money(reward_parts.development) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 1].amount));
       return false;
     }
 
@@ -1455,17 +1448,29 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
   }
 
   base_reward = reward_parts.adjusted_base_reward;
-  uint64_t max_base_reward = reward_parts.miner + reward_parts.service_node_paid + reward_parts.gov_reward() + reward_parts.dev_reward() + 1;
+  // Due to errors in floating point or rounding which happen quite often we will add +1 atomic to workaround errors
+  uint64_t max_base_reward = reward_parts.base_miner + reward_parts.governance + reward_parts.development + reward_parts.service_node_paid + 1;
   uint64_t max_money_in_use = max_base_reward + fee;
   if(money_in_use > max_money_in_use)
   {
-    MERROR_VER("coinbase transaction spend too much money (" << print_money(money_in_use) << "). Maximum Block reward is " << print_money(max_money_in_use) << " ( " << print_money(max_base_reward) << " base reward + " << print_money(fee) << " fees)");
+    MERROR_VER("Coinbase Transaction spends too much money ( " << print_money(money_in_use) << " ). Maximum block reward is " << print_money(max_money_in_use) << " where: ( " << print_money(max_base_reward) << " base + " << print_money(fee) << " fees)");
     return false;
   }
 
-  CHECK_AND_ASSERT_MES(money_in_use >= fee, false, "base reward calculation bug");
+  CHECK_AND_ASSERT_MES(money_in_use >= fee, false, "Base Reward calculation bug");
   base_reward = money_in_use - fee;
 
+/*
+  base_reward = reward_parts.adjusted_base_reward;
+  if(base_reward + fee < money_in_use)
+  {
+    MERROR_VER("Coinbase transaction spend too much money: ( " << print_money(money_in_use) << " ). <-> Block Reward is: " << print_money(base_reward + fee) << " ( " << print_money(base_reward) << " + " << print_money(fee) << " )");
+    return false;
+  }
+
+  CHECK_AND_ASSERT_MES(money_in_use - fee <= base_reward, false, "base reward calculation bug");
+  base_reward = money_in_use - fee;
+*/
   return true;
 }
 //------------------------------------------------------------------
@@ -1773,21 +1778,12 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
    block weight, so first miner transaction generated with fake amount of money, and with phase we know think we know expected block weight
    */
   //make blocks coin-base tx looks close to real coinbase tx to get truthful blob weight
-  uint8_t hard_fork_version = m_hardfork->get_current_version();
+  uint8_t hard_fork_version = b.major_version;
+  arqma_miner_tx_context miner_tx_context(m_nettype,
+                                          m_service_node_list.select_winner(),
+                                          m_service_node_list.get_winner_addresses_and_portions());
 
-  miner_tx_context miner_context(m_nettype, m_service_node_list.select_winner(),
-                                 m_service_node_list.get_winner_addresses_and_portions());
-
-  if(hard_fork_version >= 16)
-  {
-    if(!calculate_delayed_rewards(hard_fork_version, height, miner_context.delayed_rewards))
-    {
-      LOG_ERROR("Failed to calculate delayed block rewards");
-      return false;
-    }
-  }
-
-  bool r = construct_miner_tx(this, height, median_weight, already_generated_coins, txs_weight, fee, miner_address, b.miner_tx, ex_nonce, hard_fork_version, miner_context);
+  bool r = construct_miner_tx(this, height, median_weight, already_generated_coins, txs_weight, fee, miner_address, b.miner_tx, ex_nonce, hard_fork_version, miner_tx_context);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, first chance");
   size_t cumulative_weight = txs_weight + get_transaction_weight(b.miner_tx);
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
@@ -1795,7 +1791,7 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
 #endif
   for (size_t try_count = 0; try_count != 10; ++try_count)
   {
-    r = construct_miner_tx(this, height, median_weight, already_generated_coins, cumulative_weight, fee, miner_address, b.miner_tx, ex_nonce, hard_fork_version, miner_context);
+    r = construct_miner_tx(this, height, median_weight, already_generated_coins, cumulative_weight, fee, miner_address, b.miner_tx, ex_nonce, hard_fork_version, miner_tx_context);
     CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, second chance");
     size_t coinbase_weight = get_transaction_weight(b.miner_tx);
     if (coinbase_weight > cumulative_weight - txs_weight)
@@ -3634,6 +3630,7 @@ bool Blockchain::check_fee(const transaction& tx, size_t tx_weight, uint64_t fee
     median = m_current_block_cumul_weight_limit / 2;
     const uint64_t blockchain_height = m_db->height();
     already_generated_coins = blockchain_height ? m_db->get_block_already_generated_coins(blockchain_height - 1) : 0;
+
     if(!get_base_block_reward(median, 1, already_generated_coins, base_reward, version, blockchain_height))
       return false;
   }
@@ -3702,6 +3699,7 @@ uint64_t Blockchain::get_dynamic_base_fee_estimate(uint64_t grace_blocks) const
     median = min_block_weight;
 
   uint64_t already_generated_coins = db_height ? m_db->get_block_already_generated_coins(db_height - 1) : 0;
+
   uint64_t base_reward;
   if(!get_base_block_reward(m_current_block_cumul_weight_limit / 2, 1, already_generated_coins, base_reward, hard_fork_version, db_height))
   {
@@ -4202,7 +4200,7 @@ leave:
   TIME_MEASURE_START(vmt);
   uint64_t base_reward = 0;
   uint64_t already_generated_coins = blockchain_height ? m_db->get_block_already_generated_coins(blockchain_height - 1) : 0;
-  if(!validate_miner_transaction(bl, cumulative_block_weight, fee_summary, base_reward, already_generated_coins, m_hardfork->get_current_version(), blockchain_height))
+  if(!validate_miner_transaction(bl, cumulative_block_weight, fee_summary, base_reward, already_generated_coins, m_hardfork->get_current_version()))
   {
     MERROR_VER("Block with id: " << id << " has incorrect miner transaction");
     bvc.m_verification_failed = true;
@@ -4790,46 +4788,6 @@ uint64_t Blockchain::prevalidate_block_hashes(uint64_t height, const std::vector
   MDEBUG("usable: " << usable << " / " << hashes.size());
   CHECK_AND_ASSERT_MES(usable < std::numeric_limits<uint64_t>::max() / 2, 0, "usable is negative");
   return usable;
-}
-//------------------------------------------------------------------
-bool Blockchain::calculate_delayed_rewards(uint8_t hard_fork_version, uint64_t height, uint64_t &reward) const
-{
-  reward = 0;
-  if(hard_fork_version < network_version_16)
-  {
-    return false;
-  }
-
-  if(!height_has_delayed_outputs(nettype(), hard_fork_version, height))
-  {
-    return true;
-  }
-
-  const cryptonote::config_t &network = cryptonote::get_config(nettype(), hard_fork_version);
-  uint64_t num_blocks = network.REWARD_INTERVAL_IN_BLOCKS;
-  uint64_t start_height = height - num_blocks;
-
-  if(height < num_blocks)
-  {
-    start_height = 0;
-    num_blocks = height;
-  }
-
-  std::vector<std::pair<cryptonote::blobdata, cryptonote::block>> blocks;
-  if(!get_blocks(start_height, num_blocks, blocks))
-  {
-    LOG_ERROR("Unagle to fetch historical blocks");
-    return false;
-  }
-
-  for(const auto &it : blocks)
-  {
-    cryptonote::block const &block = it.second;
-    if(block.major_version >= 16)
-      reward += derive_delayed_rewards(nettype(), block);
-  }
-
-  return true;
 }
 //------------------------------------------------------------------
 // ND: Speedups:

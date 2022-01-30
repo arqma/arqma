@@ -1297,14 +1297,14 @@ namespace cryptonote
         ss << obj_to_json_str(tx) << std::endl;
       }
       ss << "blob_size: " << (short_format ? "-" : std::to_string(txblob->size())) << std::endl
-        << "weight: " << meta.weight << std::endl
-        << "fee: " << print_money(meta.fee) << std::endl
-        << "kept_by_block: " << (meta.kept_by_block ? 'T' : 'F') << std::endl
-        << "double_spend_seen: " << (meta.double_spend_seen ? 'T' : 'F') << std::endl
-        << "max_used_block_height: " << meta.max_used_block_height << std::endl
-        << "max_used_block_id: " << meta.max_used_block_id << std::endl
-        << "last_failed_height: " << meta.last_failed_height << std::endl
-        << "last_failed_id: " << meta.last_failed_id << std::endl;
+         << "weight: " << meta.weight << std::endl
+         << "fee: " << print_money(meta.fee) << std::endl
+         << "kept_by_block: " << (meta.kept_by_block ? 'T' : 'F') << std::endl
+         << "double_spend_seen: " << (meta.double_spend_seen ? 'T' : 'F') << std::endl
+         << "max_used_block_height: " << meta.max_used_block_height << std::endl
+         << "max_used_block_id: " << meta.max_used_block_id << std::endl
+         << "last_failed_height: " << meta.last_failed_height << std::endl
+         << "last_failed_id: " << meta.last_failed_id << std::endl;
       return true;
     }, !short_format);
 
@@ -1322,20 +1322,12 @@ namespace cryptonote
     fee = 0;
 
     //baseline empty block
-    miner_reward_context block_reward_context = {};
+    arqma_block_reward_context block_reward_context = {};
     block_reward_context.height = height;
-    if(version >= 16)
-    {
-      if(!m_blockchain.calculate_delayed_rewards(version, height, block_reward_context.delayed_rewards))
-      {
-        MERROR("Failed to calculate delayed block rewards");
-        return false;
-      }
-    }
 
     block_reward_parts reward_parts = {};
     get_arqma_block_reward(median_weight, total_weight, already_generated_coins, version, reward_parts, block_reward_context);
-    best_coinbase = reward_parts.miner;
+    best_coinbase = reward_parts.base_miner;
 
     size_t max_total_weight = 2 * median_weight - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
     std::unordered_set<crypto::key_image> k_images;
@@ -1372,7 +1364,7 @@ namespace cryptonote
           LOG_PRINT_L2("  would exceed maximum block weight");
           continue;
         }
-        uint64_t block_reward = reward_parts_other.miner;
+        uint64_t block_reward = reward_parts_other.base_miner;
         coinbase = block_reward + fee + meta.fee;
         if (coinbase < template_accept_threshold(best_coinbase))
         {

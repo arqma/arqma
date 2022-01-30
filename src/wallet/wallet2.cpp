@@ -6666,9 +6666,9 @@ uint64_t wallet2::get_fee_multiplier(uint32_t priority, int fee_algorithm)
       priority = 1;
   }
 
-  THROW_WALLET_EXCEPTION_IF(fee_algorithm < 0 || fee_algorithm >= (int)(ARQMA_ARRAY_COUNT(multipliers)), error::invalid_priority);
+  THROW_WALLET_EXCEPTION_IF(fee_algorithm < 0 || fee_algorithm >= (int)(arqma::array_count(multipliers)), error::invalid_priority);
   fee_multipliers_t const *curr_multiplier = multipliers + fee_algorithm;
-  if(priority >= 1 && priority <= (uint32_t)ARQMA_ARRAY_COUNT(curr_multiplier->values))
+  if(priority >= 1 && priority <= (uint32_t)arqma::array_count(curr_multiplier->values))
   {
     return curr_multiplier->values[priority-1];
   }
@@ -6820,11 +6820,9 @@ uint32_t wallet2::adjust_priority(uint32_t priority)
   return priority;
 }
 
-arqma_construct_tx_params wallet2::construct_params(uint8_t hard_fork_version, txtype tx_type)
+arqma_construct_tx_params wallet2::construct_params()
 {
   arqma_construct_tx_params tx_params;
-  tx_params.hard_fork_version = hard_fork_version;
-  tx_params.tx_type = tx_type;
 
   return tx_params;
 }
@@ -7237,8 +7235,8 @@ wallet2::stake_result wallet2::create_stake_tx(const crypto::public_key& service
       return result;
     }
 
-    arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::stake);
-    auto ptx_vector = create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_at_block, priority, extra, 0, subaddr_indices, tx_params);
+//    arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::stake);
+    auto ptx_vector = create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_at_block, priority, extra, 0, subaddr_indices, txtype::stake);
     if(ptx_vector.size() == 1)
     {
       result.status = stake_result_status::success;
@@ -7324,13 +7322,6 @@ wallet2::register_service_node_result wallet2::create_register_service_node_tx(c
         result.msg = tr("Wallet is yet not synchronized.");
         return result;
       }
-    }
-
-    boost::optional<uint8_t> hard_fork_version = get_hard_fork_version();
-    if(!hard_fork_version)
-    {
-      result.status = register_service_node_result_status::network_version_query_failed;
-      result.msg    = ERR_MSG_NETWORK_VERSION_QUERY_FAILED;
     }
 
     staking_requirement = service_nodes::get_staking_requirement(nettype(), bc_height, *hard_fork_version);
@@ -7452,8 +7443,8 @@ wallet2::register_service_node_result wallet2::create_register_service_node_tx(c
       cryptonote::address_parse_info dest = {};
       dest.address = address;
 
-      arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::stake);
-      auto ptx_vector = create_transactions_2(dsts, config::tx_settings::tx_mixin, 0, priority, extra, subaddr_account, subaddr_indices, tx_params);
+//      arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::stake);
+      auto ptx_vector = create_transactions_2(dsts, config::tx_settings::tx_mixin, 0, priority, extra, subaddr_account, subaddr_indices, txtype::stake);
       if(ptx_vector.size() == 1)
       {
         result.status = register_service_node_result_status::success;
@@ -7595,15 +7586,15 @@ wallet2::request_stake_unlock_result wallet2::can_request_stake_unlock(const cry
     de.amount = 0;
     dsts.push_back(de);
 
-    boost::optional<uint8_t> hard_fork_version = get_hard_fork_version();
+//    boost::optional<uint8_t> hard_fork_version = get_hard_fork_version();
     std::vector<uint8_t> extra;
     uint32_t priority = 0;
     std::set<uint32_t> subaddr_indices = {};
-    arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::key_image_unlock);
+//    arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::key_image_unlock);
 
     add_service_node_pubkey_to_tx_extra(extra, sn_key);
     add_tx_key_image_unlock_to_tx_extra(extra, unlock);
-    auto ptx_vector = create_transactions_2(dsts, config::tx_settings::tx_mixin, 0, priority, extra, 0, subaddr_indices, tx_params);
+    auto ptx_vector = create_transactions_2(dsts, config::tx_settings::tx_mixin, 0, priority, extra, 0, subaddr_indices, txtype::key_image_unlock);
 
     result.ptx = ptx_vector[0];
 
@@ -8377,7 +8368,7 @@ void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry
   for(auto& dt: dsts)
   {
     THROW_WALLET_EXCEPTION_IF(0 == dt.amount && (tx_params.tx_type != txtype::key_image_unlock), error::zero_destination);
-    THROW_WALLET_EXCEPTION_IF(dt.amount < config::tx_settings::min_tx_amount && (tx_params.tx_type != txtype::key_image_unlock), error::tx_amount_too_low);
+//    THROW_WALLET_EXCEPTION_IF(dt.amount < config::tx_settings::min_tx_amount && (tx_params.tx_type != txtype::key_image_unlock), error::tx_amount_too_low);
     needed_money += dt.amount;
     LOG_PRINT_L2("transfer: adding " << print_money(dt.amount) << ", for a total of " << print_money(needed_money));
     THROW_WALLET_EXCEPTION_IF(needed_money < dt.amount, error::tx_sum_overflow, dsts, fee, m_nettype);
@@ -9332,14 +9323,13 @@ bool wallet2::light_wallet_key_image_is_ours(const crypto::key_image& key_image,
 // This system allows for sending (almost) the entire balance, since it does
 // not generate spurious change in all txes, thus decreasing the instantaneous
 // usable balance.
-std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryptonote::tx_destination_entry> dsts, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra, uint32_t subaddr_account, std::set<uint32_t> subaddr_indices, arqma_construct_tx_params &tx_params)
+std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryptonote::tx_destination_entry> dsts, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra, uint32_t subaddr_account, std::set<uint32_t> subaddr_indices, cryptonote::txtype tx_type)
 {
   //ensure device is let in NONE mode in any case
   hw::device &hwdev = m_account.get_device();
   boost::unique_lock<hw::device> hwdev_lock (hwdev);
   hw::reset_mode rst(hwdev);
 
-  bool const is_unstake_tx = (tx_params.tx_type == txtype::key_image_unlock);
   auto original_dsts = dsts;
 
   if(m_light_wallet) {
@@ -9399,10 +9389,18 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
   const uint64_t fee_quantization_mask = get_fee_quantization_mask();
 
+  boost::optional<uint8_t> hard_fork_version = get_hard_fork_version();
+  THROW_WALLET_EXCEPTION_IF(!hard_fork_version, error::get_hard_fork_version_error, "Failed to quert current hard fork version");
+
+  arqma_construct_tx_params arqma_tx_params = tools::wallet2::construct_params();
+  arqma_tx_params.tx_type = tx_type;
+  arqma_tx_params.hard_fork_version = *hard_fork_version;
+
   THROW_WALLET_EXCEPTION_IF(dsts.empty(), error::zero_destination);
 
   // calculate total amount being sent to all destinations
   // throw if total amount overflows uint64_t
+  bool is_unstake_tx = (arqma_tx_params.tx_type == txtype::key_image_unlock);
   needed_money = 0;
   for(auto& dt: dsts)
   {
@@ -9496,10 +9494,10 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
 
   // shuffle & sort output indices
   {
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(unused_transfers_indices_per_subaddr.begin(), unused_transfers_indices_per_subaddr.end(), g);
-    std::shuffle(unused_dust_indices_per_subaddr.begin(), unused_dust_indices_per_subaddr.end(), g);
+//    std::random_device rd;
+//    std::mt19937 g(rd());
+//    std::shuffle(unused_transfers_indices_per_subaddr.begin(), unused_transfers_indices_per_subaddr.end(), g);
+//    std::shuffle(unused_dust_indices_per_subaddr.begin(), unused_dust_indices_per_subaddr.end(), g);
     auto sort_predicate = [&unlocked_balance_per_subaddr] (const std::pair<uint32_t, std::vector<size_t>>& x, const std::pair<uint32_t, std::vector<size_t>>& y)
     {
       return unlocked_balance_per_subaddr[x.first].first > unlocked_balance_per_subaddr[y.first].first;
@@ -9645,10 +9643,10 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
     }
     else
     {
-      while(!dsts.empty() && dsts[0].amount <= available_amount && estimate_tx_weight(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size(), extra.size()) < TX_WEIGHT_TARGET(upper_transaction_weight_limit))
+      while(!dsts.empty() && dsts[0].amount <= available_amount && estimate_tx_weight(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size()+1, extra.size()) < TX_WEIGHT_TARGET(upper_transaction_weight_limit))
       {
-        if(tx.dsts.size() >= BULLETPROOF_MAX_OUTPUTS-1)
-          break;
+//        if(tx.dsts.size() >= BULLETPROOF_MAX_OUTPUTS-1)
+//          break;
         // we can fully pay that destination
         LOG_PRINT_L2("We can fully pay " << get_account_address_as_str(m_nettype, dsts[0].is_subaddress, dsts[0].addr) <<
           " for " << print_money(dsts[0].amount));
@@ -9659,16 +9657,16 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
         ++original_output_index;
       }
 
-      if(available_amount > 0 && !dsts.empty() && estimate_tx_weight(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size(), extra.size()) < TX_WEIGHT_TARGET(upper_transaction_weight_limit))
+      if(available_amount > 0 && !dsts.empty() && estimate_tx_weight(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size()+1, extra.size()) < TX_WEIGHT_TARGET(upper_transaction_weight_limit))
       {
-        if(tx.dsts.size() < BULLETPROOF_MAX_OUTPUTS-1)
-        {
-          // we can partially fill that destination
-          LOG_PRINT_L2("We can partially pay " << get_account_address_as_str(m_nettype, dsts[0].is_subaddress, dsts[0].addr) << " for " << print_money(available_amount) << "/" << print_money(dsts[0].amount));
-          tx.add(dsts[0], available_amount, original_output_index, m_merge_destinations);
-          dsts[0].amount -= available_amount;
-          available_amount = 0;
-        }
+//        if(tx.dsts.size() < BULLETPROOF_MAX_OUTPUTS-1)
+//        {
+        // we can partially fill that destination
+        LOG_PRINT_L2("We can partially pay " << get_account_address_as_str(m_nettype, dsts[0].is_subaddress, dsts[0].addr) << " for " << print_money(available_amount) << "/" << print_money(dsts[0].amount));
+        tx.add(dsts[0], available_amount, original_output_index, m_merge_destinations);
+        dsts[0].amount -= available_amount;
+        available_amount = 0;
+//        }
       }
     }
 
@@ -9686,7 +9684,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
       }
       else
       {
-        const size_t estimated_rct_tx_weight = estimate_tx_weight(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size(), extra.size());
+        const size_t estimated_rct_tx_weight = estimate_tx_weight(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size()+1, extra.size());
         try_tx = dsts.empty() || (estimated_rct_tx_weight >= TX_WEIGHT_TARGET(upper_transaction_weight_limit));
         THROW_WALLET_EXCEPTION_IF(try_tx && tx.dsts.empty(), error::tx_too_big, estimated_rct_tx_weight, upper_transaction_weight_limit);
       }
@@ -9696,11 +9694,11 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
       cryptonote::transaction test_tx;
       pending_tx test_ptx;
 
-      needed_fee = estimate_fee(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size() + 1, extra.size(), base_fee, fee_multiplier, fee_quantization_mask);
+      needed_fee = estimate_fee(tx.selected_transfers.size(), fake_outs_count, tx.dsts.size()+1, extra.size(), base_fee, fee_multiplier, fee_quantization_mask);
 
-      for(const auto &bm : tx.dsts)
-        if(bm.amount < config::tx_settings::min_tx_amount)
-          needed_fee += config::tx_settings::min_amount_blockage_fee;
+//      for(const auto &bm : tx.dsts)
+//        if(bm.amount < config::tx_settings::min_tx_amount)
+//          needed_fee += config::tx_settings::min_amount_blockage_fee;
 
       uint64_t inputs = 0, outputs = needed_fee;
       for (size_t idx: tx.selected_transfers) inputs += m_transfers[idx].amount();
@@ -9725,7 +9723,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
                             test_tx,
                             test_ptx,
                             rct_config,
-                            tx_params);
+                            arqma_tx_params);
 
       auto txBlob = t_serializable_object_to_blob(test_ptx.tx);
       needed_fee = calculate_fee(test_ptx.tx, txBlob.size(), base_fee, fee_multiplier, fee_quantization_mask);
@@ -9775,7 +9773,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
                                 test_tx,
                                 test_ptx,
                                 rct_config,
-                                tx_params);
+                                arqma_tx_params);
 
           txBlob = t_serializable_object_to_blob(test_ptx.tx);
           needed_fee = calculate_fee(test_ptx.tx, txBlob.size(), base_fee, fee_multiplier, fee_quantization_mask);
@@ -9846,7 +9844,7 @@ skip_tx:
                           test_tx,                    /* OUT   cryptonote::transaction& tx, */
                           test_ptx,                   /* OUT   cryptonote::transaction& tx, */
                           rct_config,
-                          tx_params);
+                          arqma_tx_params);
     auto txBlob = t_serializable_object_to_blob(test_ptx.tx);
     tx.tx = test_tx;
     tx.ptx = test_ptx;
@@ -10045,7 +10043,9 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
   boost::optional<uint8_t> hard_fork_version = get_hard_fork_version();
   THROW_WALLET_EXCEPTION_IF(!hard_fork_version, error::get_hard_fork_version_error, "Failed to query current hard fork version");
 
-  arqma_construct_tx_params arqma_tx_params = tools::wallet2::construct_params(*hard_fork_version, tx_type);
+  arqma_construct_tx_params arqma_tx_params = tools::wallet2::construct_params();
+  arqma_tx_params.tx_type = tx_type;
+  arqma_tx_params.hard_fork_version = *hard_fork_version;
 
   LOG_PRINT_L2("Starting with " << unused_transfers_indices.size() << " non-dust outputs and " << unused_dust_indices.size() << " dust outputs");
 

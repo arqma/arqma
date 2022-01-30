@@ -33,12 +33,14 @@
 
 #include <string>
 
-#define ARQMA_ARRAY_COUNT(array) sizeof(array)/sizeof(array[0])
 namespace arqma
 {
   double round(double);
   double exp2(double);
   std::string hex64_to_base32z(std::string const& src);
+
+  template <typename T, size_t N>
+  constexpr size_t array_count(T (&)[N]) { return N; }
 }; // namespace arqma
 
 #endif // ARQMA_H

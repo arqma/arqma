@@ -120,6 +120,13 @@ set(blockchain_depth_private_headers)
 arqma_private_headers(blockchain_depth
   ${blockchain_depth_private_headers})
 
+set(blockchain_stats_sources
+  blockchain_stats.cpp)
+
+set(blockchain_stats_private_headers)
+
+arqma_private_headers(blockchain_stats
+  ${blockchain_stats_private_headers})
 
 arqma_add_executable(blockchain_import
   ${blockchain_import_sources}
@@ -233,4 +240,17 @@ install(TARGETS blockchain_prune DESTINATION bin)
 target_link_libraries(blockchain_prune
   PRIVATE
     p2p
+    arqma_bc_utils_std_libs)
+
+arqma_add_executable(blockchain_stats
+  ${blockchain_stats_sources}
+  ${blockchain_stats_private_headers})
+
+set_property(TARGET blockchain_stats
+  PROPERTY
+  OUTPUT_NAME "arqma-blockchain-stats")
+install(TARGETS blockchain_stats DESTINATION bin)
+
+target_link_libraries(blockchain_stats
+  PRIVATE
     arqma_bc_utils_std_libs)

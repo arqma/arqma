@@ -51,11 +51,6 @@ depends:
 	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target)/release
 	cd build/$(target)/release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake $(cmake_opts) ../../.. && $(MAKE)
 
-depends-noaes:
-
-	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target)-noaes/release
-	cd build/$(target)-noaes/release && cmake -DNO_AES=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake ../../.. && $(MAKE)
-
 depends-compat:
 	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target)-compat/release
 	cd build/$(target)-compat/release && cmake -DCMAKE_BUILD_TYPE=Release -DBACKCOMPAT=ON -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake ../../.. && $(MAKE)
@@ -104,10 +99,6 @@ release-all:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
 
-release-rpi:
-	mkdir -p $(builddir)/release-rpi
-	cd $(builddir)/release-rpi && cmake -D NO_AES=ON -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
-
 release-static:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
@@ -144,10 +135,6 @@ release-static-linux-x86_64:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="linux-x64" $(topdir) && $(MAKE)
 
-release-static-freebsd-x86_64:
-	mkdir -p $(builddir)/release
-	cd $(builddir)/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="freebsd-x64" $(topdir) && $(MAKE)
-
 release-static-mac-x86_64:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="mac-x64" $(topdir) && $(MAKE)
@@ -162,9 +149,8 @@ service-nodes:
 	[ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] || (echo "Exiting."; exit 1;)
 	mkdir -p $(builddir)/release
 	git config --local user.name "user" && git config --local user.email "user@github.com"
-	git fetch origin pull/297/head:s_n && git merge s_n --no-verify
-	git submodule init && git submodule update
-	cd $(builddir)/release && cmake -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
+	git fetch origin pull/297/head:s_n && git merge s_n --no-edit --quiet
+	cd $(builddir)/release && cmake -D BUILD_64=ON -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
 
 #fuzz:
 #	mkdir -p $(builddir)/fuzz

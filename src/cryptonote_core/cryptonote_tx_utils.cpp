@@ -154,64 +154,11 @@ namespace cryptonote
     return correct_key == output_key;
   }
   //---------------------------------------------------------------
-  uint64_t delayed_reward_formula(uint64_t base_reward)
+  uint64_t dev_reward_formula(uint64_t base_reward, uint8_t hard_fork_version)
   {
-    return base_reward * config::governance::gr / 100;
-  }
-
-  bool block_has_outputs(network_type nettype, cryptonote::block const &block)
-  {
-    return height_has_delayed_outputs(nettype, block.major_version, get_block_height(block));
-  }
-
-  bool height_has_delayed_outputs(network_type nettype, uint8_t hard_fork_version, uint64_t height)
-  {
-    if(height == 0)
-      return false;
-
-    if(hard_fork_version < 16)
-      return false;
-
-    const cryptonote::config_t &network = cryptonote::get_config(nettype, hard_fork_version);
-    if(height % network.REWARD_INTERVAL_IN_BLOCKS != 0)
-    {
-      return false;
-    }
-
-    return true;
-  }
-
-  uint64_t derive_delayed_rewards(network_type nettype, const cryptonote::block &block)
-  {
-    uint64_t result = 0;
-    uint64_t snode_reward = 0;
-    uint64_t vout_end = block.miner_tx.vout.size();
-
-    if(block_has_outputs(nettype, block))
-    {
-      --vout_end;
-      --vout_end;
-    }
-
-    for(size_t vout_index = 1; vout_index < vout_end; ++vout_index)
-    {
-      tx_out const &output = block.miner_tx.vout[vout_index];
-      snode_reward += output.amount;
-    }
-
-    uint64_t base_reward = snode_reward * config::governance::sn;
-    uint64_t rewards = delayed_reward_formula(base_reward);
-    uint64_t block_reward = base_reward;
-
-    uint64_t actual_reward = 0;
-    for (tx_out const &output : block.miner_tx.vout)
-      actual_reward += output.amount;
-
-    CHECK_AND_ASSERT_MES(block_reward <= actual_reward, false, "Rederiving the base block reward from the service node reward "
-      "exceeded the actual amount paid in the block, derived block reward: " << block_reward << ", actual reward: " << actual_reward);
-
-    result = rewards;
-    return result;
+    if(hard_fork_version >= 16)
+      return base_reward * config::governance::gr / 100;
+    return 0;
   }
 
   uint64_t service_node_reward_formula(uint64_t base_reward, uint8_t hard_fork_version)
@@ -237,11 +184,10 @@ namespace cryptonote
     return reward;
   }
   //---------------------------------------------------------------
-  miner_tx_context::miner_tx_context(network_type type, crypto::public_key const &winner, std::vector<std::pair<account_public_address, stake_portions>> const &winner_info)
+  arqma_miner_tx_context::arqma_miner_tx_context(network_type type, crypto::public_key const &winner, std::vector<std::pair<account_public_address, stake_portions>> const &winner_info)
     : nettype(type)
     , snode_winner_key(winner)
     , snode_winner_info(winner_info)
-    , delayed_rewards(0)
   {
   }
   //---------------------------------------------------------------
@@ -256,9 +202,9 @@ namespace cryptonote
     transaction& tx,
     const blobdata& extra_nonce,
     uint8_t hard_fork_version,
-    const miner_tx_context &miner_context)
+    const arqma_miner_tx_context &miner_tx_context)
   {
-    const network_type nettype = miner_context.nettype;
+    const network_type nettype = miner_tx_context.nettype;
 
     tx.vin.clear();
     tx.vout.clear();
@@ -267,9 +213,9 @@ namespace cryptonote
     tx.type = txtype::standard;
     tx.version = transaction::get_max_version_for_hf(hard_fork_version);
 
-    const crypto::public_key &service_node_key = miner_context.snode_winner_key;
+    const crypto::public_key &service_node_key = miner_tx_context.snode_winner_key;
     const std::vector<std::pair<account_public_address, uint64_t>> &service_node_info =
-          miner_context.snode_winner_info.empty() ? service_nodes::null_winner : miner_context.snode_winner_info;
+          miner_tx_context.snode_winner_info.empty() ? service_nodes::null_winner : miner_tx_context.snode_winner_info;
 
     keypair txkey = keypair::generate(hw::get_device("default"));
     add_tx_pub_key_to_extra(tx, txkey.pub);
@@ -287,11 +233,10 @@ namespace cryptonote
     txin_gen in;
     in.height = height;
 
-    miner_reward_context block_reward_context = {};
+    arqma_block_reward_context block_reward_context = {};
     block_reward_context.fee = fee;
     block_reward_context.height = height;
-    block_reward_context.snode_winner_info = miner_context.snode_winner_info;
-    block_reward_context.delayed_rewards = miner_context.delayed_rewards;
+    block_reward_context.snode_winner_info = miner_tx_context.snode_winner_info;
 
     block_reward_parts reward_parts;
     if(!get_arqma_block_reward(median_weight, current_block_weight, already_generated_coins, hard_fork_version, reward_parts, block_reward_context))
@@ -321,10 +266,7 @@ namespace cryptonote
       tx.vout.push_back(out);
       if(hard_fork_version >= 16)
       {
-        uint64_t eleet = miner_context.nettype == cryptonote::MAINNET ? 31337 : 3137;
-        crypto::hash base_id = pbc->get_block_id_by_height(height - eleet);
-        std::string hex_str = epee::string_tools::pod_to_hex(base_id).substr(0,3);
-        uint64_t unlock_blocks = std::stol(hex_str, nullptr, 16) * 2;
+        uint64_t unlock_blocks = miner_tx_context.nettype == cryptonote::MAINNET ? 32 : 2;
         tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS + unlock_blocks);
       }
       else
@@ -373,7 +315,7 @@ namespace cryptonote
       tk.key = out_eph_public_key;
 
       tx_out out;
-      summary_amounts += out.amount = reward_parts.gov_reward();
+      summary_amounts += out.amount = reward_parts.governance;
       out.target = tk;
       tx.vout.push_back(out);
       tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
@@ -396,13 +338,13 @@ namespace cryptonote
       tk.key = out_eph_public_key;
 
       tx_out out;
-      summary_amounts += out.amount = reward_parts.dev_reward();
+      summary_amounts += out.amount = reward_parts.development;
       out.target = tk;
       tx.vout.push_back(out);
       tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
     }
 
-    uint64_t expected_amount = reward_parts.miner_reward() + reward_parts.service_node_paid + reward_parts.gov_reward() + reward_parts.dev_reward();
+    uint64_t expected_amount = reward_parts.miner_reward() + reward_parts.service_node_paid + reward_parts.governance + reward_parts.development;
     CHECK_AND_ASSERT_MES(summary_amounts == expected_amount, false, "Failed to construct miner tx, summary_amounts: " << summary_amounts << " not equal total block_reward = " << expected_amount);
 
     //lock
@@ -413,11 +355,11 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool get_arqma_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint8_t hard_fork_version, block_reward_parts &result, const miner_reward_context &miner_context)
+  bool get_arqma_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint8_t hard_fork_version, block_reward_parts &result, const arqma_block_reward_context &arqma_context)
   {
     result = {};
     uint64_t base_reward;
-    if(!get_base_block_reward(median_weight, current_block_weight, already_generated_coins, base_reward, hard_fork_version, miner_context.height))
+    if(!get_base_block_reward(median_weight, current_block_weight, already_generated_coins, base_reward, hard_fork_version, arqma_context.height))
     {
       MERROR("Failed to calculate base block reward");
       return false;
@@ -431,29 +373,25 @@ namespace cryptonote
 
     if(already_generated_coins == 0)
     {
-      result.original_base_reward = result.adjusted_base_reward = result.miner = base_reward;
+      result.original_base_reward = result.adjusted_base_reward = result.base_miner = base_reward;
       return true;
     }
 
     result.original_base_reward = base_reward;
     result.service_node_total = service_node_reward_formula(base_reward, hard_fork_version);
-    if(miner_context.snode_winner_info.empty())
+    if(arqma_context.snode_winner_info.empty())
       result.service_node_paid = calculate_sum_of_portions(service_nodes::null_winner, result.service_node_total);
     else
-      result.service_node_paid = calculate_sum_of_portions(miner_context.snode_winner_info, result.service_node_total);
+      result.service_node_paid = calculate_sum_of_portions(arqma_context.snode_winner_info, result.service_node_total);
 
     result.adjusted_base_reward = result.original_base_reward;
-    if(hard_fork_version >= 16)
-    {
-      result.rewards = miner_context.delayed_rewards;
+    result.governance = dev_reward_formula(result.original_base_reward, hard_fork_version);
+    result.development = dev_reward_formula(result.original_base_reward, hard_fork_version);
 
-      if(result.rewards > 0)
-        result.adjusted_base_reward += result.rewards;
-    }
+    result.adjusted_base_reward += (result.governance + result.development);
 
-    result.miner = result.original_base_reward - result.service_node_paid;
-    result.miner_fee = miner_context.fee;
-
+    result.base_miner = result.original_base_reward - result.service_node_paid;
+    result.base_miner_fee = arqma_context.fee;
     return true;
   }
   //---------------------------------------------------------------

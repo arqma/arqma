@@ -168,7 +168,7 @@ namespace cryptonote
     class ValidateMinerTxHook
     {
     public:
-      virtual bool validate_miner_tx(const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, block_reward_parts const &reward_parts) const = 0;
+      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, block_reward_parts const &reward_parts) const = 0;
     };
 
     /**
@@ -1075,8 +1075,6 @@ namespace cryptonote
     void lock();
     void unlock();
 
-    bool calculate_delayed_rewards(uint8_t hard_fork_version, uint64_t height, uint64_t &reward) const;
-
     void cancel();
 
     /**
@@ -1393,7 +1391,7 @@ namespace cryptonote
      *
      * @return false if anything is found wrong with the miner transaction, otherwise true
      */
-    bool validate_miner_transaction(const block& b, size_t cumulative_block_weight, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, uint8_t hard_fork_version, uint64_t height);
+    bool validate_miner_transaction(const block& b, size_t cumulative_block_weight, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, uint8_t hard_fork_version);
 
     /**
      * @brief reverts the blockchain to its previous state following a failed switch

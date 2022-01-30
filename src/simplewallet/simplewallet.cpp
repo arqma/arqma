@@ -5211,15 +5211,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
       unlock_block = bc_height + locked_blocks;
     }
 
-    boost::optional<uint8_t> hard_fork_version = m_wallet->get_hard_fork_version();
-    if(!hard_fork_version)
-    {
-      fail_msg_writer() << tools::ERR_MSG_NETWORK_VERSION_QUERY_FAILED;
-      return false;
-    }
-
-    arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::standard);
-    ptx_vector = m_wallet->create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, tx_params);
+    ptx_vector = m_wallet->create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices);
 
     if (ptx_vector.empty())
     {

@@ -43,25 +43,23 @@ namespace cryptonote
   bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
   bool validate_development_reward_key(uint64_t height, const std::string& development_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
 
-  uint64_t delayed_reward_formula(uint64_t base_reward);
-  bool block_has_outputs(network_type nettype, cryptonote::block const &block);
-  bool height_has_delayed_outputs(network_type nettype, uint8_t hard_fork_version, uint64_t height);
-  uint64_t derive_delayed_rewards(network_type nettype, const cryptonote::block &block);
+  uint64_t dev_reward_formula(uint64_t base_reward, uint8_t hard_fork_version);
 
   uint64_t get_portion_of_reward(uint64_t portions, uint64_t total_service_node_reward);
   uint64_t service_node_reward_formula(uint64_t base_reward, uint8_t hard_fork_version);
 
-  struct miner_tx_context
+  struct arqma_miner_tx_context
   {
     using stake_portions = uint64_t;
 
-    miner_tx_context(network_type type = MAINNET, crypto::public_key const &winner = crypto::null_pkey,
-                     std::vector<std::pair<account_public_address, stake_portions>> const &winner_info = {});
+    arqma_miner_tx_context(network_type type = MAINNET, crypto::public_key const &winner = crypto::null_pkey,
+                           std::vector<std::pair<account_public_address, stake_portions>> const &winner_info = {});
 
     network_type nettype;
     crypto::public_key snode_winner_key;
     std::vector<std::pair<account_public_address, stake_portions>> snode_winner_info;
-    uint64_t delayed_rewards;
+    uint64_t governance;
+    uint64_t development;
   };
 
   class Blockchain;
@@ -76,35 +74,35 @@ namespace cryptonote
     transaction& tx,
     const blobdata& extra_nonce = blobdata(),
     uint8_t hard_fork_version = 1,
-    const miner_tx_context &miner_context = {});
+    const arqma_miner_tx_context &miner_context = {});
 
   struct block_reward_parts
   {
     uint64_t service_node_total;
     uint64_t service_node_paid;
 
-    uint64_t rewards;
-    uint64_t miner;
-    uint64_t miner_fee;
+    uint64_t governance;
+    uint64_t development;
+    uint64_t base_miner;
+    uint64_t base_miner_fee;
 
-    uint64_t original_base_reward;
     uint64_t adjusted_base_reward;
+    uint64_t original_base_reward;
 
-    uint64_t gov_reward() { return rewards; }
-    uint64_t dev_reward() { return rewards; }
-    uint64_t miner_reward() { return miner + miner_fee; }
+    uint64_t miner_reward() { return base_miner + base_miner_fee; }
   };
 
-  struct miner_reward_context
+  struct arqma_block_reward_context
   {
     using portions = uint64_t;
     uint64_t height;
     uint64_t fee;
-    uint64_t delayed_rewards;
+    uint64_t governance;
+    uint64_t development;
     std::vector<std::pair<account_public_address, portions>> snode_winner_info;
   };
 
-  bool get_arqma_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint8_t hard_fork_version, block_reward_parts &result, const miner_reward_context &miner_context);
+  bool get_arqma_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint8_t hard_fork_version, block_reward_parts &result, const arqma_block_reward_context &arqma_context);
 
   struct tx_source_entry
   {

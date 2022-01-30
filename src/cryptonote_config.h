@@ -234,8 +234,7 @@ namespace config
       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
     } }; // Bender's nightmare
   std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
-  const uint32_t GENESIS_NONCE = 19993;
-  const uint64_t REWARD_INTERVAL_IN_BLOCKS = ((60 * 60 * 24 * 2) / DIFFICULTY_TARGET_V16);
+  uint32_t const GENESIS_NONCE = 19993;
   std::string const GOVERNANCE_WALLET_ADDRESS = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
   std::string const DEV_WALLET_ADDRESS = "";
 
@@ -250,9 +249,8 @@ namespace config
     boost::uuids::uuid const NETWORK_ID = { {
         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
       } }; // Bender's daydream
-    const uint64_t REWARD_INTERVAL_IN_BLOCKS = 50;
     std::string const GOVERNANCE_WALLET_ADDRESS = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkYzCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
-    std::string const DEV_WALLET_ADDRESS = "";
+    std::string const DEV_WALLET_ADDRESS = "atywfJChhS1XLjfY2pDGUHNo5BcWMM5ZJeFs4pWGs9p7gCbxSguxoyBWLDYasHuY7yHppCWYRbPPMHNVf2EXuzpq2xMZLhQZMW";
   }
 
    namespace stagenet
@@ -266,7 +264,6 @@ namespace config
      boost::uuids::uuid const NETWORK_ID = { {
          0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
        } }; // Bender's daydream
-     const uint64_t REWARD_INTERVAL_IN_BLOCKS = 50;
      std::string const GOVERNANCE_WALLET_ADDRESS = "as2H2hydWETBhUdFiRD5qZHw3QsVdirAsAc3P4HQSSWx6KMv3PQZPtkU3VeKtJaVe9a7SP1pqxb8rCdh2WJtVK7B2RMzQBFRJ";
      std::string const DEV_WALLET_ADDRESS = "as2V1HH36fNQXrzb3aSwcbEfmQHAoWgBabhSrfimiGNV7gVjJaSvbed7XndTpNe5yHczdwVWF2FtCg2Yd7z3pker2VCsS5Gzq";
    }
@@ -322,7 +319,8 @@ namespace arqma
     "it-support.mal-bit.com",
     "207.244.249.105",
     "139.99.106.122",
-    "164.68.123.118"
+    "164.68.123.118",
+    "194.233.64.43"
   };
 
   const char *const testnet_core_nodes[] =
@@ -330,7 +328,8 @@ namespace arqma
     "161.97.102.172",
     "139.99.106.122",
     "77.93.206.172",
-    "it-support.mal-bit.com"
+    "it-support.mal-bit.com",
+    "194.233.64.43"
   };
 
   const char *const stagenet_core_nodes[] =
@@ -340,7 +339,8 @@ namespace arqma
     "77.93.206.172",
     "it-support.mal-bit.com",
     "164.68.123.118",
-    "144.217.242.16"
+    "144.217.242.16",
+    "194.233.64.43"
   };
 }
 
@@ -358,7 +358,7 @@ namespace cryptonote
     network_version_13,
     network_version_14,
     network_version_15,
-    network_version_16
+    network_version_16,
   };
 
   enum network_type : uint8_t
@@ -380,11 +380,10 @@ namespace cryptonote
       boost::uuids::uuid NETWORK_ID;
       std::string GENESIS_TX;
       uint32_t GENESIS_NONCE;
-      uint64_t REWARD_INTERVAL_IN_BLOCKS;
       std::string const *GOVERNANCE_WALLET_ADDRESS;
       std::string const *DEV_WALLET_ADDRESS;
     };
-    inline const config_t& get_config(network_type nettype, uint8_t hard_fork_version = 7)
+    inline const config_t& get_config(network_type nettype, uint8_t hard_fork_version = 1)
     {
       static config_t mainnet = {
         ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
@@ -396,7 +395,6 @@ namespace cryptonote
         ::config::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE,
-        ::config::REWARD_INTERVAL_IN_BLOCKS,
         &::config::GOVERNANCE_WALLET_ADDRESS,
         &::config::DEV_WALLET_ADDRESS
       };
@@ -411,7 +409,6 @@ namespace cryptonote
         ::config::testnet::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE,
-        ::config::testnet::REWARD_INTERVAL_IN_BLOCKS,
         &::config::testnet::GOVERNANCE_WALLET_ADDRESS,
         &::config::testnet::DEV_WALLET_ADDRESS
       };
@@ -426,19 +423,15 @@ namespace cryptonote
         ::config::stagenet::NETWORK_ID,
         ::config::GENESIS_TX,
         ::config::GENESIS_NONCE,
-        ::config::stagenet::REWARD_INTERVAL_IN_BLOCKS,
         &::config::stagenet::GOVERNANCE_WALLET_ADDRESS,
         &::config::stagenet::DEV_WALLET_ADDRESS
       };
 
       switch (nettype)
       {
-        //case MAINNET:
+        case MAINNET:
         case FAKECHAIN:
         {
-          if(nettype == FAKECHAIN)
-            mainnet.REWARD_INTERVAL_IN_BLOCKS = 50;
-
           return mainnet;
         }
         case TESTNET:
@@ -447,7 +440,6 @@ namespace cryptonote
         }
 
         case STAGENET:
-        case MAINNET:
         {
           return stagenet;
         }

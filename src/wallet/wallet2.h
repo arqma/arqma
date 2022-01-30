@@ -865,7 +865,7 @@ private:
 
     std::vector<wallet2::pending_tx> create_transactions_2(std::vector<cryptonote::tx_destination_entry> dsts, const size_t fake_outs_count, const uint64_t unlock_time,
                                                            uint32_t priority, const std::vector<uint8_t>& extra, uint32_t subaddr_account, std::set<uint32_t> subaddr_indices,
-                                                           cryptonote::arqma_construct_tx_params &tx_params);
+                                                           cryptonote::txtype tx_type = cryptonote::txtype::standard);
 
     std::vector<wallet2::pending_tx> create_transactions_all(uint64_t below, const cryptonote::account_public_address &address, bool is_subaddress, const size_t outputs,
                                                              const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra,
@@ -1233,7 +1233,7 @@ private:
     uint64_t adjust_mixin(uint64_t mixin);
     uint32_t adjust_priority(uint32_t priority);
 
-    static cryptonote::arqma_construct_tx_params construct_params(uint8_t hard_fork_version, cryptonote::txtype tx_type);
+    static cryptonote::arqma_construct_tx_params construct_params();
 
     bool is_unattended() const { return m_unattended; }
 

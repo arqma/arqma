@@ -890,26 +890,10 @@ namespace tools
 
     try
     {
-      uint64_t mixin;
-      if(req.ring_size != 0)
-      {
-        mixin = m_wallet->adjust_mixin(req.ring_size - 1);
-      }
-      else
-      {
-        mixin = m_wallet->adjust_mixin(req.mixin);
-      }
+      uint64_t mixin = m_wallet->adjust_mixin(req.ring_size ? req.ring_size - 1 : 0);
       uint32_t priority = m_wallet->adjust_priority(req.priority);
 
-      boost::optional<uint8_t> hard_fork_version = m_wallet->get_hard_fork_version();
-      if(!hard_fork_version)
-      {
-        er.code = WALLET_RPC_ERROR_CODE_HF_QUERY_FAILED;
-        er.message = tools::ERR_MSG_NETWORK_VERSION_QUERY_FAILED;
-        return false;
-      }
-      cryptonote::arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, cryptonote::txtype::standard);
-      std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_2(dsts, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices, tx_params);
+      std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_2(dsts, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices);
 
       if (ptx_vector.empty())
       {
@@ -959,27 +943,10 @@ namespace tools
 
     try
     {
-      uint64_t mixin;
-      if(req.ring_size != 0)
-      {
-        mixin = m_wallet->adjust_mixin(req.ring_size - 1);
-      }
-      else
-      {
-        mixin = m_wallet->adjust_mixin(req.mixin);
-      }
+      uint64_t mixin = m_wallet->adjust_mixin(req.ring_size ? req.ring_size - 1 : 0);
       uint32_t priority = m_wallet->adjust_priority(req.priority);
-
-      boost::optional<uint8_t> hard_fork_version = m_wallet->get_hard_fork_version();
-      if(!hard_fork_version)
-      {
-        er.code = WALLET_RPC_ERROR_CODE_HF_QUERY_FAILED;
-        er.message = tools::ERR_MSG_NETWORK_VERSION_QUERY_FAILED;
-        return false;
-      }
-      cryptonote::arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, cryptonote::txtype::standard);
       LOG_PRINT_L2("on_transfer_split calling create_transactions_2");
-      std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_2(dsts, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices, tx_params);
+      std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_2(dsts, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices);
 
       LOG_PRINT_L2("on_transfer_split called create_transactions_2");
 
@@ -1397,17 +1364,8 @@ namespace tools
 
     try
     {
-      uint64_t mixin;
-      if(req.ring_size != 0)
-      {
-        mixin = m_wallet->adjust_mixin(req.ring_size - 1);
-      }
-      else
-      {
-        mixin = m_wallet->adjust_mixin(req.mixin);
-      }
+      uint64_t mixin = m_wallet->adjust_mixin(req.ring_size ? req.ring_size - 1 : 0);
       uint32_t priority = m_wallet->adjust_priority(req.priority);
-
       std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_all(req.below_amount, dsts[0].addr, dsts[0].is_subaddress, req.outputs, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices);
 
       return fill_response(ptx_vector, req.get_tx_keys, res.tx_key_list, res.amount_list, res.fee_list, res.multisig_txset, res.unsigned_txset, req.do_not_relay,
@@ -1461,17 +1419,8 @@ namespace tools
 
     try
     {
-      uint64_t mixin;
-      if(req.ring_size != 0)
-      {
-        mixin = m_wallet->adjust_mixin(req.ring_size - 1);
-      }
-      else
-      {
-        mixin = m_wallet->adjust_mixin(req.mixin);
-      }
+      uint64_t mixin = m_wallet->adjust_mixin(req.ring_size ? req.ring_size - 1 : 0);
       uint32_t priority = m_wallet->adjust_priority(req.priority);
-
       std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_single(ki, dsts[0].addr, dsts[0].is_subaddress, req.outputs, mixin, req.unlock_time, priority, extra);
 
       if (ptx_vector.empty())
@@ -4246,7 +4195,7 @@ namespace tools
         args.erase(args.begin());
     }
 
-    tools::wallet2::register_service_node_result register_result = m_wallet->create_register_service_node_tx(args, 0 /*subaddr_account*/);
+    tools::wallet2::register_service_node_result register_result = m_wallet->create_register_service_node_tx(args, 0/*subaddr_account*/);
     if(register_result.status != tools::wallet2::register_service_node_result_status::success)
     {
       er.code    = WALLET_RPC_ERROR_CODE_TX_NOT_POSSIBLE;

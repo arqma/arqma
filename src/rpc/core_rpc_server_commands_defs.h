@@ -773,9 +773,9 @@ namespace cryptonote
   {
     struct request_t
     {
-      bool fully_funded_nodes_only;
+      bool active_nodes_only;
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_OPT(fully_funded_nodes_only, (bool)true)
+        KV_SERIALIZE_OPT(active_nodes_only, (bool)true)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
