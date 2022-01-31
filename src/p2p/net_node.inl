@@ -240,7 +240,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::handle_command_line(const boost::program_options::variables_map& vm)
   {
     bool testnet = command_line::get_arg(vm, cryptonote::arg_testnet_on);
-    bool stagenet = command_line::get_arg(vm, cryptonote::arg_stagenet_on);
+    bool stagenet = true; //command_line::get_arg(vm, cryptonote::arg_stagenet_on);
     m_nettype = testnet ? cryptonote::TESTNET : stagenet ? cryptonote::STAGENET : cryptonote::MAINNET;
 
     network_zone& public_zone = m_network_zones[epee::net_utils::zone::public_];

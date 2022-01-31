@@ -364,89 +364,87 @@ namespace cryptonote
   };
 
   enum network_type : uint8_t
-    {
-      MAINNET = 0,
-      TESTNET,
-      STAGENET,
-      FAKECHAIN,
-      UNDEFINED = 255
+  {
+    MAINNET = 0,
+    TESTNET,
+    STAGENET,
+    FAKECHAIN,
+    UNDEFINED = 255
+  };
+  struct config_t
+  {
+    uint64_t CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
+    uint64_t CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX;
+    uint64_t CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
+    uint16_t P2P_DEFAULT_PORT;
+    uint16_t RPC_DEFAULT_PORT;
+    uint16_t ZMQ_DEFAULT_PORT;
+    boost::uuids::uuid NETWORK_ID;
+    std::string GENESIS_TX;
+    uint32_t GENESIS_NONCE;
+    std::string const *GOVERNANCE_WALLET_ADDRESS;
+    std::string const *DEV_WALLET_ADDRESS;
+  };
+  inline const config_t& get_config(network_type nettype, uint8_t hard_fork_version = 1)
+  {
+    static config_t mainnet = {
+      ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+      ::config::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+      ::config::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+      ::config::P2P_DEFAULT_PORT,
+      ::config::RPC_DEFAULT_PORT,
+      ::config::ZMQ_DEFAULT_PORT,
+      ::config::NETWORK_ID,
+      ::config::GENESIS_TX,
+      ::config::GENESIS_NONCE,
+      &::config::GOVERNANCE_WALLET_ADDRESS,
+      &::config::DEV_WALLET_ADDRESS
     };
-    struct config_t
-    {
-      uint64_t CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
-      uint64_t CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX;
-      uint64_t CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
-      uint16_t P2P_DEFAULT_PORT;
-      uint16_t RPC_DEFAULT_PORT;
-      uint16_t ZMQ_DEFAULT_PORT;
-      boost::uuids::uuid NETWORK_ID;
-      std::string GENESIS_TX;
-      uint32_t GENESIS_NONCE;
-      std::string const *GOVERNANCE_WALLET_ADDRESS;
-      std::string const *DEV_WALLET_ADDRESS;
+
+    static config_t testnet = {
+      ::config::testnet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+      ::config::testnet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+      ::config::testnet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+      ::config::testnet::P2P_DEFAULT_PORT,
+      ::config::testnet::RPC_DEFAULT_PORT,
+      ::config::testnet::ZMQ_DEFAULT_PORT,
+      ::config::testnet::NETWORK_ID,
+      ::config::GENESIS_TX,
+      ::config::GENESIS_NONCE,
+      &::config::testnet::GOVERNANCE_WALLET_ADDRESS,
+      &::config::testnet::DEV_WALLET_ADDRESS
     };
-    inline const config_t& get_config(network_type nettype, uint8_t hard_fork_version = 1)
+
+    static config_t stagenet = {
+      ::config::stagenet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+      ::config::stagenet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+      ::config::stagenet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
+      ::config::stagenet::P2P_DEFAULT_PORT,
+      ::config::stagenet::RPC_DEFAULT_PORT,
+      ::config::stagenet::ZMQ_DEFAULT_PORT,
+      ::config::stagenet::NETWORK_ID,
+      ::config::GENESIS_TX,
+      ::config::GENESIS_NONCE,
+      &::config::stagenet::GOVERNANCE_WALLET_ADDRESS,
+      &::config::stagenet::DEV_WALLET_ADDRESS
+    };
+
+    switch (nettype)
     {
-      static config_t mainnet = {
-        ::config::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
-        ::config::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
-        ::config::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
-        ::config::P2P_DEFAULT_PORT,
-        ::config::RPC_DEFAULT_PORT,
-        ::config::ZMQ_DEFAULT_PORT,
-        ::config::NETWORK_ID,
-        ::config::GENESIS_TX,
-        ::config::GENESIS_NONCE,
-        &::config::GOVERNANCE_WALLET_ADDRESS,
-        &::config::DEV_WALLET_ADDRESS
-      };
-
-      static config_t testnet = {
-        ::config::testnet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
-        ::config::testnet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
-        ::config::testnet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
-        ::config::testnet::P2P_DEFAULT_PORT,
-        ::config::testnet::RPC_DEFAULT_PORT,
-        ::config::testnet::ZMQ_DEFAULT_PORT,
-        ::config::testnet::NETWORK_ID,
-        ::config::GENESIS_TX,
-        ::config::GENESIS_NONCE,
-        &::config::testnet::GOVERNANCE_WALLET_ADDRESS,
-        &::config::testnet::DEV_WALLET_ADDRESS
-      };
-
-      static config_t stagenet = {
-        ::config::stagenet::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
-        ::config::stagenet::CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
-        ::config::stagenet::CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX,
-        ::config::stagenet::P2P_DEFAULT_PORT,
-        ::config::stagenet::RPC_DEFAULT_PORT,
-        ::config::stagenet::ZMQ_DEFAULT_PORT,
-        ::config::stagenet::NETWORK_ID,
-        ::config::GENESIS_TX,
-        ::config::GENESIS_NONCE,
-        &::config::stagenet::GOVERNANCE_WALLET_ADDRESS,
-        &::config::stagenet::DEV_WALLET_ADDRESS
-      };
-
-      switch (nettype)
+      case MAINNET:
+      case FAKECHAIN:
       {
-        case MAINNET:
-        case FAKECHAIN:
-        {
-          return mainnet;
-        }
-        case TESTNET:
-        {
-          return testnet;
-        }
-
-        case STAGENET:
-        {
-          return stagenet;
-        }
-
-        default: throw std::runtime_error("Invalid network type");
+        return mainnet;
       }
-   };
+      case TESTNET:
+      {
+        return testnet;
+      }
+      case STAGENET:
+      {
+        return stagenet;
+      }
+      default: throw std::runtime_error("Invalid network type");
+    }
+  };
 }

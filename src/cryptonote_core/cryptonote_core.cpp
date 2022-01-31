@@ -86,7 +86,7 @@ namespace cryptonote
   const command_line::arg_descriptor<bool, false> arg_stagenet_on = {
     "stagenet"
   , "Run on stagenet. The wallet must be launched with --stagenet flag."
-  , false
+  , true
   };
   const command_line::arg_descriptor<bool> arg_regtest_on = {
     "regtest"
@@ -231,7 +231,7 @@ namespace cryptonote
               m_last_json_checkpoints_update(0),
               m_disable_dns_checkpoints(false),
               m_update_download(0),
-              m_nettype(UNDEFINED),
+              m_nettype(STAGENET),
               m_update_available(false),
               m_pad_transactions(false)
   {
@@ -329,11 +329,11 @@ namespace cryptonote
     if (m_nettype != FAKECHAIN)
     {
       const bool testnet = command_line::get_arg(vm, arg_testnet_on);
-      const bool stagenet = command_line::get_arg(vm, arg_stagenet_on);
+      const bool stagenet = true; //command_line::get_arg(vm, arg_stagenet_on);
       m_nettype = testnet ? TESTNET : stagenet ? STAGENET : MAINNET;
-      m_deregister_vote_pool.m_nettype = m_nettype;
     }
 
+    m_deregister_vote_pool.m_nettype = m_nettype;
     m_config_folder = command_line::get_arg(vm, arg_data_dir);
 
     auto data_dir = boost::filesystem::path(m_config_folder);

@@ -218,7 +218,7 @@ int main(int argc, char const * argv[])
     }
 
     const bool testnet = command_line::get_arg(vm, cryptonote::arg_testnet_on);
-    const bool stagenet = command_line::get_arg(vm, cryptonote::arg_stagenet_on);
+    const bool stagenet = true; //command_line::get_arg(vm, cryptonote::arg_stagenet_on);
     const bool regtest = command_line::get_arg(vm, cryptonote::arg_regtest_on);
     if (testnet + stagenet + regtest > 1)
     {
