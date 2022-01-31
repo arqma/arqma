@@ -779,22 +779,16 @@ namespace cryptonote
      */
     void check_against_checkpoints(const checkpoints& points, bool enforce);
 
-    /**
-     * @brief configure whether or not to enforce DNS-based checkpoints
-     *
-     * @param enforce the new enforcement setting
-     */
     void set_enforce_dns_checkpoints(bool enforce);
 
     /**
-     * @brief loads new checkpoints from a file and optionally from DNS
+     * @brief loads new checkpoints from a file
      *
      * @param file_path the path of the file to look for and load checkpoints from
-     * @param check_dns whether or not to check for new DNS-based checkpoints
      *
      * @return false if any enforced checkpoint type fails to load, otherwise true
      */
-    bool update_checkpoints(const std::string& file_path, bool check_dns);
+    bool update_checkpoints(const std::string& file_path);
 
     struct service_node_checkpoint_pool_entry
     {
@@ -1169,7 +1163,6 @@ namespace cryptonote
     std::vector<ValidateMinerTxHook*> m_validate_miner_tx_hooks;
 
     checkpoints m_checkpoints;
-    bool m_enforce_dns_checkpoints;
 
     HardFork *m_hardfork;
 
