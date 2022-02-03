@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The ArQmA Network
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2022, The ArQmA Network
+// Copyright (c) 2014-2022, The Monero Project
 //
 // All rights reserved.
 //
