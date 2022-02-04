@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Word list originally created as part of the Electrum project, Copyright (C) 2014 Thomas Voegtlin
 //
 // Copyright (c) 2014-2018, The Monero Project
@@ -1110,6 +1110,7 @@ namespace Language
         "ourselves",
         "poet",
         "possible",
+        "beer",
         "princess",
         "sail",
         "size",

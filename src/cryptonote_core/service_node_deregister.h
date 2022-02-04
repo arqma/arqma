@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2022, The Arqma Project
 // Copyright (c) 2018, The Loki Project
 //
 // All rights reserved.

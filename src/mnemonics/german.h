@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Word list created by Monero contributor Shrikez
 //
 // Copyright (c) 2014-2018, The Monero Project
@@ -309,6 +309,7 @@ namespace Language
         "Bezug",
         "biegen",
         "Biene",
+        "Bier",
         "Bierzelt",
         "bieten",
         "Bikini",
