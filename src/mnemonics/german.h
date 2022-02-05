@@ -309,7 +309,6 @@ namespace Language
         "Bezug",
         "biegen",
         "Biene",
-        "Bier",
         "Bierzelt",
         "bieten",
         "Bikini",

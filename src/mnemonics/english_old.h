@@ -1110,7 +1110,6 @@ namespace Language
         "ourselves",
         "poet",
         "possible",
-        "beer",
         "princess",
         "sail",
         "size",
