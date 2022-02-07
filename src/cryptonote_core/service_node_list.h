@@ -1,5 +1,6 @@
 // Copyright (c)      2018-2022, The Arqma Project
 // Copyright (c)      2018, The Loki Project
+// Copyright (c) 2021-2022, The ArQmA Network
 //
 // All rights reserved.
 //
@@ -87,7 +88,7 @@ namespace service_nodes
       END_SERIALIZE()
     };
 
-    uint8_t version;
+    uint8_t version = 0;
     uint64_t registration_height = 0;
     uint64_t requested_unlock_height = 0;
 
@@ -127,8 +128,8 @@ namespace service_nodes
 
   struct service_node_pubkey_info
   {
-    crypto::public_key pubkey;
-    service_node_info info;
+    crypto::public_key pubkey{};
+    service_node_info info{};
 
     BEGIN_SERIALIZE_OBJECT()
       FIELD(pubkey)
@@ -138,9 +139,9 @@ namespace service_nodes
 
   struct key_image_blacklist_entry
   {
-    uint8_t version;
-    crypto::key_image key_image;
-    uint64_t unlock_height;
+    uint8_t version = service_node_info::v1;
+    crypto::key_image key_image{};
+    uint64_t unlock_height = 0;
 
     BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(version)
@@ -190,7 +191,7 @@ namespace service_nodes
     const std::shared_ptr<const quorum_checkpointing> get_checkpointing_quorum(uint64_t height) const;
 
     std::vector<service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const;
-    const std::vector<key_image_blacklist_entry> &get_blacklisted_key_images() const { return m_key_image_blacklist; }
+    const std::vector<key_image_blacklist_entry> &get_blacklisted_key_images() const { return m_transient_state.key_image_blacklist; }
 
     void set_db_pointer(cryptonote::BlockchainDB* db);
     void set_my_service_node_keys(crypto::public_key const *pub_key);
@@ -326,22 +327,21 @@ namespace service_nodes
     void clear(bool delete_db_entry = false);
     bool load();
 
-    std::unordered_map<crypto::public_key, service_node_info> m_service_nodes_infos;
-    std::list<std::unique_ptr<rollback_event>> m_rollback_events;
+    mutable boost::recursive_mutex m_sn_mutex;
     cryptonote::Blockchain& m_blockchain;
     bool m_hooks_registered;
+    crypto::public_key const *m_service_node_pubkey;
+    cryptonote::BlockchainDB *m_db;
 
     using block_height = uint64_t;
-    block_height m_height;
-
-    mutable boost::recursive_mutex m_sn_mutex;
-
-    crypto::public_key const *m_service_node_pubkey;
-    cryptonote::BlockchainDB* m_db;
-
-    std::vector<key_image_blacklist_entry> m_key_image_blacklist;
-    std::map<block_height, quorum_manager> m_quorum_states;
-
+    struct
+    {
+      std::unordered_map<crypto::public_key, service_node_info> service_nodes_infos;
+      std::vector<key_image_blacklist_entry> key_image_blacklist;
+      std::map<block_height, quorum_manager> quorum_states;
+      std::list<std::unique_ptr<rollback_event>> rollback_events;
+      block_height height;
+    } m_transient_state;
   };
 
   bool reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, uint64_t& portions_for_operator, std::vector<uint64_t>& portions, uint64_t& expiration_timestamp, crypto::public_key& service_node_key, crypto::signature& signature, crypto::public_key& tx_pub_key);

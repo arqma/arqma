@@ -199,9 +199,9 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define MAX_NUMBER_OF_CONTRIBUTORS                      4
 #define MIN_STAKE_SHARE                                 (STAKING_SHARE_PARTS / MAX_NUMBER_OF_CONTRIBUTORS)
 
-#define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (86400*14) // (seconds_per_day times days)
+#define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (3600 * 24 * 14) // 2 weeks
 
-#define MEMPOOL_PRUNE_NON_STANDARD_TX_LIFETIME          (7200) // value in seconds
+#define MEMPOOL_PRUNE_NON_STANDARD_TX_LIFETIME          (7200) // 2 hours
 #define BLOCKS_EXPECTED_IN_HOURS(val)                   ((3600 / DIFFICULTY_TARGET_V16) * (val))
 #define BLOCKS_EXPECTED_IN_DAYS(val)                    (BLOCKS_EXPECTED_IN_HOURS(24) * (val))
 #define BLOCKS_EXPECTED_IN_YEARS(val)                   (BLOCKS_EXPECTED_IN_DAYS(365) * (val))

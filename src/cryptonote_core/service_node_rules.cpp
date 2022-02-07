@@ -14,7 +14,7 @@ namespace arqma_bc = config::blockchain_settings;
 
 namespace service_nodes
 {
-  uint64_t get_staking_requirement(cryptonote::network_type m_nettype, uint64_t height, uint8_t hard_fork_version)
+  uint64_t get_staking_requirement(cryptonote::network_type m_nettype, uint64_t height)
   {
     if(m_nettype != cryptonote::MAINNET)
     {
@@ -53,9 +53,9 @@ namespace service_nodes
     }
 
     constexpr int64_t heights[] = {
-      99999999,
-      99999999,
-      99999999,
+      999999000,
+      999999900,
+      999999990,
       // to be filled upon release
     };
 
