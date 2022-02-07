@@ -2807,7 +2807,7 @@ namespace cryptonote
       entry.last_reward_block_height = pubkey_info.info.last_reward_block_height;
       entry.last_reward_transaction_index = pubkey_info.info.last_reward_transaction_index;
       entry.last_uptime_proof = proof.timestamp;
-      entry.service_node_version = {proof.version_major};
+      entry.service_node_version = {proof.arqma_snode_major, proof.arqma_snode_minor, proof.arqma_snode_patch};
 
       entry.contributors.reserve(pubkey_info.info.contributors.size());
 

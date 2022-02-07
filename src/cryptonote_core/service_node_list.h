@@ -45,9 +45,9 @@ namespace service_nodes
     struct contribution_t
     {
       uint8_t version = v1;
-      crypto::public_key key_image_pub_key{};
-      crypto::key_image key_image{};
-      uint64_t amount = 0;
+      crypto::public_key key_image_pub_key;
+      crypto::key_image key_image;
+      uint64_t amount;
 
       BEGIN_SERIALIZE_OBJECT()
         VARINT_FIELD(version)
@@ -65,10 +65,10 @@ namespace service_nodes
 
     struct contributor_t
     {
-      uint8_t version = 0;
-      uint64_t amount = 0;
-      uint64_t reserved = 0;
-      cryptonote::account_public_address address{};
+      uint8_t version;
+      uint64_t amount;
+      uint64_t reserved;
+      cryptonote::account_public_address address;
       std::vector<contribution_t> locked_contributions;
 
       contributor_t() = default;
@@ -88,20 +88,18 @@ namespace service_nodes
       END_SERIALIZE()
     };
 
-    uint8_t version = 0;
-    uint64_t registration_height = 0;
-    uint64_t requested_unlock_height = 0;
-
-    uint64_t last_reward_block_height = 0;
-    uint32_t last_reward_transaction_index = 0;
-
+    uint8_t version;
+    uint64_t registration_height;
+    uint64_t requested_unlock_height;
+    uint64_t last_reward_block_height;
+    uint32_t last_reward_transaction_index;
     std::vector<contributor_t> contributors;
-    uint64_t total_contributed = 0;
-    uint64_t total_reserved = 0;
-    uint64_t staking_requirement = 0;
-    uint64_t portions_for_operator = 0;
-    swarm_id_t swarm_id = 0;
-    cryptonote::account_public_address operator_address{};
+    uint64_t total_contributed;
+    uint64_t total_reserved;
+    uint64_t staking_requirement;
+    uint64_t portions_for_operator;
+    swarm_id_t swarm_id;
+    cryptonote::account_public_address operator_address;
 
     service_node_info() = default;
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
@@ -128,8 +126,8 @@ namespace service_nodes
 
   struct service_node_pubkey_info
   {
-    crypto::public_key pubkey{};
-    service_node_info info{};
+    crypto::public_key pubkey;
+    service_node_info info;
 
     BEGIN_SERIALIZE_OBJECT()
       FIELD(pubkey)
@@ -140,8 +138,8 @@ namespace service_nodes
   struct key_image_blacklist_entry
   {
     uint8_t version = service_node_info::v1;
-    crypto::key_image key_image{};
-    uint64_t unlock_height = 0;
+    crypto::key_image key_image;
+    uint64_t unlock_height;
 
     BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(version)

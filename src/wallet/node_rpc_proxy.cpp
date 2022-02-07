@@ -54,6 +54,10 @@ void NodeRPCProxy::invalidate()
   m_all_service_nodes_cached_height = 0;
   m_all_service_nodes.clear();
 
+  m_contributed_service_nodes_cached_height = 0;
+  m_contributed_service_nodes_cached_address.clear();
+  m_contributed_service_nodes.clear();
+
   m_height = 0;
   for (size_t n = 0; n < 256; ++n)
     m_earliest_height[n] = 0;
@@ -284,6 +288,37 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> NodeRPCP
   return result;
 }
 
+// Updates the cache of all SN
+bool NodeRPCProxy::update_all_service_nodes_cache(uint64_t height, boost::optional<std::string> &failed) const
+{
+  cryptonote::COMMAND_RPC_GET_SERVICE_NODES::request req = {};
+  cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response res = {};
+
+  bool r = epee::net_utils::invoke_http_json_rpc("/json_rpc", "get_all_service_nodes", req, res, m_http_client, rpc_timeout);
+
+  if(!r)
+  {
+    failed = std::string("Failed to connect to daemon");
+    return false;
+  }
+
+  if(res.status == CORE_RPC_STATUS_BUSY)
+  {
+    failed = res.status;
+    return false;
+  }
+
+  if(res.status != CORE_RPC_STATUS_OK)
+  {
+    failed = res.status;
+    return false;
+  }
+
+  m_all_service_nodes_cached_height = height;
+  m_all_service_nodes = std::move(res.service_node_states);
+  return true;
+}
+
 std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> NodeRPCProxy::get_all_service_nodes(boost::optional<std::string> &failed) const
 {
   std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> result;
@@ -294,38 +329,43 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> NodeRPCP
     return result;
 
   {
-    if(m_all_service_nodes_cached_height != height)
-    {
-      cryptonote::COMMAND_RPC_GET_SERVICE_NODES::request req = {};
-      cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response res = {};
-
-      m_daemon_rpc_mutex.lock();
-      bool r = epee::net_utils::invoke_http_json_rpc("/json_rpc", "get_all_service_nodes", req, res, m_http_client, rpc_timeout);
-      m_daemon_rpc_mutex.unlock();
-
-      if(!r)
-      {
-        failed = std::string("Failed to connect to daemon");
-        return result;
-      }
-
-      if(res.status == CORE_RPC_STATUS_BUSY)
-      {
-        failed = res.status;
-        return result;
-      }
-
-      if(res.status != CORE_RPC_STATUS_OK)
-      {
-        failed = res.status;
-        return result;
-      }
-
-      m_all_service_nodes_cached_height = height;
-      m_all_service_nodes = std::move(res.service_node_states);
-    }
+    boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
+    if(m_all_service_nodes_cached_height != height && !update_all_service_nodes_cache(height, failed))
+      return result;
 
     result = m_all_service_nodes;
+  }
+
+  return result;
+}
+
+// Filtered version of the above while using at the same contributor
+std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> NodeRPCProxy::get_contributed_service_nodes(const std::string &contributor, boost::optional<std::string> &failed) const
+{
+  std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> result;
+
+  uint64_t height;
+  failed = get_height(height);
+  if(failed)
+    return result;
+
+  {
+    boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
+    if(m_contributed_service_nodes_cached_height != height || m_contributed_service_nodes_cached_address != contributor)
+    {
+      if(m_all_service_nodes_cached_height != height && !update_all_service_nodes_cache(height, failed))
+        return result;
+
+      m_contributed_service_nodes.clear();
+      std::copy_if(m_all_service_nodes.begin(), m_all_service_nodes.end(), std::back_inserter(m_contributed_service_nodes), [&contributor](const cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry &e)
+      {
+        return std::any_of(e.contributors.begin(), e.contributors.end(), [&contributor](const cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::contributor &c) { return contributor == c.address; });
+      });
+      m_contributed_service_nodes_cached_height = height;
+      m_contributed_service_nodes_cached_address = contributor;
+    }
+
+    result = m_contributed_service_nodes;
   }
 
   return result;
@@ -341,14 +381,13 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::ent
     return result;
 
   {
+    boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
     if(m_service_node_blacklisted_key_images_cached_height != height)
     {
       cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::request req = {};
       cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::response res = {};
 
-      m_daemon_rpc_mutex.lock();
       bool r = epee::net_utils::invoke_http_json_rpc("/json_rpc", "get_service_node_blacklisted_key_images", req, res, m_http_client, rpc_timeout);
-      m_daemon_rpc_mutex.unlock();
 
       if(!r)
       {

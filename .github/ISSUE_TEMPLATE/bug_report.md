@@ -19,8 +19,6 @@ What is the expected behaviour if the steps above are followed:
 **Current behaviour**
 What is the current behaviour if the steps to reproduce are followed:
 
-**Describe the bug**
-
 **Screenshots or Logs**
 If applicable, add screenshots or logs to help explain the issue.
 

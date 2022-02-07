@@ -1267,13 +1267,11 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::store()
   {
-    if(!m_db)
-      return false;
-
     uint8_t hard_fork_version = m_blockchain.get_current_hard_fork_version();
     if(hard_fork_version < cryptonote::network_version_16)
       return true;
 
+    CHECK_AND_ASSERT_MES(m_db != nullptr, false, "Failed to store Service Node info. m_db == nullptr");
     data_members_for_serialization data_to_store;
     {
       std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
@@ -1288,8 +1286,11 @@ namespace service_nodes
         if(manager.uptime_proof)
           quorum.uptime_quorum = *manager.uptime_proof;
 
-        if(manager.checkpointing)
-          quorum.checkpointing_quorum = *manager.checkpointing;
+        if(quorum.version >= service_node_info::v1)
+        {
+          if(manager.checkpointing)
+            quorum.checkpointing_quorum = *manager.checkpointing;
+        }
 
         data_to_store.quorum_states.push_back(quorum);
       }
@@ -1397,8 +1398,11 @@ namespace service_nodes
       if(states.uptime_quorum.quorum_nodes.size() > 0)
         m_transient_state.quorum_states[states.height].uptime_proof = std::make_shared<quorum_uptime_proof>(states.uptime_quorum);
 
-      if(states.checkpointing_quorum.quorum_nodes.size() > 0)
-        m_transient_state.quorum_states[states.height].checkpointing = std::make_shared<quorum_checkpointing>(states.checkpointing_quorum);
+      if(states.version >= service_node_info::v1)
+      {
+        if(states.checkpointing_quorum.quorum_nodes.size() > 0)
+          m_transient_state.quorum_states[states.height].checkpointing = std::make_shared<quorum_checkpointing>(states.checkpointing_quorum);
+      }
     }
 
     for(const auto& info : data_in.infos)

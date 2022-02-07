@@ -210,11 +210,9 @@ namespace service_nodes
     if(!m_core.is_service_node(pubkey))
       return false;
 
-    // TODO: Will need to be set Valid Version Numbers after test and before Release to Public.
-    // if(!(proof.arqma_ver_major == 7 && proof.arqma_ver_minor == 1 && proof.arqma_snode_major == 1 && proof.arqma_snode_minor == 0))
     uint64_t height = m_core.get_current_blockchain_height();
     uint8_t hf_ver = m_core.get_hard_fork_version(height);
-    if(hf_ver >= 16 && proof.arqma_snode_major != 1) // for tests
+    if(hf_ver >= cryptonote::network_version_16 && proof.arqma_snode_major < 7)
       return false;
 
     CRITICAL_REGION_LOCAL(m_lock);
@@ -225,16 +223,20 @@ namespace service_nodes
     if(!crypto::check_signature(hash, pubkey, sig))
       return false;
 
-    m_uptime_proof_seen[pubkey] = {now, proof.arqma_snode_major}; // more sn_version bits will be added at later point.
+    m_uptime_proof_seen[pubkey] = {now, proof.arqma_snode_major, proof.arqma_snode_minor, proof.arqma_snode_patch};
     return true;
   }
 
-  void generate_uptime_proof_request(const crypto::public_key& pubkey, const crypto::secret_key& seckey, cryptonote::NOTIFY_UPTIME_PROOF::request& req)
+  void quorum_cop::generate_uptime_proof_request(cryptonote::NOTIFY_UPTIME_PROOF::request& req) const
   {
-    req.arqma_ver_major = static_cast<uint16_t>(ARQMA_VERSION_MAJOR);
-    req.arqma_ver_minor = static_cast<uint16_t>(ARQMA_VERSION_MINOR);
-    req.arqma_snode_major = static_cast<uint16_t>(ARQMA_SNODE_VERSION_MAJOR);
-    req.arqma_snode_minor = static_cast<uint16_t>(ARQMA_SNODE_VERSION_MINOR);
+    req.arqma_snode_major = static_cast<uint16_t>(ARQMA_VERSION_MAJOR);
+    req.arqma_snode_minor = static_cast<uint16_t>(ARQMA_VERSION_MINOR);
+    req.arqma_snode_patch = static_cast<uint16_t>(ARQMA_VERSION_PATCH);
+
+    crypto::public_key pubkey;
+    crypto::secret_key seckey;
+    m_core.get_service_node_keys(pubkey, seckey);
+
     req.timestamp = time(nullptr);
     req.pubkey = pubkey;
 

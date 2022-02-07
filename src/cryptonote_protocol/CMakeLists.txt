@@ -33,15 +33,17 @@ project(arqma CXX)
 set(cryptonote_protocol_sources
   block_queue.cpp
   cryptonote_protocol_handler-base.cpp
-  cryptonote_protocol_handler.inl)
+  cryptonote_protocol_handler.inl
+  core_protocol_instantiation.cpp
+  p2p_net_node_instantiation.cpp)
 
 set(cryptonote_protocol_headers)
 
 set(cryptonote_protocol_private_headers
   block_queue.h
   cryptonote_protocol_defs.h
-  cryptonote_protocol_handler.h
-  cryptonote_protocol_handler_common.h)
+  cryptonote_protocol_handler_common.h
+  cryptonote_protocol_handler.h)
 
 arqma_private_headers(cryptonote_protocol
   ${cryptonote_protocol_private_headers})
@@ -55,6 +57,5 @@ target_link_libraries(cryptonote_protocol
   PUBLIC
     p2p
   PRIVATE
-    miniupnpc
     easylogging
     ${EXTRA_LIBRARIES})

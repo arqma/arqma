@@ -41,6 +41,12 @@ namespace cryptonote
 
 namespace service_nodes
 {
+  struct proof_info
+  {
+    uint64_t timestamp;
+    uint16_t arqma_snode_major, arqma_snode_minor, arqma_snode_patch;
+  };
+
   struct quorum_checkpointing
   {
     std::vector<crypto::public_key> quorum_nodes;
@@ -73,12 +79,6 @@ namespace service_nodes
     count,
   };
 
-  struct proof_info
-  {
-    uint64_t timestamp;
-    uint16_t version_major;
-  };
-
   class quorum_cop
     : public cryptonote::Blockchain::BlockAddedHook,
       public cryptonote::Blockchain::BlockchainDetachedHook,
@@ -103,6 +103,8 @@ namespace service_nodes
 
     proof_info get_uptime_proof(const crypto::public_key &pubkey) const;
 
+    void generate_uptime_proof_request(cryptonote::NOTIFY_UPTIME_PROOF::request& req) const;
+
   private:
 
     cryptonote::core& m_core;
@@ -111,6 +113,4 @@ namespace service_nodes
     std::unordered_map<crypto::public_key, proof_info> m_uptime_proof_seen;
     mutable epee::critical_section m_lock;
   };
-
-  void generate_uptime_proof_request(const crypto::public_key& pubkey, const crypto::secret_key& seckey, cryptonote::NOTIFY_UPTIME_PROOF::request& req);
 }
