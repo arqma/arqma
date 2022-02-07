@@ -248,7 +248,7 @@ public:
 
   std::vector<crypto::hash> get_hashes_range(const uint64_t& h1, const uint64_t& h2) const override;
 
-  crypto::hash top_block_hash(uint64_t *block_height = NULL) const ;
+  crypto::hash top_block_hash(uint64_t *block_height = NULL) const;
 
   block get_top_block() const override;
 

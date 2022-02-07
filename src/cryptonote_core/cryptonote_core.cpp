@@ -83,10 +83,10 @@ namespace cryptonote
   , "Run on testnet. The wallet must be launched with --testnet flag."
   , false
   };
-  const command_line::arg_descriptor<bool> arg_stagenet_on = {
+  const command_line::arg_descriptor<bool, false> arg_stagenet_on = {
     "stagenet"
   , "Run on stagenet. The wallet must be launched with --stagenet flag."
-  , true
+  , false
   };
   const command_line::arg_descriptor<bool> arg_regtest_on = {
     "regtest"
@@ -220,7 +220,7 @@ namespace cryptonote
               m_checkpoints_path(""),
               m_last_json_checkpoints_update(0),
               m_update_download(0),
-              m_nettype(STAGENET),
+              m_nettype(UNDEFINED),
               m_update_available(false),
               m_pad_transactions(false)
   {
@@ -310,7 +310,7 @@ namespace cryptonote
     if (m_nettype != FAKECHAIN)
     {
       const bool testnet = command_line::get_arg(vm, arg_testnet_on);
-      const bool stagenet = true; //command_line::get_arg(vm, arg_stagenet_on);
+      const bool stagenet = command_line::get_arg(vm, arg_stagenet_on);
       m_nettype = testnet ? TESTNET : stagenet ? STAGENET : MAINNET;
     }
 

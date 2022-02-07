@@ -240,7 +240,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::handle_command_line(const boost::program_options::variables_map& vm)
   {
     bool testnet = command_line::get_arg(vm, cryptonote::arg_testnet_on);
-    bool stagenet = true; //command_line::get_arg(vm, cryptonote::arg_stagenet_on);
+    bool stagenet = command_line::get_arg(vm, cryptonote::arg_stagenet_on);
     m_nettype = testnet ? cryptonote::TESTNET : stagenet ? cryptonote::STAGENET : cryptonote::MAINNET;
 
     network_zone& public_zone = m_network_zones[epee::net_utils::zone::public_];
@@ -842,14 +842,6 @@ namespace nodetool
         if(code == LEVIN_ERROR_CONNECTION_TIMEDOUT || code == LEVIN_ERROR_CONNECTION_DESTROYED)
           timeout = true;
         return;
-      }
-      if(rsp.node_data.version.size() == 0)
-      {
-        MINFO("Peer " << context.m_remote_address.str() << " did not provide version info. It is probably Old Version");
-      }
-      else if(rsp.node_data.version.size() != 0 && rsp.node_data.version != ARQMA_VERSION)
-      {
-        MINFO("Peer " << context.m_remote_address.str() << " has a different version than ours: " << rsp.node_data.version.substr(0,12));
       }
 
       if(rsp.node_data.network_id != m_network_id)
@@ -1662,7 +1654,6 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::get_local_node_data(basic_node_data& node_data, const network_zone& zone)
   {
     node_data.peer_id = zone.m_config.m_peer_id;
-    node_data.version = ARQMA_VERSION;
     if(!m_hide_my_port && zone.m_can_pingback)
       node_data.my_port = m_external_port ? m_external_port : m_listening_port;
     else
@@ -1890,20 +1881,6 @@ namespace nodetool
   template<class t_payload_net_handler>
   int node_server<t_payload_net_handler>::handle_handshake(int command, typename COMMAND_HANDSHAKE::request& arg, typename COMMAND_HANDSHAKE::response& rsp, p2p_connection_context& context)
   {
-    if(arg.node_data.version.size() == 0)
-    {
-      MGINFO("Peer " << context.m_remote_address.str() << " did not provide version info. It is probably Old Version");
-  //    drop_connection(context);
-  //    block_host(context.m_remote_address);
-    }
-
-    if(arg.node_data.version.size() != 0 && arg.node_data.version != ARQMA_VERSION)
-    {
-      MGINFO("Peer " << context.m_remote_address.str() << " has a different version than ours: " << arg.node_data.version.substr(0,12));
-  //  drop_connection(context);
-  //    block_host(context.m_remote_address);
-    }
-
     if(arg.node_data.network_id != m_network_id)
     {
 
