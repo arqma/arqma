@@ -8366,7 +8366,7 @@ void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry
   for(auto& dt: dsts)
   {
     THROW_WALLET_EXCEPTION_IF(0 == dt.amount && (tx_params.tx_type != txtype::key_image_unlock), error::zero_destination);
-    THROW_WALLET_EXCEPTION_IF(dt.amount < config::tx_settings::min_tx_amount && (tx_params.tx_type != txtype::key_image_unlock), error::tx_amount_too_low);
+//    THROW_WALLET_EXCEPTION_IF(dt.amount < config::tx_settings::min_tx_amount && (tx_params.tx_type != txtype::key_image_unlock), error::tx_amount_too_low);
     needed_money += dt.amount;
     LOG_PRINT_L2("transfer: adding " << print_money(dt.amount) << ", for a total of " << print_money(needed_money));
     THROW_WALLET_EXCEPTION_IF(needed_money < dt.amount, error::tx_sum_overflow, dsts, fee, m_nettype);

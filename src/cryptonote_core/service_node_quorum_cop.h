@@ -73,6 +73,12 @@ namespace service_nodes
     count,
   };
 
+  struct proof_info
+  {
+    uint64_t timestamp;
+    uint16_t version_major;
+  };
+
   class quorum_cop
     : public cryptonote::Blockchain::BlockAddedHook,
       public cryptonote::Blockchain::BlockchainDetachedHook,
@@ -95,15 +101,14 @@ namespace service_nodes
                   "Safety buffer should always be less than the vote lifetime");
     bool prune_uptime_proof();
 
-    uint64_t get_uptime_proof(const crypto::public_key &pubkey) const;
+    proof_info get_uptime_proof(const crypto::public_key &pubkey) const;
 
   private:
 
     cryptonote::core& m_core;
     uint64_t m_uptime_proof_height;
 
-    using timestamp = uint64_t;
-    std::unordered_map<crypto::public_key, timestamp> m_uptime_proof_seen;
+    std::unordered_map<crypto::public_key, proof_info> m_uptime_proof_seen;
     mutable epee::critical_section m_lock;
   };
 

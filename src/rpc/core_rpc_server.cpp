@@ -2792,16 +2792,22 @@ namespace cryptonote
       }
     }
 
+    res.height = m_core.get_current_blockchain_height();
+    res.block_hash = string_tools::pod_to_hex(m_core.get_block_id_by_height(res.height - 1));
+
     for(const auto &pubkey_info : pubkey_info_list)
     {
       COMMAND_RPC_GET_SERVICE_NODES::response::entry entry = {};
+
+      const auto proof = m_core.get_uptime_proof(pubkey_info.pubkey);
 
       entry.service_node_pubkey = string_tools::pod_to_hex(pubkey_info.pubkey);
       entry.registration_height = pubkey_info.info.registration_height;
       entry.requested_unlock_height = pubkey_info.info.requested_unlock_height;
       entry.last_reward_block_height = pubkey_info.info.last_reward_block_height;
       entry.last_reward_transaction_index = pubkey_info.info.last_reward_transaction_index;
-      entry.last_uptime_proof = m_core.get_uptime_proof(pubkey_info.pubkey);
+      entry.last_uptime_proof = proof.timestamp;
+      entry.service_node_version = {proof.version_major};
 
       entry.contributors.reserve(pubkey_info.info.contributors.size());
 
@@ -2831,6 +2837,7 @@ namespace cryptonote
       entry.staking_requirement = pubkey_info.info.staking_requirement;
       entry.portions_for_operator = pubkey_info.info.portions_for_operator;
       entry.operator_address = cryptonote::get_account_address_as_str(nettype(), false/*is_subaddress*/, pubkey_info.info.operator_address);
+      entry.swarm_id = pubkey_info.info.swarm_id;
 
       res.service_node_states.push_back(entry);
     }

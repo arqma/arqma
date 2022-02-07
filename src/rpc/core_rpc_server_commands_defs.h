@@ -2625,11 +2625,13 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint64_t last_reward_block_height;
         uint32_t last_reward_transaction_index;
         uint64_t last_uptime_proof;
+        std::vector<uint16_t> service_node_version;
         std::vector<contributor> contributors;
         uint64_t total_contributed;
         uint64_t total_reserved;
         uint64_t staking_requirement;
         uint64_t portions_for_operator;
+        uint64_t swarm_id;
         std::string operator_address;
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(service_node_pubkey)
@@ -2638,20 +2640,26 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE(last_reward_block_height)
           KV_SERIALIZE(last_reward_transaction_index)
           KV_SERIALIZE(last_uptime_proof)
+          KV_SERIALIZE(service_node_version)
           KV_SERIALIZE(contributors)
           KV_SERIALIZE(total_contributed)
           KV_SERIALIZE(total_reserved)
           KV_SERIALIZE(staking_requirement)
           KV_SERIALIZE(portions_for_operator)
+          KV_SERIALIZE(swarm_id)
           KV_SERIALIZE(operator_address)
         END_KV_SERIALIZE_MAP()
       };
 
       std::vector<entry> service_node_states;
+      uint64_t height;
+      std::string block_hash;
       std::string status;
       std::string as_json;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(service_node_states)
+        KV_SERIALIZE(height)
+        KV_SERIALIZE(block_hash)
         KV_SERIALIZE(status)
         KV_SERIALIZE(as_json)
       END_KV_SERIALIZE_MAP()
