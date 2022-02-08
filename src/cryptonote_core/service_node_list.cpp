@@ -1267,11 +1267,13 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::store()
   {
+    if(!m_db)
+      return false;
+
     uint8_t hard_fork_version = m_blockchain.get_current_hard_fork_version();
     if(hard_fork_version < cryptonote::network_version_16)
       return true;
 
-    CHECK_AND_ASSERT_MES(m_db != nullptr, false, "Failed to store Service Node info. m_db == nullptr");
     data_members_for_serialization data_to_store;
     {
       std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);

@@ -6970,7 +6970,7 @@ bool wallet2::find_and_save_rings(bool force)
       req.txs_hashes.push_back(epee::string_tools::pod_to_hex(txs_hashes[s]));
     bool r;
     {
-      const boost::lock_guard<boost::recursive_mutex> lock{m_daemon_rpc_mutex};
+      const boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
       r = epee::net_utils::invoke_http_json("/gettransactions", req, res, m_http_client, rpc_timeout);
     }
     THROW_WALLET_EXCEPTION_IF(!r, error::no_connection_to_daemon, "gettransactions");
