@@ -120,17 +120,22 @@ namespace cryptonote
   public:
     void debug__print_checkpoints()
     {
-      const std::map<uint64_t, checkpoint_t> &checkpoint_map = m_checkpoints.get_points();
-      if(checkpoint_map.empty())
+      uint64_t end = get_current_blockchain_height() - 1;
+
+      checkpoint_t top_checkpoint;
+      if(m_db->get_top_checkpoint(top_checkpoint))
+        end = std::max(top_checkpoint.height, end);
+
+      std::vector<checkpoint_t> checkpoints = m_db->get_checkpoints_range(0, end);
+      if(checkpoints.empty())
       {
         std::cout << "Checkpoint: None available" << std::endl;
       }
       else
       {
-        for(auto const &it : checkpoint_map)
+        for(auto const &it : checkpoints)
         {
-          checkpoint_t const &checkpoint = it.second;
-          std::cout << "Checkpoint [" << it.first << "]" << ((checkpoint.type == checkpoint_type::service_node) ? "Service Node" : "Predefined") << std::endl;
+          std::cout << "Checkpoint [" << it.height << "]" << ((it.type == checkpoint_type::service_node) ? "Service Node" : "Predefined") << std::endl;
         }
       }
     }
@@ -217,13 +222,6 @@ namespace cryptonote
      * @return true on success, false if any uninitialization steps fail
      */
     bool deinit();
-
-    /**
-     * @brief assign a set of blockchain checkpoint hashes
-     *
-     * @param chk_pts the set of checkpoints to assign
-     */
-    void set_checkpoints(checkpoints&& chk_pts) { m_checkpoints = chk_pts; }
 
     /**
      * @brief get blocks and transactions from blocks based on start height and count
@@ -765,21 +763,6 @@ namespace cryptonote
     bool get_transactions(const std::vector<crypto::hash>& txs_ids, std::vector<transaction>& txs, std::vector<crypto::hash>& missed_txs) const;
 
     //debug functions
-
-    /**
-     * @brief check the blockchain against a set of checkpoints
-     *
-     * If a block fails a checkpoint and enforce is enabled, the blockchain
-     * will be rolled back to two blocks prior to that block.  If enforce
-     * is disabled, as is currently the default case with DNS-based checkpoints,
-     * an error will be printed to the user but no other action will be taken.
-     *
-     * @param points the checkpoints to check against
-     * @param enforce whether or not to take action on failure
-     */
-    void check_against_checkpoints(const checkpoints& points, bool enforce);
-
-    void set_enforce_dns_checkpoints(bool enforce);
 
     /**
      * @brief loads new checkpoints from a file

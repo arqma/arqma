@@ -66,6 +66,10 @@ public:
 
   virtual void drop_hard_fork_info() override {}
   virtual bool block_exists(const crypto::hash& h, uint64_t *height) const override { return false; }
+  virtual void update_block_checkpoint(struct checkpoint_t const &checkpoint) override {}
+  virtual bool get_block_checkpoint(uint64_t height, struct checkpoint_t &checkpoint) const override { return false; }
+  virtual bool get_top_checkpoint(struct checkpoint_t &checkpoint) const override { return false; }
+  virtual std::vector<cryptonote::checkpoint_t> get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints) const override { return {}; }
   virtual cryptonote::blobdata get_block_blob_from_height(const uint64_t& height) const override { return cryptonote::t_serializable_object_to_blob(get_block_from_height(height)); }
   virtual cryptonote::blobdata get_block_blob(const crypto::hash& h) const override { return cryptonote::blobdata(); }
   virtual bool get_tx_blob(const crypto::hash& h, cryptonote::blobdata &tx) const override { return false; }

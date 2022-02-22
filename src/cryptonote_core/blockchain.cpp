@@ -89,45 +89,48 @@ DISABLE_VS_WARNINGS(4267)
 // used to overestimate the block reward when estimating a per kB to use
 #define BLOCK_REWARD_OVERESTIMATE (10 * 1000000000000)
 
-const forks_t mainnet_hard_forks[] = {
- { network_version_1,       0, 0, 1341378000 },
- { network_version_7,       1, 0, 1528750800 },
- { network_version_8,     100, 0, 1528751200 },
- { network_version_9,    7000, 0, 1530320400 },
- { network_version_10,  61250, 0, 1543615200 },
- { network_version_11, 131650, 0, 1552424400 },
- { network_version_12, 183700, 0, 1558656000 },
- { network_version_13, 248200, 0, 1566511680 },
- { network_version_14, 248920, 0, 1566598080 },
- { network_version_15, 303666, 0, 1573257000 }
+const forks_t mainnet_hard_forks[] =
+{
+  { network_version_1,       0, 0, 1341378000 },
+  { network_version_7,       1, 0, 1528750800 },
+  { network_version_8,     100, 0, 1528751200 },
+  { network_version_9,    7000, 0, 1530320400 },
+  { network_version_10,  61250, 0, 1543615200 },
+  { network_version_11, 131650, 0, 1552424400 },
+  { network_version_12, 183700, 0, 1558656000 },
+  { network_version_13, 248200, 0, 1566511680 },
+  { network_version_14, 248920, 0, 1566598080 },
+  { network_version_15, 303666, 0, 1573257000 }
 };
 
-const forks_t testnet_hard_forks[] = {
- { network_version_1,       0, 0, 1341378000 },
- { network_version_7,       1, 0, 1528750800 },
- { network_version_8,     100, 0, 1528751200 },
- { network_version_9,     200, 0, 1530248400 },
- { network_version_10,    300, 0, 1538352000 },
- { network_version_11,    400, 0, 1552424400 },
- { network_version_12,    500, 0, 1552824400 },
- { network_version_13,    600, 0, 1566511680 },
- { network_version_14,    700, 0, 1566598080 },
- { network_version_15,    800, 0, 1566598080 },
- { network_version_16,    900, 0, 1566598280 }
+const forks_t testnet_hard_forks[] =
+{
+  { network_version_1,       0, 0, 1341378000 },
+  { network_version_7,       1, 0, 1528750800 },
+  { network_version_8,     100, 0, 1528751200 },
+  { network_version_9,     200, 0, 1530248400 },
+  { network_version_10,    300, 0, 1538352000 },
+  { network_version_11,    400, 0, 1552424400 },
+  { network_version_12,    500, 0, 1552824400 },
+  { network_version_13,    600, 0, 1566511680 },
+  { network_version_14,    700, 0, 1566598080 },
+  { network_version_15,    800, 0, 1566598080 },
+  { network_version_16,    900, 0, 1566598280 }
 };
 
-const forks_t stagenet_hard_forks[] = {
- { network_version_1,       0, 0, 1341378000 },
- { network_version_7,       1, 0, 1528750800 },
- { network_version_8,     100, 0, 1528751200 },
- { network_version_9,     200, 0, 1530248400 },
- { network_version_10,    500, 0, 1538352000 },
- { network_version_11,    800, 0, 1552424400 },
- { network_version_12,   1500, 0, 1554336000 },
- { network_version_13,   2000, 0, 1560348000 },
- { network_version_14,   2720, 0, 1560351600 },
- { network_version_15,  12100, 0, 1570414500 },
- { network_version_16,  12800, 0, 1570414510 }
+const forks_t stagenet_hard_forks[] =
+{
+  { network_version_1,       0, 0, 1341378000 },
+  { network_version_7,       1, 0, 1528750800 },
+  { network_version_8,     100, 0, 1528751200 },
+  { network_version_9,     200, 0, 1530248400 },
+  { network_version_10,    500, 0, 1538352000 },
+  { network_version_11,    800, 0, 1552424400 },
+  { network_version_12,   1500, 0, 1554336000 },
+  { network_version_13,   2000, 0, 1560348000 },
+  { network_version_14,   2720, 0, 1560351600 },
+  { network_version_15,  12100, 0, 1570414500 },
+  { network_version_16,  12800, 0, 1570414510 }
 };
 
 const size_t num_mainnet_hard_forks = sizeof(mainnet_hard_forks) / sizeof(mainnet_hard_forks[0]);
@@ -349,17 +352,15 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   m_db = db;
 
   m_nettype = test_options != NULL ? FAKECHAIN : nettype;
+
+  if(!m_checkpoints.init(m_nettype, m_db))
+    throw std::runtime_error("Failed to initialize checkpoints");
+
   m_offline = offline;
   m_fixed_difficulty = fixed_difficulty;
   if (m_hardfork == nullptr)
-  {
-    if (m_nettype ==  FAKECHAIN || m_nettype == STAGENET)
-      m_hardfork = new HardFork(*db, 1);
-    else if (m_nettype == TESTNET)
-      m_hardfork = new HardFork(*db, 1);
-    else
-      m_hardfork = new HardFork(*db, 1);
-  }
+    m_hardfork = new HardFork(*db, 1);
+
   if (m_nettype == FAKECHAIN)
   {
     for (size_t n = 0; test_options->hard_forks[n].first; ++n)
@@ -380,6 +381,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     for (size_t n = 0; n < num_mainnet_hard_forks; ++n)
       m_hardfork->add_fork(mainnet_hard_forks[n].version, mainnet_hard_forks[n].height, mainnet_hard_forks[n].threshold, mainnet_hard_forks[n].time);
   }
+
   m_hardfork->init();
 
   m_db->set_hard_fork(m_hardfork);
@@ -4503,49 +4505,68 @@ bool Blockchain::add_new_block(const block& bl, block_verification_context& bvc)
   return handle_block_to_main_chain(bl, id, bvc);
 }
 //------------------------------------------------------------------
-//TODO: Refactor, consider returning a failure height and letting
-//      caller decide course of action.
-void Blockchain::check_against_checkpoints(const checkpoints& points, bool enforce)
+bool Blockchain::update_checkpoints(const std::string& file_path)
 {
-  CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  bool stop_batch = m_db->batch_start();
+  std::vector<height_to_hash> checkpoint_hashes;
+  if(!cryptonote::load_checkpoints_from_json(file_path, checkpoint_hashes))
+    return false;
 
-  for(const auto& checkpoint_it : points.get_points())
+  std::vector<height_to_hash>::const_iterator first_to_check = checkpoint_hashes.end();
+  std::vector<height_to_hash>::const_iterator one_past_last_to_check = checkpoint_hashes.end();
+
+  uint64_t prev_max_height = m_checkpoints.get_max_height();
+  LOG_PRINT_L1("Adding checkpoints from blockchain hashfile: " << file_path);
+  LOG_PRINT_L1("Hard-coded max checkpoint height is: " << prev_max_height);
+  for(std::vector<height_to_hash>::const_iterator it = checkpoint_hashes.begin(); it != one_past_last_to_check; it++)
   {
-    uint64_t block_height = checkpoint_it.first;
-    checkpoint_t const &checkpoint = checkpoint_it.second;
-
-    if(block_height >= m_db->height())
-      break;
-
-    if (!points.check_block(block_height, m_db->get_block_hash_from_height(block_height), nullptr))
+    uint64_t height;
+    height = it->height;
+    if(height <= prev_max_height)
     {
-      // if asked to enforce checkpoints, roll back to a couple of blocks before the checkpoint
-      if (enforce)
+      LOG_PRINT_L1("Ignoring checkpoint height: " << height);
+    }
+    else
+    {
+      if(first_to_check == checkpoint_hashes.end())
+        first_to_check = it;
+
+      std::string blockhash = it->hash;
+      LOG_PRINT_L1("Adding checkpoint height: " << height << ", hash: " << blockhash);
+
+      if(!m_checkpoints.add_checkpoint(height, blockhash))
+      {
+        one_past_last_to_check = it;
+        LOG_PRINT_L1("Failed to add checkpoint at height: " << height << ", hash: " << blockhash);
+        break;
+      }
+    }
+  }
+
+  bool result = true;
+  {
+    CRITICAL_REGION_LOCAL(m_blockchain_lock);
+    bool stop_batch = m_db->batch_start();
+
+    for(std::vector<height_to_hash>::const_iterator it = first_to_check; it != one_past_last_to_check; it++)
+    {
+      uint64_t block_height = it->height;
+      if(block_height >= m_db->height())
+        break;
+
+      if(m_checkpoints.check_block(block_height, m_db->get_block_hash_from_height(block_height), nullptr))
       {
         LOG_ERROR("Local blockchain failed to pass a checkpoint, rolling back!");
         std::list<block> empty;
         rollback_blockchain_switching(empty, block_height - 2);
-      }
-      else
-      {
-        LOG_ERROR("WARNING: local blockchain failed to pass a ArQ-Net checkpoint, and you could be on a fork. You should either sync up from scratch, OR download a fresh blockchain bootstrap, OR enable checkpoint enforcing with the --enforce-dns-checkpointing command-line option");
+        result = false;
       }
     }
+
+    if(stop_batch)
+      m_db->batch_stop();
   }
-  if (stop_batch)
-    m_db->batch_stop();
-}
-//------------------------------------------------------------------
-// returns false if any of the checkpoints loading returns false.
-// That should happen only if a checkpoint is added that conflicts
-// with an existing checkpoint.
-bool Blockchain::update_checkpoints(const std::string& file_path)
-{
-  if(!m_checkpoints.load_checkpoints_from_json(file_path))
-    return false;
-  check_against_checkpoints(m_checkpoints, true);
-  return true;
+
+  return result;
 }
 //------------------------------------------------------------------
 bool Blockchain::add_checkpoint_vote(service_nodes::checkpoint_vote const &vote)
