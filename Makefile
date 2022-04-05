@@ -156,6 +156,16 @@ release-static-win:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D_FORTIFY_SOURCE=0 -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="win-x64" -D CMAKE_TOOLCHAIN_FILE=$(topdir)/cmake/64-bit-toolchain.cmake -D MSYS2_FOLDER=$(shell cd ${MINGW_PREFIX}/.. && pwd -W) $(topdir) && $(MAKE)
 
+service-nodes:
+	@echo "\n\033[6;31mYou are wiling to build ArQmA Service Node daemon. This means you want to contribute to Public Tests. \nRunning that command it will fetch, merge and compile Pull Request made by Devs.\033[0m\n" ; \
+	read -r -p "Continue (y/N)?: " CONTINUE; \
+	[ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] || (echo "Exiting."; exit 1;)
+	mkdir -p $(builddir)/release
+	git config --local user.name "user" && git config --local user.email "user@github.com"
+	git fetch origin pull/297/head:s_n && git merge s_n --no-verify
+	git submodule init && git submodule update
+	cd $(builddir)/release && cmake -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
+
 #fuzz:
 #	mkdir -p $(builddir)/fuzz
 #	cd $(builddir)/fuzz && cmake -D STATIC=ON -D SANITIZE=ON -D BUILD_TESTS=ON -D USE_LTO=OFF -D CMAKE_C_COMPILER=afl-gcc -D CMAKE_CXX_COMPILER=afl-g++ -D ARCH="x86-64" -D CMAKE_BUILD_TYPE=fuzz -D BUILD_TAG="linux-x64" $(topdir) && $(MAKE)
@@ -175,4 +185,4 @@ clean-all:
 tags:
 	ctags -R --sort=1 --c++-kinds=+p --fields=+iaS --extra=+q --language-force=C++ src contrib tests/gtest
 
-.PHONY: all cmake-debug debug debug-test debug-all cmake-release release release-test release-all clean tags
+.PHONY: all cmake-debug debug debug-test debug-all cmake-release release release-test release-all clean tags service-nodes
