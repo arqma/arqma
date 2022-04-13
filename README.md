@@ -1,63 +1,47 @@
-## Arqma Network
+## Morelo Network
 
-Copyright (c) 2018-2021, The Arqma Network    
+
+Copyright (c) 2020-2022, The Morelo Network
+Copyright (c) 2018-2020, The Arqma Network    
 Copyright (c) 2014-2021, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
 
-- Web: [arqma.com](https://arqma.com)
+- Web: [xxx](xxx)
 - Mail: [support@arqma.com](mailto:support@arqma.com)
-- GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
-- Discord: [https://chat.arqma.com](https://chat.arqma.com)
-- Telegram: [https://telegram.arqma.com](https://telegram.arqma.com)
-- Matrix chat: [#arqma:matrix.org or Internal room ID: !YqTIhVcMbLHivbYegN:matrix.org](https://#arqma:matrix.org)
+- GitHub: [https://github.com/MoreloNetwork/morelo](https://github.com/MoreloNetwork/morelo)
+- Discord: [xxx](xxx)
 
-## Other Arqma related websites
+## Other Morelo related websites
 
-- Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
-- Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
-- Arqma Blockchain Explorer 2: [explorer.arqma.com](https://explorer.arqma.com)
-- Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
-- Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
-- Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
-- Arqma Payment Gateway: [https://pg.arqma.com](https://pg.arqma.com)
-- Arqma WooCommerce Payment Plugin: [https://github.com/arqma/arqma-payments-woocommerce-gateway](https://github.com/arqma/arqma-payments-woocommerce-gateway)
-- Arqma Off-line Wallet Address Generator: [https://generate.arqma.com](https://generate.arqma.com)
-- myArqma - Arqma Web-Wallet Interface: [https://myarqma.com](https://myarqma.com)
-- arqmaDroid - Arqma Android Wallet: [https://play.google.com/store/apps/details?id=com.arqma.Droid](https://play.google.com/store/apps/details?id=com.arqma.Droid)
-- Arqma GUI electron wallet: [https://github.com/arqma/arqma-electron-wallet](https://github.com/arqma/arqma-electron-wallet)
+- xxx
 
-## Arqma Social-Media Websites
+## Morelo Social-Media Websites
 
-- Twitter: [https://twitter.com/ArQmA_Network](https://twitter.com/ArQmA_Network)
-- FaceBook: [https://www.facebook.com/ARQMAnetwork](https://www.facebook.com/ARQMAnetwork)
-- Medium: [https://medium.com/@ArQmANetwork](https://medium.com/@ArQmANetwork)
-- YouTube: [https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA](https://www.youtube.com/channel/UC24ZbH8J1SKpxmdakIJotoA)
+- xxx
 
-## Arqma Exchange Websites
+## Morelo Exchange Websites
 
-- TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
-- Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
-- Citex: [https://trade.citex.co.kr/trade/ARQ_BTC](https://trade.citex.co.kr/trade/ARQ_BTC) **Not Avaialble in the USA**
+- xxx
 
 ## Introduction
 
-Arqma is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.
+Morelo is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.
 
-**Privacy:** Arqma uses a cryptographically sound system to allow you to send and receive funds without your transactions being easily revealed on the blockchain (the ledger of transactions that everyone has). This ensures that your purchases, receipts, and all transfers remain absolutely private by default.
+**Privacy:** Morelo uses a cryptographically sound system to allow you to send and receive funds without your transactions being easily revealed on the blockchain (the ledger of transactions that everyone has). This ensures that your purchases, receipts, and all transfers remain absolutely private by default.
 
 **Security:** Using the power of a distributed peer-to-peer consensus network, every transaction on the network is cryptographically secured. Individual wallets have a 25 word mnemonic seed that is only displayed once, and can be written down to backup the wallet. Wallet files are encrypted with a passphrase to ensure they are useless if stolen.
 
-**Untraceability:** By taking advantage of ring signatures, a special property of a certain type of cryptography, Arqma is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.
+**Untraceability:** By taking advantage of ring signatures, a special property of a certain type of cryptography, Morelo is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.
 
 ## SSL
 
-As a network, Arqma supports complete, cryptographically secured connections at all levels. This includes, but is not limited to Arqma Network Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
+As a network, Morelo supports complete, cryptographically secured connections at all levels. This includes, but is not limited to Morelo Network Nodes (Full nodes), Remote Nodes and all wallets - CLI and GUI for desktop, and Android and iOS [ iOS is under development].    
 
-Arqma Network will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over the Arqma Network.
+Morelo Network will be consistently implementing the highest security protocols to achieve the greatest privacy for all transactions, as well as all communications made over the Morelo Network.
 
-The use of SSL connections means that there will not be any possibility to use the Arqma Network with unsecured or tampered connections (daemons), and that your privacy will remain a feature built in a protocol level.
+The use of SSL connections means that there will not be any possibility to use the Morelo Network with unsecured or tampered connections (daemons), and that your privacy will remain a feature built in a protocol level.
 
  * Below is an example how to generate SSL Keys with openssl
 
@@ -70,11 +54,11 @@ The use of SSL connections means that there will not be any possibility to use t
 
 ## About this project
 
-This is the core implementation of Arqma. It is open source and completely free to use without restrictions, except for those specified in the license agreement below. There are no restrictions on anyone creating an alternative implementation of Arqma that uses the protocol and network in a compatible manner.
+This is the core implementation of Morelo. It is open source and completely free to use without restrictions, except for those specified in the license agreement below. There are no restrictions on anyone creating an alternative implementation of Morelo that uses the protocol and network in a compatible manner.
 
 As with many development projects, the repository on Github is considered to be the "staging" area for the latest changes. Before changes are merged into that branch on the main repository, they are tested by individual developers in their own branches, submitted as a pull request, and then subsequently tested by contributors who focus on testing and code reviews. That having been said, the repository should be carefully considered before using it in a production environment, unless there is a patch in the repository for a particular show-stopping issue you are experiencing. It is generally a better idea to use a tagged release for stability.
 
-**Anyone is welcome to contribute to Arqma's codebase!** If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.
+**Anyone is welcome to contribute to Morelo's codebase!** If you have a fix or code change, feel free to submit it as a pull request directly to the "master" branch. In cases where the change is relatively small or does not affect other parts of the codebase it may be merged in immediately by any one of the collaborators. On the other hand, if the change is particularly large or complex, it is expected that it will be discussed at length either well in advance of the pull request being submitted, or even directly on the pull request.
 
 ## License
 
@@ -84,7 +68,7 @@ See [LICENSE](LICENSE).
 
 If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidelines.
 
-## Compiling Arqma from source
+## Compiling Morelo from source
 
 ## Build
 
@@ -92,7 +76,7 @@ If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidel
 
 That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
 
-[![TravisCI master branch](https://img.shields.io/travis/arqma/arqma/master?label=master%20branch&style=for-the-badge)](https://travis-ci.org/arqma/arqma)
+[![TravisCI master branch](https://img.shields.io/travis/morelo/morelo/master?label=master%20branch&style=for-the-badge)](https://travis-ci.org/morelo/morelo)
 ![Monitored by DiscordHooks](https://img.shields.io/static/v1?label=Monitored%20by&message=DiscordHooks&color=brightgreen&style=for-the-badge)
 
 ### Dependencies
@@ -103,7 +87,7 @@ That build is from the master branch, which is used for active development and c
 
 ##### [Boost](https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz)
 
-##### Arqma build been tested on Ubuntu Server 20.04 Focal Fosa with above releases as long with [gcc9.3](https://gcc.gnu.org/gcc-9/)
+##### Morelo build been tested on Ubuntu Server 20.04 Focal Fosa with above releases as long with [gcc9.3](https://gcc.gnu.org/gcc-9/)
 
 The following table summarizes the tools and libraries required to build. A
 few of the libraries are also included in this repository (marked as
@@ -153,16 +137,16 @@ Install all dependencies at once on OSX:
 
 Clone recursively to pull-in needed submodule(s):
 
-`$ git clone https://github.com/arqma/arqma`
+`$ git clone https://github.com/morelo/morelo`
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.6.1`
+`$ cd morelo && git checkout release-v0.6.1`
 `$ git submodule init && git submodule update`
 
 ### Build instructions
 
-Arqma uses the CMake build system and a top-level [Makefile](Makefile) that
+Morelo uses the CMake build system and a top-level [Makefile](Makefile) that
 invokes cmake commands as needed.
 
 #### On Linux and OS X
@@ -171,15 +155,15 @@ invokes cmake commands as needed.
 
 * Change to the root of the source code directory and build:
 
-	`$ cd arqma && make release`
+	`$ cd morelo && make release`
 
 	*Optional*: If your machine has several cores and enough memory, enable parallel build by running `make -j<number of threads>` instead of `make`. For this to be worthwhile, the machine should have one core and about 2GB of RAM available per thread.
 
 * The resulting executables can be found in `build/release/bin`
 
-* Add `PATH="$PATH:$HOME/arqma/build/release/bin"` to `.profile`
+* Add `PATH="$PATH:$HOME/morelo/build/release/bin"` to `.profile`
 
-* Run Arqma with `arqmad --detach`
+* Run Morelo with `morelod --detach`
 
 * **Optional**: build and run the test suite to verify the binaries:
 
@@ -207,7 +191,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * `$ apt-get update && apt-get upgrade` to install all of the latest software
 
-* Install the dependencies for Arqma from the 'Debian' column in the table above.
+* Install the dependencies for Morelo from the 'Debian' column in the table above.
 
 * Increase the system swap size:
 
@@ -216,10 +200,10 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 	`$ CONF_SWAPSIZE=1024`
 	`$sudo /etc/init.d/dphys-swapfile start`
 
-* Clone arqma and checkout most recent release version:
+* Clone morelo and checkout most recent release version:
 
-	`$ git clone https://github.com/arqma/arqma.git`
-	`$ cd arqma`
+	`$ git clone https://github.com/morelo/morelo.git`
+	`$ cd morelo`
 
 * Build:
 
@@ -229,15 +213,15 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * The resulting executables can be found in `build/release/bin`
 
-* Add `PATH="$PATH:$HOME/arqma/build/release/bin"` to `.profile`
+* Add `PATH="$PATH:$HOME/morelo/build/release/bin"` to `.profile`
 
-* Run Arqma with `arqmad --detach`
+* Run Morelo with `morelod --detach`
 
 * You may wish to reduce the size of the swap file after the build has finished, and delete the boost directory from your home directory
 
 #### *Note for Raspbian Jessie users:*
 
-If you are using the older Raspbian Jessie image, compiling Arqma is a bit more complicated. The version of Boost available in the Debian Jessie repositories is too old to use with Arqma, and thus you must compile a newer version yourself. The following explains the extra steps, and has been tested on a Raspberry Pi 2 with a clean install of minimal Raspbian Jessie.
+If you are using the older Raspbian Jessie image, compiling Morelo is a bit more complicated. The version of Boost available in the Debian Jessie repositories is too old to use with Morelo, and thus you must compile a newer version yourself. The following explains the extra steps, and has been tested on a Raspberry Pi 2 with a clean install of minimal Raspbian Jessie.
 
 * As before, `$ apt-get update && apt-get upgrade` to install all of the latest software, and increase the system swap size
 
@@ -263,7 +247,7 @@ If you are using the older Raspbian Jessie image, compiling Arqma is a bit more 
 
 * Wait ~4 hours
 
-* From here, follow the [general Raspberry Pi instructions](#on-the-raspberry-pi) from the "Clone arqma and checkout most recent release version" step.
+* From here, follow the [general Raspberry Pi instructions](#on-the-raspberry-pi) from the "Clone morelo and checkout most recent release version" step.
 
 #### On Windows:
 
@@ -299,13 +283,13 @@ application.
 
 **Building**
 
-* Download Arqma with command:
+* Download Morelo with command:
 
-	`$ git clone https://github.com/arqma/arqma`
+	`$ git clone https://github.com/morelo/morelo`
 
 * Change branch to last Release:
 
-	`$ cd arqma && git checkout release-v0.6.1`
+	`$ cd morelo && git checkout release-v0.6.1`
 
 * Activate and update submodules:
 
@@ -323,13 +307,13 @@ application.
 
 * The resulting executables can be found in `build/debug/bin`
 
-*** Arqma does Not support 32-bit Windows anymore ***
+*** Morelo does Not support 32-bit Windows anymore ***
 
 ### On FreeBSD:
 
-The project can be built from scratch by following instructions for Linux above. If you are running arqma in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
+The project can be built from scratch by following instructions for Linux above. If you are running morelo in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
 
-We expect to add Arqma into the ports tree in the near future, which will aid in managing installations using ports or packages.
+We expect to add Morelo into the ports tree in the near future, which will aid in managing installations using ports or packages.
 
 ### On OpenBSD:
 
@@ -344,7 +328,7 @@ The doxygen and graphviz packages are optional and require the xbase set.
 The Boost package has a bug that will prevent librpc.a from building correctly. In order to fix this, you will have to Build boost yourself from scratch. Follow the directions here (under "Building Boost"):
 https://github.com/bitcoin/bitcoin/blob/master/doc/build-openbsd.md
 
-You will have to add the serialization, date_time, and regex modules to Boost when building as they are needed by Arqma.
+You will have to add the serialization, date_time, and regex modules to Boost when building as they are needed by Morelo.
 
 To build: `$ env CC=egcc CXX=eg++ CPP=ecpp DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/path/to/the/boost/you/built make release-static-64`
 
@@ -405,11 +389,11 @@ The default Solaris linker can't be used, you have to install GNU ld, then run c
 ### On Linux for Android (using docker):
 
 ### Build image
-`docker build -f utils/build_scripts/android32.Dockerfile -t arqma-android .`
+`docker build -f utils/build_scripts/android32.Dockerfile -t morelo-android .`
 ### Create container
-`docker create -it --name arqma-android arqma-android bash`
+`docker create -it --name morelo-android morelo-android bash`
 ### Get binaries
-`docker cp arqma-android:/opt/android/arqma/build/release/bin .`
+`docker cp morelo-android:/opt/android/morelo/build/release/bin .`
 
 ### Building portable statically linked binaries
 
@@ -423,7 +407,7 @@ By default, in either dynamically or statically linked builds, binaries target t
 
 ### Cross Compiling
 
-You can also cross-compile Arqma static binaries on Linux for Windows and macOS with the `depends` system.
+You can also cross-compile Morelo static binaries on Linux for Windows and macOS with the `depends` system.
 
 * `make depends target=x86_64-linux-gnu` for 64-bit linux binaries.
 * `make depends target=x86_64-w64-mingw32` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
@@ -435,22 +419,22 @@ You can also cross-compile Arqma static binaries on Linux for Windows and macOS 
 
 The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
 
-Using `depends` might also be easier to compile Arqma on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
+Using `depends` might also be easier to compile Morelo on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
 
 ### Compability with older Linux Versions < GLIBC_2.25
 
 * `make depends-compat target=x86_64-linux-gnu` for 64-bit linux binaries.
 
 
-## Running arqmad
+## Running morelod
 
 The build places the binary in `bin/` sub-directory within the build directory
 from which cmake was invoked (repository root by default). To run in
 foreground:
 
-`$ ./bin/arqmad`
+`$ ./bin/morelod`
 
-To list all available options, run `./bin/arqmad --help`.  Options can be
+To list all available options, run `./bin/morelod --help`.  Options can be
 specified either on the command line or in a configuration file passed by the
 `--config-file` argument.  To specify an option in the configuration file, add
 a line with the syntax `argumentname=value`, where `argumentname` is the name
@@ -458,17 +442,17 @@ of the argument without the leading dashes, for example `log-level=1`.
 
 To run in background:
 
-`$ ./bin/arqmad --log-file arqmad.log --detach`
+`$ ./bin/morelod --log-file morelod.log --detach`
 
 To run as a systemd service, copy
-[arqmad.service](utils/systemd/arqmad.service) to `/etc/systemd/system/` and
-[arqmad.conf](utils/conf/arqmad.conf) to `/etc/`. The [example
-service](utils/systemd/arqmad.service) assumes that the user `arqma` exists
+[morelod.service](utils/systemd/morelod.service) to `/etc/systemd/system/` and
+[morelod.conf](utils/conf/morelod.conf) to `/etc/`. The [example
+service](utils/systemd/morelod.service) assumes that the user `morelo` exists
 and its home is the data directory specified in the [example
-config](utils/conf/arqmad.conf).
+config](utils/conf/morelod.conf).
 
 If you're on Mac, you may need to add the `--max-concurrency 1` option to
-arqma-wallet-cli, and possibly arqmad, if you get crashes refreshing.
+morelo-wallet-cli, and possibly morelod, if you get crashes refreshing.
 
 ## Internationalization
 
@@ -482,31 +466,31 @@ See [README.i18n.md](README.i18n.md).
 > used solely for relaying transactions received over local RPC. This provides
 > privacy and better protection against surrounding node (sybil) attacks.
 
-While Arqma isn't made to integrate with Tor, it can be used wrapped with torsocks, by
+While Morelo isn't made to integrate with Tor, it can be used wrapped with torsocks, by
 setting the following configuration parameters and environment variables:
 
 * `--p2p-bind-ip 127.0.0.1` on the command line or `p2p-bind-ip=127.0.0.1` in
-  arqmad.conf to disable listening for connections on external interfaces.
-* `--no-igd` on the command line or `no-igd=1` in arqmad.conf to disable IGD
+  morelod.conf to disable listening for connections on external interfaces.
+* `--no-igd` on the command line or `no-igd=1` in morelod.conf to disable IGD
   (UPnP port forwarding negotiation), which is pointless with Tor.
 * `DNS_PUBLIC=tcp` or `DNS_PUBLIC=tcp://x.x.x.x` where x.x.x.x is the IP of the
   desired DNS server, for DNS requests to go over TCP, so that they are routed
-  through Tor. When IP is not specified, arqmad uses the default list of
+  through Tor. When IP is not specified, morelod uses the default list of
   servers defined in [src/common/dns_utils.cpp](src/common/dns_utils.cpp).
-* `TORSOCKS_ALLOW_INBOUND=1` to tell torsocks to allow arqmad to bind to interfaces
+* `TORSOCKS_ALLOW_INBOUND=1` to tell torsocks to allow morelod to bind to interfaces
    to accept connections from the wallet. On some Linux systems, torsocks
    allows binding to localhost by default, so setting this variable is only
    necessary to allow binding to local LAN/VPN interfaces to allow wallets to
    connect from remote hosts. On other systems, it may be needed for local wallets
    as well.
 * Do NOT pass `--detach` when running through torsocks with systemd, (see
-  [utils/systemd/arqmad.service](utils/systemd/arqmad.service) for details).
+  [utils/systemd/morelod.service](utils/systemd/morelod.service) for details).
 * If you use the wallet with a Tor daemon via the loopback IP (eg, 127.0.0.1:9050),
   then use `--untrusted-daemon` unless it is your own hidden service.
 
-Example command line to start arqmad through Tor:
+Example command line to start morelod through Tor:
 
-`DNS_PUBLIC=tcp torsocks arqmad --p2p-bind-ip 127.0.0.1 --no-igd`
+`DNS_PUBLIC=tcp torsocks morelod --p2p-bind-ip 127.0.0.1 --no-igd`
 
 ### Using Tor on Tails
 
@@ -515,11 +499,11 @@ to add a rule to allow this connection too, in addition to telling torsocks to
 allow inbound connections. Full example:
 
 `$ sudo iptables -I OUTPUT 2 -p tcp -d 127.0.0.1 -m tcp --dport 19994 -j ACCEPT`
-`$ DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
+`$ DNS_PUBLIC=tcp torsocks ./morelod --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
         --data-dir /home/amnesia/Persistent/your/directory/to/the/blockchain`
 ## Debugging
 
-This section contains general instructions for debugging failed installs or problems encountered with Arqma. First ensure you are running the latest version built from the Github repository.
+This section contains general instructions for debugging failed installs or problems encountered with Morelo. First ensure you are running the latest version built from the Github repository.
 
 ### Obtaining stack traces and core dumps on Unix systems
 
@@ -531,7 +515,7 @@ Run the build.
 
 Once it stalls, enter the following command:
 
-`$ gdb /path/to/arqmad `pidof arqmad``
+`$ gdb /path/to/morelod `pidof morelod``
 
 Type `thread apply all bt` within gdb in order to obtain the stack trace
 
@@ -543,27 +527,27 @@ Enter `echo core | sudo tee /proc/sys/kernel/core_pattern` to stop cores from be
 
 Run the build.
 
-When it terminates with an output along the lines of "Segmentation fault (core dumped)", there should be a core dump file in the same directory as arqmad. It may be named just `core`, or `core.xxxx` with numbers appended.
+When it terminates with an output along the lines of "Segmentation fault (core dumped)", there should be a core dump file in the same directory as morelod. It may be named just `core`, or `core.xxxx` with numbers appended.
 
 You can now analyse this core dump with `gdb` as follows:
 
-`$ gdb /path/to/arqmad /path/to/dumpfile`
+`$ gdb /path/to/morelod /path/to/dumpfile`
 
 Print the stack trace with `bt`
 
-* To run arqma within gdb:
+* To run morelo within gdb:
 
-Type `$gdb /path/to/arqmad`
+Type `$gdb /path/to/morelod`
 
 Pass command-line options with `--args` followed by the relevant arguments
 
-Type `run` to run arqmad
+Type `run` to run morelod
 
 ### Analysing memory corruption
 
 We use the tool `valgrind` for this.
 
-Run with `valgrind /path/to/arqmad`. It will be slow.
+Run with `valgrind /path/to/morelod`. It will be slow.
 
 ### LMDB
 
@@ -571,7 +555,7 @@ Instructions for debugging suspected blockchain corruption as per @HYC
 
 There is an `mdb_stat` command in the LMDB source that can print statistics about the database but it's not routinely built. This can be built with the following command:
 
-`$ cd ~/arqma/external/liblmdb && make`
+`$ cd ~/morelo/external/liblmdb && make`
 
 The output of `mdb_stat -ea <path to blockchain dir>` will indicate inconsistencies in the blocks, block_heights and block_info table.
 
