@@ -283,7 +283,7 @@ namespace config
 namespace arqma_nodes
 {
   static constexpr size_t seed_nodes_qty = 12;
-  
+
   const char *const MAINNET_NODES[] =
   {
     "144.217.242.16",
@@ -291,7 +291,7 @@ namespace arqma_nodes
     "it-support.mal-bit.com",
     "207.244.249.105",
     "139.99.106.122",
-    "164.68.123.118",
+    "38.242.135.157",
     "209.126.84.37"
   };
 
@@ -309,7 +309,7 @@ namespace arqma_nodes
     "139.99.106.122",
     "77.93.206.172",
     "it-support.mal-bit.com",
-    "164.68.123.118",
+    "38.242.135.157",
     "144.217.242.16",
     "209.126.84.37"
   };

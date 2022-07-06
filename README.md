@@ -439,6 +439,9 @@ Using `depends` might also be easier to compile Arqma on Windows than using MSYS
 
 * `make depends-compat target=x86_64-linux-gnu` for 64-bit linux binaries.
 
+### Compability with NO AES devices
+
+* `make depends-noaes target=aarch64-linux-gnu` sample for Raspberry Pi.
 
 ## Running arqmad
 
