@@ -252,7 +252,7 @@ namespace config
 
    namespace sync
    {
-     const uint64_t HIGHEST_CHECKPOINT = 248920;
+     const uint64_t HIGHEST_CHECKPOINT = 975000;
      const size_t NORMAL_SYNC = 10;
      const size_t FAST_SYNC = 50;
    }
