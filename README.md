@@ -4,6 +4,8 @@ Copyright (c) 2018-2021, The Arqma Network
 Copyright (c) 2014-2021, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
+[![CodeQL](https://github.com/arqtras/arqma/actions/workflows/codeql.yml/badge.svg?branch=service_nodes)](https://github.com/arqtras/arqma/actions/workflows/codeql.yml)
+
 ## Development resources
 
 - Web: [arqma.com](https://arqma.com)
