@@ -1,0 +1,49 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "dev", "master" ]
+  pull_request:
+    branches: [ "dev", "master" ]
+  schedule:
+    - cron: '28 16 * * 2'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp' ]
+        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
+        # Learn more about CodeQL language support at https://aka.ms/codeql-docs/language-support
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Remove preinstalled libboost
+      run: sudo rm -rf /usr/local/share/boost
+    - name: Update environment
+      run: sudo apt update && sudo apt upgrade -y
+    - name: Install dependencies
+      run: sudo apt install -y build-essential cmake libboost-all-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev gperf libreadline-dev
+    - name: Build
+      run: make release
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
