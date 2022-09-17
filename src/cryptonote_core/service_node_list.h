@@ -30,13 +30,14 @@
 
 #pragma once
 
-#include "blockchain.h"
 #include <boost/variant.hpp>
 #include "serialization/serialization.h"
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "cryptonote_core/service_node_rules.h"
-#include "cryptonote_core/service_node_deregister.h"
+#include "cryptonote_core/service_node_voting.h"
 #include "cryptonote_core/service_node_quorum_cop.h"
+
+namespace cryptonote { struct Blockchain; struct BlockchainDB; }
 
 namespace service_nodes
 {
@@ -100,6 +101,8 @@ namespace service_nodes
     uint64_t portions_for_operator;
     swarm_id_t swarm_id;
     cryptonote::account_public_address operator_address;
+    uint32_t public_ip;
+    uint16_t storage_port;
 
     service_node_info() = default;
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
@@ -120,7 +123,8 @@ namespace service_nodes
       VARINT_FIELD(portions_for_operator)
       FIELD(operator_address)
       VARINT_FIELD(swarm_id)
-      VARINT_FIELD(dummy)
+      VARINT_FIELD(public_ip)
+      VARINT_FIELD(storage_port)
     END_SERIALIZE()
   };
 
@@ -164,17 +168,16 @@ namespace service_nodes
 
   using block_height = uint64_t;
   class service_node_list
-    : public cryptonote::Blockchain::BlockAddedHook,
-      public cryptonote::Blockchain::BlockchainDetachedHook,
-      public cryptonote::Blockchain::InitHook,
-      public cryptonote::Blockchain::ValidateMinerTxHook
+    : public cryptonote::BlockAddedHook,
+      public cryptonote::BlockchainDetachedHook,
+      public cryptonote::InitHook,
+      public cryptonote::ValidateMinerTxHook
   {
   public:
     service_node_list(cryptonote::Blockchain& blockchain);
     ~service_node_list();
     void block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs) override;
     void blockchain_detached(uint64_t height) override;
-    void register_hooks(service_nodes::quorum_cop &quorum_cop);
     void init() override;
     bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &base_reward) const override;
     std::vector<std::pair<cryptonote::account_public_address, uint64_t>> get_winner_addresses_and_portions() const;
@@ -185,8 +188,7 @@ namespace service_nodes
 
     void update_swarms(uint64_t height);
 
-    const std::shared_ptr<const quorum_uptime_proof> get_uptime_quorum(uint64_t height) const;
-    const std::shared_ptr<const quorum_checkpointing> get_checkpointing_quorum(uint64_t height) const;
+    std::shared_ptr<const testing_quorum> get_testing_quorum(quorum_type type, uint64_t height) const;
 
     std::vector<service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const;
     const std::vector<key_image_blacklist_entry> &get_blacklisted_key_images() const { return m_transient_state.key_image_blacklist; }
@@ -196,6 +198,8 @@ namespace service_nodes
     bool store();
 
     void get_all_service_nodes_public_keys(std::vector<crypto::public_key>& keys, bool active_nodes_only) const;
+
+    void handle_uptime_proof(const cryptonote::NOTIFY_UPTIME_PROOF::request &proof);
 
     struct rollback_event
     {
@@ -276,14 +280,14 @@ namespace service_nodes
     {
       uint8_t version;
       uint64_t height;
-      quorum_uptime_proof uptime_quorum;
-      quorum_checkpointing checkpointing_quorum;
+      testing_quorum quorums[(size_t)quorum_type::count];
 
       BEGIN_SERIALIZE_OBJECT()
         FIELD(version)
         FIELD(height)
-        FIELD(uptime_quorum)
-        FIELD(checkpointing_quorum)
+        FIELD_N("deregister_quorum", quorums[(size_t)quorum_type::deregister])
+        if(version >= service_node_info::v1)
+          FIELD_N("checkpointing_quorum", quorums[(size_t)quorum_type::checkpointing])
       END_SERIALIZE()
     };
 
@@ -327,7 +331,6 @@ namespace service_nodes
 
     mutable boost::recursive_mutex m_sn_mutex;
     cryptonote::Blockchain& m_blockchain;
-    bool m_hooks_registered;
     crypto::public_key const *m_service_node_pubkey;
     cryptonote::BlockchainDB *m_db;
 

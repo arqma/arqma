@@ -31,6 +31,11 @@
 
 #pragma once
 
+#include "serialization/serialization.h"
+#include "serialization/binary_archive.h"
+#include "serialization/variant.h"
+#include "crypto/crypto.h"
+#include <boost/variant.hpp>
 
 #define TX_EXTRA_PADDING_MAX_COUNT             255
 #define TX_EXTRA_NONCE_MAX_COUNT               255
@@ -242,8 +247,10 @@ namespace cryptonote
   {
     struct vote
     {
+      vote() = default;
+      vote(crypto::signature const &signature, uint32_t validator_index) : signature(signature), validator_index(validator_index) { }
       crypto::signature signature;
-      uint32_t voters_quorum_index;
+      uint32_t validator_index;
     };
 
     uint64_t block_height;
@@ -298,21 +305,21 @@ namespace cryptonote
   //   varint tag;
   //   varint size;
   //   varint data[];
-  typedef boost::variant<tx_extra_pub_key,
-                         tx_extra_service_node_winner,
-                         tx_extra_additional_pub_keys,
+  typedef boost::variant<tx_extra_padding,
+                         tx_extra_pub_key,
                          tx_extra_nonce,
-                         tx_extra_service_node_register,
-                         tx_extra_service_node_deregister,
-                         tx_extra_service_node_contributor,
+                         tx_extra_merge_mining_tag,
+                         tx_extra_additional_pub_keys,
+                         tx_extra_mysterious_minergate,
                          tx_extra_service_node_pubkey,
+                         tx_extra_service_node_register,
+                         tx_extra_service_node_contributor,
+                         tx_extra_service_node_winner,
+                         tx_extra_service_node_deregister,
                          tx_extra_tx_secret_key,
                          tx_extra_tx_key_image_proofs,
-                         tx_extra_tx_key_image_unlock,
-                         tx_extra_merge_mining_tag,
-                         tx_extra_mysterious_minergate,
-                         tx_extra_padding>
-          tx_extra_field;
+                         tx_extra_tx_key_image_unlock
+                        > tx_extra_field;
 }
 
 BLOB_SERIALIZER(cryptonote::tx_extra_service_node_deregister::vote);

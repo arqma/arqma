@@ -36,7 +36,7 @@
 #include "misc_log_ex.h"
 #include "crypto/hash.h"
 #include "cryptonote_config.h"
-#include "cryptonote_core/service_node_deregister.h"
+#include "cryptonote_core/service_node_voting.h"
 
 #define ADD_CHECKPOINT(h, hash)  CHECK_AND_ASSERT(add_checkpoint(h,  hash), false);
 #define JSON_HASH_FILE_NAME "checkpoints.json"
@@ -52,10 +52,24 @@ namespace cryptonote
 
   struct checkpoint_t
   {
+    uint8_t version = 0;
     checkpoint_type type;
     uint64_t height;
     crypto::hash block_hash;
     std::vector<service_nodes::voter_to_signature> signatures;
+
+    BEGIN_SERIALIZE()
+      FIELD(version)
+      {
+        uint8_t serialized_type = 0;
+        if (W) serialized_type = static_cast<uint8_t>(type);
+        FIELD_N("type", serialized_type);
+        if (!W) type = static_cast<checkpoint_type>(serialized_type);
+      }
+      FIELD(height)
+      FIELD(block_hash)
+      FIELD(signatures)
+    END_SERIALIZE()
   };
 
   struct height_to_hash
@@ -101,7 +115,7 @@ namespace cryptonote
      */
     bool add_checkpoint(uint64_t height, const std::string& hash_str);
 
-    bool add_checkpoint_vote(service_nodes::checkpoint_vote const &vote);
+    bool update_checkpoint(checkpoint_t const &checkpoint);
 
     /**
      * @brief checks if there is a checkpoint in the future
@@ -167,7 +181,6 @@ namespace cryptonote
 
   private:
     BlockchainDB *m_db;
-    std::unordered_map<uint64_t, std::vector<checkpoint_t>> m_staging_points;
   };
 
 }

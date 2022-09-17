@@ -67,7 +67,7 @@
 #include "cryptonote_basic/hardfork.h"
 #include "blockchain_db/blockchain_db.h"
 
-namespace service_nodes { class service_node_list; struct deregister_vote_pool; }
+namespace service_nodes { class service_node_list; class voting_pool; }
 namespace tools { class Notify; }
 
 struct forks_t
@@ -152,36 +152,12 @@ namespace cryptonote
       uint64_t already_generated_coins; //!< the total coins minted after that block
     };
 
-    class BlockAddedHook
-    {
-    public:
-      virtual void block_added(const block& block, const std::vector<transaction>& txs) = 0;
-    };
-
-    class BlockchainDetachedHook
-    {
-    public:
-      virtual void blockchain_detached(uint64_t height) = 0;
-    };
-
-    class InitHook
-    {
-    public:
-      virtual void init() = 0;
-    };
-
-    class ValidateMinerTxHook
-    {
-    public:
-      virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, block_reward_parts const &reward_parts) const = 0;
-    };
-
     /**
      * @brief Blockchain constructor
      *
      * @param tx_pool a reference to the transaction pool to be kept by the Blockchain
      */
-    Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list, service_nodes::deregister_vote_pool &deregister_vote_pool);
+    Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list);
 
     /**
      * @brief Blockchain destructor
@@ -302,7 +278,7 @@ namespace cryptonote
      *
      * @return false on erroneous blocks, else true
      */
-    bool prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks);
+    bool prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks, std::vector<checkpoint_t> &checkpoints);
 
     /**
      * @brief incoming blocks post-processing, cleanup, and disk sync
@@ -773,15 +749,7 @@ namespace cryptonote
      */
     bool update_checkpoints(const std::string& file_path);
 
-    struct service_node_checkpoint_pool_entry
-    {
-      uint64_t height;
-      std::vector<service_nodes::checkpoint_vote> votes;
-    };
-
-    std::vector<service_node_checkpoint_pool_entry> m_checkpoint_pool;
-    bool add_checkpoint_vote(service_nodes::checkpoint_vote const &vote);
-
+    bool update_checkpoint(checkpoint_t const &checkpoint);
 
     // user options, must be called before calling init()
 
@@ -1093,7 +1061,6 @@ namespace cryptonote
     tx_memory_pool& m_tx_pool;
 
     service_nodes::service_node_list& m_service_node_list;
-    service_nodes::deregister_vote_pool& m_deregister_vote_pool;
 
     mutable epee::critical_section m_blockchain_lock; // TODO: add here reader/writer lock
 

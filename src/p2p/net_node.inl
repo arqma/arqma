@@ -1375,7 +1375,7 @@ namespace nodetool
         if(conn_count < expected_white_connections)
         {
           //start from anchor list
-          size_t anchor_connections = P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT;
+          size_t anchor_connections = m_nettype == cryptonote::MAINNET ? P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT : P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST;
           while (get_outgoing_connections_count(zone.second) < anchor_connections
             && make_expected_connections_count(zone.second, anchor, anchor_connections));
           //then do white list

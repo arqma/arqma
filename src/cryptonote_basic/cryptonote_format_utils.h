@@ -46,7 +46,7 @@ namespace epee
   class wipeable_string;
 }
 
-namespace service_nodes { struct deregister_vote; }
+namespace service_nodes { struct quorum_vote_t; }
 
 namespace cryptonote
 {
@@ -171,7 +171,7 @@ namespace cryptonote
   std::string print_money(uint64_t amount, unsigned int decimal_point = -1);
 
   char const *print_tx_verification_context(tx_verification_context const &tvc, transaction const *tx = nullptr);
-  char const *print_vote_verification_context(vote_verification_context const &vvc, service_nodes::deregister_vote const *vote = nullptr);
+  char const *print_vote_verification_context(vote_verification_context const &vvc, service_nodes::quorum_vote_t const *vote = nullptr);
 
   inline std::ostream &operator<<(std::ostream &stream, transaction const &tx)
   {

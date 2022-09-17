@@ -126,7 +126,7 @@
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT                   32
-#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST              2
+#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST              1
 
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     52428800   // 50MB maximum packet size

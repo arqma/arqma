@@ -39,7 +39,7 @@
 #include "cryptonote_basic/difficulty.h"
 #include "crypto/hash.h"
 #include "cryptonote_config.h"
-#include "cryptonote_core/service_node_deregister.h"
+#include "cryptonote_core/service_node_voting.h"
 #include "rpc/rpc_handler.h"
 #include "common/varint.h"
 #include "common/perf_timer.h"
@@ -2576,6 +2576,31 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
+  struct COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST
+  {
+    struct request_t
+    {
+      uint64_t max_height;
+      uint64_t seed;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(max_height)
+        KV_SERIALIZE(seed)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::string status;
+      uint64_t res_height;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(res_height)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
   struct COMMAND_RPC_GET_SERVICE_NODES
   {
     struct request_t
@@ -2633,6 +2658,9 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint64_t portions_for_operator;
         uint64_t swarm_id;
         std::string operator_address;
+        std::string public_ip;
+        uint16_t storage_port;
+
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(service_node_pubkey)
           KV_SERIALIZE(registration_height)
@@ -2648,6 +2676,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE(portions_for_operator)
           KV_SERIALIZE(swarm_id)
           KV_SERIALIZE(operator_address)
+          KV_SERIALIZE(public_ip)
+          KV_SERIALIZE(storage_port)
         END_KV_SERIALIZE_MAP()
       };
 

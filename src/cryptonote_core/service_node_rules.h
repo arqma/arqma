@@ -1,19 +1,28 @@
 #pragma once
 
 #include "crypto/crypto.h"
+#include "cryptonote_basic/tx_extra.h"
 #include "cryptonote_config.h"
-#include "service_node_deregister.h"
+#include "service_node_voting.h"
 
 #include <random>
 
 namespace service_nodes
 {
-  constexpr size_t   QUORUM_SIZE                      = 10;
-  constexpr size_t   QUORUM_LIFETIME                  = (6 * deregister_vote::DEREGISTER_LIFETIME_BY_HEIGHT);
-  constexpr size_t   MIN_VOTES_TO_KICK_SERVICE_NODE   = 7;
-  constexpr size_t   MIN_VOTES_TO_CHECKPOINT          = MIN_VOTES_TO_KICK_SERVICE_NODE;
-  constexpr size_t   NTH_OF_THE_NETWORK_TO_TEST       = 100;
-  constexpr size_t   MIN_NODES_TO_TEST                = 50;
+  constexpr size_t   DEREGISTER_QUORUM_SIZE                      = 10;
+  constexpr size_t   DEREGISTER_MIN_VOTES_TO_KICK_SERVICE_NODE   = 7;
+  constexpr size_t   DEREGISTER_NTH_OF_THE_NETWORK_TO_TEST       = 100;
+  constexpr size_t   DEREGISTER_MIN_NODES_TO_TEST                = 50;
+  constexpr uint64_t DEREGISTER_VOTE_LIFETIME                    = BLOCKS_EXPECTED_IN_HOURS(2);
+
+  constexpr uint64_t CHECKPOINT_INTERVAL              = 4;
+  constexpr uint64_t CHECKPOINT_VOTE_LIFETIME         = ((CHECKPOINT_INTERVAL * 3) - 1);
+  constexpr uint64_t CHECKPOINT_QUORUM_SIZE           = 20;
+  constexpr uint64_t CHECKPOINT_MIN_VOTES             = 18;
+
+  static_assert(DEREGISTER_MIN_VOTES_TO_KICK_SERVICE_NODE <= DEREGISTER_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
+  static_assert(CHECKPOINT_MIN_VOTES <= CHECKPOINT_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
+
   constexpr size_t   MIN_SWARM_SIZE                   = 5;
   constexpr size_t   MAX_SWARM_SIZE                   = 10;
   constexpr size_t   IDEAL_SWARM_MARGIN               = 2;
@@ -34,12 +43,12 @@ namespace service_nodes
   constexpr int      MAX_KEY_IMAGES_PER_CONTRIBUTOR   = 1;
   constexpr uint64_t QUEUE_SWARM_ID                   = 0;
   constexpr uint64_t KEY_IMAGE_AWAITING_UNLOCK_HEIGHT = 0;
-  constexpr uint64_t CHECKPOINT_INTERVAL              = 4;
+
+  constexpr uint64_t DEREGISTER_TX_LIFETIME_IN_BLOCKS = DEREGISTER_VOTE_LIFETIME;
+  constexpr size_t   QUORUM_LIFETIME                  = (6 * DEREGISTER_TX_LIFETIME_IN_BLOCKS);
 
   using swarm_id_t = uint64_t;
   constexpr swarm_id_t UNASSIGNED_SWARM_ID = UINT64_MAX;
-  static_assert(MIN_VOTES_TO_KICK_SERVICE_NODE <= QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
-  static_assert(MIN_VOTES_TO_CHECKPOINT <= QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
 
 
   inline uint64_t staking_num_lock_blocks(cryptonote::network_type nettype)
@@ -51,6 +60,21 @@ namespace service_nodes
         return BLOCKS_EXPECTED_IN_DAYS(2);
       default:
         return BLOCKS_EXPECTED_IN_DAYS(30);
+    }
+  }
+
+  inline uint64_t quorum_vote_lifetime(quorum_type type)
+  {
+    switch (type)
+    {
+      case quorum_type::deregister:    return DEREGISTER_VOTE_LIFETIME;
+      case quorum_type::checkpointing: return CHECKPOINT_VOTE_LIFETIME;
+      default:
+      {
+        assert("Unhandled enum type" == 0);
+        return 0;
+      }
+      break;
     }
   }
 
@@ -75,4 +99,3 @@ namespace service_nodes
 
   uint64_t uniform_distribution_portable(std::mt19937_64& mersenne_twister, uint64_t n);
 }
-

@@ -44,7 +44,7 @@
 #include "common/command_line.h"
 #include "tx_pool.h"
 #include "blockchain.h"
-#include "service_node_deregister.h"
+#include "service_node_voting.h"
 #include "service_node_list.h"
 #include "service_node_quorum_cop.h"
 #include "cryptonote_basic/miner.h"
@@ -177,7 +177,7 @@ namespace cryptonote
       *
       * @note see Blockchain::prepare_handle_incoming_blocks
       */
-     bool prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks);
+     bool prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks, std::vector<checkpoint_t> &checkpoints);
 
      /**
       * @copydoc Blockchain::cleanup_handle_incoming_blocks
@@ -664,7 +664,7 @@ namespace cryptonote
       *
       * @note see Blockchain::update_checkpoints()
       */
-     bool update_checkpoints(const bool skip_dns = false);
+     bool update_checkpoints();
 
      /**
       * @brief tells the daemon to wind down operations and stop running
@@ -734,13 +734,6 @@ namespace cryptonote
      bool is_update_available() const { return m_update_available; }
 
      /**
-      * @brief get whether fluffy blocks are enabled
-      *
-      * @return whether fluffy blocks are enabled
-      */
-     bool fluffy_blocks_enabled() const { return m_fluffy_blocks_enabled; }
-
-     /**
       * @brief get whether transaction relay should be padded
       *
       * @return whether transaction relay should be padded
@@ -769,14 +762,15 @@ namespace cryptonote
      bool offline() const { return m_offline; }
 
      /**
-      * @brief Get the deterministic list of service node's public keys for quorum testing
+      * @brief Get the deterministic quorum of service node's public keys responsible for the specified quorum type
       *
+      * @param type The quorum type to retrieve
       * @param height Block height to deterministically recreate the quorum list from
+      *
       * @return Null shared ptr if quorum has not been determined yet for height
       */
-     const std::shared_ptr<const service_nodes::quorum_uptime_proof> get_uptime_quorum(uint64_t height) const;
+     std::shared_ptr<const service_nodes::testing_quorum> get_testing_quorum(service_nodes::quorum_type type, uint64_t height) const;
 
-     const std::shared_ptr<const service_nodes::quorum_checkpointing> get_checkpointing_quorum(uint64_t height) const;
      /**
       * @brief get a non owning reference to the list of blacklisted key images
       */
@@ -800,15 +794,24 @@ namespace cryptonote
       */
      bool is_service_node(const crypto::public_key& pubkey) const;
 
+     uint32_t get_service_node_public_ip() const
+     {
+       return m_sn_public_ip;
+     }
+
+     uint16_t get_storage_port() const
+     {
+       return m_storage_port;
+     }
+
      /**
-      * @brief Add a vote to deregister a service node from network
+      * @brief Add a service node vote
       *
       * @param vote The vote for deregistering a service node.
       * @return Whether the vote was added to the partial deregister pool
       */
-     bool add_deregister_vote(const service_nodes::deregister_vote& vote, vote_verification_context &vvc);
+     bool add_service_node_vote(const service_nodes::quorum_vote_t& vote, vote_verification_context &vvc);
 
-     bool add_checkpoint_vote(const service_nodes::checkpoint_vote& vote, vote_verification_context &vvc);
      /**
       * @brief Return the account associated to this service node.
       * @param pub_key The public key for the service node, unmodified if not a service node
@@ -872,11 +875,11 @@ namespace cryptonote
      bool check_blockchain_pruning();
 
      /**
-      * @brief attempt to relay the pooled deregister votes
+      * @brief attempt to relay the pooled checkpoint votes
       *
       * @return true, necessary for binding this function to a periodic invoker
       */
-     bool relay_deregister_votes();
+     bool relay_service_node_votes();
 
    private:
 
@@ -1032,8 +1035,6 @@ namespace cryptonote
       */
      bool relay_txpool_transactions();
 
-     bool relay_checkpoint_votes();
-
      /**
       * @brief checks DNS versions
       *
@@ -1067,7 +1068,6 @@ namespace cryptonote
      tx_memory_pool m_mempool; //!< transaction pool instance
      Blockchain m_blockchain_storage; //!< Blockchain instance
 
-     service_nodes::deregister_vote_pool m_deregister_vote_pool;
      service_nodes::service_node_list m_service_node_list;
      service_nodes::quorum_cop m_quorum_cop;
 
@@ -1092,8 +1092,7 @@ namespace cryptonote
      epee::math_helper::once_a_time_seconds<UPTIME_PROOF_BUFFER_IN_SECONDS, true> m_check_uptime_proof_interval; //!< interval for submitting uptime proof
      epee::math_helper::once_a_time_seconds<30, true> m_uptime_proof_pruner;
 
-     epee::math_helper::once_a_time_seconds<60*2, false> m_deregisters_auto_relayer;
-     epee::math_helper::once_a_time_seconds<60*2, false> m_checkpoint_auto_relayer;
+     epee::math_helper::once_a_time_seconds<60*2, false> m_service_node_vote_relayer;
 
      std::atomic<bool> m_starter_message_showed; //!< has the "daemon will sync now" message been shown?
 
@@ -1111,6 +1110,9 @@ namespace cryptonote
      bool m_service_node;
      crypto::secret_key m_service_node_key;
      crypto::public_key m_service_node_pubkey;
+
+     uint32_t m_sn_public_ip;
+     uint16_t m_storage_port;
 
      size_t block_sync_size;
 
@@ -1130,7 +1132,6 @@ namespace cryptonote
      size_t m_last_update_length;
      boost::mutex m_update_mutex;
 
-     bool m_fluffy_blocks_enabled;
      bool m_offline;
      bool m_pad_transactions;
    };

@@ -42,7 +42,6 @@
 #include "blockchain.h"
 #include "blockchain_db/blockchain_db.h"
 #include "cryptonote_basic/cryptonote_boost_serialization.h"
-#include "cryptonote_core/service_node_deregister.h"
 #include "cryptonote_config.h"
 #include "cryptonote_basic/miner.h"
 #include "misc_language.h"
@@ -57,7 +56,7 @@
 #include "ringct/rctSigs.h"
 #include "common/perf_timer.h"
 #include "common/notify.h"
-#include "service_node_deregister.h"
+#include "service_node_voting.h"
 #include "service_node_list.h"
 #include "common/varint.h"
 #include "common/pruning.h"
@@ -138,7 +137,7 @@ const size_t num_testnet_hard_forks = sizeof(testnet_hard_forks) / sizeof(testne
 const size_t num_stagenet_hard_forks = sizeof(stagenet_hard_forks) / sizeof(stagenet_hard_forks[0]);
 
 //------------------------------------------------------------------
-Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list, service_nodes::deregister_vote_pool& deregister_vote_pool) :
+Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list) :
   m_db(), m_tx_pool(tx_pool), m_hardfork(NULL), m_timestamps_and_difficulties_height(0), m_current_block_cumul_weight_limit(0), m_current_block_cumul_weight_median(0),
   m_max_prepare_blocks_threads(8), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false),
   m_fast_sync(true), m_show_time_stats(false), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
@@ -149,12 +148,10 @@ Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list
   m_difficulty_for_next_block_top_hash(crypto::null_hash),
   m_difficulty_for_next_block(1),
   m_service_node_list(service_node_list),
-  m_deregister_vote_pool(deregister_vote_pool),
   m_btc_valid(false),
   m_batch_success(true),
   m_prepare_height(0)
 {
-  m_checkpoint_pool.reserve(service_nodes::QUORUM_SIZE * 4);
   LOG_PRINT_L3("Blockchain::" << __func__);
 }
 //------------------------------------------------------------------
@@ -2182,6 +2179,22 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
     rsp.blocks.push_back(block_complete_entry());
     block_complete_entry& e = rsp.blocks.back();
 
+    uint64_t const block_height = get_block_height(bl.second);
+    if ((block_height % service_nodes::CHECKPOINT_INTERVAL) == 0)
+    {
+      try
+      {
+        checkpoint_t checkpoint;
+        if (m_db->get_block_checkpoint(block_height, checkpoint))
+          e.checkpoint = t_serializable_object_to_blob(checkpoint);
+      }
+      catch (const std::exception &e)
+      {
+        MERROR("Get block checkpoint from DB failed non-trivially at height: " << block_height << ", what = " << e.what());
+        return false;
+      }
+    }
+
     // FIXME: s/rsp.missed_ids/missed_tx_id/ ?  Seems like rsp.missed_ids
     //        is for missed blocks, not missed transactions as well.
     get_transactions_blobs(bl.second.tx_hashes, e.txs, missed_tx_ids);
@@ -3445,14 +3458,14 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
         return false;
       }
 
-      const std::shared_ptr<const service_nodes::quorum_uptime_proof> uptime_quorum = m_service_node_list.get_uptime_quorum(deregister.block_height);
-      if(!uptime_quorum)
+      const std::shared_ptr<const service_nodes::testing_quorum> quorum = m_service_node_list.get_testing_quorum(service_nodes::quorum_type::deregister, deregister.block_height);
+      if(!quorum)
       {
         MERROR_VER("Deregister TX could not get quorum for height: " << deregister.block_height);
         return false;
       }
 
-      if(!service_nodes::deregister_vote::verify_deregister(nettype(), deregister, tvc.m_vote_ctx, *uptime_quorum))
+      if(!service_nodes::verify_tx_deregister(deregister, tvc.m_vote_ctx, *quorum))
       {
         tvc.m_verification_failed = true;
         MERROR_VER("Transaction: " << get_transaction_hash(tx) << " could not be completely verified. Reason: " << print_vote_verification_context(tvc.m_vote_ctx));
@@ -3471,10 +3484,10 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
         }
 
         uint64_t delta_height = curr_height - deregister.block_height;
-        if(delta_height >= service_nodes::deregister_vote::DEREGISTER_LIFETIME_BY_HEIGHT)
+        if(delta_height >= service_nodes::DEREGISTER_TX_LIFETIME_IN_BLOCKS)
         {
           LOG_PRINT_L1("Received Deregister Transaction for height: " << deregister.block_height << " and Service Node: " << deregister.service_node_index
-                       << ", is older than: " << service_nodes::deregister_vote::DEREGISTER_LIFETIME_BY_HEIGHT
+                       << ", is older than: " << service_nodes::DEREGISTER_TX_LIFETIME_IN_BLOCKS
                        << " blocks and has been rejected. Current height is: " << curr_height);
           tvc.m_vote_ctx.m_invalid_block_height = true;
           tvc.m_verification_failed = true;
@@ -3483,7 +3496,7 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
       }
 
       const uint64_t height = deregister.block_height;
-      const size_t num_blocks_to_check = service_nodes::deregister_vote::DEREGISTER_LIFETIME_BY_HEIGHT;
+      const size_t num_blocks_to_check = service_nodes::DEREGISTER_TX_LIFETIME_IN_BLOCKS;
 
       std::vector<std::pair<cryptonote::blobdata,block>> blocks;
       std::vector<cryptonote::blobdata> txs;
@@ -3511,14 +3524,14 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
           continue;
         }
 
-        const std::shared_ptr<const service_nodes::quorum_uptime_proof> existing_uptime_quorum = m_service_node_list.get_uptime_quorum(existing_deregister.block_height);
-        if(!existing_uptime_quorum)
+        const std::shared_ptr<const service_nodes::testing_quorum> existing_quorum = m_service_node_list.get_testing_quorum(service_nodes::quorum_type::deregister, existing_deregister.block_height);
+        if(!existing_quorum)
         {
           MERROR_VER("could not get uptime quorum for recent deregister tx");
           continue;
         }
 
-        if(existing_uptime_quorum->nodes_to_test[existing_deregister.service_node_index] == uptime_quorum->nodes_to_test[deregister.service_node_index])
+        if(existing_quorum->workers[existing_deregister.service_node_index] == quorum->workers[deregister.service_node_index])
         {
           MERROR_VER("Already seen this deregister tx (aka double spend)");
           tvc.m_double_spend = true;
@@ -4305,17 +4318,8 @@ leave:
 
   m_tx_pool.on_blockchain_inc(new_height, id);
 
-  // New height is the height of the block we just mined. We want (new_height
-  // + 1) because our age checks for deregister votes is now (age >=
-  // DEREGISTER_VOTE_LIFETIME_BY_HEIGHT) where age is derived from
-  // get_current_blockchain_height() which gives you the height that you are
-  // currently mining for, i.e. (new_height + 1). Otherwise peers will silently
-  // drop connection from each other when they go around P2Ping votes.
-  m_deregister_vote_pool.remove_expired_votes(new_height + 1);
-  m_deregister_vote_pool.remove_used_votes(arq_txs);
   get_difficulty_for_next_block(); // just to cache it
   invalidate_block_template_cache();
-
 
   if(zmq_enabled)
   {
@@ -4569,14 +4573,10 @@ bool Blockchain::update_checkpoints(const std::string& file_path)
   return result;
 }
 //------------------------------------------------------------------
-bool Blockchain::add_checkpoint_vote(service_nodes::checkpoint_vote const &vote)
+bool Blockchain::update_checkpoint(cryptonote::checkpoint_t const &checkpoint)
 {
-  crypto::hash const canonical_block_hash = get_block_id_by_height(vote.block_height);
-  if(vote.block_hash != canonical_block_hash)
-    return false;
-
-  m_checkpoints.add_checkpoint_vote(vote);
-  return true;
+  bool result = m_checkpoints.update_checkpoint(checkpoint);
+  return result;
 }
 //------------------------------------------------------------------
 void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const
@@ -4785,7 +4785,7 @@ uint64_t Blockchain::prevalidate_block_hashes(uint64_t height, const std::vector
 //    vs [k_image, output_keys] (m_scan_table). This is faster because it takes advantage of bulk queries
 //    and is threaded if possible. The table (m_scan_table) will be used later when querying output
 //    keys.
-bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks)
+bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks, std::vector<checkpoint_t> &checkpoints)
 {
   MTRACE("Blockchain::" << __func__);
   TIME_MEASURE_START(prepare);
@@ -4817,6 +4817,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
   for (const auto &entry : blocks_entry)
   {
     bytes += entry.block.size();
+    bytes += entry.checkpoint.size();
     for (const auto &tx_blob : entry.txs)
     {
       bytes += tx_blob.size();
@@ -4918,7 +4919,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
       m_prepare_height = 0;
 
       if (m_cancel)
-         return false;
+        return false;
 
       for (const auto & map : maps)
       {
@@ -4929,6 +4930,35 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
 
   if (m_cancel)
     return false;
+
+  //
+  // NOTE: Parse checkpoints
+  //
+  for (size_t i = 0; i < blocks.size(); i++)
+  {
+    blobdata const &checkpoint_blob = blocks_entry[i].checkpoint;
+    block const &block = blocks[i];
+    uint64_t block_height = get_block_height(block);
+    bool maybe_has_checkpoint = (block_height % service_nodes::CHECKPOINT_INTERVAL == 0);
+
+    if (checkpoint_blob.size() && !maybe_has_checkpoint)
+    {
+      MDEBUG("Checkpoint blob given but not expecting a checkpoint at this height");
+      return false;
+    }
+
+    if (checkpoint_blob.size())
+    {
+      checkpoint_t checkpoint;
+      if (!t_serializable_object_from_blob(checkpoint, checkpoint_blob))
+      {
+        MDEBUG("Checkpoint blob available but failed to parse");
+        return false;
+      }
+
+      checkpoints.push_back(checkpoint);
+    }
+  }
 
   if (blocks_exist)
   {
