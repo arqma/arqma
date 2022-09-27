@@ -194,7 +194,7 @@ namespace cryptonote
   };
   static const command_line::arg_descriptor<bool> arg_service_node = {
     "service-node"
-  , "Run as a Arqma Network Service Node"
+  , "Run as a Arqma Network Service Node, options 'sn-public-ip' and 'storage-server-port' must be set"
   };
   static const command_line::arg_descriptor<std::string> arg_public_ip = {
     "sn-public-ip"
@@ -229,6 +229,9 @@ namespace cryptonote
   {
     m_checkpoints_updating.clear();
     set_cryptonote_protocol(pprotocol);
+
+    // Reset the storage server last ping to make sure the verify uptime proof works
+    this->update_storage_server_last_ping();
   }
   void core::set_cryptonote_protocol(i_cryptonote_protocol* pprotocol)
   {
@@ -331,16 +334,27 @@ namespace cryptonote
       m_storage_port = command_line::get_arg(vm, arg_sn_bind_port);
 
       bool storage_ok = true;
-
       if (m_storage_port == 0) {
-        MERROR("Please specify the port on which the storage server is listening.");
+        MERROR("Please specify the port on which the storage server is listening with: '--" << arg_sn_bind_port.name << " <port>'");
         storage_ok = false;
       }
 
       const std::string pub_ip = command_line::get_arg(vm, arg_public_ip);
-      if (!epee::string_tools::get_ip_int32_from_string(m_sn_public_ip, pub_ip))
+      if (pub_ip.size())
       {
-        MERROR("Unable to parse IPv4 public address.");
+        if (!epee::string_tools::get_ip_int32_from_string(m_sn_public_ip, pub_ip)) {
+          MERROR("Unable to parse IPv4 public address from: " << pub_ip);
+          storage_ok = false;
+        }
+
+        if (epee::net_utils::is_ip_local(m_sn_public_ip) || epee::net_utils::is_ip_loopback(m_sn_public_ip)) {
+          MERROR("Address given for public-ip is not public: " << m_sn_public_ip);
+          storage_ok = false;
+        }
+      }
+      else
+      {
+        MERROR("Please specify an IPv4 public address which the service node & storage server is accessible from with: '--" << arg_public_ip.name << " <ip address>'");
         storage_ok = false;
       }
 
@@ -351,12 +365,6 @@ namespace cryptonote
       }
 
       MGINFO("Storage server endpoint is set to: " << (epee::net_utils::ipv4_network_address{ m_sn_public_ip, m_storage_port }).str());
-
-      if (epee::net_utils::is_ip_local(m_sn_public_ip) || epee::net_utils::is_ip_loopback(m_sn_public_ip))
-      {
-        MERROR("Specified IP is not public.");
-        return false;
-      }
     }
 
     epee::debug::g_test_dbg_lock_sleep() = command_line::get_arg(vm, arg_test_dbg_lock_sleep);
@@ -1421,6 +1429,24 @@ namespace cryptonote
     return res;
   }
   //-----------------------------------------------------------------------------------------------
+  bool core::check_storage_server_ping() const
+  {
+    time_t last_ping = m_last_storage_server_ping.load();
+    const auto elapsed = std::time(nullptr) - last_ping;
+
+    if (elapsed > STORAGE_SERVER_PING_LIFETIME) {
+      MWARNING("Have not heard from the storage server since at least: " << epee::misc_utils::get_time_str(last_ping));
+      return false;
+    }
+
+    return true;
+  }
+  //-----------------------------------------------------------------------------------------------
+  void core::update_storage_server_last_ping()
+  {
+    m_last_storage_server_ping.store(std::time(nullptr));
+  }
+  //-----------------------------------------------------------------------------------------------
   void core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
   {
     std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
@@ -1771,7 +1797,15 @@ namespace cryptonote
       {
         uint64_t last_uptime = m_quorum_cop.get_uptime_proof(states[0].pubkey).timestamp;
         if(last_uptime <= static_cast<uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
+        {
+          if (!this->check_storage_server_ping())
+          {
+            MERROR("Failed to submit uptime proof: have not heard from the storage server recently. Make sure that it is running!");
+            return true;
+          }
+
           this->submit_uptime_proof();
+        }
 
         return true;
       });

@@ -4575,6 +4575,7 @@ bool Blockchain::update_checkpoints(const std::string& file_path)
 //------------------------------------------------------------------
 bool Blockchain::update_checkpoint(cryptonote::checkpoint_t const &checkpoint)
 {
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
   bool result = m_checkpoints.update_checkpoint(checkpoint);
   return result;
 }

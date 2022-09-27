@@ -178,6 +178,7 @@ namespace cryptonote
         MAP_JON_RPC_WE("get_staking_requirement",               on_get_staking_requirement,               COMMAND_RPC_GET_STAKING_REQUIREMENT)
         MAP_JON_RPC_WE_IF("prune_blockchain",                   on_prune_blockchain,                      COMMAND_RPC_PRUNE_BLOCKCHAIN, !m_restricted)
         MAP_JON_RPC_WE_IF("perform_blockchain_test",            on_perform_blockchain_test,               COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST, !m_restricted)
+        MAP_JON_RPC_WE_IF("storage_server_ping",                on_storage_server_ping,                   COMMAND_RPC_STORAGE_SERVER_PING, !m_restricted)
       END_JSON_RPC_MAP()
     END_URI_MAP2()
 
@@ -258,6 +259,7 @@ namespace cryptonote
     bool on_get_staking_requirement(const COMMAND_RPC_GET_STAKING_REQUIREMENT::request& req, COMMAND_RPC_GET_STAKING_REQUIREMENT::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_prune_blockchain(const COMMAND_RPC_PRUNE_BLOCKCHAIN::request& req, COMMAND_RPC_PRUNE_BLOCKCHAIN::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_perform_blockchain_test(const COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST::request& req, COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
+    bool on_storage_server_ping(const COMMAND_RPC_STORAGE_SERVER_PING::request& req, COMMAND_RPC_STORAGE_SERVER_PING::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     //------------------------------
 
     void on_get_checkpoints() { m_core.debug__print_checkpoints(); }

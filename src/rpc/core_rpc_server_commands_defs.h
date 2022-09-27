@@ -2697,6 +2697,21 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
+  struct COMMAND_RPC_STORAGE_SERVER_PING
+  {
+    struct request
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
   struct COMMAND_RPC_GET_STAKING_REQUIREMENT
   {
     struct request_t
