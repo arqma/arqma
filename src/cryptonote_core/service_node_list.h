@@ -43,9 +43,15 @@ namespace service_nodes
 {
   struct service_node_info // registration information
   {
+    enum version
+    {
+      v0,
+      v1,
+    };
+
     struct contribution_t
     {
-      uint8_t version = v1;
+      uint8_t version;
       crypto::public_key key_image_pub_key;
       crypto::key_image key_image;
       uint64_t amount;
@@ -56,12 +62,6 @@ namespace service_nodes
         FIELD(key_image)
         VARINT_FIELD(amount)
       END_SERIALIZE()
-    };
-
-    enum version
-    {
-      v0,
-      v1,
     };
 
     struct contributor_t
@@ -141,7 +141,7 @@ namespace service_nodes
 
   struct key_image_blacklist_entry
   {
-    uint8_t version = service_node_info::v1;
+    uint8_t version;
     crypto::key_image key_image;
     uint64_t unlock_height;
 

@@ -9,46 +9,47 @@
 
 namespace service_nodes
 {
-  constexpr size_t   DEREGISTER_QUORUM_SIZE                      = 10;
-  constexpr size_t   DEREGISTER_MIN_VOTES_TO_KICK_SERVICE_NODE   = 7;
-  constexpr size_t   DEREGISTER_NTH_OF_THE_NETWORK_TO_TEST       = 100;
-  constexpr size_t   DEREGISTER_MIN_NODES_TO_TEST                = 50;
-  constexpr uint64_t DEREGISTER_VOTE_LIFETIME                    = BLOCKS_EXPECTED_IN_HOURS(2);
+  constexpr size_t   DEREGISTER_QUORUM_SIZE                        = 10;
+  constexpr size_t   DEREGISTER_MIN_VOTES_TO_KICK_SERVICE_NODE     = 7;
+  constexpr size_t   DEREGISTER_NTH_OF_THE_NETWORK_TO_TEST         = 100;
+  constexpr size_t   DEREGISTER_MIN_NODES_TO_TEST                  = 50;
+  constexpr uint64_t DEREGISTER_VOTE_LIFETIME                      = BLOCKS_EXPECTED_IN_HOURS(2);
 
-  constexpr uint64_t CHECKPOINT_INTERVAL              = 4;
-  constexpr uint64_t CHECKPOINT_VOTE_LIFETIME         = ((CHECKPOINT_INTERVAL * 3) - 1);
-  constexpr uint64_t CHECKPOINT_QUORUM_SIZE           = 20;
-  constexpr uint64_t CHECKPOINT_MIN_VOTES             = 18;
+  constexpr uint64_t CHECKPOINT_INTERVAL                           = 4;
+  constexpr uint64_t CHECKPOINT_STORE_PERSISTENTLY_INTERVAL        = 60;
+  constexpr uint64_t CHECKPOINT_VOTE_LIFETIME                      = CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
+  constexpr uint64_t CHECKPOINT_QUORUM_SIZE                        = 20;
+  constexpr uint64_t CHECKPOINT_MIN_VOTES                          = 18;
 
   static_assert(DEREGISTER_MIN_VOTES_TO_KICK_SERVICE_NODE <= DEREGISTER_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
   static_assert(CHECKPOINT_MIN_VOTES <= CHECKPOINT_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
 
-  constexpr size_t   MIN_SWARM_SIZE                   = 5;
-  constexpr size_t   MAX_SWARM_SIZE                   = 10;
-  constexpr size_t   IDEAL_SWARM_MARGIN               = 2;
-  constexpr size_t   IDEAL_SWARM_SIZE                 = MIN_SWARM_SIZE + IDEAL_SWARM_MARGIN;
-  constexpr size_t   EXCESS_BASE                      = MIN_SWARM_SIZE;
-  constexpr size_t   NEW_SWARM_SIZE                   = IDEAL_SWARM_SIZE;
+  constexpr size_t   MIN_SWARM_SIZE                                 = 5;
+  constexpr size_t   MAX_SWARM_SIZE                                 = 10;
+  constexpr size_t   IDEAL_SWARM_MARGIN                             = 2;
+  constexpr size_t   IDEAL_SWARM_SIZE                               = MIN_SWARM_SIZE + IDEAL_SWARM_MARGIN;
+  constexpr size_t   EXCESS_BASE                                    = MIN_SWARM_SIZE;
+  constexpr size_t   NEW_SWARM_SIZE                                 = IDEAL_SWARM_SIZE;
   // The lower swarm percentile that will be randomly filled with new service nodes
-  constexpr size_t   FILL_SWARM_LOWER_PERCENTILE      = 25;
+  constexpr size_t   FILL_SWARM_LOWER_PERCENTILE                    = 25;
   // Redistribute decommissioned snodes to the smallest swarms
   constexpr size_t   DECOMMISSIONED_REDISTRIBUTION_LOWER_PERCENTILE = 0;
   // The upper swarm percentile that will be randomly selected during stealing
-  constexpr size_t   STEALING_SWARM_UPPER_PERCENTILE  = 75;
+  constexpr size_t   STEALING_SWARM_UPPER_PERCENTILE                = 75;
   // We never create a new swarm unless there are SWARM_BUFFER extra nodes
   // available in the queue.
-  constexpr size_t   SWARM_BUFFER                     = 5;
+  constexpr size_t   SWARM_BUFFER                                   = 5;
   // if a swarm has strictly less nodes than this, it is considered unhealthy
   // and nearby swarms will mirror it's data. It will disappear, and is already considered gone.
-  constexpr int      MAX_KEY_IMAGES_PER_CONTRIBUTOR   = 1;
-  constexpr uint64_t QUEUE_SWARM_ID                   = 0;
-  constexpr uint64_t KEY_IMAGE_AWAITING_UNLOCK_HEIGHT = 0;
+  constexpr int      MAX_KEY_IMAGES_PER_CONTRIBUTOR                 = 1;
+  constexpr uint64_t QUEUE_SWARM_ID                                 = 0;
+  constexpr uint64_t KEY_IMAGE_AWAITING_UNLOCK_HEIGHT               = 0;
 
-  constexpr uint64_t DEREGISTER_TX_LIFETIME_IN_BLOCKS = DEREGISTER_VOTE_LIFETIME;
-  constexpr size_t   QUORUM_LIFETIME                  = (6 * DEREGISTER_TX_LIFETIME_IN_BLOCKS);
+  constexpr uint64_t DEREGISTER_TX_LIFETIME_IN_BLOCKS               = DEREGISTER_VOTE_LIFETIME;
+  constexpr size_t   QUORUM_LIFETIME                                = (6 * DEREGISTER_TX_LIFETIME_IN_BLOCKS);
 
   using swarm_id_t = uint64_t;
-  constexpr swarm_id_t UNASSIGNED_SWARM_ID = UINT64_MAX;
+  constexpr swarm_id_t UNASSIGNED_SWARM_ID                          = UINT64_MAX;
 
 
   inline uint64_t staking_num_lock_blocks(cryptonote::network_type nettype)

@@ -327,6 +327,7 @@ public:
                             ) override;
 
   void update_block_checkpoint(checkpoint_t const &checkpoint) override;
+  void remove_block_checkpoint(uint64_t height) override;
   bool get_block_checkpoint(uint64_t height, checkpoint_t &checkpoint) const override;
   bool get_top_checkpoint(checkpoint_t &checkpoint) const override;
   std::vector<checkpoint_t> get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints = 0) const override;

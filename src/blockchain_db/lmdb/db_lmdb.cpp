@@ -38,6 +38,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/endian/conversion.hpp>
 #include <memory>  // std::unique_ptr
 #include <cstring>  // memcpy
 
@@ -348,7 +349,7 @@ struct blk_checkpoint_header
 {
   uint64_t height;
   crypto::hash block_hash;
-  size_t num_signatures;
+  uint64_t num_signatures;
 };
 #pragma pack(pop)
 
@@ -4040,6 +4041,9 @@ void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
   header.block_hash = checkpoint.block_hash;
   header.num_signatures = checkpoint.signatures.size();
 
+  boost::endian::native_to_little_inplace(header.height);
+  boost::endian::native_to_little_inplace(header.num_signatures);
+
   size_t const MAX_BYTES_REQUIRED = sizeof(header) + (sizeof(*checkpoint.signatures.data()) * service_nodes::CHECKPOINT_QUORUM_SIZE);
   uint8_t buffer[MAX_BYTES_REQUIRED];
 
@@ -4083,6 +4087,30 @@ void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
     throw0(DB_ERROR(lmdb_error("Failed to update block checkpoint in db transaction: ", ret).c_str()));
 }
 
+void BlockchainLMDB::remove_block_checkpoint(uint64_t height)
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+
+  check_open();
+  mdb_txn_cursors *m_cursors = &m_wcursors;
+  CURSOR(block_checkpoints);
+
+  MDB_val_set(key, height);
+  MDB_val value = {};
+  int ret = mdb_cursor_get(m_cur_block_checkpoints, &key, &value, MDB_SET_KEY);
+  if (ret == MDB_SUCCESS)
+  {
+    ret = mdb_cursor_del(m_cur_block_checkpoints, 0);
+    if (ret)
+      throw0(DB_ERROR(lmdb_error("Failed to delete block checkpoint: ", ret).c_str()));
+  }
+  else
+  {
+    if (ret != MDB_NOTFOUND)
+      throw1(DB_ERROR(lmdb_error("Failed non-trivially to get cursos for checkpoint to delete: ", ret).c_str()));
+  }
+}
+
 bool BlockchainLMDB::get_block_checkpoint_internal(uint64_t height, checkpoint_t &checkpoint, MDB_cursor_op op) const
 {
   TXN_PREFIX_RDONLY();
@@ -4095,6 +4123,9 @@ bool BlockchainLMDB::get_block_checkpoint_internal(uint64_t height, checkpoint_t
   {
     auto const *header = static_cast<blk_checkpoint_header const *>(value.mv_data);
     auto const *signatures = reinterpret_cast<service_nodes::voter_to_signature *>(static_cast<uint8_t *>(value.mv_data) + sizeof(*header));
+
+    boost::endian::little_to_native_inplace(header->height);
+    boost::endian::little_to_native_inplace(header->num_signatures);
 
     checkpoint = {};
     checkpoint.height = header->height;

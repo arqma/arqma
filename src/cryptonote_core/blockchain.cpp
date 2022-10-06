@@ -500,9 +500,6 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     }
   }
 
-  for(InitHook* hook : m_init_hooks)
-    hook->init();
-
   if (test_options && test_options->long_term_block_weight_window)
   {
     m_long_term_block_weights_window = test_options->long_term_block_weight_window;
@@ -523,6 +520,11 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     if(!update_next_cumulative_weight_limit())
       return false;
   }
+
+  hook_block_added(m_checkpoints);
+  hook_blockchain_detached(m_checkpoints);
+  for (InitHook* hook : m_init_hooks) hook->init();
+
   return true;
 }
 //------------------------------------------------------------------
@@ -2172,6 +2174,9 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
   std::vector<std::pair<cryptonote::blobdata,block>> blocks;
   get_blocks(arg.blocks, blocks, rsp.missed_ids);
 
+  uint64_t const top_height = (m_db->height() - 1);
+  uint64_t const earliest_height_to_sync_checkpoints_granularly = (top_height < service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL) ? 0 : top_height - service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
+
   for(auto& bl : blocks)
   {
     std::vector<crypto::hash> missed_tx_ids;
@@ -2180,7 +2185,11 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
     block_complete_entry& e = rsp.blocks.back();
 
     uint64_t const block_height = get_block_height(bl.second);
-    if ((block_height % service_nodes::CHECKPOINT_INTERVAL) == 0)
+    uint64_t checkpoint_interval = service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
+    if (block_height >= earliest_height_to_sync_checkpoints_granularly)
+      checkpoint_interval = service_nodes::CHECKPOINT_INTERVAL;
+
+    if ((block_height % checkpoint_interval) == 0)
     {
       try
       {
@@ -4835,6 +4844,35 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
   }
   m_batch_success = true;
 
+  // Place parsing before early returns since the caching layer seems to make
+  // this function early return in the common case, so always ensure checkpoints
+  // are parsed out.
+  for (size_t i = 0; i < blocks.size(); i++)
+  {
+    blobdata const &checkpoint_blob = blocks_entry[i].checkpoint;
+    block const &block = blocks[i];
+    uint64_t block_height = get_block_height(block);
+    bool maybe_has_checkpoint = (block_height % service_nodes::CHECKPOINT_INTERVAL == 0);
+
+    if (checkpoint_blob.size() && !maybe_has_checkpoint)
+    {
+      MDEBUG("Checkpoint blob given but not expecting a checkpoint at this height");
+      return false;
+    }
+
+    if (checkpoint_blob.size())
+    {
+      checkpoint_t checkpoint;
+      if (!t_serializable_object_from_blob(checkpoint, checkpoint_blob))
+      {
+        MDEBUG("Checkpoint blob available but failed to parse");
+        return false;
+      }
+
+      checkpoints.push_back(checkpoint);
+    }
+  }
+
   const uint64_t height = m_db->height();
   if ((height + blocks_entry.size()) < m_blocks_hash_check.size())
     return true;
@@ -4931,35 +4969,6 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
 
   if (m_cancel)
     return false;
-
-  //
-  // NOTE: Parse checkpoints
-  //
-  for (size_t i = 0; i < blocks.size(); i++)
-  {
-    blobdata const &checkpoint_blob = blocks_entry[i].checkpoint;
-    block const &block = blocks[i];
-    uint64_t block_height = get_block_height(block);
-    bool maybe_has_checkpoint = (block_height % service_nodes::CHECKPOINT_INTERVAL == 0);
-
-    if (checkpoint_blob.size() && !maybe_has_checkpoint)
-    {
-      MDEBUG("Checkpoint blob given but not expecting a checkpoint at this height");
-      return false;
-    }
-
-    if (checkpoint_blob.size())
-    {
-      checkpoint_t checkpoint;
-      if (!t_serializable_object_from_blob(checkpoint, checkpoint_blob))
-      {
-        MDEBUG("Checkpoint blob available but failed to parse");
-        return false;
-      }
-
-      checkpoints.push_back(checkpoint);
-    }
-  }
 
   if (blocks_exist)
   {
@@ -5344,7 +5353,7 @@ void Blockchain::cancel()
 }
 
 #if defined(PER_BLOCK_CHECKPOINT)
-static const char expected_block_hashes_hash[] = "ef3b51de57710b1e1ef80c6bae2ba744037a407cd4ef0a5c447b91b771119cc6";
+static const char expected_block_hashes_hash[] = "066c0124fffe893e367ee43d290eec6a5f493f06db922de5695d9c2e6c8bc47c";
 void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get_checkpoints)
 {
   if (get_checkpoints == nullptr || !m_fast_sync)

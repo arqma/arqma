@@ -37,6 +37,7 @@
 #include "crypto/hash.h"
 #include "cryptonote_config.h"
 #include "cryptonote_core/service_node_voting.h"
+#include "cryptonote_basic/cryptonote_basic_impl.h"
 
 #define ADD_CHECKPOINT(h, hash)  CHECK_AND_ASSERT(add_checkpoint(h,  hash), false);
 #define JSON_HASH_FILE_NAME "checkpoints.json"
@@ -57,6 +58,7 @@ namespace cryptonote
     uint64_t height;
     crypto::hash block_hash;
     std::vector<service_nodes::voter_to_signature> signatures;
+    uint64_t prev_height;
 
     BEGIN_SERIALIZE()
       FIELD(version)
@@ -69,6 +71,7 @@ namespace cryptonote
       FIELD(height)
       FIELD(block_hash)
       FIELD(signatures)
+      FIELD(prev_height)
     END_SERIALIZE()
   };
 
@@ -100,9 +103,12 @@ namespace cryptonote
    * Some of these are compiled-in, while others can be loaded at runtime
    * either from a json file or via DNS from a checkpoint-hosting server.
    */
-  class checkpoints
+  class checkpoints : public cryptonote::BlockAddedHook, public cryptonote::BlockchainDetachedHook
   {
   public:
+    void block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs) override;
+    void blockchain_detached(uint64_t height) override;
+
     /**
      * @brief adds a checkpoint to the container
      *
@@ -116,6 +122,13 @@ namespace cryptonote
     bool add_checkpoint(uint64_t height, const std::string& hash_str);
 
     bool update_checkpoint(checkpoint_t const &checkpoint);
+
+    /**
+     * @brief Remove checkpoints that should not be stored persistently, i.e.
+     *        any checkpoint whose height is not divisible by
+     *        service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL
+     */
+    void prune_checkpoints(uint64_t height) const;
 
     /**
      * @brief checks if there is a checkpoint in the future
@@ -180,6 +193,7 @@ namespace cryptonote
     bool init(network_type nettype, struct BlockchainDB *db);
 
   private:
+    uint64_t m_last_cull_height = 0;
     BlockchainDB *m_db;
   };
 
