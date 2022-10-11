@@ -45,7 +45,6 @@ namespace service_nodes
   {
     enum version
     {
-      v0,
       v1,
     };
 
@@ -94,6 +93,9 @@ namespace service_nodes
     uint64_t requested_unlock_height;
     uint64_t last_reward_block_height;
     uint32_t last_reward_transaction_index;
+    uint32_t decommission_count;
+    int64_t active_since_height;
+    uint64_t last_decommission_height;
     std::vector<contributor_t> contributors;
     uint64_t total_contributed;
     uint64_t total_reserved;
@@ -106,10 +108,10 @@ namespace service_nodes
 
     service_node_info() = default;
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
-    bool is_active() const { return is_fully_funded(); }
+    bool is_decommissioned() const { return active_since_height < 0; }
+    bool is_active() const { return is_fully_funded() && !is_decommissioned(); }
     size_t total_num_locked_contributions() const;
 
-    int dummy; // forced sn_list rescan
     BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(version)
       VARINT_FIELD(registration_height)
@@ -125,6 +127,8 @@ namespace service_nodes
       VARINT_FIELD(swarm_id)
       VARINT_FIELD(public_ip)
       VARINT_FIELD(storage_port)
+      VARINT_FIELD(active_since_height)
+      VARINT_FIELD(last_decommission_height)
     END_SERIALIZE()
   };
 
@@ -152,19 +156,22 @@ namespace service_nodes
     END_SERIALIZE()
   };
 
-  template<typename T>
-  void arqma_shuffle(std::vector<T>& a, uint64_t seed)
+  template<typename RandomIt>
+  void arqma_shuffle(RandomIt begin, RandomIt end, uint64_t seed)
   {
-    if(a.size() <= 1)
-      return;
+    if (end <= begin + 1) return;
+    const size_t size = std::distance(begin, end);
     std::mt19937_64 mersenne_twister(seed);
-    for(size_t i = 1; i < a.size(); i++)
+    for(size_t i = 1; i < size; i++)
     {
       size_t j = (size_t)uniform_distribution_portable(mersenne_twister, i+1);
-      if(i != j)
-        std::swap(a[i], a[j]);
+      using std::swap;
+      swap(begin[i], begin[j]);
     }
   }
+
+  using pubkey_and_sninfo = std::pair<crypto::public_key, service_node_info>;
+  using service_nodes_infos_t = std::unordered_map<crypto::public_key, service_node_info>;
 
   using block_height = uint64_t;
   class service_node_list
@@ -183,7 +190,7 @@ namespace service_nodes
     std::vector<std::pair<cryptonote::account_public_address, uint64_t>> get_winner_addresses_and_portions() const;
     crypto::public_key select_winner() const;
 
-    bool is_service_node(const crypto::public_key& pubkey) const;
+    bool is_service_node(const crypto::public_key& pubkey, bool require_cative = true) const;
     bool is_key_image_locked(crypto::key_image const &check_image, uint64_t *unlock_height = nullptr, service_node_info::contribution_t *the_locked_contribution = nullptr) const;
 
     void update_swarms(uint64_t height);
@@ -197,7 +204,7 @@ namespace service_nodes
     void set_my_service_node_keys(crypto::public_key const *pub_key);
     bool store();
 
-    void get_all_service_nodes_public_keys(std::vector<crypto::public_key>& keys, bool active_nodes_only) const;
+    void get_all_service_nodes_public_keys(std::vector<crypto::public_key>& keys, bool require_active) const;
 
     void handle_uptime_proof(const cryptonote::NOTIFY_UPTIME_PROOF::request &proof);
 
@@ -280,14 +287,13 @@ namespace service_nodes
     {
       uint8_t version;
       uint64_t height;
-      testing_quorum quorums[(size_t)quorum_type::count];
+      testing_quorum quorums[static_cast<uint8_t>(quorum_type::count)];
 
       BEGIN_SERIALIZE_OBJECT()
         FIELD(version)
         FIELD(height)
-        FIELD_N("deregister_quorum", quorums[(size_t)quorum_type::deregister])
-        if(version >= service_node_info::v1)
-          FIELD_N("checkpointing_quorum", quorums[(size_t)quorum_type::checkpointing])
+        FIELD_N("obligations_quorum", quorums[static_cast<uint8_t>(quorum_type::obligations)])
+        FIELD_N("checkpointing_quorum", quorums[static_cast<uint8_t>(quorum_type::checkpointing)])
       END_SERIALIZE()
     };
 
@@ -315,10 +321,8 @@ namespace service_nodes
     bool process_key_image_unlock_tx(const cryptonote::transaction& tx, uint64_t block_height);
     bool process_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index);
     bool process_contribution_tx(const cryptonote::transaction& tx, uint64_t block_height, uint32_t index);
-    bool process_deregistration_tx(const cryptonote::transaction& tx, uint64_t block_height);
+    bool process_state_change_tx(const cryptonote::transaction& tx, uint64_t block_height);
     void process_block(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs);
-
-    std::vector<crypto::public_key> get_service_nodes_pubkeys() const;
 
     bool contribution_tx_output_has_correct_unlock_time(const cryptonote::transaction& tx, size_t i, uint64_t block_height) const;
 
@@ -335,14 +339,25 @@ namespace service_nodes
     cryptonote::BlockchainDB *m_db;
 
     using block_height = uint64_t;
-    struct
+    struct transient_state
     {
-      std::unordered_map<crypto::public_key, service_node_info> service_nodes_infos;
+      service_nodes_infos_t service_nodes_infos;
       std::vector<key_image_blacklist_entry> key_image_blacklist;
       std::map<block_height, quorum_manager> quorum_states;
       std::list<std::unique_ptr<rollback_event>> rollback_events;
       block_height height;
-    } m_transient_state;
+      // Returns a filtered, pubkey-sorted vector of service nodes that are active (fully funded and *NOT* decommissioned).
+      std::vector<pubkey_and_sninfo> active_service_nodes_infos() const;
+      // Similar to the above, but returns all nodes that are fully funded *AND* decommissioned.
+      std::vector<pubkey_and_sninfo> decommissioned_service_nodes_infos() const;
+    };
+    transient_state m_transient_state;
+
+    template <typename T>
+    void load_transient(const rollback_event_variant &event)
+    {
+      m_transient_state.rollback_events.emplace_back(new T(boost::get<T>(event)));
+    }
   };
 
   bool reg_tx_extract_fields(const cryptonote::transaction& tx, std::vector<cryptonote::account_public_address>& addresses, uint64_t& portions_for_operator, std::vector<uint64_t>& portions, uint64_t& expiration_timestamp, crypto::public_key& service_node_key, crypto::signature& signature, crypto::public_key& tx_pub_key);

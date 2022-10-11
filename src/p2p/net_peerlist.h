@@ -236,7 +236,7 @@ namespace nodetool
       return false;
 
     peers_indexed::index<by_time>::type& by_time_index = m_peers_white.get<by_time>();
-    p = *epee::misc_utils::move_it_backward(--by_time_index.end(), i);
+    p = *epee::misc_utils::move_it_backward(std::prev(by_time_index.end()), i);
     return true;
   }
   //--------------------------------------------------------------------------------------------------
@@ -248,7 +248,7 @@ namespace nodetool
       return false;
 
     peers_indexed::index<by_time>::type& by_time_index = m_peers_gray.get<by_time>();
-    p = *epee::misc_utils::move_it_backward(--by_time_index.end(), i);
+    p = *epee::misc_utils::move_it_backward(std::prev(by_time_index.end()), i);
     return true;
   }
   //--------------------------------------------------------------------------------------------------
@@ -422,7 +422,7 @@ namespace nodetool
     size_t random_index = crypto::rand_idx(m_peers_gray.size());
 
     peers_indexed::index<by_time>::type& by_time_index = m_peers_gray.get<by_time>();
-    pe = *epee::misc_utils::move_it_backward(--by_time_index.end(), random_index);
+    pe = *epee::misc_utils::move_it_backward(std::prev(by_time_index.end()), random_index);
 
     return true;
 

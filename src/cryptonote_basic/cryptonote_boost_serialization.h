@@ -172,9 +172,9 @@ namespace boost
     if(x.version >= cryptonote::txversion::v3)
     {
       a & x.output_unlock_times;
-      bool is_deregister = x.type == cryptonote::txtype::deregister;
+      bool is_deregister = x.type == cryptonote::txtype::state_change;
       a & is_deregister;
-      x.type = is_deregister ? cryptonote::txtype::deregister : cryptonote::txtype::standard;
+      x.type = is_deregister ? cryptonote::txtype::state_change : cryptonote::txtype::standard;
     }
     a & x.unlock_time;
     a & x.vin;

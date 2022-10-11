@@ -790,9 +790,9 @@ namespace cryptonote
       *
       * @param pubkey the public key to test
       *
-      * @return whether 'pubkey' is known as a service node
+      * @return whether 'pubkey' is known as a (optionally active) service node
       */
-     bool is_service_node(const crypto::public_key& pubkey) const;
+     bool is_service_node(const crypto::public_key& pubkey, bool require_active) const;
 
      uint32_t get_service_node_public_ip() const
      {

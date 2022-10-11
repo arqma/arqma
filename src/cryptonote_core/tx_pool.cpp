@@ -118,12 +118,12 @@ namespace cryptonote
     if(tx.is_transfer())
       return false;
 
-    if(tx.type == txtype::deregister)
+    if(tx.type == txtype::state_change)
     {
-      tx_extra_service_node_deregister deregister;
-      if(!get_service_node_deregister_from_tx_extra(tx.extra, deregister))
+      tx_extra_service_node_state_change state_change;
+      if(!get_service_node_state_change_from_tx_extra(tx.extra, state_change))
       {
-        MERROR("Could not get service node deregister from tx, possibly corrupt tx in your blockchain, rejecting malformed");
+        MERROR("Could not get service node state change from tx, possibly corrupt tx in your blockchain, rejecting malformed");
         return true;
       }
 
@@ -131,20 +131,18 @@ namespace cryptonote
       get_transactions(pool_txs);
       for(const transaction& pool_tx : pool_txs)
       {
-        if(pool_tx.type != txtype::deregister)
+        if(pool_tx.type != txtype::state_change)
           continue;
 
-        tx_extra_service_node_deregister pool_tx_deregister;
-        if(!get_service_node_deregister_from_tx_extra(pool_tx.extra, pool_tx_deregister))
+        tx_extra_service_node_state_change pool_tx_state_change;
+        if(!get_service_node_state_change_from_tx_extra(pool_tx.extra, pool_tx_state_change))
         {
-          MERROR("Could not get service node deregister from tx, possibly corrupt tx in your blockchain");
+          MERROR("Could not get service node state change from tx, possibly corrupt tx in your blockchain");
           continue;
         }
 
-        if((pool_tx_deregister.block_height == deregister.block_height) && (pool_tx_deregister.service_node_index == deregister.service_node_index))
-        {
+        if (state_change == pool_tx_state_change)
           return true;
-        }
       }
     }
     else if(tx.type == txtype::key_image_unlock)
@@ -170,9 +168,9 @@ namespace cryptonote
           return true;
         }
 
-        if(unlock.key_image == pool_unlock.key_image)
+        if(unlock == pool_unlock)
         {
-          MERROR("There was at least one TX in the pool that is requesting to unlock the same key image already.");
+          MWARNING("There was at least one TX in the pool that is requesting to unlock the same key image already.");
           return true;
         }
       }
@@ -488,7 +486,9 @@ namespace cryptonote
     }
 
     // this will never remove the first one, but we don't care
-    auto it = --m_txs_by_fee_and_receive_time.end();
+    auto it = m_txs_by_fee_and_receive_time.end();
+    if (it != m_txs_by_fee_and_receive_time.begin())
+      it = std::prev(it);
     while(it != m_txs_by_fee_and_receive_time.begin())
     {
       if(m_txpool_weight <= bytes)
@@ -743,7 +743,7 @@ namespace cryptonote
                 return true;
               }
 
-              if(tx.type != txtype::deregister)
+              if(tx.type != txtype::state_change)
                 return true;
 
               tx_verification_context tvc;

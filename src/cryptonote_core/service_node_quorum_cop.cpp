@@ -42,16 +42,16 @@
 
 namespace service_nodes
 {
-  static_assert(quorum_cop::REORG_SAFETY_BUFFER_IN_BLOCKS < DEREGISTER_VOTE_LIFETIME, "Safety buffer should always be less than the vote lifetime");
+  static_assert(quorum_cop::REORG_SAFETY_BUFFER_IN_BLOCKS < STATE_CHANGE_VOTE_LIFETIME, "Safety buffer should always be less than the vote lifetime");
 
   quorum_cop::quorum_cop(cryptonote::core& core)
-    : m_core(core), m_uptime_proof_height(0), m_last_checkpointed_height(0)
+    : m_core(core), m_obligations_height(0), m_last_checkpointed_height(0)
   {
   }
 
   void quorum_cop::init()
   {
-    m_uptime_proof_height = 0;
+    m_obligations_height = 0;
     m_last_checkpointed_height = 0;
     m_uptime_proof_seen.clear();
 
@@ -64,13 +64,21 @@ namespace service_nodes
       process_quorums(blk);
   }
 
+  bool quorum_cop::check_service_node(const crypto::public_key &pubkey, const service_node_info &info) const
+  {
+    if (!m_uptime_proof_seen.count(pubkey))
+      return false;
+
+    return true;
+  }
+
   void quorum_cop::blockchain_detached(uint64_t height)
   {
-    if (m_uptime_proof_height >= height)
+    if (m_obligations_height >= height)
     {
-      LOG_ERROR("The blockchain was detached to height: " << height << ", but quorum cop has already processed votes up to " << m_uptime_proof_height);
+      LOG_ERROR("The blockchain was detached to height: " << height << ", but quorum cop has already processed votes up to " << m_obligations_height);
       LOG_ERROR("This implies a reorg occured that was over " << REORG_SAFETY_BUFFER_IN_BLOCKS << ". This should never happen! Please report this to the devs.");
-      m_uptime_proof_height = height;
+      m_obligations_height = height;
     }
 
     if (m_last_checkpointed_height >= height)
@@ -109,7 +117,7 @@ namespace service_nodes
     if(!m_core.get_service_node_keys(my_pubkey, my_seckey))
       return;
 
-    if (!m_core.is_service_node(my_pubkey))
+    if (!m_core.is_service_node(my_pubkey, /*require_active=*/ true))
       return;
 
     uint64_t const height = cryptonote::get_block_height(block);
@@ -135,28 +143,30 @@ namespace service_nodes
           LOG_ERROR("Unhandled quorum type with value: " << (int)type);
         } break;
 
-        case quorum_type::deregister:
+        case quorum_type::obligations:
         {
           time_t const now = time(nullptr);
-          time_t const min_lifetime = 7200;
+          constexpr time_t min_lifetime = UPTIME_PROOF_MAX_TIME_IN_SECONDS;
 
           bool alive_for_min_time = (now - m_core.get_start_time()) >= min_lifetime;
           if (!alive_for_min_time)
             continue;
 
-          if (m_uptime_proof_height < start_voting_from_height)
-            m_uptime_proof_height = start_voting_from_height;
+          if (m_obligations_height < start_voting_from_height)
+            m_obligations_height = start_voting_from_height;
 
-          for (; m_uptime_proof_height < (height - REORG_SAFETY_BUFFER_IN_BLOCKS); m_uptime_proof_height++)
+          for (; m_obligations_height < (height - REORG_SAFETY_BUFFER_IN_BLOCKS); m_obligations_height++)
           {
-            if (m_core.get_hard_fork_version(m_uptime_proof_height) < 16) continue;
+            if (m_core.get_hard_fork_version(m_obligations_height) < 16) continue;
 
-            const std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(quorum_type::deregister, m_uptime_proof_height);
+            const std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(quorum_type::obligations, m_obligations_height);
             if (!quorum)
             {
-              LOG_ERROR("Uptime quorum for height " << m_uptime_proof_height << " was not cached in daemon!");
+              LOG_ERROR("Obligations quorum for height " << m_obligations_height << " was not cached in daemon!");
               continue;
             }
+
+            if (quorum->workers.empty()) continue;
 
             int index_in_group = find_index_in_quorum_group(quorum->validators, my_pubkey);
             if (index_in_group <= -1) continue;
@@ -164,19 +174,72 @@ namespace service_nodes
             //
             // NOTE: I am in the quorum
             //
-            for (size_t node_index = 0; node_index < quorum->workers.size(); ++node_index)
+            auto worker_states = m_core.get_service_node_list_state(quorum->workers);
+            auto worker_it = worker_states.begin();
+            CRITICAL_REGION_LOCAL(m_lock);
+            int good = 0, total = 0;
+            for (size_t node_index = 0; node_index < quorum->workers.size(); ++worker_it, ++node_index)
             {
-              const crypto::public_key &node_key = quorum->workers[node_index];
+              // If the SN no longer exists then it will be omitted from the worker_states vector,]
+              // so if the elements do not line up skip ahead.
+              while (worker_it->pubkey != quorum->workers[node_index] && node_index < quorum->workers.size())
+                node_index++;
+              if (node_index == quorum->workers.size())
+                break;
+              total++;
 
-              CRITICAL_REGION_LOCAL(m_lock);
-              bool vote_off_node = (m_uptime_proof_seen.find(node_key) == m_uptime_proof_seen.end());
-              if (!vote_off_node) continue;
+              const auto& node_key = worker_it->pubkey;
+              const auto& info = worker_it->info;
 
-              quorum_vote_t vote = service_nodes::make_deregister_vote(m_uptime_proof_height, static_cast<uint16_t>(index_in_group), node_index, my_pubkey, my_seckey);
+              bool checks_passed = check_service_node(node_key, info);
+
+              new_state vote_for_state;
+              if (checks_passed) {
+                if (!info.is_decommissioned()) {
+                  good++;
+                  continue;
+                }
+
+                vote_for_state = new_state::recommission;
+                LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " is now passing required checks; voting to recommission");
+              }
+              else
+              {
+                int64_t credit = calculate_decommission_credit(info, latest_height);
+
+                if (info.is_decommissioned()) {
+                  if (credit >= 0) {
+                    LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " is still not passing required checks, but has remaining credit ("
+                                                                << credit << " blocks); abstaining (to leave decommissioned)");
+                    continue;
+                  }
+
+                  LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " has no remaining credit; voting to deregister");
+                  vote_for_state = new_state::deregister; // Credit ran out!
+                }
+                else
+                {
+                  if (credit >= DECOMMISSION_MINIMUM) {
+                    vote_for_state = new_state::decommission;
+                    LOG_PRINT_L2("Service node " << quorum->workers[node_index] << " has stopped passing required checks, but has sufficient earned credit ("
+                                                 << credit << " blocks) to avoid deregistration; voting to decommission");
+                  }
+                  else
+                  {
+                    vote_for_state = new_state::deregister;
+                    LOG_PRINT_L2("Service node " << quorum->workers[node_index] << " has stopped passing required checks, but does not have sufficient earned credit ("
+                                                 << credit << " blocks, " << DECOMMISSION_MINIMUM << " required) to decommission; voting to deregister");
+                  }
+                }
+              }
+
+              quorum_vote_t vote = service_nodes::make_state_change_vote(m_obligations_height, static_cast<uint16_t>(index_in_group), node_index, vote_for_state, my_pubkey, my_seckey);
               cryptonote::vote_verification_context vvc;
               if (!handle_vote(vote, vvc))
-                LOG_ERROR("Failed to add uptime deregister vote reason: " << print_vote_verification_context(vvc, nullptr));
+                LOG_ERROR("Failed to add uptime check_state vote; reason: " << print_vote_verification_context(vvc, nullptr));
             }
+            if (good > 0)
+              LOG_PRINT_L2(good << " of " << total << " service nodes are active and passing checks; no state change votes required");
           }
         }
         break;
@@ -249,7 +312,7 @@ namespace service_nodes
         return false;
       };
 
-      case quorum_type::deregister: break;
+      case quorum_type::obligations: break;
       case quorum_type::checkpointing:
       {
         cryptonote::block block;
@@ -286,7 +349,7 @@ namespace service_nodes
         return false;
       };
 
-      case quorum_type::deregister: break;
+      case quorum_type::obligations: break;
       case quorum_type::checkpointing:
       {
         if (votes.size() >= CHECKPOINT_MIN_VOTES)
@@ -306,6 +369,9 @@ namespace service_nodes
           }
 
           m_core.get_blockchain_storage().update_checkpoint(checkpoint);
+        }
+        {
+          LOG_PRINT_L2("Don't have enough votes yet to submit a checkpoint: have " << votes.size() << " of " << CHECKPOINT_MIN_VOTES << " required");
         }
       }
       break;
@@ -343,11 +409,15 @@ namespace service_nodes
     const uint32_t public_ip = proof.public_ip;
     const uint16_t storage_port = proof.storage_port;
 
-    if((timestamp < now - UPTIME_PROOF_BUFFER_IN_SECONDS) || (timestamp > now + UPTIME_PROOF_BUFFER_IN_SECONDS))
+    if((timestamp < now - UPTIME_PROOF_BUFFER_IN_SECONDS) || (timestamp > now + UPTIME_PROOF_BUFFER_IN_SECONDS)) {
+      LOG_PRINT_L2("Rejecting uptime proof from " << pubkey << ": timestamp is too far from now");
       return false;
+    }
 
-    if(!m_core.is_service_node(pubkey))
+    if(!m_core.is_service_node(pubkey, /*require_active=*/ false)) {
+      LOG_PRINT_L2("Rejecting uptime proof from " << pubkey << ": no such service node is currently registered");
       return false;
+    }
 
     uint64_t height = m_core.get_current_blockchain_height();
     uint8_t hf_ver = m_core.get_hard_fork_version(height);
@@ -361,10 +431,13 @@ namespace service_nodes
     if (epee::net_utils::is_ip_local(public_ip) || epee::net_utils::is_ip_loopback(public_ip)) return false;
 
     crypto::hash hash = make_hash(pubkey, timestamp, public_ip, storage_port);
-    if (!crypto::check_signature(hash, pubkey, sig))
+    if (!crypto::check_signature(hash, pubkey, sig)) {
+      LOG_PRINT_L2("Rejecting uptime proof from " << pubkey << ": signature validation failed");
       return false;
+    }
 
     m_uptime_proof_seen[pubkey] = {now, proof.arqma_snode_major, proof.arqma_snode_minor, proof.arqma_snode_patch};
+    LOG_PRINT_L2("Accepted uptime proof from " << pubkey);
     return true;
   }
 
@@ -414,5 +487,36 @@ namespace service_nodes
       return {};
 
     return it->second;
+  }
+
+  // Calculate the decommission credit for a service node.  If the SN is current decommissioned this
+  // returns the number of blocks remaining in the credit; otherwise this is the number of currently
+  // accumulated blocks.
+  int64_t quorum_cop::calculate_decommission_credit(const service_node_info &info, uint64_t current_height)
+  {
+    // If currently decommissioned, we need to know how long it was up before being decommissioned;
+    // otherwise we need to know how long since it last become active until now.
+    int64_t blocks_up;
+    if (info.is_decommissioned()) // decommissioned; the negative of active_since_height tells us when the period leading up to the current decommission started
+      blocks_up = int64_t(info.last_decommission_height) - (-info.active_since_height);
+    else
+      blocks_up = int64_t(current_height) - int64_t(info.active_since_height);
+
+    // Now we calculate the credit earned from being up for `blocks_up` blocks
+    int64_t credit = 0;
+    if (blocks_up >= 0) {
+      credit = blocks_up * DECOMMISSION_CREDIT_PER_DAY / BLOCKS_EXPECTED_IN_HOURS(24);
+
+      if (info.decommission_count <= info.is_decommissioned()) // Has never been decommissioned (or is currently in the first decommission), so add initial starting credit
+        credit += DECOMMISSION_INITIAL_CREDIT;
+      if (credit > DECOMMISSION_MAX_CREDIT)
+        credit = DECOMMISSION_MAX_CREDIT; // Cap the available decommission credit blocks if above the max
+    }
+
+    // If currently decommissioned, remove any used credits used for the current downtime
+    if (info.is_decommissioned())
+      credit -= int64_t(current_height) - int64_t(info.last_decommission_height);
+
+    return credit;
   }
 }

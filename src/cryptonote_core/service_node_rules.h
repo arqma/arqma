@@ -9,11 +9,22 @@
 
 namespace service_nodes
 {
-  constexpr size_t   DEREGISTER_QUORUM_SIZE                        = 10;
-  constexpr size_t   DEREGISTER_MIN_VOTES_TO_KICK_SERVICE_NODE     = 7;
-  constexpr size_t   DEREGISTER_NTH_OF_THE_NETWORK_TO_TEST         = 100;
-  constexpr size_t   DEREGISTER_MIN_NODES_TO_TEST                  = 50;
-  constexpr uint64_t DEREGISTER_VOTE_LIFETIME                      = BLOCKS_EXPECTED_IN_HOURS(2);
+  // State change quorums are in charge of policing the network by changing the state of a service
+  // node on the network: temporary decommissioning, recommissioning, and permanent deregistration.
+  constexpr size_t   STATE_CHANGE_QUORUM_SIZE                        = 10;
+  constexpr size_t   STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
+  constexpr size_t   STATE_CHANGE_NTH_OF_THE_NETWORK_TO_TEST         = 100;
+  constexpr size_t   STATE_CHANGE_MIN_NODES_TO_TEST                  = 50;
+  constexpr uint64_t STATE_CHANGE_VOTE_LIFETIME                      = BLOCKS_EXPECTED_IN_HOURS(2);
+
+  static_assert(STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE <= STATE_CHANGE_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
+
+  constexpr int64_t DECOMMISSION_CREDIT_PER_DAY = BLOCKS_EXPECTED_IN_HOURS(24) / 30;
+  constexpr int64_t DECOMMISSION_INITIAL_CREDIT = BLOCKS_EXPECTED_IN_HOURS(0);
+  constexpr int64_t DECOMMISSION_MAX_CREDIT     = BLOCKS_EXPECTED_IN_HOURS(24);
+  constexpr int64_t DECOMMISSION_MINIMUM        = BLOCKS_EXPECTED_IN_HOURS(8);
+
+  static_assert(DECOMMISSION_INITIAL_CREDIT <= DECOMMISSION_MAX_CREDIT, "Initial registration decommission credit cannot be larger than the maximum decommission credit");
 
   constexpr uint64_t CHECKPOINT_INTERVAL                           = 4;
   constexpr uint64_t CHECKPOINT_STORE_PERSISTENTLY_INTERVAL        = 60;
@@ -21,7 +32,6 @@ namespace service_nodes
   constexpr uint64_t CHECKPOINT_QUORUM_SIZE                        = 20;
   constexpr uint64_t CHECKPOINT_MIN_VOTES                          = 18;
 
-  static_assert(DEREGISTER_MIN_VOTES_TO_KICK_SERVICE_NODE <= DEREGISTER_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
   static_assert(CHECKPOINT_MIN_VOTES <= CHECKPOINT_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
 
   constexpr size_t   MIN_SWARM_SIZE                                 = 5;
@@ -32,7 +42,7 @@ namespace service_nodes
   constexpr size_t   NEW_SWARM_SIZE                                 = IDEAL_SWARM_SIZE;
   // The lower swarm percentile that will be randomly filled with new service nodes
   constexpr size_t   FILL_SWARM_LOWER_PERCENTILE                    = 25;
-  // Redistribute decommissioned snodes to the smallest swarms
+  // Redistribute snodes for decommissioned swarms to the smallest swarms
   constexpr size_t   DECOMMISSIONED_REDISTRIBUTION_LOWER_PERCENTILE = 0;
   // The upper swarm percentile that will be randomly selected during stealing
   constexpr size_t   STEALING_SWARM_UPPER_PERCENTILE                = 75;
@@ -45,8 +55,8 @@ namespace service_nodes
   constexpr uint64_t QUEUE_SWARM_ID                                 = 0;
   constexpr uint64_t KEY_IMAGE_AWAITING_UNLOCK_HEIGHT               = 0;
 
-  constexpr uint64_t DEREGISTER_TX_LIFETIME_IN_BLOCKS               = DEREGISTER_VOTE_LIFETIME;
-  constexpr size_t   QUORUM_LIFETIME                                = (6 * DEREGISTER_TX_LIFETIME_IN_BLOCKS);
+  constexpr uint64_t STATE_CHANGE_TX_LIFETIME_IN_BLOCKS             = STATE_CHANGE_VOTE_LIFETIME;
+  constexpr size_t   QUORUM_LIFETIME                                = (6 * STATE_CHANGE_TX_LIFETIME_IN_BLOCKS);
 
   using swarm_id_t = uint64_t;
   constexpr swarm_id_t UNASSIGNED_SWARM_ID                          = UINT64_MAX;
@@ -68,7 +78,7 @@ namespace service_nodes
   {
     switch (type)
     {
-      case quorum_type::deregister:    return DEREGISTER_VOTE_LIFETIME;
+      case quorum_type::obligations:   return STATE_CHANGE_VOTE_LIFETIME;
       case quorum_type::checkpointing: return CHECKPOINT_VOTE_LIFETIME;
       default:
       {
