@@ -331,7 +331,7 @@ namespace service_nodes
     const auto state = get_testing_quorum(quorum_type::obligations, state_change.block_height);
     if(!state)
     {
-      MERROR("Uptime quorum for height: " << state_change.block_height << ", was not stored by the daemon");
+      MERROR("Obligation quorum for height: " << state_change.block_height << ", was not stored by the daemon");
       return false;
     }
 
@@ -1251,9 +1251,9 @@ namespace service_nodes
       auto quorum = std::make_shared<testing_quorum>();
       std::vector<size_t> pub_keys_indexes;
 
+      size_t total_nodes = active_snode_list.size();
       if(type == quorum_type::obligations)
       {
-        size_t total_nodes = active_snode_list.size();
         num_validators = std::min(active_snode_list.size(), STATE_CHANGE_QUORUM_SIZE);
         pub_keys_indexes = generate_shuffled_service_node_index_list(total_nodes, block_hash, type, num_validators, active_snode_list.size());
         manager.obligations = quorum;
@@ -1262,10 +1262,9 @@ namespace service_nodes
       }
       else if(type == quorum_type::checkpointing)
       {
+        pub_keys_indexes = generate_shuffled_service_node_index_list(total_nodes, block_hash, type);
         manager.checkpointing = quorum;
-        num_validators = std::min(pub_keys_indexes.size(), CHECKPOINT_QUORUM_SIZE);
-        size_t num_remaining_nodes = pub_keys_indexes.size() - num_validators;
-        num_workers = std::min(num_remaining_nodes, CHECKPOINT_QUORUM_SIZE);
+        num_workers = std::min(pub_keys_indexes.size(), CHECKPOINT_QUORUM_SIZE);
       }
       else
       {

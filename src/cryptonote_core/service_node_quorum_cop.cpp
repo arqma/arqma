@@ -42,7 +42,7 @@
 
 namespace service_nodes
 {
-  static_assert(quorum_cop::REORG_SAFETY_BUFFER_IN_BLOCKS < STATE_CHANGE_VOTE_LIFETIME, "Safety buffer should always be less than the vote lifetime");
+  static_assert(quorum_cop::REORG_SAFETY_BUFFER_IN_BLOCKS < VOTE_LIFETIME, "Safety buffer should always be less than the vote lifetime");
 
   quorum_cop::quorum_cop(cryptonote::core& core)
     : m_core(core), m_obligations_height(0), m_last_checkpointed_height(0)
@@ -112,6 +112,10 @@ namespace service_nodes
 
   void quorum_cop::process_quorums(cryptonote::block const &block)
   {
+    uint8_t const hard_fork_version = block.major_version;
+    if (hard_fork_version < cryptonote::network_version_16)
+      return;
+
     crypto::public_key my_pubkey;
     crypto::secret_key my_seckey;
     if(!m_core.get_service_node_keys(my_pubkey, my_seckey))
@@ -121,20 +125,18 @@ namespace service_nodes
       return;
 
     uint64_t const height = cryptonote::get_block_height(block);
-    for (int i = 0; i < (int)quorum_type::count; i++)
+    uint64_t const latest_height = std::max(m_core.get_current_blockchain_height(), m_core.get_target_blockchain_height());
+    if (latest_height < VOTE_LIFETIME)
+      return;
+
+    uint64_t const start_voting_from_height = latest_height - VOTE_LIFETIME;
+    if (height < start_voting_from_height)
+      return;
+
+    for (int i = 0; i <= static_cast<int>(quorum_type::count); i++)
     {
       quorum_type const type = static_cast<quorum_type>(i);
-      uint64_t const vote_lifetime = service_nodes::quorum_vote_lifetime(type);
 
-      uint64_t const latest_height = std::max(m_core.get_current_blockchain_height(), m_core.get_target_blockchain_height());
-      if (latest_height < vote_lifetime)
-        continue;
-
-      uint64_t const start_voting_from_height = latest_height - vote_lifetime;
-      if (height < start_voting_from_height)
-        continue;
-
-      uint8_t const hard_fork_version = block.major_version;
       switch(type)
       {
         default:
@@ -146,18 +148,14 @@ namespace service_nodes
         case quorum_type::obligations:
         {
           time_t const now = time(nullptr);
-          constexpr time_t min_lifetime = UPTIME_PROOF_MAX_TIME_IN_SECONDS;
-
-          bool alive_for_min_time = (now - m_core.get_start_time()) >= min_lifetime;
+          bool alive_for_min_time = (now - m_core.get_start_time()) >= MIN_TIME_IN_S_BEFORE_VOTING;
           if (!alive_for_min_time)
-            continue;
+            break;
 
-          if (m_obligations_height < start_voting_from_height)
-            m_obligations_height = start_voting_from_height;
-
+          m_obligations_height = std::max(m_obligations_height, start_voting_from_height);
           for (; m_obligations_height < (height - REORG_SAFETY_BUFFER_IN_BLOCKS); m_obligations_height++)
           {
-            if (m_core.get_hard_fork_version(m_obligations_height) < 16) continue;
+            if (m_core.get_hard_fork_version(m_obligations_height) < cryptonote::network_version_16) continue;
 
             const std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(quorum_type::obligations, m_obligations_height);
             if (!quorum)
@@ -246,13 +244,14 @@ namespace service_nodes
 
         case quorum_type::checkpointing:
         {
-          if (m_last_checkpointed_height < start_voting_from_height)
-            m_last_checkpointed_height = start_voting_from_height;
-
+          m_last_checkpointed_height = std::max(start_voting_from_height, m_last_checkpointed_height);
           for (m_last_checkpointed_height += (m_last_checkpointed_height % CHECKPOINT_INTERVAL);
               m_last_checkpointed_height <= height;
               m_last_checkpointed_height += CHECKPOINT_INTERVAL)
           {
+            if (m_core.get_hard_fork_version(m_last_checkpointed_height) <= cryptonote::network_version_16)
+              continue;
+
             const std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(quorum_type::checkpointing, m_last_checkpointed_height);
             if (!quorum)
             {
@@ -370,6 +369,7 @@ namespace service_nodes
 
           m_core.get_blockchain_storage().update_checkpoint(checkpoint);
         }
+        else
         {
           LOG_PRINT_L2("Don't have enough votes yet to submit a checkpoint: have " << votes.size() << " of " << CHECKPOINT_MIN_VOTES << " required");
         }

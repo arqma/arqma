@@ -394,7 +394,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     block_verification_context bvc = {};
     generate_genesis_block(bl);
     db_wtxn_guard wtxn_guard(m_db);
-    add_new_block(bl, bvc);
+    add_new_block(bl, bvc, nullptr/*checkpoint*/);
     CHECK_AND_ASSERT_MES(!bvc.m_verification_failed, false, "Failed to add genesis block to blockchain");
   }
   // TODO: if blockchain load successful, verify blockchain against both
@@ -650,6 +650,9 @@ void Blockchain::pop_blocks(uint64_t nblocks)
     return;
   }
 
+  auto split_height = m_db->height();
+  for (BlockchainDetachedHook* hook : m_blockchain_detached_hooks) hook->blockchain_detached(split_height);
+
   if(stop_batch)
     m_db->batch_stop();
 }
@@ -744,12 +747,11 @@ bool Blockchain::reset_and_set_genesis_block(const block& b)
   m_db->drop_alt_blocks();
   m_hardfork->init();
 
-  for(InitHook* hook : m_init_hooks)
-    hook->init();
+  for(InitHook* hook : m_init_hooks) hook->init();
 
   db_wtxn_guard wtxn_guard(m_db);
   block_verification_context bvc = {};
-  add_new_block(b, bvc);
+  add_new_block(b, bvc, nullptr/*checkpoint*/);
   if (!update_next_cumulative_weight_limit())
     return false;
   return bvc.m_added_to_main_chain && !bvc.m_verification_failed;
@@ -1224,7 +1226,7 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<block_extended_info>
     for (auto& old_ch_ent : disconnected_chain)
     {
       block_verification_context bvc = {};
-      bool r = handle_alternative_block(old_ch_ent, get_block_hash(old_ch_ent), bvc);
+      bool r = handle_alternative_block(old_ch_ent, get_block_hash(old_ch_ent), bvc, false/*has_checkpoint*/);
       if(!r)
       {
         MERROR("Failed to push ex-main chain blocks to alternative chain ");
@@ -1929,7 +1931,7 @@ bool Blockchain::build_alt_chain(const crypto::hash &prev_id, std::list<block_ex
 // if that chain is long enough to become the main chain and re-org accordingly
 // if so.  If not, we need to hang on to the block in case it becomes part of
 // a long forked chain eventually.
-bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id, block_verification_context& bvc)
+bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id, block_verification_context& bvc, bool has_checkpoint)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
@@ -1941,10 +1943,6 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     bvc.m_verification_failed = true;
     return false;
   }
-  // this basically says if the blockchain is smaller than the first
-  // checkpoint then alternate blocks are allowed.  Alternatively, if the
-  // last checkpoint *before* the end of the current chain is also before
-  // the block to be added, then this is fine.
   if (!m_checkpoints.is_alternative_block_allowed(get_current_blockchain_height(), block_height))
   {
     MERROR_VER("Block with id: " << id << std::endl << " can't be accepted for alternative chain, block height: " << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
@@ -1988,14 +1986,6 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     if(!check_block_timestamp(timestamps, b))
     {
       MERROR_VER("Block with id: " << id << std::endl << " for alternative chain, has invalid timestamp: " << b.timestamp);
-      bvc.m_verification_failed = true;
-      return false;
-    }
-
-    bool is_a_checkpoint = false;
-    if(!m_checkpoints.check_block(bei.height, id, &is_a_checkpoint))
-    {
-      LOG_ERROR("CHECKPOINT VALIDATION FAILED");
       bvc.m_verification_failed = true;
       return false;
     }
@@ -2071,8 +2061,15 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     m_db->add_alt_block(id, data, cryptonote::block_to_blob(bei.bl));
     alt_chain.push_back(bei);
 
-    // FIXME: is it even possible for a checkpoint to show up not on the main chain?
-    if(is_a_checkpoint)
+    bool is_a_checkpoint = false;
+    if (!has_checkpoint && !m_checkpoints.check_block(bei.height, id, &is_a_checkpoint))
+    {
+      LOG_ERROR("CHECKPOINT VALIDATION FAILED");
+      bvc.m_verification_failed = true;
+      return false;
+    }
+
+    if (has_checkpoint || is_a_checkpoint)
     {
       //do reorganize!
       MGINFO_GREEN("###### REORGANIZE on height: " << alt_chain.front().height << " of " << m_db->height() - 1 << ", checkpoint is found in alternative chain on height " << bei.height);
@@ -2225,6 +2222,9 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
     //pack block
     e.block = std::move(bl.first);
   }
+
+  // get and pack other transactions, if needed
+  get_transactions_blobs(arg.txs, rsp.txs, rsp.missed_ids);
 
   return true;
 }
@@ -3474,34 +3474,11 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
         return false;
       }
 
-      if(!service_nodes::verify_tx_state_change(state_change, tvc.m_vote_ctx, *quorum))
+      if(!service_nodes::verify_tx_state_change(state_change, get_current_blockchain_height(), tvc.m_vote_ctx, *quorum))
       {
         tvc.m_verification_failed = true;
         MERROR_VER("Transaction: " << get_transaction_hash(tx) << " : state change tx could not be completely verified. Reason: " << print_vote_verification_context(tvc.m_vote_ctx));
         return false;
-      }
-
-      {
-        const uint64_t curr_height = get_current_blockchain_height();
-        if(state_change.block_height >= curr_height)
-        {
-          LOG_PRINT_L1("Received State change Transaction for height: " << state_change.block_height << " and service node: " << state_change.service_node_index
-                       << ", is newer than current height: " << curr_height << " blocks and has been rejected.");
-          tvc.m_vote_ctx.m_invalid_block_height = true;
-          tvc.m_verification_failed = true;
-          return false;
-        }
-
-        uint64_t delta_height = curr_height - state_change.block_height;
-        if(delta_height >= service_nodes::STATE_CHANGE_TX_LIFETIME_IN_BLOCKS)
-        {
-          LOG_PRINT_L1("Received State Change Transaction for height: " << state_change.block_height << " and Service Node: " << state_change.service_node_index
-                       << ", is older than: " << service_nodes::STATE_CHANGE_TX_LIFETIME_IN_BLOCKS
-                       << " blocks and has been rejected. Current height is: " << curr_height);
-          tvc.m_vote_ctx.m_invalid_block_height = true;
-          tvc.m_verification_failed = true;
-          return false;
-        }
       }
 
       const uint64_t height = state_change.block_height;
@@ -4487,7 +4464,7 @@ bool Blockchain::update_next_cumulative_weight_limit(uint64_t *long_term_effecti
   return true;
 }
 //------------------------------------------------------------------
-bool Blockchain::add_new_block(const block& bl, block_verification_context& bvc)
+bool Blockchain::add_new_block(const block& bl, block_verification_context& bvc, checkpoint_t const *checkpoint)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   crypto::hash id = get_block_hash(bl);
@@ -4502,20 +4479,43 @@ bool Blockchain::add_new_block(const block& bl, block_verification_context& bvc)
     return false;
   }
 
+  if (checkpoint)
+  {
+    checkpoint_t existing_checkpoint;
+    uint64_t block_height = get_block_height(bl);
+    try
+    {
+      if (m_db->get_block_checkpoint(block_height, existing_checkpoint))
+      {
+        if (checkpoint->signatures.size() < existing_checkpoint.signatures.size())
+          checkpoint = nullptr;
+      }
+    }
+    catch (const std::exception &e)
+    {
+      MERROR("Get block checkpoint from DB failed at height: " << block_height << ", what = " << e.what());
+    }
+  }
+
+  bool result = false;
+  rtxn_guard.stop();
   //check that block refers to chain tail
   if(!(bl.prev_id == get_tail_id()))
   {
     //chain switching or wrong block
     bvc.m_added_to_main_chain = false;
-    rtxn_guard.stop();
-    bool r = handle_alternative_block(bl, id, bvc);
+    result = handle_alternative_block(bl, id, bvc, (checkpoint != nullptr));
     m_blocks_txs_check.clear();
-    return r;
     //never relay alternative blocks
   }
+  else
+  {
+    result = handle_block_to_main_chain(bl, id, bvc);
+  }
 
-  rtxn_guard.stop();
-  return handle_block_to_main_chain(bl, id, bvc);
+  if (result && checkpoint)
+    update_checkpoint(*checkpoint);
+  return result;
 }
 //------------------------------------------------------------------
 bool Blockchain::update_checkpoints(const std::string& file_path)
@@ -4795,7 +4795,7 @@ uint64_t Blockchain::prevalidate_block_hashes(uint64_t height, const std::vector
 //    vs [k_image, output_keys] (m_scan_table). This is faster because it takes advantage of bulk queries
 //    and is threaded if possible. The table (m_scan_table) will be used later when querying output
 //    keys.
-bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks, std::vector<checkpoint_t> &checkpoints)
+bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete_entry> &blocks_entry, std::vector<block> &blocks)
 {
   MTRACE("Blockchain::" << __func__);
   TIME_MEASURE_START(prepare);
@@ -4843,35 +4843,6 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     m_blockchain_lock.lock();
   }
   m_batch_success = true;
-
-  // Place parsing before early returns since the caching layer seems to make
-  // this function early return in the common case, so always ensure checkpoints
-  // are parsed out.
-  for (size_t i = 0; i < blocks.size(); i++)
-  {
-    blobdata const &checkpoint_blob = blocks_entry[i].checkpoint;
-    block const &block = blocks[i];
-    uint64_t block_height = get_block_height(block);
-    bool maybe_has_checkpoint = (block_height % service_nodes::CHECKPOINT_INTERVAL == 0);
-
-    if (checkpoint_blob.size() && !maybe_has_checkpoint)
-    {
-      MDEBUG("Checkpoint blob given but not expecting a checkpoint at this height");
-      return false;
-    }
-
-    if (checkpoint_blob.size())
-    {
-      checkpoint_t checkpoint;
-      if (!t_serializable_object_from_blob(checkpoint, checkpoint_blob))
-      {
-        MDEBUG("Checkpoint blob available but failed to parse");
-        return false;
-      }
-
-      checkpoints.push_back(checkpoint);
-    }
-  }
 
   const uint64_t height = m_db->height();
   if ((height + blocks_entry.size()) < m_blocks_hash_check.size())

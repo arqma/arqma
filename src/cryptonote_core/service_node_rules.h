@@ -5,8 +5,6 @@
 #include "cryptonote_config.h"
 #include "service_node_voting.h"
 
-#include <random>
-
 namespace service_nodes
 {
   // State change quorums are in charge of policing the network by changing the state of a service
@@ -15,7 +13,7 @@ namespace service_nodes
   constexpr size_t   STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
   constexpr size_t   STATE_CHANGE_NTH_OF_THE_NETWORK_TO_TEST         = 100;
   constexpr size_t   STATE_CHANGE_MIN_NODES_TO_TEST                  = 50;
-  constexpr uint64_t STATE_CHANGE_VOTE_LIFETIME                      = BLOCKS_EXPECTED_IN_HOURS(2);
+  constexpr uint64_t VOTE_LIFETIME                                   = BLOCKS_EXPECTED_IN_HOURS(2);
 
   static_assert(STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE <= STATE_CHANGE_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
 
@@ -29,8 +27,9 @@ namespace service_nodes
   constexpr uint64_t CHECKPOINT_INTERVAL                           = 4;
   constexpr uint64_t CHECKPOINT_STORE_PERSISTENTLY_INTERVAL        = 60;
   constexpr uint64_t CHECKPOINT_VOTE_LIFETIME                      = CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
-  constexpr uint64_t CHECKPOINT_QUORUM_SIZE                        = 20;
-  constexpr uint64_t CHECKPOINT_MIN_VOTES                          = 18;
+  constexpr ptrdiff_t MIN_TIME_IN_S_BEFORE_VOTING                  = 0;
+  constexpr size_t CHECKPOINT_QUORUM_SIZE                          = 20;
+  constexpr size_t CHECKPOINT_MIN_VOTES                            = 13;
 
   static_assert(CHECKPOINT_MIN_VOTES <= CHECKPOINT_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
 
@@ -55,7 +54,7 @@ namespace service_nodes
   constexpr uint64_t QUEUE_SWARM_ID                                 = 0;
   constexpr uint64_t KEY_IMAGE_AWAITING_UNLOCK_HEIGHT               = 0;
 
-  constexpr uint64_t STATE_CHANGE_TX_LIFETIME_IN_BLOCKS             = STATE_CHANGE_VOTE_LIFETIME;
+  constexpr uint64_t STATE_CHANGE_TX_LIFETIME_IN_BLOCKS             = VOTE_LIFETIME;
   constexpr size_t   QUORUM_LIFETIME                                = (6 * STATE_CHANGE_TX_LIFETIME_IN_BLOCKS);
 
   using swarm_id_t = uint64_t;
@@ -71,21 +70,6 @@ namespace service_nodes
         return BLOCKS_EXPECTED_IN_DAYS(2);
       default:
         return BLOCKS_EXPECTED_IN_DAYS(30);
-    }
-  }
-
-  inline uint64_t quorum_vote_lifetime(quorum_type type)
-  {
-    switch (type)
-    {
-      case quorum_type::obligations:   return STATE_CHANGE_VOTE_LIFETIME;
-      case quorum_type::checkpointing: return CHECKPOINT_VOTE_LIFETIME;
-      default:
-      {
-        assert("Unhandled enum type" == 0);
-        return 0;
-      }
-      break;
     }
   }
 

@@ -66,10 +66,6 @@ public:
 
   virtual void drop_hard_fork_info() override {}
   virtual bool block_exists(const crypto::hash& h, uint64_t *height) const override { return false; }
-  virtual void update_block_checkpoint(struct checkpoint_t const &checkpoint) override {}
-  virtual bool get_block_checkpoint(uint64_t height, struct checkpoint_t &checkpoint) const override { return false; }
-  virtual bool get_top_checkpoint(struct checkpoint_t &checkpoint) const override { return false; }
-  virtual std::vector<cryptonote::checkpoint_t> get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints) const override { return {}; }
   virtual cryptonote::blobdata get_block_blob_from_height(const uint64_t& height) const override { return cryptonote::t_serializable_object_to_blob(get_block_from_height(height)); }
   virtual cryptonote::blobdata get_block_blob(const crypto::hash& h) const override { return cryptonote::blobdata(); }
   virtual bool get_tx_blob(const crypto::hash& h, cryptonote::blobdata &tx) const override { return false; }
@@ -163,6 +159,18 @@ public:
 
   virtual uint64_t get_max_block_size() override { return 100000000; }
   virtual void add_max_block_size(uint64_t sz) override { }
+
+  virtual void update_block_checkpoint(struct checkpoint_t const &checkpoint) override {}
+  virtual bool get_block_checkpoint(uint64_t height, struct checkpoint_t &checkpoint) const override { return false; }
+  virtual bool get_top_checkpoint(struct checkpoint_t &checkpoint) const override { return false; }
+  virtual void remove_block_checkpoint(uint64_t height) override { }
+  virtual std::vector<cryptonote::checkpoint_t> get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints) const override { return {}; }
+
+  virtual bool get_output_blacklist(std::vector<uint64_t> &blacklist) const override { return false; }
+  virtual void add_output_blacklist(std::vector<uint64_t> const &blacklist) override { }
+  virtual void set_service_node_data(const std::string& data) override { }
+  virtual bool get_service_node_data(std::string& data) override { return false; }
+  virtual void clear_service_node_data() override { }
 
   virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob) override {}
   virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob) override { return false; }

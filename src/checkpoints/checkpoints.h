@@ -49,6 +49,7 @@ namespace cryptonote
   {
     hardcoded,
     service_node,
+    count,
   };
 
   struct checkpoint_t
@@ -62,12 +63,7 @@ namespace cryptonote
 
     BEGIN_SERIALIZE()
       FIELD(version)
-      {
-        uint8_t serialized_type = 0;
-        if (W) serialized_type = static_cast<uint8_t>(type);
-        FIELD_N("type", serialized_type);
-        if (!W) type = static_cast<checkpoint_type>(serialized_type);
-      }
+      ENUM_FIELD(type, type < checkpoint_type::count)
       FIELD(height)
       FIELD(block_hash)
       FIELD(signatures)

@@ -39,6 +39,27 @@ namespace arqma
   double exp2(double);
   std::string hex64_to_base32z(std::string const& src);
 
+  template <typename lambda_t>
+  struct defer
+  {
+    lambda_t lambda;
+    defer(lambda_t lambda) : lambda(lambda) {}
+    ~defer() { lambda(); }
+  };
+
+  struct defer_helper
+  {
+    template <typename lambda_t>
+    defer<lambda_t> operator+(lambda_t lambda)
+    {
+      return defer<lambda_t>(lambda);
+    }
+  };
+
+  #define ARQMA_TOKEN_COMBINE2(x, y) x ## y
+  #define ARQMA_TOKEN_COMBINE(x, y) ARQMA_TOKEN_COMBINE2(x, y)
+  #define ARQMA_DEFER auto const ARQMA_TOKEN_COMBINE(arqma_defer_, __LINE__) == arqma::defer_helper() + [&]()
+
   template <typename T, size_t N>
   constexpr size_t array_count(T (&)[N]) { return N; }
 }; // namespace arqma
