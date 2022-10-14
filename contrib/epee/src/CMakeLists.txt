@@ -28,20 +28,21 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 add_library(epee
-  hex.cpp
-  http_auth.cpp
-  mlog.cpp
-  net_helper.cpp
-  net_utils_base.cpp
-  string_tools.cpp
-  wipeable_string.cpp
-  memwipe.c
-  connection_basic.cpp
-  network_throttle.cpp
-  network_throttle-detail.cpp
-  mlocker.cpp
-  buffer.cpp
-  net_ssl.cpp)
+  STATIC
+    hex.cpp
+    http_auth.cpp
+    mlog.cpp
+    net_helper.cpp
+    net_utils_base.cpp
+    string_tools.cpp
+    wipeable_string.cpp
+    memwipe.c
+    connection_basic.cpp
+    network_throttle.cpp
+    network_throttle-detail.cpp
+    mlocker.cpp
+    buffer.cpp
+    net_ssl.cpp)
 
 if(TARGET readline)
   target_sources(epee PRIVATE readline_buffer.cpp)
@@ -66,8 +67,10 @@ target_link_libraries(epee
     ${Boost_CHRONO_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
-  PRIVATE
+    ${Boost_REGEX_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
     ${OPENSSL_LIBRARIES}
+  PRIVATE
     ${EXTRA_LIBRARIES})
 
 target_include_directories(epee PUBLIC ../include)
