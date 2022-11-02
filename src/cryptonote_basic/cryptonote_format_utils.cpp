@@ -1169,8 +1169,8 @@ namespace cryptonote
 
     if(tx)
     {
-      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction Version: %d", static_cast<uint16_t>(tx->version));
-      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, " Type: %s", transaction::type_to_string(tx->type));
+      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction Version: %s", transaction::version_to_string(tx->version));
+      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, ", Type: %s", transaction::type_to_string(tx->type));
     }
 
     if(bufPtr != buf)

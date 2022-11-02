@@ -41,6 +41,15 @@ namespace cryptonote { struct Blockchain; struct BlockchainDB; }
 
 namespace service_nodes
 {
+  struct proof_info
+  {
+    uint64_t timestamp = 0;
+    uint16_t version_major = 0, version_minor = 0, version_patch = 0;
+    int16_t num_checkpoint_votes_received = 0;
+    int16_t num_checkpoint_votes_expected = 0;
+    std::array<std::pair<uint32_t, uint64_t>, 2> public_ips = {};
+  };
+
   struct service_node_info // registration information
   {
     enum version
@@ -105,6 +114,8 @@ namespace service_nodes
     cryptonote::account_public_address operator_address;
     uint32_t public_ip;
     uint16_t storage_port;
+    proof_info proof;
+    uint64_t last_ip_change_height;
 
     service_node_info() = default;
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
@@ -118,6 +129,9 @@ namespace service_nodes
       VARINT_FIELD(requested_unlock_height)
       VARINT_FIELD(last_reward_block_height)
       VARINT_FIELD(last_reward_transaction_index)
+      VARINT_FIELD(decommission_count)
+      VARINT_FIELD(active_since_height)
+      VARINT_FIELD(last_decommission_height)
       FIELD(contributors)
       VARINT_FIELD(total_contributed)
       VARINT_FIELD(total_reserved)
@@ -127,8 +141,7 @@ namespace service_nodes
       VARINT_FIELD(swarm_id)
       VARINT_FIELD(public_ip)
       VARINT_FIELD(storage_port)
-      VARINT_FIELD(active_since_height)
-      VARINT_FIELD(last_decommission_height)
+      VARINT_FIELD(last_ip_change_height)
     END_SERIALIZE()
   };
 
@@ -193,8 +206,6 @@ namespace service_nodes
     bool is_service_node(const crypto::public_key& pubkey, bool require_cative = true) const;
     bool is_key_image_locked(crypto::key_image const &check_image, uint64_t *unlock_height = nullptr, service_node_info::contribution_t *the_locked_contribution = nullptr) const;
 
-    void update_swarms(uint64_t height);
-
     std::shared_ptr<const testing_quorum> get_testing_quorum(quorum_type type, uint64_t height) const;
 
     std::vector<service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const;
@@ -206,7 +217,11 @@ namespace service_nodes
 
     void get_all_service_nodes_public_keys(std::vector<crypto::public_key>& keys, bool require_active) const;
 
-    void handle_uptime_proof(const cryptonote::NOTIFY_UPTIME_PROOF::request &proof);
+    cryptonote::NOTIFY_UPTIME_PROOF::request generate_uptime_proof(crypto::public_key const &pubkey, crypto::secret_key const &key, uint32_t public_ip, uint16_t storage_port) const;
+    bool handle_uptime_proof(cryptonote::NOTIFY_UPTIME_PROOF::request const &proof);
+
+    void handle_checkpoint_vote(quorum_vote_t const &vote);
+    void expect_checkpoint_vote_from(crypto::public_key const &pubkey);
 
     struct rollback_event
     {
@@ -323,6 +338,7 @@ namespace service_nodes
     bool process_contribution_tx(const cryptonote::transaction& tx, uint64_t block_height, uint32_t index);
     bool process_state_change_tx(const cryptonote::transaction& tx, uint64_t block_height);
     void process_block(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs);
+    void update_swarms(uint64_t height);
 
     bool contribution_tx_output_has_correct_unlock_time(const cryptonote::transaction& tx, size_t i, uint64_t block_height) const;
 

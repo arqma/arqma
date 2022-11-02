@@ -47,7 +47,7 @@
 #include "service_node_voting.h"
 #include "service_node_list.h"
 #include "service_node_quorum_cop.h"
-#include "cryptonote_basic/miner.h"
+#include "cryptonote_core/miner.h"
 #include "cryptonote_basic/connection_context.h"
 #include "warnings.h"
 #include "crypto/hash.h"
@@ -794,16 +794,6 @@ namespace cryptonote
       */
      bool is_service_node(const crypto::public_key& pubkey, bool require_active) const;
 
-     uint32_t get_service_node_public_ip() const
-     {
-       return m_sn_public_ip;
-     }
-
-     uint16_t get_storage_port() const
-     {
-       return m_storage_port;
-     }
-
      /**
       * @brief Add a service node vote
       *
@@ -834,27 +824,6 @@ namespace cryptonote
       * @return true
       */
      bool submit_uptime_proof();
-
-     /**
-      * @brief Try find the uptime proof from the service node.
-      *
-      * @param key The public key of the service node
-      *
-      * @return proof_info struct containing the uptime proof epoch timestamp and version if proof found, otherwise all 0s.
-      */
-     service_nodes::proof_info get_uptime_proof(const crypto::public_key &key) const;
-
-     /**
-      * @brief Check if the last ping received from the storage server has expired
-      *
-      * @return true if it has not expired
-      */
-     bool check_storage_server_ping() const;
-
-     /**
-      * @brief Update the storage server ping time
-      */
-     void update_storage_server_last_ping();
 
      /**
       * @brief get the blockchain pruning seed
@@ -892,6 +861,14 @@ namespace cryptonote
       * @return true, necessary for binding this function to a periodic invoker
       */
      bool relay_service_node_votes();
+
+     /**
+      * @brief Increment the number of expected checkpoints that the service node should have voted on by 1
+      */
+     void expect_checkpoint_vote_from(crypto::public_key const &pubkey) { m_service_node_list.expect_checkpoint_vote_from(pubkey); }
+
+     /// Time point at which the storage server last pinged us
+     std::atomic<time_t> m_last_storage_server_ping;
 
    private:
 
@@ -1102,7 +1079,6 @@ namespace cryptonote
      epee::math_helper::once_a_time_seconds<60*10, true> m_check_disk_space_interval; //!< interval for checking for disk space
      epee::math_helper::once_a_time_seconds<60*60*5, true> m_blockchain_pruning_interval; //!< interval for incremental blockchain pruning
      epee::math_helper::once_a_time_seconds<UPTIME_PROOF_BUFFER_IN_SECONDS, true> m_check_uptime_proof_interval; //!< interval for submitting uptime proof
-     epee::math_helper::once_a_time_seconds<30, true> m_uptime_proof_pruner;
 
      epee::math_helper::once_a_time_seconds<60*2, false> m_service_node_vote_relayer;
 
@@ -1125,8 +1101,6 @@ namespace cryptonote
 
      uint32_t m_sn_public_ip;
      uint16_t m_storage_port;
-
-     std::atomic<time_t> m_last_storage_server_ping;
 
      size_t block_sync_size;
 

@@ -7,16 +7,6 @@
 
 namespace service_nodes
 {
-  // State change quorums are in charge of policing the network by changing the state of a service
-  // node on the network: temporary decommissioning, recommissioning, and permanent deregistration.
-  constexpr size_t   STATE_CHANGE_QUORUM_SIZE                        = 10;
-  constexpr size_t   STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
-  constexpr size_t   STATE_CHANGE_NTH_OF_THE_NETWORK_TO_TEST         = 100;
-  constexpr size_t   STATE_CHANGE_MIN_NODES_TO_TEST                  = 50;
-  constexpr uint64_t VOTE_LIFETIME                                   = BLOCKS_EXPECTED_IN_HOURS(2);
-
-  static_assert(STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE <= STATE_CHANGE_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
-
   constexpr int64_t DECOMMISSION_CREDIT_PER_DAY = BLOCKS_EXPECTED_IN_HOURS(24) / 30;
   constexpr int64_t DECOMMISSION_INITIAL_CREDIT = BLOCKS_EXPECTED_IN_HOURS(0);
   constexpr int64_t DECOMMISSION_MAX_CREDIT     = BLOCKS_EXPECTED_IN_HOURS(24);
@@ -27,11 +17,32 @@ namespace service_nodes
   constexpr uint64_t CHECKPOINT_INTERVAL                           = 4;
   constexpr uint64_t CHECKPOINT_STORE_PERSISTENTLY_INTERVAL        = 60;
   constexpr uint64_t CHECKPOINT_VOTE_LIFETIME                      = CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
+
+  constexpr int16_t CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK = 8;
+  constexpr int16_t CHECKPOINT_MAX_MISSABLE_VOTES                                    = 4;
+  static_assert(CHECKPOINT_MAX_MISSABLE_VOTES < CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK,
+                "The maximum number of votes a service node can miss can not be greater than the amount of checkpoint "
+                "quorums they must participate in before we check if they should be deregistered or not.");
+
+  constexpr size_t STATE_CHANGE_NTH_OF_THE_NETWORK_TO_TEST         = 100;
+  constexpr size_t STATE_CHANGE_MIN_NODES_TO_TEST                  = 50;
+  constexpr uint64_t VOTE_LIFETIME                                 = BLOCKS_EXPECTED_IN_HOURS(2);
+
+  constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
+  constexpr size_t STATE_CHANGE_QUORUM_SIZE                        = 10;
   constexpr ptrdiff_t MIN_TIME_IN_S_BEFORE_VOTING                  = 0;
   constexpr size_t CHECKPOINT_QUORUM_SIZE                          = 20;
   constexpr size_t CHECKPOINT_MIN_VOTES                            = 13;
 
+  static_assert(STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE <= STATE_CHANGE_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
   static_assert(CHECKPOINT_MIN_VOTES <= CHECKPOINT_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
+
+  constexpr uint64_t MAX_REORG_BLOCKS_POST_HF16                     = (CHECKPOINT_INTERVAL * 2) + (CHECKPOINT_INTERVAL - 1);
+  constexpr uint64_t REORG_SAFETY_BUFFER_IN_BLOCKS                  = 20;
+  static_assert(REORG_SAFETY_BUFFER_IN_BLOCKS < VOTE_LIFETIME, "Safety buffer should always less than the vote lifetime");
+
+  constexpr uint64_t IP_CHANGE_WINDOW_IN_SECONDS                    = 86400;
+  constexpr uint64_t IP_CHANGE_BUFFER_IN_SECONDS                    = 7200;
 
   constexpr size_t   MIN_SWARM_SIZE                                 = 5;
   constexpr size_t   MAX_SWARM_SIZE                                 = 10;

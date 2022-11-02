@@ -30,6 +30,7 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #include <boost/algorithm/string.hpp>
+#include <boost/endian/conversion.hpp>
 
 #include "string_tools.h"
 using namespace epee;
@@ -194,10 +195,10 @@ namespace cryptonote
   };
   static const command_line::arg_descriptor<bool> arg_service_node = {
     "service-node"
-  , "Run as a Arqma Network Service Node, options 'sn-public-ip' and 'storage-server-port' must be set"
+  , "Run as a Arqma Network Service Node, options 'service-node-public-ip' and 'storage-server-port' must be set"
   };
   static const command_line::arg_descriptor<std::string> arg_public_ip = {
-    "sn-public-ip"
+    "service-node-public-ip"
   , "Public IP address on which this service node's services (such as the Arqma "
     "storage server) are accessible. This IP address will be advertised to the "
     "network via the service node uptime proofs. Required if operating as a "
@@ -225,13 +226,11 @@ namespace cryptonote
               m_update_download(0),
               m_nettype(UNDEFINED),
               m_update_available(false),
+              m_last_storage_server_ping(time(nullptr)),
               m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
     set_cryptonote_protocol(pprotocol);
-
-    // Reset the storage server last ping to make sure the verify uptime proof works
-    this->update_storage_server_last_ping();
   }
   void core::set_cryptonote_protocol(i_cryptonote_protocol* pprotocol)
   {
@@ -347,7 +346,7 @@ namespace cryptonote
           storage_ok = false;
         }
 
-        if (epee::net_utils::is_ip_local(m_sn_public_ip) || epee::net_utils::is_ip_loopback(m_sn_public_ip)) {
+        if (!epee::net_utils::is_ip_public(m_sn_public_ip)) {
           MERROR("Address given for public-ip is not public: " << epee::string_tools::get_ip_string_from_int32(m_sn_public_ip));
           storage_ok = false;
         }
@@ -1401,50 +1400,19 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::submit_uptime_proof()
   {
-    if (m_service_node)
-    {
-      cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
-      NOTIFY_UPTIME_PROOF::request r;
-      m_quorum_cop.generate_uptime_proof_request(r);
-      bool relayed = get_protocol()->relay_uptime_proof(r, fake_context);
+    if (!m_service_node) return true;
+    NOTIFY_UPTIME_PROOF::request req = m_service_node_list.generate_uptime_proof(m_service_node_pubkey, m_service_node_key, m_sn_public_ip, m_storage_port);
 
-      if(relayed)
-        MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_pubkey);
-    }
+    cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
+    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context);
+    if (relayed) MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_pubkey);
+
     return true;
-  }
-  //-----------------------------------------------------------------------------------------------
-  service_nodes::proof_info core::get_uptime_proof(const crypto::public_key &key) const
-  {
-    return m_quorum_cop.get_uptime_proof(key);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::handle_uptime_proof(const NOTIFY_UPTIME_PROOF::request &proof)
   {
-    bool res = m_quorum_cop.handle_uptime_proof(proof);
-    if (res)
-    {
-      m_service_node_list.handle_uptime_proof(proof);
-    }
-    return res;
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::check_storage_server_ping() const
-  {
-    time_t last_ping = m_last_storage_server_ping.load();
-    const auto elapsed = std::time(nullptr) - last_ping;
-
-    if (elapsed > STORAGE_SERVER_PING_LIFETIME) {
-      MWARNING("Have not heard from the storage server since at least: " << epee::misc_utils::get_time_str(last_ping));
-      return false;
-    }
-
-    return true;
-  }
-  //-----------------------------------------------------------------------------------------------
-  void core::update_storage_server_last_ping()
-  {
-    m_last_storage_server_ping.store(std::time(nullptr));
+    return m_service_node_list.handle_uptime_proof(proof);
   }
   //-----------------------------------------------------------------------------------------------
   void core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
@@ -1463,7 +1431,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::relay_service_node_votes()
   {
-    std::vector<service_nodes::quorum_vote_t> relayable_votes = m_quorum_cop.get_relayable_votes();
+    std::vector<service_nodes::quorum_vote_t> relayable_votes = m_quorum_cop.get_relayable_votes(get_current_blockchain_height());
     NOTIFY_NEW_SERVICE_NODE_VOTE::request req = {};
     req.votes = std::move(relayable_votes);
     if(req.votes.size())
@@ -1471,7 +1439,7 @@ namespace cryptonote
       cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
       if(get_protocol()->relay_service_node_votes(req, fake_context))
       {
-        m_quorum_cop.set_votes_relayed(relayable_votes);
+        m_quorum_cop.set_votes_relayed(req.votes);
       }
     }
 
@@ -1790,20 +1758,31 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
+  static bool check_storage_server_ping(time_t last_time_storage_server_pinged)
+  {
+    const auto elapsed = std::time(nullptr) - last_time_storage_server_pinged;
+    if (elapsed > STORAGE_SERVER_PING_LIFETIME)
+    {
+      MWARNING("Have not heard from the storage server since at least: " << tools::get_human_readable_timespan(std::chrono::seconds(last_time_storage_server_pinged)));
+      return false;
+    }
+    return true;
+  }
+  //-----------------------------------------------------------------------------------------------
   void core::do_uptime_proof_call()
   {
     std::vector<service_nodes::service_node_pubkey_info> const states = get_service_node_list_state({ m_service_node_pubkey });
     // wait one block before starting uptime proofs.
-    if(!states.empty() && states[0].info.registration_height + 1 < get_current_blockchain_height())
+    if(!states.empty() && (states[0].info.registration_height + 1) < get_current_blockchain_height())
     {
-      m_check_uptime_proof_interval.do_call([&states, this]()
-      {
-        uint64_t last_uptime = m_quorum_cop.get_uptime_proof(states[0].pubkey).timestamp;
-        if(last_uptime <= static_cast<uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
+      service_nodes::service_node_info const &info = states[0].info;
+      m_check_uptime_proof_interval.do_call([&info, this]() {
+        if (info.proof.timestamp <= static_cast<uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
         {
-          if (!this->check_storage_server_ping())
+          if (!check_storage_server_ping(m_last_storage_server_ping))
           {
-            MGINFO_RED("Failed to submit uptime proof: have not heard from the storage server recently. Make sure that it is running!");
+            MGINFO_RED("Failed to submit uptime proof: have not heard from the storage server recently. "
+                       "Make sure that it is running! It is required to run alongside with Arqma Daemon.");
             return true;
           }
 
@@ -1846,8 +1825,6 @@ namespace cryptonote
     {
       do_uptime_proof_call();
     }
-
-    m_uptime_proof_pruner.do_call(boost::bind(&service_nodes::quorum_cop::prune_uptime_proof, &m_quorum_cop));
 
     m_miner.on_idle();
     m_mempool.on_idle();
@@ -2083,6 +2060,7 @@ namespace cryptonote
   bool core::add_service_node_vote(const service_nodes::quorum_vote_t& vote, vote_verification_context &vvc)
   {
     bool result = m_quorum_cop.handle_vote(vote, vvc);
+    if (vvc.m_added_to_pool) m_service_node_list.handle_checkpoint_vote(vote);
     return result;
   }
   //-----------------------------------------------------------------------------------------------

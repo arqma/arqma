@@ -44,12 +44,6 @@ namespace service_nodes
 {
   struct service_node_info;
 
-  struct proof_info
-  {
-    uint64_t timestamp;
-    uint16_t arqma_snode_major, arqma_snode_minor, arqma_snode_patch;
-  };
-
   struct testing_quorum
   {
     std::vector<crypto::public_key> validators;
@@ -67,6 +61,12 @@ namespace service_nodes
     std::shared_ptr<const testing_quorum> checkpointing;
   };
 
+  struct service_node_test_results {
+    bool uptime_proved = true;
+    bool single_ip = true;
+    bool voted_in_checkpoints = true;
+  };
+
   class quorum_cop
     : public cryptonote::BlockAddedHook,
       public cryptonote::BlockchainDetachedHook,
@@ -80,31 +80,18 @@ namespace service_nodes
     void blockchain_detached(uint64_t height) override;
 
     void set_votes_relayed(std::vector<quorum_vote_t> const &relayed_votes);
-    std::vector<quorum_vote_t> get_relayable_votes();
+    std::vector<quorum_vote_t> get_relayable_votes(uint64_t current_height);
     bool handle_vote(quorum_vote_t const &vote, cryptonote::vote_verification_context &vvc);
-    bool handle_uptime_proof(const cryptonote::NOTIFY_UPTIME_PROOF::request &proof);
-
-    static const uint64_t REORG_SAFETY_BUFFER_IN_BLOCKS = 20;
-
-    bool prune_uptime_proof();
-
-    proof_info get_uptime_proof(const crypto::public_key &pubkey) const;
-
-    void generate_uptime_proof_request(cryptonote::NOTIFY_UPTIME_PROOF::request& req) const;
 
     static int64_t calculate_decommission_credit(const service_node_info &info, uint64_t current_height);
-
-    bool check_service_node(const crypto::public_key &pubkey, const service_node_info &info) const;
-
   private:
     void process_quorums(cryptonote::block const &block);
+    service_node_test_results check_service_node(const crypto::public_key &pubkey, const service_node_info &info) const;
 
     cryptonote::core& m_core;
     voting_pool m_vote_pool;
     uint64_t m_obligations_height;
     uint64_t m_last_checkpointed_height;
-
-    std::unordered_map<crypto::public_key, proof_info> m_uptime_proof_seen;
     mutable epee::critical_section m_lock;
   };
 }

@@ -2855,7 +2855,9 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
 
     struct response
     {
+      std::string status;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
   };
