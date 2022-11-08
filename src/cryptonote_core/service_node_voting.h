@@ -38,11 +38,13 @@
 #include "cryptonote_basic/blobdatatype.h"
 #include "cryptonote_basic/tx_extra.h"
 
+#include "string_tools.h"
 #include "math_helper.h"
 #include "syncobj.h"
 
 namespace cryptonote
 {
+  struct tx_verification_context;
   struct vote_verification_context;
   struct checkpoint_t;
 };
@@ -60,6 +62,12 @@ namespace service_nodes
       FIELD(voter_index)
       FIELD(signature)
     END_SERIALIZE()
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(voter_index)
+      std::string signature = epee::string_tools::pod_to_hex(this_ref.signature);
+      KV_SERIALIZE_VALUE(signature)
+    END_KV_SERIALIZE_MAP()
   };
 
   struct checkpoint_vote { crypto::hash block_hash; };
@@ -102,7 +110,7 @@ namespace service_nodes
   quorum_vote_t make_state_change_vote(uint64_t block_height, uint16_t index_in_group, uint16_t worker_index, new_state state, crypto::public_key const &pub_key, crypto::secret_key const &secret_key);
 
   bool verify_checkpoint(cryptonote::checkpoint_t const &checkpoint, service_nodes::testing_quorum const &quorum);
-  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::vote_verification_context& vvc, const service_nodes::testing_quorum &quorum);
+  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context& vvc, const service_nodes::testing_quorum &quorum);
   bool verify_vote(const quorum_vote_t& vote, uint64_t latest_height, cryptonote::vote_verification_context &vvc, const service_nodes::testing_quorum &quorum);
   crypto::signature make_signature_from_vote(quorum_vote_t const &vote, const crypto::public_key& pub, const crypto::secret_key& sec);
   crypto::signature make_signature_from_tx_change_state(cryptonote::tx_extra_service_node_state_change const &state_change, crypto::public_key const &pub, crypto::secret_key const &sec);

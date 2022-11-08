@@ -43,6 +43,7 @@
 #include "rpc/rpc_handler.h"
 #include "common/varint.h"
 #include "common/perf_timer.h"
+#include "checkpoints/checkpoints.h"
 
 namespace
 {
@@ -2651,6 +2652,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint32_t last_reward_transaction_index;
         uint64_t last_uptime_proof;
         bool active;
+        bool funded;
+        uint64_t state_height;
         uint32_t decommission_count;
         int64_t earned_downtime_blocks;
         std::vector<uint16_t> service_node_version;
@@ -2672,6 +2675,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE(last_reward_transaction_index)
           KV_SERIALIZE(last_uptime_proof)
           KV_SERIALIZE(active)
+          KV_SERIALIZE(funded)
+          KV_SERIALIZE(state_height)
           KV_SERIALIZE(decommission_count)
           KV_SERIALIZE(earned_downtime_blocks)
           KV_SERIALIZE(service_node_version)
@@ -2720,6 +2725,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       bool last_reward_transaction_index;
       bool last_uptime_proof;
       bool active;
+      bool funded;
+      bool state_height;
       bool decommission_count;
       bool earned_downtime_blocks;
       bool service_node_version;
@@ -2734,6 +2741,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       bool storage_port;
       bool block_hash;
       bool height;
+      bool target_height;
+      bool hardfork;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_OPT2(service_node_pubkey, false)
@@ -2743,6 +2752,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         KV_SERIALIZE_OPT2(last_reward_transaction_index, false)
         KV_SERIALIZE_OPT2(last_uptime_proof, false)
         KV_SERIALIZE_OPT2(active, false)
+        KV_SERIALIZE_OPT2(funded, false)
+        KV_SERIALIZE_OPT2(state_height, false)
         KV_SERIALIZE_OPT2(decommission_count, false)
         KV_SERIALIZE_OPT2(earned_downtime_blocks, false)
         KV_SERIALIZE_OPT2(service_node_version, false)
@@ -2757,6 +2768,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         KV_SERIALIZE_OPT2(storage_port, false)
         KV_SERIALIZE_OPT2(block_hash, false)
         KV_SERIALIZE_OPT2(height, false)
+        KV_SERIALIZE_OPT2(target_height, false)
+        KV_SERIALIZE_OPT2(hardfork, false)
       END_KV_SERIALIZE_MAP()
     };
 
@@ -2791,7 +2804,9 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint64_t last_reward_block_height; // The last height at which this Service Node received a reward.
         uint32_t last_reward_transaction_index; // When multiple Service Nodes register on the same height, the order the transaction arrive dictate the order you receive rewards.
         uint64_t last_uptime_proof; // The last time this Service Node's uptime proof was relayed by atleast 1 Service Node other than itself in unix epoch time.
-        bool active; // True if fully funded and not currently decommissioned.
+        bool active; // True if fully funded and not currently decommissioned (and so `active && !funded` implicitly defines decommissioned)
+        bool funded; // True if the required stakes have been submitted to activate this Service Node
+        uint64_t state_height; // If active: the state at which registration was completed; if decommissioned: the decommissioning height; if awaiting: the last contribution (or registration) height
         uint32_t decommission_count; // The number of times ther Service Node has been decommisioned since registration.
         int64_t earned_downtime_blocks; // The number of blocks earned towards decommissioning, or the number of blocks remaining until deregistration if currently decommissioned
         std::vector<uint16_t> service_node_version; // The major, minor, patch version of the Service Node respectively.
@@ -2813,6 +2828,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(last_reward_transaction_index)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(last_uptime_proof)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(active)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(funded)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(state_height)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(decommission_count)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(earned_downtime_blocks)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(service_node_version)
@@ -2832,14 +2849,18 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
 
       std::vector<entry> service_node_states; // Array of service node registration information
       uint64_t height; // Current block height
+      uint64_t target_height;
       std::string block_hash; // Current block hash
+      uint8_t hardfork;
       std::string status; // Generic RPC error code. "OK" is the success value.
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(service_node_states)
         KV_SERIALIZE(status)
         if (this_ref.fields.height) KV_SERIALIZE(height)
+        if (this_ref.fields.target_height) KV_SERIALIZE(target_height)
         if (this_ref.fields.block_hash) KV_SERIALIZE(block_hash)
+        if (this_ref.fields.hardfork) KV_SERIALIZE(hardfork)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -2932,6 +2953,39 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       bool untrusted;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(blacklist)
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(untrusted)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_CHECKPOINTS
+  {
+    constexpr static uint32_t NUM_CHECKPOINTS_TO_QUERY_BY_DEFAULT = 60;
+    constexpr static uint64_t HEIGHT_SENTINEL_VALUE = (UINT64_MAX - 1);
+    struct request_t
+    {
+      uint64_t start_height;
+      uint64_t end_height;
+      uint32_t count;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_OPT(start_height, HEIGHT_SENTINEL_VALUE)
+        KV_SERIALIZE_OPT(end_height, HEIGHT_SENTINEL_VALUE)
+        KV_SERIALIZE_OPT(count, NUM_CHECKPOINTS_TO_QUERY_BY_DEFAULT)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::vector<checkpoint_t> checkpoints;
+      std::string status;
+      bool untrusted;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(checkpoints)
         KV_SERIALIZE(status)
         KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()

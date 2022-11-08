@@ -2773,6 +2773,8 @@ namespace cryptonote
     entry.last_reward_transaction_index = sn_info.info.last_reward_transaction_index;
     entry.last_uptime_proof = sn_info.info.proof.timestamp;
     entry.active = sn_info.info.is_active();
+    entry.funded = sn_info.info.is_fully_funded();
+    entry.state_height = sn_info.info.is_fully_funded() ? (sn_info.info.is_decommissioned() ? sn_info.info.last_decommission_height : sn_info.info.active_since_height) : sn_info.info.last_reward_block_height;
     entry.earned_downtime_blocks = service_nodes::quorum_cop::calculate_decommission_credit(sn_info.info, current_height);
     entry.decommission_count = sn_info.info.decommission_count;
     entry.service_node_version = {sn_info.info.proof.version_major, sn_info.info.proof.version_minor, sn_info.info.proof.version_patch};
@@ -2841,13 +2843,15 @@ namespace cryptonote
       }
     }
 
-    res.height = m_core.get_current_blockchain_height();
-    res.block_hash = string_tools::pod_to_hex(m_core.get_block_id_by_height(res.height - 1));
+    const uint64_t height = m_core.get_current_blockchain_height();
+
+    res.height = height - 1;
+    res.block_hash = string_tools::pod_to_hex(m_core.get_block_id_by_height(res.height));
 
     for(const auto &pubkey_info : pubkey_info_list)
     {
       COMMAND_RPC_GET_SERVICE_NODES::response::entry entry = {};
-      fill_sn_response_entry(entry, pubkey_info, res.height);
+      fill_sn_response_entry(entry, pubkey_info, height);
 
       res.service_node_states.push_back(entry);
     }
@@ -2882,7 +2886,7 @@ namespace cryptonote
 
     res.service_node_states.reserve(sn_infos.size());
 
-    uint64_t height = m_core.get_current_blockchain_height();
+    const uint64_t height = m_core.get_current_blockchain_height();
 
     for (auto &pubkey_info : sn_infos)
     {
@@ -2892,8 +2896,10 @@ namespace cryptonote
     }
 
     res.status = CORE_RPC_STATUS_OK;
-    res.height = m_core.get_current_blockchain_height();
-    res.block_hash = string_tools::pod_to_hex(m_core.get_block_id_by_height(res.height - 1));
+    res.height = height - 1;
+    res.target_height = m_core.get_target_blockchain_height();
+    res.block_hash = string_tools::pod_to_hex(m_core.get_block_id_by_height(res.height));
+    res.hardfork = m_core.get_hard_fork_version(res.height);
 
     res.fields = req.fields;
     return true;
@@ -3010,6 +3016,53 @@ namespace cryptonote
       res.blacklist.push_back(std::move(new_entry));
     }
 
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_get_checkpoints(const COMMAND_RPC_GET_CHECKPOINTS::request& req, COMMAND_RPC_GET_CHECKPOINTS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
+  {
+    bool bootstrap_daemon_connection_failure = false;
+    if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_CHECKPOINTS>(invoke_http_mode::JON_RPC, "get_checkpoints", req, res, bootstrap_daemon_connection_failure))
+      return bootstrap_daemon_connection_failure;
+
+    if (ctx && m_restricted)
+    {
+      if (req.count > COMMAND_RPC_GET_CHECKPOINTS_MAX_COUNT)
+      {
+        error_resp.code     = CORE_RPC_ERROR_CODE_WRONG_PARAM;
+        error_resp.message  = "Number of requested checkpoints greater than the allowed limit: ";
+        error_resp.message += std::to_string(COMMAND_RPC_GET_CHECKPOINTS_MAX_COUNT);
+        error_resp.message += ", requested: ";
+        error_resp.message += std::to_string(req.count);
+        return false;
+      }
+    }
+
+    res.status             = CORE_RPC_STATUS_OK;
+    BlockchainDB const &db = m_core.get_blockchain_storage().get_db();
+
+    if (req.start_height == COMMAND_RPC_GET_CHECKPOINTS::HEIGHT_SENTINEL_VALUE &&
+        req.end_height   == COMMAND_RPC_GET_CHECKPOINTS::HEIGHT_SENTINEL_VALUE)
+    {
+      checkpoint_t top_checkpoint;
+      if (db.get_top_checkpoint(top_checkpoint))
+        res.checkpoints = db.get_checkpoints_range(top_checkpoint.height, 0, req.count);
+      return true;
+    }
+
+    if (req.start_height == COMMAND_RPC_GET_CHECKPOINTS::HEIGHT_SENTINEL_VALUE)
+    {
+      res.checkpoints = db.get_checkpoints_range(req.end_height, 0, req.count);
+      return true;
+    }
+
+    if (req.end_height == COMMAND_RPC_GET_CHECKPOINTS::HEIGHT_SENTINEL_VALUE)
+    {
+      res.checkpoints = db.get_checkpoints_range(req.start_height, UINT64_MAX, req.count);
+      return true;
+    }
+
+    res.checkpoints = db.get_checkpoints_range(req.start_height, req.end_height);
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------

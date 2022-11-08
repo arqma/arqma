@@ -171,6 +171,34 @@ namespace service_nodes
     return nullptr;
   }
   //----------------------------------------------------------------------------
+  bool service_node_list::get_quorum_pubkey(quorum_type type, quorum_group group, uint64_t height, size_t quorum_index, crypto::public_key &key) const
+  {
+    std::shared_ptr<const testing_quorum> quorum = get_testing_quorum(type, height);
+    if (!quorum)
+    {
+      MERROR("Quorum for height: " << height << ", was not stored by the daemon");
+      return false;
+    }
+
+    std::vector<crypto::public_key> const *array = nullptr;
+    if (group == quorum_group::validator) array = &quorum->validators;
+    if (group == quorum_group::worker) array = &quorum->workers;
+    else
+    {
+      MERROR("Invalid quorum group specified");
+      return false;
+    }
+
+    if (quorum_index >= array->size())
+    {
+      MERROR("Quorum indexing out of bounds: " << quorum_index << ", quorum_size: " << array->size());
+      return false;
+    }
+
+    key = (*array)[quorum_index];
+    return true;
+  }
+  //----------------------------------------------------------------------------
   std::vector<service_node_pubkey_info> service_node_list::get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const
   {
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
@@ -330,20 +358,9 @@ namespace service_nodes
       return false;
     }
 
-    const auto state = get_testing_quorum(quorum_type::obligations, state_change.block_height);
-    if(!state)
-    {
-      MERROR("Obligation quorum for height: " << state_change.block_height << ", was not stored by the daemon");
+    crypto::public_key key;
+    if (!get_quorum_pubkey(quorum_type::obligations, quorum_group::worker, state_change.block_height, state_change.service_node_index, key))
       return false;
-    }
-
-    if(state_change.service_node_index >= state->workers.size())
-    {
-      MERROR("Service Node index to vote off has became invalid. quorum rules have changed without a Hard-Fork.");
-      return false;
-    }
-
-    const crypto::public_key& key = state->workers[state_change.service_node_index];
 
     auto iter = m_transient_state.service_nodes_infos.find(key);
     if(iter == m_transient_state.service_nodes_infos.end())
@@ -1573,21 +1590,14 @@ namespace service_nodes
   {
     if (vote.type != quorum_type::checkpointing) return;
 
-    std::shared_ptr<const testing_quorum> quorum = get_testing_quorum(vote.type, vote.block_height);
-    if (!quorum)
+    crypto::public_key pubkey;
+    if (!get_quorum_pubkey(quorum_type::checkpointing, quorum_group::worker, vote.block_height, vote.index_in_group, pubkey))
     {
       MERROR("Unexpected missing quorum for checkpointing vote at height: " << vote.block_height << ", current height: " << m_transient_state.height);
       return;
     }
 
-    if (vote.index_in_group >= quorum->workers.size())
-    {
-      MERROR("Unexpected vote indexing out of bounds, vote should have already been validated previously.");
-      return;
-    }
-
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
-    crypto::public_key const &pubkey = quorum->workers[vote.index_in_group];
     auto it = m_transient_state.service_nodes_infos.find(pubkey);
     if (it == m_transient_state.service_nodes_infos.end()) return;
 

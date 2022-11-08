@@ -156,23 +156,31 @@ namespace service_nodes
     return true;
   }
 
-  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::vote_verification_context &vvc, const service_nodes::testing_quorum &quorum)
+  constexpr uint64_t VERIFY_HEIGHT_BUFFER = 5;
+
+  static bool bad_tx(cryptonote::tx_verification_context &tvc) {
+    tvc.m_verification_failed = true;
+    return false;
+  }
+
+  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context &tvc, const service_nodes::testing_quorum &quorum)
   {
+    auto &vvc = tvc.m_vote_ctx;
     if (state_change.votes.size() < service_nodes::STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE)
     {
       LOG_PRINT_L1("Not enough votes");
       vvc.m_not_enough_votes = true;
-      return false;
+      return bad_tx(tvc);
     }
 
     if (state_change.votes.size() > service_nodes::STATE_CHANGE_QUORUM_SIZE)
     {
       LOG_PRINT_L1("Too many votes");
-      return false;
+      return bad_tx(tvc);
     }
 
     if (!bounds_check_worker_index(quorum, state_change.service_node_index, &vvc))
-      return false;
+      return bad_tx(tvc);
 
     {
       if (state_change.block_height >= latest_height)
@@ -180,16 +188,19 @@ namespace service_nodes
         LOG_PRINT_L1("Received state change tx for height: " << state_change.block_height << " and service node: " << state_change.service_node_index
                                                              << ", is newer than current height: " << latest_height << " blocks and has been rejected.");
         vvc.m_invalid_block_height = true;
+        if (state_change.block_height >= latest_height + VERIFY_HEIGHT_BUFFER)
+          tvc.m_verification_failed = true;
         return false;
       }
 
-      uint64_t delta_height = latest_height - state_change.block_height;
-      if (latest_height >= state_change.block_height && delta_height >= service_nodes::STATE_CHANGE_TX_LIFETIME_IN_BLOCKS)
+      if (latest_height >= state_change.block_height + service_nodes::STATE_CHANGE_TX_LIFETIME_IN_BLOCKS)
       {
         LOG_PRINT_L1("Received state change tx for height: " << state_change.block_height << " and service node: " << state_change.service_node_index << ", is older than: "
                                                              << service_nodes::STATE_CHANGE_TX_LIFETIME_IN_BLOCKS << " (current height: " << latest_height << ") "
                                                              << "blocks and has been rejected.");
         vvc.m_invalid_block_height = true;
+        if (latest_height >= state_change.block_height + (service_nodes::STATE_CHANGE_TX_LIFETIME_IN_BLOCKS + VERIFY_HEIGHT_BUFFER))
+          tvc.m_verification_failed = true;
         return false;
       }
     }
@@ -199,13 +210,13 @@ namespace service_nodes
     for (const auto& vote : state_change.votes)
     {
       if (!bounds_check_validator_index(quorum, vote.validator_index, &vvc))
-        return false;
+        return bad_tx(tvc);
 
       if (++validator_set[vote.validator_index] > 1)
       {
         vvc.m_duplicate_voters = true;
         LOG_PRINT_L1("Voter quorum index is duplicated: " << vote.validator_index);
-        return false;
+        return bad_tx(tvc);
       }
 
       crypto::public_key const &key = quorum.validators[vote.validator_index];
@@ -213,7 +224,7 @@ namespace service_nodes
       {
         LOG_PRINT_L1("Invalid signatures for votes");
         vvc.m_signature_not_valid = true;
-        return false;
+        return bad_tx(tvc);
       }
     }
 
@@ -294,21 +305,16 @@ namespace service_nodes
       return result;
 
     {
-      // If we get an incoming vote that is outside the acceptable range by this many votes then
-      // just ignore it instead of dropping the connection; the sending side could be a couple
-      // blocks out of sync and sending something that it thinks is legit.
-      constexpr uint64_t VOTE_BUFFER = 5;
-
       bool height_in_buffer = false;
       if (latest_height > vote.block_height + VOTE_LIFETIME)
       {
-        height_in_buffer = latest_height <= vote.block_height + (VOTE_LIFETIME + VOTE_BUFFER);
+        height_in_buffer = latest_height <= vote.block_height + (VOTE_LIFETIME + VERIFY_HEIGHT_BUFFER);
         LOG_PRINT_L1("Received vote for height: " << vote.block_height << ", is older than: " << VOTE_LIFETIME << " blocks and has been rejected.");
         vvc.m_invalid_block_height = true;
       }
       else if (vote.block_height > latest_height)
       {
-        height_in_buffer = vote.block_height <= latest_height + VOTE_BUFFER;
+        height_in_buffer = vote.block_height <= latest_height + VERIFY_HEIGHT_BUFFER;
         LOG_PRINT_L1("Received vote for height: " << vote.block_height << ", is newer than: " << latest_height << " (latest block height) and has been rejected.");
         vvc.m_invalid_block_height = true;
       }

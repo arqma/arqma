@@ -106,12 +106,7 @@ namespace service_nodes
       m_obligations_height = height;
     }
 
-    if (m_last_checkpointed_height >= height)
-    {
-      LOG_ERROR("The blockchain was detached to height: " << height << ", but quorum cop has already processed votes up to " << m_last_checkpointed_height);
-      LOG_ERROR("This implies a reorg occured that was over " << REORG_SAFETY_BUFFER_IN_BLOCKS << ". This should never happen! Please report this to the devs.");
-      m_last_checkpointed_height = height;
-    }
+    m_last_checkpointed_height = height;
     m_vote_pool.remove_expired_votes(height);
   }
 
@@ -340,29 +335,6 @@ namespace service_nodes
   bool quorum_cop::handle_vote(quorum_vote_t const &vote, cryptonote::vote_verification_context &vvc)
   {
     vvc = {};
-    switch(vote.type)
-    {
-      default:
-      {
-        LOG_PRINT_L1("Unhandled vote type with value: " << (int)vote.type);
-        assert("Unhandled vote type" == 0);
-        return false;
-      };
-
-      case quorum_type::obligations: break;
-      case quorum_type::checkpointing:
-      {
-        cryptonote::block block;
-        if (!m_core.get_block_by_hash(vote.checkpoint.block_hash, block))
-        {
-          LOG_PRINT_L1("Vote does not reference valid block hash: " << vote.checkpoint.block_hash);
-          return false;
-        }
-      }
-      break;
-    }
-
-    // NOTE: Only do validation that relies on access cryptonote::core here in quorum cop, the rest goes in voting pool
     std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(vote.type, vote.block_height);
     if (!quorum)
     {
