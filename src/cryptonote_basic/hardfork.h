@@ -39,6 +39,7 @@ namespace cryptonote
   class HardFork
   {
   public:
+    constexpr static uint8_t INVALID_HARD_FORK_VERSION_FOR_HEIGHT = 255;
     typedef enum {
       Ready
     } State;

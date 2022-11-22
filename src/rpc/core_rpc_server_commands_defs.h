@@ -45,6 +45,8 @@
 #include "common/perf_timer.h"
 #include "checkpoints/checkpoints.h"
 
+#include "cryptonote_core/service_node_quorum_cop.h"
+
 namespace
 {
   template<typename T>
@@ -2426,65 +2428,45 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
 
   struct COMMAND_RPC_GET_QUORUM_STATE
   {
+    static constexpr uint64_t HEIGHT_SENTINEL_VALUE = UINT64_MAX;
     struct request_t
     {
-      uint64_t height;
+      uint64_t start_height;
+      uint64_t end_height;
+      uint8_t quorum_type;
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(height)
+        KV_SERIALIZE_OPT(start_height, HEIGHT_SENTINEL_VALUE)
+        KV_SERIALIZE_OPT(end_height, HEIGHT_SENTINEL_VALUE)
+        KV_SERIALIZE_OPT(quorum_type, (uint8_t)service_nodes::quorum_type::rpc_request_all_quorums_sentinel_value)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
-    {
-      std::string status;
-      std::vector<std::string> quorum_nodes;
-      std::vector<std::string> nodes_to_test;
-      bool untrusted;
-
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(status)
-        KV_SERIALIZE(quorum_nodes)
-        KV_SERIALIZE(nodes_to_test)
-        KV_SERIALIZE(untrusted)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_GET_QUORUM_STATE_BATCHED
-  {
-    struct request_t
-    {
-      uint64_t height_begin;
-      uint64_t height_end;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(height_begin)
-        KV_SERIALIZE(height_end)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_entry
+    struct quorum_for_height
     {
       uint64_t height;
-      std::vector<std::string> quorum_nodes;
-      std::vector<std::string> nodes_to_test;
+      uint8_t quorum_type;
+      service_nodes::testing_quorum quorum;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(height)
-        KV_SERIALIZE(quorum_nodes)
-        KV_SERIALIZE(nodes_to_test)
+        KV_SERIALIZE(quorum)
       END_KV_SERIALIZE_MAP()
+
+      BEGIN_SERIALIZE()
+        FIELD(height)
+        FIELD(quorum_type)
+        FIELD(quorum)
+      END_SERIALIZE()
     };
 
     struct response_t
     {
       std::string status;
-      std::vector<response_entry> quorum_entries;
+      std::vector<quorum_for_height> quorums;
       bool untrusted;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
-        KV_SERIALIZE(quorum_entries)
+        KV_SERIALIZE(quorums)
         KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()
     };
