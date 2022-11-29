@@ -207,7 +207,7 @@ namespace service_nodes
     bool is_service_node(const crypto::public_key& pubkey, bool require_cative = true) const;
     bool is_key_image_locked(crypto::key_image const &check_image, uint64_t *unlock_height = nullptr, service_node_info::contribution_t *the_locked_contribution = nullptr) const;
 
-    std::shared_ptr<const testing_quorum> get_testing_quorum(quorum_type type, uint64_t height) const;
+    std::shared_ptr<const testing_quorum> get_testing_quorum(quorum_type type, uint64_t height, bool include_old = false) const;
     bool get_quorum_pubkey(quorum_type type, quorum_group group, uint64_t height, size_t quorum_size, crypto::public_key &key) const;
 
     std::vector<service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const;
@@ -215,6 +215,7 @@ namespace service_nodes
 
     void set_db_pointer(cryptonote::BlockchainDB* db);
     void set_my_service_node_keys(crypto::public_key const *pub_key);
+    void set_quorum_history_storage(uint64_t hist_size); // 0 = none (default), 1 = unlimited, N = # of blocks
     bool store();
 
     void get_all_service_nodes_public_keys(std::vector<crypto::public_key>& keys, bool require_active) const;
@@ -348,11 +349,12 @@ namespace service_nodes
     std::vector<crypto::public_key> update_and_get_expired_nodes(const std::vector<cryptonote::transaction>& txs, uint64_t block_height);
 
     void clear(bool delete_db_entry = false);
-    bool load();
+    bool load(uint64_t current_height);
 
     cryptonote::Blockchain& m_blockchain;
     crypto::public_key const *m_service_node_pubkey;
     cryptonote::BlockchainDB *m_db;
+    uint64_t m_store_quorum_history;
 
     using block_height = uint64_t;
     mutable boost::recursive_mutex m_sn_mutex;
@@ -363,6 +365,8 @@ namespace service_nodes
       std::map<block_height, quorum_manager> quorum_states;
       std::list<std::unique_ptr<rollback_event>> rollback_events;
       block_height height;
+      // Store all old quorum history only if run with --store-full-quorum-history
+      decltype(quorum_states) old_quorum_states;
       // Returns a filtered, pubkey-sorted vector of service nodes that are active (fully funded and *NOT* decommissioned).
       std::vector<pubkey_and_sninfo> active_service_nodes_infos() const;
       // Similar to the above, but returns all nodes that are fully funded *AND* decommissioned.

@@ -209,6 +209,11 @@ namespace cryptonote
   , "The port on which this service node's storage server is accessible. A listening "
     "storage server is required for service nodes."
   , 0};
+  static const command_line::arg_descriptor<uint64_t> arg_store_quorum_history = {
+    "store-quorum-history"
+  , "Store the Service Node Quorum history for the last N blocks. "
+    "Specify the number of blocks or 1 to store the entire history."
+  , 0};
   //-----------------------------------------------------------------------------------------------
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
@@ -304,6 +309,7 @@ namespace cryptonote
     command_line::add_arg(desc, arg_service_node);
     command_line::add_arg(desc, arg_public_ip);
     command_line::add_arg(desc, arg_sn_bind_port);
+    command_line::add_arg(desc, arg_store_quorum_history);
 
     miner::init_options(desc);
     BlockchainDB::init_options(desc);
@@ -640,6 +646,8 @@ namespace cryptonote
     // SN
     {
       m_service_node_list.set_db_pointer(initialized_db);
+
+      m_service_node_list.set_quorum_history_storage(command_line::get_arg(vm, arg_store_quorum_history));
 
       m_blockchain_storage.hook_block_added(m_service_node_list);
       m_blockchain_storage.hook_blockchain_detached(m_service_node_list);
@@ -2035,9 +2043,9 @@ namespace cryptonote
     return get_blockchain_storage().prune_blockchain(pruning_seed);
   }
   //-----------------------------------------------------------------------------------------------
-  std::shared_ptr<const service_nodes::testing_quorum> core::get_testing_quorum(service_nodes::quorum_type type, uint64_t height) const
+  std::shared_ptr<const service_nodes::testing_quorum> core::get_testing_quorum(service_nodes::quorum_type type, uint64_t height, bool include_old) const
   {
-    return m_service_node_list.get_testing_quorum(type, height);
+    return m_service_node_list.get_testing_quorum(type, height, include_old);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::is_service_node(const crypto::public_key& pubkey, bool require_active) const
