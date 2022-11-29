@@ -527,9 +527,8 @@ int main(int argc, char* argv[])
   bool already_pruned = false;
   for (size_t n = 0; n < core_storage.size(); ++n)
   {
-    blockchain_objects_t *blockchain_objects = new blockchain_objects_t();
-    core_storage[n] = &(blockchain_objects->m_blockchain);
-
+    blockchain_objects_t blockchain_objects = {};
+    core_storage[n] = &(blockchain_objects.m_blockchain);
     BlockchainDB* db = new_db();
     if (db == NULL)
     {

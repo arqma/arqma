@@ -55,15 +55,6 @@ namespace service_nodes
       FIELD(validators)
       FIELD(workers)
     END_SERIALIZE()
-
-    BEGIN_KV_SERIALIZE_MAP()
-      std::vector<std::string> validators(this_ref.validators.size());
-      for (size_t i = 0; i < this_ref.validators.size(); i++) validators[i] = epee::string_tools::pod_to_hex(this_ref.validators[i]);
-      KV_SERIALIZE_VALUE(validators)
-      std::vector<std::string> workers(this_ref.workers.size());
-      for (size_t i = 0; i < this_ref.workers.size(); i++) workers[i] = epee::string_tools::pod_to_hex(this_ref.workers[i]);
-      KV_SERIALIZE_VALUE(workers)
-    END_KV_SERIALIZE_MAP()
   };
 
   struct quorum_manager
@@ -76,6 +67,8 @@ namespace service_nodes
     bool uptime_proved = true;
     bool single_ip = true;
     bool voted_in_checkpoints = true;
+
+    bool passed() const { return uptime_proved && voted_in_checkpoints; }
   };
 
   class quorum_cop

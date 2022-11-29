@@ -59,11 +59,9 @@ class BlocksdatFile
 {
 public:
 
-  bool store_blockchain_raw(cryptonote::Blockchain* cs, cryptonote::tx_memory_pool* txp,
-      boost::filesystem::path& output_file, uint64_t use_block_height=0);
+  bool store_blockchain_raw(cryptonote::Blockchain* cs, cryptonote::tx_memory_pool* txp, boost::filesystem::path& output_file, uint64_t use_block_height = 0);
 
 protected:
-
   Blockchain* m_blockchain_storage;
 
   std::ofstream * m_raw_data_file;
@@ -75,7 +73,6 @@ protected:
   void write_block(const crypto::hash &block_hash);
 
 private:
-
   uint64_t m_cur_height; // tracks current height during export
   std::vector<crypto::hash> m_hashes;
 };

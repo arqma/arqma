@@ -51,6 +51,17 @@ using namespace epee;
 
 namespace cryptonote
 {
+  bool checkpoint_t::check(crypto::hash const &hash) const
+  {
+    bool result = block_hash == hash;
+    if (result)
+      MINFO("Checkpoint passed for height: " << height << " " << block_hash);
+    else
+      MWARNING("Checkpoint failed for height: " << height << ". Expected hash: " << block_hash << ", Given hash: " << hash);
+
+    return result;
+  }
+
   height_to_hash const HARDCODED_MAINNET_CHECKPOINTS[] = {
     {0,      "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328"},
     {1,      "6115a8e9902af15d31d14c698621d54e9bb594b0da053591ec5d1ceb537960ea"},
@@ -168,9 +179,11 @@ namespace cryptonote
 
     uint64_t const end_cull_height = height - service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
     uint64_t start_cull_height = (end_cull_height < service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL) ? 0 : end_cull_height - service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
-    start_cull_height += (start_cull_height % service_nodes::CHECKPOINT_INTERVAL);
-    m_last_cull_height = std::max(m_last_cull_height, start_cull_height);
 
+    if ((start_cull_height % service_nodes::CHECKPOINT_INTERVAL) > 0)
+      start_cull_height += (service_nodes::CHECKPOINT_INTERVAL - (start_cull_height % service_nodes::CHECKPOINT_INTERVAL));
+
+    m_last_cull_height = std::max(m_last_cull_height, start_cull_height);
     auto guard = db_wtxn_guard(m_db);
     for (; m_last_cull_height < end_cull_height; m_last_cull_height += service_nodes::CHECKPOINT_INTERVAL)
     {
@@ -229,11 +242,7 @@ namespace cryptonote
     if(!found)
       return true;
 
-    bool result = checkpoint.block_hash == h;
-    if(result)
-      MINFO("Checkpoint verified and validated for height: " << height << " " << h);
-    else
-      MWARNING("Wrong Checkpoint for height: " << height << "\nExpected checkpoint_hash: " << checkpoint.block_hash << " while Received checkpoint_hash: " << h);
+    bool result = checkpoint.check(h);
     return result;
   }
   //---------------------------------------------------------------------------

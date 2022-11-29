@@ -32,12 +32,10 @@
 #include "cryptonote_basic/cryptonote_boost_serialization.h"
 #include "cryptonote_basic/difficulty.h"
 
-
 namespace cryptonote
 {
   namespace bootstrap
   {
-
     struct file_info
     {
       uint8_t  major_version;
@@ -83,7 +81,5 @@ namespace cryptonote
         VARINT_FIELD(coins_generated)
       END_SERIALIZE()
     };
-
   }
-
 }

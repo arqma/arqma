@@ -62,6 +62,8 @@ namespace cryptonote
     std::vector<service_nodes::voter_to_signature> signatures;
     uint64_t prev_height;
 
+    bool check(crypto::hash const &block_hash) const;
+
     static char const *type_to_string(checkpoint_type type)
     {
       switch(type)
@@ -80,17 +82,6 @@ namespace cryptonote
       FIELD(signatures)
       FIELD(prev_height)
     END_SERIALIZE()
-
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE(version)
-      KV_SERIALIZE(height)
-      std::string type = checkpoint_t::type_to_string(this_ref.type);
-      KV_SERIALIZE_VALUE(type)
-      std::string block_hash = epee::string_tools::pod_to_hex(this_ref.block_hash);
-      KV_SERIALIZE_VALUE(block_hash)
-      KV_SERIALIZE(signatures)
-      KV_SERIALIZE(prev_height)
-    END_KV_SERIALIZE_MAP()
   };
 
   struct height_to_hash

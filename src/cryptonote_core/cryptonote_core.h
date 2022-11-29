@@ -660,9 +660,9 @@ namespace cryptonote
       * its checkpoints if it is time.  If updating checkpoints fails,
       * the daemon is told to shut down.
       *
-      * @note see Blockchain::update_checkpoints()
+      * @note see Blockchain::update_checkpoints_from_json_file()
       */
-     bool update_checkpoints();
+     bool update_checkpoints_from_json_file();
 
      /**
       * @brief tells the daemon to wind down operations and stop running
@@ -861,9 +861,9 @@ namespace cryptonote
      bool relay_service_node_votes();
 
      /**
-      * @brief Increment the number of expected checkpoints that the service node should have voted on by 1
+      * @brief Record if the Service Node has checkpointed at this point in time
       */
-     void expect_checkpoint_vote_from(crypto::public_key const &pubkey) { m_service_node_list.expect_checkpoint_vote_from(pubkey); }
+     void record_checkpoint_vote(crypto::public_key const &pubkey, bool voted) { m_service_node_list.record_checkpoint_vote(pubkey, voted); }
 
      /// Time point at which the storage server last pinged us
      std::atomic<time_t> m_last_storage_server_ping;

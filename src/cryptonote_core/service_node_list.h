@@ -45,9 +45,10 @@ namespace service_nodes
   {
     uint64_t timestamp = 0;
     uint16_t version_major = 0, version_minor = 0, version_patch = 0;
-    int16_t num_checkpoint_votes_received = 0;
-    int16_t num_checkpoint_votes_expected = 0;
+    std::array<bool, CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK> votes;
+    uint8_t vote_index = 0;
     std::array<std::pair<uint32_t, uint64_t>, 2> public_ips = {};
+    proof_info() { votes.fill(true); }
   };
 
   struct service_node_info // registration information
@@ -103,7 +104,7 @@ namespace service_nodes
     uint64_t last_reward_block_height;
     uint32_t last_reward_transaction_index;
     uint32_t decommission_count;
-    int64_t active_since_height;
+    uint64_t active_since_height;
     uint64_t last_decommission_height;
     std::vector<contributor_t> contributors;
     uint64_t total_contributed;
@@ -221,8 +222,7 @@ namespace service_nodes
     cryptonote::NOTIFY_UPTIME_PROOF::request generate_uptime_proof(crypto::public_key const &pubkey, crypto::secret_key const &key, uint32_t public_ip, uint16_t storage_port) const;
     bool handle_uptime_proof(cryptonote::NOTIFY_UPTIME_PROOF::request const &proof);
 
-    void handle_checkpoint_vote(quorum_vote_t const &vote);
-    void expect_checkpoint_vote_from(crypto::public_key const &pubkey);
+    void record_checkpoint_vote(crypto::public_key const &pubkey, bool voted);
 
     struct rollback_event
     {
@@ -350,12 +350,12 @@ namespace service_nodes
     void clear(bool delete_db_entry = false);
     bool load();
 
-    mutable boost::recursive_mutex m_sn_mutex;
     cryptonote::Blockchain& m_blockchain;
     crypto::public_key const *m_service_node_pubkey;
     cryptonote::BlockchainDB *m_db;
 
     using block_height = uint64_t;
+    mutable boost::recursive_mutex m_sn_mutex;
     struct transient_state
     {
       service_nodes_infos_t service_nodes_infos;

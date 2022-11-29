@@ -37,8 +37,7 @@ namespace service_nodes
   static_assert(STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE <= STATE_CHANGE_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
   static_assert(CHECKPOINT_MIN_VOTES <= CHECKPOINT_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
 
-  constexpr uint64_t MAX_REORG_BLOCKS_POST_HF16                     = (CHECKPOINT_INTERVAL * 2) + (CHECKPOINT_INTERVAL - 1);
-  constexpr uint64_t REORG_SAFETY_BUFFER_IN_BLOCKS                  = 20;
+  constexpr uint64_t REORG_SAFETY_BUFFER_IN_BLOCKS                  = (CHECKPOINT_INTERVAL * 2) + (CHECKPOINT_INTERVAL - 1);
   static_assert(REORG_SAFETY_BUFFER_IN_BLOCKS < VOTE_LIFETIME, "Safety buffer should always less than the vote lifetime");
 
   constexpr uint64_t IP_CHANGE_WINDOW_IN_SECONDS                    = 86400;

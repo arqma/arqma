@@ -144,7 +144,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<uint64_t> arg_prep_blocks_threads = {
     "prep-blocks-threads"
   , "Max number of threads to use when preparing block hashes in groups."
-  , 8
+  , 4
   };
   static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
@@ -240,7 +240,7 @@ namespace cryptonote
       m_pprotocol = &m_protocol_stub;
   }
   //-----------------------------------------------------------------------------------
-  bool core::update_checkpoints()
+  bool core::update_checkpoints_from_json_file()
   {
     if (m_nettype != MAINNET) return true;
     if (m_checkpoints_updating.test_and_set()) return true;
@@ -248,7 +248,7 @@ namespace cryptonote
     bool res = true;
     if (time(NULL) - m_last_json_checkpoints_update >= 600)
     {
-      res = m_blockchain_storage.update_checkpoints(m_checkpoints_path);
+      res = m_blockchain_storage.update_checkpoints_from_json_file(m_checkpoints_path);
       m_last_json_checkpoints_update = time(NULL);
     }
 
@@ -678,7 +678,7 @@ namespace cryptonote
 
     MGINFO("Loading checkpoints");
 
-    CHECK_AND_ASSERT_MES(update_checkpoints(), false, "One or more checkpoints loaded from json conflicted with existing checkpoints.");
+    CHECK_AND_ASSERT_MES(update_checkpoints_from_json_file(), false, "One or more checkpoints loaded from json conflicted with existing checkpoints.");
 
    //DNS versions checking
     if (check_updates_string == "disabled")
@@ -1620,7 +1620,7 @@ namespace cryptonote
       return false;
     }
 
-    CHECK_AND_ASSERT_MES(update_checkpoints(), false, "One or more checkpoints loaded from json conflicted with existing checkpoints.");
+    CHECK_AND_ASSERT_MES(update_checkpoints_from_json_file(), false, "One or more checkpoints loaded from json conflicted with existing checkpoints.");
 
     block lb;
     if(!b)
@@ -2060,7 +2060,6 @@ namespace cryptonote
   bool core::add_service_node_vote(const service_nodes::quorum_vote_t& vote, vote_verification_context &vvc)
   {
     bool result = m_quorum_cop.handle_vote(vote, vvc);
-    if (vvc.m_added_to_pool) m_service_node_list.handle_checkpoint_vote(vote);
     return result;
   }
   //-----------------------------------------------------------------------------------------------

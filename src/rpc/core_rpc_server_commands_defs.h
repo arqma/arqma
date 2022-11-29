@@ -2442,13 +2442,30 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     };
     typedef epee::misc_utils::struct_init<request_t> request;
 
+    struct quorum_t
+    {
+      std::vector<std::string> validators;
+      std::vector<std::string> workers;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(validators)
+        KV_SERIALIZE(workers)
+      END_KV_SERIALIZE_MAP()
+
+      BEGIN_SERIALIZE()
+        FIELD(validators)
+        FIELD(workers)
+      END_SERIALIZE()
+    };
+
     struct quorum_for_height
     {
       uint64_t height;
       uint8_t quorum_type;
-      service_nodes::testing_quorum quorum;
+      quorum_t quorum;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(height)
+        KV_SERIALIZE(quorum_type)
         KV_SERIALIZE(quorum)
       END_KV_SERIALIZE_MAP()
 
@@ -2960,9 +2977,69 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     };
     typedef epee::misc_utils::struct_init<request_t> request;
 
+    struct voter_to_signature_serialized
+    {
+      uint16_t voter_index;
+      std::string signature;
+
+      voter_to_signature_serialized() = default;
+      voter_to_signature_serialized(service_nodes::voter_to_signature const &entry) : voter_index(entry.voter_index), signature(epee::string_tools::pod_to_hex(entry.signature)) { }
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(voter_index)
+        KV_SERIALIZE(signature)
+      END_KV_SERIALIZE_MAP()
+
+      BEGIN_SERIALIZE()
+        FIELD(voter_index)
+        FIELD(signature)
+      END_SERIALIZE()
+    };
+
+    struct checkpoint_serialized
+    {
+      uint8_t version;
+      std::string type;
+      uint64_t height;
+      std::string block_hash;
+      std::vector<voter_to_signature_serialized> signatures;
+      uint64_t prev_height;
+
+      checkpoint_serialized() = default;
+      checkpoint_serialized(checkpoint_t const &checkpoint)
+        : version(checkpoint.version)
+        , type(checkpoint_t::type_to_string(checkpoint.type))
+        , height(checkpoint.height)
+        , block_hash(epee::string_tools::pod_to_hex(checkpoint.block_hash))
+        , prev_height(checkpoint.prev_height)
+      {
+        signatures.reserve(checkpoint.signatures.size());
+        for (service_nodes::voter_to_signature const &entry : checkpoint.signatures)
+          signatures.push_back(entry);
+      }
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(version);
+        KV_SERIALIZE(type);
+        KV_SERIALIZE(height);
+        KV_SERIALIZE(block_hash);
+        KV_SERIALIZE(signatures);
+        KV_SERIALIZE(prev_height);
+      END_KV_SERIALIZE_MAP()
+
+      BEGIN_SERIALIZE()
+        FIELD(version)
+        FIELD(type)
+        FIELD(height)
+        FIELD(block_hash)
+        FIELD(signatures)
+        FIELD(prev_height)
+      END_SERIALIZE()
+    };
+
     struct response_t
     {
-      std::vector<checkpoint_t> checkpoints;
+      std::vector<checkpoint_serialized> checkpoints;
       std::string status;
       bool untrusted;
 
@@ -2975,4 +3052,47 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
+  struct COMMAND_RPC_GET_SN_STATE_CHANGES
+  {
+    constexpr static uint32_t NUM_BLOCKS_TO_SCAN_BY_DEFAULT = 720;
+    constexpr static uint64_t HEIGHT_SENTINEL_VALUE = (UINT64_MAX - 1);
+    struct request_t
+    {
+      uint64_t start_height;
+      uint64_t end_height;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(start_height)
+        KV_SERIALIZE_OPT(end_height, HEIGHT_SENTINEL_VALUE)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::string status;
+      bool untrusted;
+
+      uint32_t total_deregister;
+      uint32_t total_ip_change_penalty;
+      uint32_t total_decommission;
+      uint32_t total_recommission;
+      uint32_t total_unlock;
+      uint64_t start_height;
+      uint64_t end_height;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(untrusted)
+        KV_SERIALIZE(total_deregister)
+        KV_SERIALIZE(total_ip_change_penalty)
+        KV_SERIALIZE(total_decommission)
+        KV_SERIALIZE(total_recommission)
+        KV_SERIALIZE(total_unlock)
+        KV_SERIALIZE(start_height)
+        KV_SERIALIZE(end_height)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
 }

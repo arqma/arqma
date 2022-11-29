@@ -139,7 +139,7 @@ const size_t num_stagenet_hard_forks = sizeof(stagenet_hard_forks) / sizeof(stag
 //------------------------------------------------------------------
 Blockchain::Blockchain(tx_memory_pool& tx_pool, service_nodes::service_node_list& service_node_list) :
   m_db(), m_tx_pool(tx_pool), m_hardfork(NULL), m_timestamps_and_difficulties_height(0), m_current_block_cumul_weight_limit(0), m_current_block_cumul_weight_median(0),
-  m_max_prepare_blocks_threads(8), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false),
+  m_max_prepare_blocks_threads(4), m_db_sync_on_blocks(true), m_db_sync_threshold(1), m_db_sync_mode(db_async), m_db_default_sync(false),
   m_fast_sync(true), m_show_time_stats(false), m_sync_counter(0), m_bytes_to_sync(0), m_cancel(false),
   m_long_term_block_weights_window(CRYPTONOTE_LONG_TERM_BLOCK_WEIGHT_WINDOW_SIZE),
   m_long_term_effective_median_block_weight(0),
@@ -4519,7 +4519,7 @@ bool Blockchain::add_new_block(const block& bl, block_verification_context& bvc,
   return result;
 }
 //------------------------------------------------------------------
-bool Blockchain::update_checkpoints(const std::string& file_path)
+bool Blockchain::update_checkpoints_from_json_file(const std::string& file_path)
 {
   std::vector<height_to_hash> checkpoint_hashes;
   if(!cryptonote::load_checkpoints_from_json(file_path, checkpoint_hashes))
@@ -4587,6 +4587,19 @@ bool Blockchain::update_checkpoint(cryptonote::checkpoint_t const &checkpoint)
 {
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   bool result = m_checkpoints.update_checkpoint(checkpoint);
+  if (result)
+  {
+    if (checkpoint.height < m_db->height())
+    {
+      if (!checkpoint.check(m_db->get_block_hash_from_height(checkpoint.height)))
+      {
+        LOG_ERROR("Local blockchain failed to pass a checkpoint in: " << __func__ << ", rolling back!");
+        std::list<block> empty;
+        rollback_blockchain_switching(empty, checkpoint.height - 2);
+      }
+    }
+  }
+
   return result;
 }
 //------------------------------------------------------------------

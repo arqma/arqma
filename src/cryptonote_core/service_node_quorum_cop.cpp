@@ -65,8 +65,9 @@ namespace service_nodes
 
     if (check_uptime_obligation && time_since_last_uptime_proof > UPTIME_PROOF_MAX_TIME_IN_SECONDS)
     {
-      LOG_PRINT_L1("Submitting deregister vote for: " << pubkey << ", due to uptime proof being older than: " << UPTIME_PROOF_MAX_TIME_IN_SECONDS
-                    << ", time since last uptime proof: " << tools::get_human_readable_timespan(std::chrono::seconds(time_since_last_uptime_proof)));
+      LOG_PRINT_L1("Service Node: " << pubkey << ", failed uptime proof obligation check: the last uptime proof was older than: "
+                                    << UPTIME_PROOF_MAX_TIME_IN_SECONDS << "s. Time since last uptime proof was: "
+                                    << tools::get_human_readable_timespan(std::chrono::seconds(time_since_last_uptime_proof)));
       result.uptime_proved = false;
     }
 
@@ -80,17 +81,20 @@ namespace service_nodes
       }
     }
 
-    if (check_checkpoint_obligation && info.proof.num_checkpoint_votes_expected >= CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK)
+    if (check_checkpoint_obligation && !info.is_decommissioned())
     {
       proof_info const &proof = info.proof;
-      if (proof.num_checkpoint_votes_received < proof.num_checkpoint_votes_expected)
+      int num_votes = 0;
+      for (bool voted : proof.votes)
+        num_votes += voted;
+
+      if (num_votes <= CHECKPOINT_MAX_MISSABLE_VOTES)
       {
-        int16_t missing_votes = info.proof.num_checkpoint_votes_expected - info.proof.num_checkpoint_votes_received;
-        if (missing_votes > CHECKPOINT_MAX_MISSABLE_VOTES)
-        {
-          LOG_PRINT_L1("Submitting deregister vote for: " << pubkey << ", due to missing more than: " << CHECKPOINT_MAX_MISSABLE_VOTES << " checkpoint_votes");
-          result.voted_in_checkpoints = false;
-        }
+        LOG_PRINT_L1("Service Node: " << pubkey << ", failed checkpoint obligation check: missed the last: "
+                                      << CHECKPOINT_MAX_MISSABLE_VOTES << " checkpoint votes from: "
+                                      << CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK
+                                      << " quorums that they were required to participate in.");
+        result.voted_in_checkpoints = false;
       }
     }
 
@@ -106,7 +110,13 @@ namespace service_nodes
       m_obligations_height = height;
     }
 
-    m_last_checkpointed_height = height;
+    if (m_last_checkpointed_height >= height + REORG_SAFETY_BUFFER_IN_BLOCKS)
+    {
+      LOG_ERROR("The blockchain was detached to height: " << height << ", but quorum cop has already processed votes for checkpointing up to " << m_last_checkpointed_height);
+      LOG_ERROR("This implies a reorg occured that was over " << REORG_SAFETY_BUFFER_IN_BLOCKS << ". This should rarely happen! Please report this to the devs.");
+      m_last_checkpointed_height = height;
+    }
+
     m_vote_pool.remove_expired_votes(height);
   }
 
@@ -178,11 +188,13 @@ namespace service_nodes
 
             if (m_core.get_hard_fork_version(m_obligations_height) >= cryptonote::network_version_16)
             {
-              std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(quorum_type::checkpointing, m_obligations_height);
-              if (quorum)
+              if (std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(quorum_type::checkpointing, m_obligations_height))
               {
-                for (crypto::public_key const &key : quorum->workers)
-                  m_core.expect_checkpoint_vote_from(key);
+                for (size_t index_in_quorum = 0; index_in_quorum < quorum->workers.size(); index_in_quorum++)
+                {
+                  crypto::public_key const &key = quorum->workers[index_in_quorum];
+                  m_core.record_checkpoint_vote(key, m_vote_pool.received_checkpoint_vote(m_obligations_height, index_in_quorum));
+                }
               }
             }
 
@@ -221,7 +233,7 @@ namespace service_nodes
               auto test_results = check_service_node(node_key, info);
 
               new_state vote_for_state;
-              if (test_results.uptime_proved) {
+              if (test_results.passed()) {
                 if (info.is_decommissioned()) {
                   vote_for_state = new_state::recommission;
                   LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " is now passing required checks, voting to recommission");
@@ -277,12 +289,17 @@ namespace service_nodes
 
         case quorum_type::checkpointing:
         {
-          m_last_checkpointed_height = std::max(start_voting_from_height, m_last_checkpointed_height);
-          for (m_last_checkpointed_height += (m_last_checkpointed_height % CHECKPOINT_INTERVAL);
-              m_last_checkpointed_height <= height;
-              m_last_checkpointed_height += CHECKPOINT_INTERVAL)
+          uint64_t start_checkpointing_height = start_voting_from_height;
+          if ((start_checkpointing_height % CHECKPOINT_INTERVAL) > 0)
+            start_checkpointing_height += (CHECKPOINT_INTERVAL - (start_checkpointing_height % CHECKPOINT_INTERVAL));
+
+          m_last_checkpointed_height = std::max(start_checkpointing_height, m_last_checkpointed_height);
+          for (; m_last_checkpointed_height <= height; m_last_checkpointed_height += CHECKPOINT_INTERVAL)
           {
             if (m_core.get_hard_fork_version(m_last_checkpointed_height) <= cryptonote::network_version_16)
+              continue;
+
+            if (m_last_checkpointed_height < REORG_SAFETY_BUFFER_IN_BLOCKS)
               continue;
 
             const std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(quorum_type::checkpointing, m_last_checkpointed_height);
@@ -338,7 +355,8 @@ namespace service_nodes
     std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(vote.type, vote.block_height);
     if (!quorum)
     {
-      LOG_ERROR("Quorum state for height: " << vote.block_height << " was not cached in daemon!");
+      vvc.m_invalid_block_height = true;
+      LOG_ERROR("Quorum state for vote height " << vote.block_height << " was not cached in daemon!");
       return false;
     }
 

@@ -134,7 +134,7 @@ bool BlocksdatFile::store_blockchain_raw(Blockchain* _blockchain_storage, tx_mem
 
   uint64_t block_start = 0;
   uint64_t block_stop = 0;
-  MINFO("source blockchain height: " <<  m_blockchain_storage->get_current_blockchain_height()-1);
+  MINFO("source blockchain height: " <<  m_blockchain_storage->get_current_blockchain_height() - 1);
   if ((requested_block_stop > 0) && (requested_block_stop < m_blockchain_storage->get_current_blockchain_height()))
   {
     MINFO("Using requested block height: " << requested_block_stop);

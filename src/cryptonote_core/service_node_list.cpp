@@ -153,6 +153,13 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   std::shared_ptr<const testing_quorum> service_node_list::get_testing_quorum(quorum_type type, uint64_t height) const
   {
+    if (type == quorum_type::checkpointing)
+    {
+      if (height < REORG_SAFETY_BUFFER_IN_BLOCKS)
+        return nullptr;
+      height -= REORG_SAFETY_BUFFER_IN_BLOCKS;
+    }
+
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     const auto &it = m_transient_state.quorum_states.find(height);
     if(it != m_transient_state.quorum_states.end())
@@ -419,6 +426,8 @@ namespace service_nodes
         info.active_since_height = -info.active_since_height;
         info.last_decommission_height = block_height;
         info.decommission_count++;
+
+        info.proof.timestamp = 0;
         return true;
 
       case new_state::recommission:
@@ -439,6 +448,7 @@ namespace service_nodes
 
         m_transient_state.rollback_events.emplace_back(new rollback_change(block_height, key, info));
         info.active_since_height = block_height;
+        info.proof.votes.fill(true);
         info.last_reward_block_height = block_height;
         info.last_reward_transaction_index = std::numeric_limits<uint32_t>::max();
         return true;
@@ -1020,19 +1030,6 @@ namespace service_nodes
     const size_t cache_state_from_height = (block_height < QUORUM_LIFETIME) ? 0 : block_height - QUORUM_LIFETIME;
     while(!m_transient_state.quorum_states.empty() && m_transient_state.quorum_states.begin()->first < cache_state_from_height)
       m_transient_state.quorum_states.erase(m_transient_state.quorum_states.begin());
-
-    //
-    // Reset checkpoint vote count
-    //
-    for (auto it : m_transient_state.service_nodes_infos)
-    {
-      proof_info &proof = it.second.proof;
-      if (proof.num_checkpoint_votes_expected > CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK)
-      {
-        proof.num_checkpoint_votes_received = std::max(proof.num_checkpoint_votes_received - CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK, 0);
-        proof.num_checkpoint_votes_expected = std::max(proof.num_checkpoint_votes_expected - CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK, 0);
-      }
-    }
   }
   //----------------------------------------------------------------------------
   void service_node_list::blockchain_detached(uint64_t height)
@@ -1274,6 +1271,18 @@ namespace service_nodes
     boost::endian::little_to_native_inplace(seed);
 
     seed += static_cast<uint64_t>(type);
+
+    //       Shuffle 2
+    //       |====================|
+    //       |                    |
+    // Shuffle 1                  |
+    // |=============|            |
+    // |     |       |            |
+    // |sublist_size |            |
+    // |     |   sublist_up_to    |
+    // 0     N       Y            Z
+    // [..........................]
+
     // If we have a list [0,Z) but we need a shuffled sublist of the first N values that only
     // includes values from [0,y) then we do this using two shufflers: first of the [0,y) sublist,
     // then of the [N,Z) sublist (which is already partially shuffled, but that doesn't matter).  We
@@ -1310,9 +1319,9 @@ namespace service_nodes
       auto quorum = std::make_shared<testing_quorum>();
       std::vector<size_t> pub_keys_indexes;
 
-      size_t total_nodes = active_snode_list.size();
       if(type == quorum_type::obligations)
       {
+        size_t total_nodes = active_snode_list.size();
         num_validators = std::min(active_snode_list.size(), STATE_CHANGE_QUORUM_SIZE);
         pub_keys_indexes = generate_shuffled_service_node_index_list(total_nodes, block_hash, type, num_validators, active_snode_list.size());
         manager.obligations = quorum;
@@ -1321,6 +1330,7 @@ namespace service_nodes
       }
       else if(type == quorum_type::checkpointing)
       {
+        size_t total_nodes = active_snode_list.size();
         pub_keys_indexes = generate_shuffled_service_node_index_list(total_nodes, block_hash, type);
         manager.checkpointing = quorum;
         num_workers = std::min(pub_keys_indexes.size(), CHECKPOINT_QUORUM_SIZE);
@@ -1586,33 +1596,15 @@ namespace service_nodes
     return true;
   }
   //----------------------------------------------------------------------------
-  void service_node_list::handle_checkpoint_vote(quorum_vote_t const &vote)
-  {
-    if (vote.type != quorum_type::checkpointing) return;
-
-    crypto::public_key pubkey;
-    if (!get_quorum_pubkey(quorum_type::checkpointing, quorum_group::worker, vote.block_height, vote.index_in_group, pubkey))
-    {
-      MERROR("Unexpected missing quorum for checkpointing vote at height: " << vote.block_height << ", current height: " << m_transient_state.height);
-      return;
-    }
-
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
-    auto it = m_transient_state.service_nodes_infos.find(pubkey);
-    if (it == m_transient_state.service_nodes_infos.end()) return;
-
-    service_node_info &info = it->second;
-    info.proof.num_checkpoint_votes_received++;
-  }
-  //----------------------------------------------------------------------------
-  void service_node_list::expect_checkpoint_vote_from(crypto::public_key const &pubkey)
+  void service_node_list::record_checkpoint_vote(crypto::public_key const &pubkey, bool voted)
   {
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     auto it = m_transient_state.service_nodes_infos.find(pubkey);
     if (it == m_transient_state.service_nodes_infos.end()) return;
 
-    service_node_info &info = it->second;
-    info.proof.num_checkpoint_votes_expected++;
+    proof_info &info = it->second.proof;
+    info.votes[info.vote_index] = voted;
+    info.vote_index = (info.vote_index + 1) % info.votes.size();
   }
   //----------------------------------------------------------------------------
   bool service_node_list::load()

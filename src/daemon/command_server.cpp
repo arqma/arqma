@@ -354,6 +354,12 @@ t_command_server::t_command_server(
     , "print_checkpoints [+json] [start_height] [end_height]"
     , "Query the available checkpoints between the range, omit arguments to print the last 60 checkpoints"
     );
+    m_command_lookup.set_handler(
+      "print_sn_state_changes"
+    , std::bind(&t_command_parser_executor::print_sn_state_changes, &m_parser, p::_1)
+    , "print_sn_state_changes <start_height> [end_height]"
+    , "Query the state changes between the range, omit the last argument to scan until the current block"
+    );
 }
 
 bool t_command_server::process_command_str(const std::string& cmd)

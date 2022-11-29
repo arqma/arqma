@@ -62,12 +62,6 @@ namespace service_nodes
       FIELD(voter_index)
       FIELD(signature)
     END_SERIALIZE()
-
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE(voter_index)
-      std::string signature = epee::string_tools::pod_to_hex(this_ref.signature);
-      KV_SERIALIZE_VALUE(signature)
-    END_KV_SERIALIZE_MAP()
   };
 
   struct checkpoint_vote { crypto::hash block_hash; };
@@ -148,6 +142,7 @@ namespace service_nodes
     void                         remove_expired_votes(uint64_t height);
     void                         remove_used_votes   (std::vector<cryptonote::transaction> const &txs);
     std::vector<quorum_vote_t>   get_relayable_votes (uint64_t height) const;
+    bool received_checkpoint_vote(uint64_t height, size_t index_in_quorum) const;
 
   private:
     std::vector<pool_vote_entry> *find_vote_pool(const quorum_vote_t &vote, bool create_if_not_found = false);
