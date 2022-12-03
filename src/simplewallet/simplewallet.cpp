@@ -4339,7 +4339,7 @@ void simple_wallet::on_money_received(uint64_t height, const crypto::hash &txid,
           tr("WARNING: this transaction uses an unencrypted payment ID: consider using subaddresses instead");
     }
   }
-  if(unlock_time)
+  if(unlock_time && !cryptonote::is_coinbase(tx))
     message_writer() << tr("NOTE: This Transaction is locked, see details with: show_transfer ") + epee::string_tools::pod_to_hex(txid);
   if(m_auto_refresh_refreshing)
     m_cmd_binder.print_prompt();
