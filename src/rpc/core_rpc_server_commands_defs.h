@@ -2601,6 +2601,32 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
+  struct service_node_contribution
+  {
+    std::string key_image;
+    std::string key_image_pub_key;
+    uint64_t amount;
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(key_image)
+      KV_SERIALIZE(key_image_pub_key)
+      KV_SERIALIZE(amount)
+    END_KV_SERIALIZE_MAP()
+  };
+
+  struct service_node_contributor
+  {
+    uint64_t amount;
+    uint64_t reserved;
+    std::string address;
+    std::vector<service_node_contribution> locked_contributions;
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(amount)
+      KV_SERIALIZE(reserved)
+      KV_SERIALIZE(address)
+      KV_SERIALIZE(locked_contributions)
+    END_KV_SERIALIZE_MAP()
+  };
+
   struct COMMAND_RPC_GET_SERVICE_NODES
   {
     struct request_t
@@ -2616,32 +2642,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
 
     struct response_t
     {
-      struct contribution
-      {
-        std::string key_image;
-        std::string key_image_pub_key;
-        uint64_t amount;
-        BEGIN_KV_SERIALIZE_MAP()
-          KV_SERIALIZE(key_image)
-          KV_SERIALIZE(key_image_pub_key)
-          KV_SERIALIZE(amount)
-        END_KV_SERIALIZE_MAP()
-      };
-
-      struct contributor
-      {
-        uint64_t amount;
-        uint64_t reserved;
-        std::string address;
-        std::vector<contribution> locked_contributions;
-        BEGIN_KV_SERIALIZE_MAP()
-          KV_SERIALIZE(amount)
-          KV_SERIALIZE(reserved)
-          KV_SERIALIZE(address)
-          KV_SERIALIZE(locked_contributions)
-        END_KV_SERIALIZE_MAP()
-      };
-
       struct entry
       {
         std::string service_node_pubkey;
@@ -2656,7 +2656,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint32_t decommission_count;
         int64_t earned_downtime_blocks;
         std::vector<uint16_t> service_node_version;
-        std::vector<contributor> contributors;
+        std::vector<service_node_contributor> contributors;
         uint64_t total_contributed;
         uint64_t total_reserved;
         uint64_t staking_requirement;
@@ -2772,9 +2772,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       END_KV_SERIALIZE_MAP()
     };
 
-    using contribution = COMMAND_RPC_GET_SERVICE_NODES::response_t::contribution;
-    using contributor = COMMAND_RPC_GET_SERVICE_NODES::response_t::contributor;
-
     struct request_t
     {
       uint32_t limit;
@@ -2809,7 +2806,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint32_t decommission_count; // The number of times ther Service Node has been decommisioned since registration.
         int64_t earned_downtime_blocks; // The number of blocks earned towards decommissioning, or the number of blocks remaining until deregistration if currently decommissioned
         std::vector<uint16_t> service_node_version; // The major, minor, patch version of the Service Node respectively.
-        std::vector<contributor> contributors; // Array of contributors, contributing to this Service Node.
+        std::vector<service_node_contributor> contributors; // Array of contributors, contributing to this Service Node.
         uint64_t total_contributed; // The total amount of Loki in atomic units contributed to this Service Node.
         uint64_t total_reserved; // The total amount of Loki in atomic units reserved in this Service Node.
         uint64_t staking_requirement; // The staking requirement in atomic units that is required to be contributed to become a Service Node.

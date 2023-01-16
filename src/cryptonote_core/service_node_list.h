@@ -122,6 +122,8 @@ namespace service_nodes
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
     bool is_decommissioned() const { return active_since_height < 0; }
     bool is_active() const { return is_fully_funded() && !is_decommissioned(); }
+
+    bool can_transition_to_state(new_state proposed_state) const;
     size_t total_num_locked_contributions() const;
 
     BEGIN_SERIALIZE_OBJECT()
@@ -335,14 +337,18 @@ namespace service_nodes
 
     struct state_serialized
     {
+      uint8_t version;
       uint64_t height;
       std::vector<service_node_pubkey_info> infos;
       std::vector<key_image_blacklist_entry> key_image_blacklist;
+      quorum_for_serialization quorums;
 
       BEGIN_SERIALIZE()
-        FIELD(height)
+        VARINT_FIELD(version)
+        VARINT_FIELD(height)
         FIELD(infos)
         FIELD(key_image_blacklist)
+        FIELD(quorums)
       END_SERIALIZE()
     };
 
@@ -365,6 +371,7 @@ namespace service_nodes
       service_nodes_infos_t service_nodes_infos;
       std::vector<key_image_blacklist_entry> key_image_blacklist;
       block_height height;
+      quorum_manager quorums;
 
       std::vector<pubkey_and_sninfo> active_service_nodes_infos() const;
       std::vector<pubkey_and_sninfo> decommissioned_service_nodes_infos() const;
@@ -373,7 +380,7 @@ namespace service_nodes
   private:
 
     bool process_key_image_unlock_tx(const cryptonote::transaction& tx, uint64_t block_height);
-    void rescan_starting_from_curr_state();
+    void rescan_starting_from_curr_state(bool store_to_disk);
     bool process_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index);
     bool process_contribution_tx(const cryptonote::transaction& tx, uint64_t block_height, uint32_t index);
     bool process_state_change_tx(const cryptonote::transaction& tx, uint64_t block_height);
@@ -382,7 +389,6 @@ namespace service_nodes
 
     bool contribution_tx_output_has_correct_unlock_time(const cryptonote::transaction& tx, size_t i, uint64_t block_height) const;
 
-    void generate_quorums(cryptonote::block const &block);
     bool is_registration_tx(const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index, crypto::public_key& key, service_node_info& info) const;
     std::vector<crypto::public_key> update_and_get_expired_nodes(const std::vector<cryptonote::transaction>& txs, uint64_t block_height);
 
@@ -396,8 +402,15 @@ namespace service_nodes
 
     mutable boost::recursive_mutex m_sn_mutex;
 
-    std::map<block_height, quorum_manager> m_quorum_states;
-    decltype(m_quorum_states) m_old_quorum_states;
+    struct quorums_by_height
+    {
+      quorums_by_height() = default;
+      quorums_by_height(uint64_t height, quorum_manager quorums) : height(height), quorums(quorums) {}
+      uint64_t height;
+      quorum_manager quorums;
+    };
+
+    std::deque<quorums_by_height> m_old_quorum_states;
     std::vector<state_t> m_state_history;
     state_t m_state;
   };

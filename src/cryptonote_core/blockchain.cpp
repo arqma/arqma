@@ -3484,12 +3484,27 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
       }
 
       crypto::public_key const &state_change_service_node_pubkey = quorum->workers[state_change.service_node_index];
-      const uint64_t height = state_change.block_height;
-      const size_t num_blocks_to_check = service_nodes::STATE_CHANGE_TX_LIFETIME_IN_BLOCKS;
+      std::vector<service_nodes::service_node_pubkey_info> service_node_array = m_service_node_list.get_service_node_list_state({state_change_service_node_pubkey});
+      if (service_node_array.empty())
+      {
+        LOG_PRINT_L2("Service Node no longer exists on the network, state change can be ignored");
+        return false;
+      }
 
-      std::vector<std::pair<cryptonote::blobdata,block>> blocks;
+      service_nodes::service_node_info const &service_node_info = service_node_array[0].info;
+      if (!service_node_info.can_transition_to_state(state_change.state))
+      {
+        LOG_PRINT_L2("State change trying to vote Service Node into the same state it already is in, (similar to double_spend)");
+        tvc.m_double_spend = true;
+        return false;
+      }
+
+      const uint64_t height = state_change.block_height;
+      constexpr size_t num_blocks_to_check = service_nodes::STATE_CHANGE_TX_LIFETIME_IN_BLOCKS;
+
+      std::vector<std::pair<cryptonote::blobdata, block>> blocks;
       std::vector<cryptonote::blobdata> txs;
-      if(!get_blocks(height, num_blocks_to_check, blocks, txs))
+      if (!get_blocks(height, num_blocks_to_check, blocks, txs))
       {
         MERROR_VER("Failed to get historical blocks to check against previous state changes for de-duplication");
         return false;
@@ -3500,11 +3515,11 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
         transaction existing_tx;
         if (!parse_and_validate_tx_from_blob(blob, existing_tx))
         {
-          MERROR_VER("transaction can not be validated from blob, possibly corrupt blockchain");
+          MERROR_VER("tx could not be validated from blob, possibly corrupt blockchain");
           continue;
         }
 
-        if(existing_tx.type != txtype::state_change)
+        if (existing_tx.type != txtype::state_change)
           continue;
 
         tx_extra_service_node_state_change existing_state_change;
@@ -3514,11 +3529,14 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
           continue;
         }
 
-        crypto::public_key existing_state_change_service_node_pubkey;
-        if (!m_service_node_list.get_quorum_pubkey(quorum_type, service_nodes::quorum_group::worker, existing_state_change.block_height, existing_state_change.service_node_index, existing_state_change_service_node_pubkey))
+        const auto existing_quorum = m_service_node_list.get_testing_quorum(quorum_type, existing_state_change.block_height);
+        if (!existing_quorum)
+        {
+          MERROR_VER("Could not get obligations quorum for recent state change tx");
           continue;
+        }
 
-        if (existing_state_change_service_node_pubkey == state_change_service_node_pubkey)
+        if (existing_quorum->workers[existing_state_change.service_node_index] == state_change_service_node_pubkey)
         {
           MERROR_VER("Already seen this state change tx (aka double spend)");
           tvc.m_double_spend = true;

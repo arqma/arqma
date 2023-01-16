@@ -177,7 +177,7 @@ namespace cryptonote
     uint64_t const height = get_block_height(block);
     if (height < service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL || block.major_version < network_version_16) return;
 
-    uint64_t const end_cull_height = height - service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
+    uint64_t end_cull_height = m_db->get_checkpoint_immutable_height();
     uint64_t start_cull_height = (end_cull_height < service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL) ? 0 : end_cull_height - service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
 
     if ((start_cull_height % service_nodes::CHECKPOINT_INTERVAL) > 0)

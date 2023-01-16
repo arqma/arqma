@@ -128,14 +128,11 @@ namespace cryptonote
         return false;
       }
 
+      crypto::public_key service_node_to_change;
       auto const quorum_type = service_nodes::quorum_type::obligations;
       auto const quorum_group = service_nodes::quorum_group::worker;
-      crypto::public_key service_node_to_change;
-      if (!service_node_list.get_quorum_pubkey(quorum_type, quorum_group, state_change.block_height, state_change.service_node_index, service_node_to_change))
-      {
-        MERROR("Could not resolve the service node public key from the information in the state change, possibly corrupt tx in your blockchain");
-        return false;
-      }
+
+      bool const can_resolve_quorum_pubkey = service_node_list.get_quorum_pubkey(quorum_type, quorum_group, state_change.block_height, state_change.service_node_index, service_node_to_change);
 
       std::vector<transaction> pool_txs;
       get_transactions(pool_txs);
@@ -152,17 +149,23 @@ namespace cryptonote
         }
 
         crypto::public_key service_node_to_change_in_the_pool;
-        if (service_node_list.get_quorum_pubkey(quorum_type, quorum_group, pool_tx_state_change.block_height, pool_tx_state_change.service_node_index, service_node_to_change_in_the_pool))
-         {
-           if (service_node_to_change == service_node_to_change_in_the_pool)
-             return true;
-         }
-         else
-         {
-           MWARNING("Could not resolve the service node public key from the information in a pooled tx state change, possibly corrupt tx in your blockchain, falling back to primitive checking method");
-           if (state_change == pool_tx_state_change)
-             return true;
-         }
+        bool same_service_node = false;
+        if (can_resolve_quorum_pubkey && service_node_list.get_quorum_pubkey(quorum_type, quorum_group, pool_tx_state_change.block_height, pool_tx_state_change.service_node_index, service_node_to_change_in_the_pool))
+        {
+          same_service_node = (service_node_to_change == service_node_to_change_in_the_pool);
+        }
+        else
+        {
+          same_service_node = (state_change == pool_tx_state_change);
+        }
+
+        if (same_service_node && pool_tx_state_change.state == state_change.state)
+          return true;
+        else
+        {
+          if (state_change == pool_tx_state_change)
+            return true;
+        }
       }
     }
     else if(tx.type == txtype::key_image_unlock)

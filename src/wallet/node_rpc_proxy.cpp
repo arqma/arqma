@@ -359,7 +359,7 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> NodeRPCP
       m_contributed_service_nodes.clear();
       std::copy_if(m_all_service_nodes.begin(), m_all_service_nodes.end(), std::back_inserter(m_contributed_service_nodes), [&contributor](const cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry &e)
       {
-        return std::any_of(e.contributors.begin(), e.contributors.end(), [&contributor](const cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::contributor &c) { return contributor == c.address; });
+        return std::any_of(e.contributors.begin(), e.contributors.end(), [&contributor](const cryptonote::service_node_contributor &c) { return contributor == c.address; });
       });
       m_contributed_service_nodes_cached_height = height;
       m_contributed_service_nodes_cached_address = contributor;
