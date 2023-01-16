@@ -591,7 +591,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "(SunOS|Solaris)")
 endif()
 
 if(APPLE AND NOT IOS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -std=c++17")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default")
   if(NOT OpenSSL_DIR AND NOT DEFINED ENV{OpenSSL_DIR})
       EXECUTE_PROCESS(COMMAND brew --prefix openssl@1.1
         OUTPUT_VARIABLE OPENSSL_ROOT_DIR
@@ -609,6 +609,10 @@ if(STATIC AND NOT IOS)
   elseif(MINGW)
     set(OPENSSL_LIBRARIES "${OPENSSL_LIBRARIES};${EXTRA_LIBRARIES}")
   endif()
+endif()
+
+if(WIN32)
+  list(APPEND OPENSSL_LIBRARIES ws2_32 crypt32)
 endif()
 
 find_package(HIDAPI)
@@ -1048,11 +1052,17 @@ if(${BOOST_IGNORE_SYSTEM_PATHS} STREQUAL "ON")
 endif()
 
 set(OLD_LIB_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+if(APPLE)
+  set(Boost_NO_BOOST_CMAKE ON)
+endif()
+
 if(STATIC)
-  set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+  if(MINGW)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+  endif()
+
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_STATIC_RUNTIME ON)
-  set(Boost_NO_BOOST_CMAKE ON)
 endif()
 
 if(DEPENDS)

@@ -1439,9 +1439,8 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::relay_service_node_votes()
   {
-    std::vector<service_nodes::quorum_vote_t> relayable_votes = m_quorum_cop.get_relayable_votes(get_current_blockchain_height());
     NOTIFY_NEW_SERVICE_NODE_VOTE::request req = {};
-    req.votes = std::move(relayable_votes);
+    req.votes = m_quorum_cop.get_relayable_votes(get_current_blockchain_height());
     if(req.votes.size())
     {
       cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
