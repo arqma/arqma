@@ -183,7 +183,7 @@ namespace cryptonote
      * @return true if alternate blocks are allowed given the parameters,
      *         otherwise false
      */
-    bool is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height) const;
+    bool is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height);
 
     /**
      * @brief gets the highest checkpoint height
@@ -203,6 +203,7 @@ namespace cryptonote
 
   private:
     uint64_t m_last_cull_height = 0;
+    uint64_t m_oldest_allowable_alternative_block = 0;
     BlockchainDB *m_db;
   };
 

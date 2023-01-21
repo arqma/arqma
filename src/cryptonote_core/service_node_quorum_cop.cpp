@@ -352,6 +352,10 @@ namespace service_nodes
   bool quorum_cop::handle_vote(quorum_vote_t const &vote, cryptonote::vote_verification_context &vvc)
   {
     vvc = {};
+    uint64_t const latest_height = std::max(m_core.get_current_blockchain_height(), m_core.get_target_blockchain_height());
+    if (!verify_vote_age(vote, latest_height, vvc))
+      return false;
+
     std::shared_ptr<const testing_quorum> quorum = m_core.get_testing_quorum(vote.type, vote.block_height);
     if (!quorum)
     {
@@ -360,13 +364,14 @@ namespace service_nodes
       return false;
     }
 
-    uint64_t latest_height = std::max(m_core.get_current_blockchain_height(), m_core.get_target_blockchain_height());
-    std::vector<pool_vote_entry> votes = m_vote_pool.add_pool_vote_if_unique(latest_height, vote, vvc, *quorum);
-    bool result = !vvc.m_verification_failed;
+    if (!verify_vote_against_quorum(vote, vvc, *quorum))
+      return false;
 
+    std::vector<pool_vote_entry> votes = m_vote_pool.add_pool_vote_if_unique(vote, vvc);
     if (!vvc.m_added_to_pool)
-      return result;
+      return true;
 
+    bool result = true;
     switch(vote.type)
     {
       default:

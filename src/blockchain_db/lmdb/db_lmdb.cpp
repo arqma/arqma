@@ -4207,14 +4207,34 @@ std::vector<checkpoint_t> BlockchainLMDB::get_checkpoints_range(uint64_t start, 
   return result;
 }
 
-uint64_t BlockchainLMDB::get_checkpoint_immutable_height() const
+bool BlockchainLMDB::get_immutable_checkpoint(checkpoint_t *immutable_checkpoint) const
 {
   size_t constexpr NUM_CHECKPOINTS = service_nodes::CHECKPOINT_NUM_CHECKPOINTS_FOR_CHAIN_FINALITY;
-  std::vector<checkpoint_t> const checkpoints = get_checkpoints_range(height(), 0, NUM_CHECKPOINTS);
-  uint64_t result = 0;
-  if (checkpoints.size() == NUM_CHECKPOINTS)
-    result = checkpoints.back().height;
-  return result;
+  static_assert(NUM_CHECKPOINTS == 2, "Expect checkpoint finality to be 2, otherwise the immutable logic needs to check for any hardcoded checkpoints inbetween");
+
+  std::vector<checkpoint_t> checkpoints = get_checkpoints_range(height(), 0, NUM_CHECKPOINTS);
+
+  if (checkpoints.empty())
+    return false;
+
+  checkpoint_t *checkpoint_ptr = nullptr;
+  if (checkpoints[0].type != checkpoint_type::service_node)
+  {
+    checkpoint_ptr = &checkpoints[0];
+  }
+  else if (checkpoints.size() == 1)
+  {
+    checkpoint_ptr = &checkpoints[1];
+  }
+  else
+  {
+    return false;
+  }
+
+  if (immutable_checkpoint)
+    *immutable_checkpoint = std::move(*checkpoint_ptr);
+
+  return true;
 }
 
 void BlockchainLMDB::pop_block(block& blk, std::vector<transaction>& txs)

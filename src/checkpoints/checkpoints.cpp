@@ -177,7 +177,12 @@ namespace cryptonote
     uint64_t const height = get_block_height(block);
     if (height < service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL || block.major_version < network_version_16) return;
 
-    uint64_t end_cull_height = m_db->get_checkpoint_immutable_height();
+    uint64_t end_cull_height = 0;
+    {
+      checkpoint_t immutable_checkpoint;
+      if (m_db->get_immutable_checkpoint(&immutable_checkpoint))
+        end_cull_height = immutable_checkpoint.height;
+    }
     uint64_t start_cull_height = (end_cull_height < service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL) ? 0 : end_cull_height - service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
 
     if ((start_cull_height % service_nodes::CHECKPOINT_INTERVAL) > 0)
@@ -246,35 +251,20 @@ namespace cryptonote
     return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height) const
+  bool checkpoints::is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height)
   {
     if(0 == block_height)
       return false;
 
-    size_t num_desired_checkpoints = 2;
-    std::vector<checkpoint_t> checkpoints = m_db->get_checkpoints_range(blockchain_height, 0, num_desired_checkpoints);
-
-    if(checkpoints.size() == 0)
-      return true;
-
-    uint64_t sentinel_reorg_height = 0;
-    if(checkpoints[0].type == checkpoint_type::service_node)
+    checkpoint_t immutable_checkpoint;
+    uint64_t immutable_height = 0;
+    if (m_db->get_immutable_checkpoint(&immutable_checkpoint))
     {
-      if(checkpoints.size() == 1)
-      {
-        return true;
-      }
-      else
-      {
-        sentinel_reorg_height = checkpoints[1].height;
-      }
-    }
-    else
-    {
-      sentinel_reorg_height = checkpoints[0].height;
+      immutable_height = immutable_checkpoint.height;
     }
 
-    bool result = sentinel_reorg_height < block_height;
+    m_oldest_allowable_alternative_block = std::max(immutable_height, m_oldest_allowable_alternative_block);
+    bool result = block_height > m_oldest_allowable_alternative_block;
     return result;
   }
   //---------------------------------------------------------------------------
