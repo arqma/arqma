@@ -33,71 +33,34 @@ if(WIN32 OR STATIC)
   add_definitions(-DSTATICLIB)
   add_definitions(-DMINIUPNP_STATICLIB)
 endif()
- 
+
 function(arqma_private_headers group)
-  source_group("${group}\\Private"
-    FILES
-      ${ARGN})
+  source_group("${group}\\Private" FILES ${ARGN})
 endfunction()
 
 function(arqma_install_headers subdir)
-  install(
-    FILES       ${ARGN}
-    DESTINATION "include/${subdir}"
-    COMPONENT   development)
+  install(FILES ${ARGN} DESTINATION "include/${subdir}" COMPONENT development)
 endfunction()
 
 function(enable_stack_trace target)
   if(STACK_TRACE)
-    set_property(TARGET ${target}
-      APPEND PROPERTY COMPILE_DEFINITIONS "STACK_TRACE")
+    set_property(TARGET ${target} APPEND PROPERTY COMPILE_DEFINITIONS "STACK_TRACE")
     if(STATIC)
-      set_property(TARGET "${target}"
-        APPEND PROPERTY LINK_FLAGS "-Wl,--wrap=__cxa_throw")
+      set_property(TARGET "${target}" APPEND PROPERTY LINK_FLAGS "-Wl,--wrap=__cxa_throw")
     endif()
   endif()
 endfunction()
 
 function(arqma_add_executable name)
-  source_group("${name}"
-    FILES
-      ${ARGN})
-
-  add_executable("${name}"
-    ${ARGN})
-  target_link_libraries("${name}"
-    PRIVATE
-      ${EXTRA_LIBRARIES})
-  set_property(TARGET "${name}"
-    PROPERTY
-      FOLDER "prog")
-  set_property(TARGET "${name}"
-    PROPERTY
-      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+  source_group("${name}" FILES ${ARGN})
+  add_executable("${name}" ${ARGN})
+  target_link_libraries("${name}" PRIVATE ${EXTRA_LIBRARIES})
+  set_property(TARGET "${name}" PROPERTY FOLDER "prog")
+  set_property(TARGET "${name}" PROPERTY RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
   enable_stack_trace("${name}")
-endfunction()
 
-function(arqma_add_library name)
-    arqma_add_library_with_deps(NAME "${name}" SOURCES ${ARGN})
-endfunction()
-
-function(arqma_add_library_with_deps)
-  cmake_parse_arguments(ARQMA_ADD_LIBRARY "" "NAME" "DEPENDS;SOURCES" ${ARGN})
-  source_group("${ARQMA_ADD_LIBRARY_NAME}" FILES ${ARQMA_ADD_LIBRARY_SOURCES})
-
-  # Define a ("virtual") object library and an actual library that links those
-  # objects together. The virtual libraries can be arbitrarily combined to link
-  # any subset of objects into one library archive. This is used for releasing
-  # libwallet, which combines multiple components.
-  set(objlib obj_${ARQMA_ADD_LIBRARY_NAME})
-  add_library(${objlib} OBJECT ${ARQMA_ADD_LIBRARY_SOURCES})
-  add_library("${ARQMA_ADD_LIBRARY_NAME}" $<TARGET_OBJECTS:${objlib}>)
-  if(ARQMA_ADD_LIBRARY_DEPENDS)
-    add_dependencies(${objlib} ${ARQMA_ADD_LIBRARY_DEPENDS})
-  endif()
-  set_property(TARGET "${ARQMA_ADD_LIBRARY_NAME}" PROPERTY FOLDER "libs")
-  target_compile_definitions(${objlib}
-    PRIVATE $<TARGET_PROPERTY:${ARQMA_ADD_LIBRARY_NAME},INTERFACE_COMPILE_DEFINITIONS>)
+  arqma_set_target_no_relink("${name}")
+  arqma_set_target_strip("${name}")
 endfunction()
 
 include(Version)
@@ -116,15 +79,11 @@ add_subdirectory(net)
 add_subdirectory(blockchain_db)
 add_subdirectory(mnemonics)
 add_subdirectory(rpc)
-if(NOT IOS)
-  add_subdirectory(serialization)
-endif()
 add_subdirectory(wallet)
-if(NOT IOS)
-  add_subdirectory(p2p)
-endif()
 add_subdirectory(cryptonote_protocol)
 if(NOT IOS)
+  add_subdirectory(serialization)
+  add_subdirectory(p2p)
   add_subdirectory(simplewallet)
   #add_subdirectory(gen_multisig)
   add_subdirectory(gen_ssl_cert)

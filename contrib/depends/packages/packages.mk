@@ -5,8 +5,8 @@ native_packages :=
 hardware_packages := hidapi libusb
 hardware_native_packages :=
 
-multiprocess_packages = libmultiprocess capnp
-multiprocess_native_packages = native_libmultiprocess native_capnp
+android_native_packages = android_ndk
+android_packages = ncurses readline sodium
 
 darwin_native_packages = $(hardware_native_packages)
 darwin_packages = ncurses readline sodium $(hardware_packages)
@@ -21,7 +21,8 @@ endif
 mingw32_packages = icu4c sodium $(hardware_packages)
 mingw32_native_packages = $(hardware_native_packages)
 
-ifneq ($(build_os),darwin)
-darwin_native_packages += native_cctools
-endif
+$(host_arch)_$(host_os)_native_packages += native_b2
 
+ifneq ($(build_os), darwin)
+darwin_native_packages += darwin_sdk native_clang native_cctools native_libtapi
+endif

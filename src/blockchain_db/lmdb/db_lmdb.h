@@ -251,7 +251,7 @@ public:
 
   std::vector<crypto::hash> get_hashes_range(const uint64_t& h1, const uint64_t& h2) const override;
 
-  crypto::hash top_block_hash(uint64_t *block_height = NULL) const;
+  crypto::hash top_block_hash(uint64_t *block_height = NULL) const override;
 
   block get_top_block() const override;
 
@@ -337,7 +337,7 @@ public:
   bool batch_start(uint64_t batch_num_blocks=0, uint64_t batch_bytes=0) override;
   void batch_commit();
   void batch_stop() override;
-  void batch_abort();
+  void batch_abort() override;
 
   void block_wtxn_start() override;
   void block_wtxn_stop() override;
@@ -392,7 +392,7 @@ private:
 
   void remove_block() override;
 
-  uint64_t add_transaction_data(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& tx, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash);
+  uint64_t add_transaction_data(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& tx, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash) override;
 
   void remove_transaction_data(const crypto::hash& tx_hash, const transaction& tx) override;
 
@@ -435,7 +435,7 @@ private:
 
   std::vector<uint64_t> get_block_info_64bit_fields(uint64_t start_height, size_t count, off_t offset) const;
 
-  uint64_t get_max_block_size();
+  uint64_t get_max_block_size() override;
   void add_max_block_size(uint64_t sz) override;
 
   // fix up anything that may be wrong due to past bugs

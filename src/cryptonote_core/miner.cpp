@@ -78,6 +78,7 @@
 using namespace epee;
 
 #include "miner.h"
+#include "crypto/hash.h"
 
 namespace cryptonote
 {
@@ -350,7 +351,6 @@ namespace cryptonote
   {
     boost::interprocess::ipcdetail::atomic_write32(&m_stop, 1);
   }
-  extern "C" void rx_stop_mining(void);
   //-----------------------------------------------------------------------------------------------------
   bool miner::stop()
   {
@@ -379,7 +379,6 @@ namespace cryptonote
 
     MINFO("Mining has been stopped, " << m_threads.size() << " finished" );
     m_threads.clear();
-    rx_stop_mining();
     return true;
   }
   //-----------------------------------------------------------------------------------------------------
@@ -437,6 +436,8 @@ namespace cryptonote
   bool miner::worker_thread()
   {
     uint32_t th_local_index = boost::interprocess::ipcdetail::atomic_inc32(&m_thread_index);
+    crypto::rx_set_miner_thread(th_local_index, tools::get_max_concurrency());
+
     MLOG_SET_THREAD_NAME(std::string("[miner ") + std::to_string(th_local_index) + "]");
     MGINFO("Miner thread was started ["<< th_local_index << "]");
     uint32_t nonce = m_starter_nonce + th_local_index;

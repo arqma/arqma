@@ -512,13 +512,11 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
       return false;
   }
 
-  if (test_options && test_options->long_term_block_weight_window)
-    m_long_term_block_weights_window = test_options->long_term_block_weight_window;
-
+  if (m_hardfork->get_current_version() >= RX_BLOCK_VERSION)
   {
-    db_txn_guard txn_guard(m_db, m_db->is_read_only());
-    if(!update_next_cumulative_weight_limit())
-      return false;
+    const crypto::hash seedhash = get_block_id_by_height(crypto::rx_seedheight(m_db->height()));
+    if (seedhash != crypto::null_hash)
+      rx_set_main_seedhash(seedhash.data, tools::get_max_concurrency());
   }
 
   hook_block_added(m_checkpoints);
@@ -655,6 +653,12 @@ void Blockchain::pop_blocks(uint64_t nblocks)
 
   if(stop_batch)
     m_db->batch_stop();
+
+  if (m_hardfork->get_current_version() >= RX_BLOCK_VERSION)
+  {
+    const crypto::hash seedhash = get_block_id_by_height(crypto::rx_seedheight(m_db->height()));
+    rx_set_main_seedhash(seedhash.data, tools::get_max_concurrency());
+  }
 }
 //------------------------------------------------------------------
 // This function tells BlockchainDB to remove the top block from the
@@ -1243,12 +1247,17 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<block_extended_info>
   }
 
   m_hardfork->reorganize_from_chain_height(split_height);
-  get_block_longhash_reorg(split_height);
 
   std::shared_ptr<tools::Notify> reorg_notify = m_reorg_notify;
   if (reorg_notify)
     reorg_notify->notify("%s", std::to_string(split_height).c_str(), "%h", std::to_string(m_db->height()).c_str(),
         "%n", std::to_string(m_db->height() - split_height).c_str());
+
+  const uint64_t new_height = m_db->height();
+  const crypto::hash seedhash = get_block_id_by_height(crypto::rx_seedheight(new_height));
+
+  if (m_hardfork->get_current_version() >= RX_BLOCK_VERSION)
+    rx_set_main_seedhash(seedhash.data, tools::get_max_concurrency());
 
   MGINFO_GREEN("REORGANIZE SUCCESS! on height: " << split_height << ", new blockchain size: " << m_db->height());
   return true;
@@ -2015,7 +2024,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
       {
         seedhash = get_block_id_by_height(seedheight);
       }
-      get_altblock_longhash(bei.bl, proof_of_work, get_current_blockchain_height(), bei.height, seedheight, seedhash);
+      get_altblock_longhash(bei.bl, proof_of_work, seedhash);
     }
     else
     {
@@ -4344,6 +4353,11 @@ leave:
   std::shared_ptr<tools::Notify> block_notify = m_block_notify;
   if (block_notify)
     block_notify->notify("%s", epee::string_tools::pod_to_hex(id).c_str(), NULL);
+
+  const crypto::hash seedhash = get_block_id_by_height(crypto::rx_seedheight(new_height));
+
+  if (m_hardfork->get_current_version() >= RX_BLOCK_VERSION)
+    rx_set_main_seedhash(seedhash.data, tools::get_max_concurrency());
 
   return true;
 }
