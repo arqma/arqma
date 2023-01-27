@@ -1621,6 +1621,23 @@ namespace service_nodes
     info.vote_index = (info.vote_index + 1) % info.votes.size();
   }
   //----------------------------------------------------------------------------
+  static quorum_manager quorum_for_serialization_to_quorum_manager(service_node_list::quorum_for_serialization const &source)
+  {
+    quorum_manager result = {};
+    {
+      auto quorum = std::make_shared<testing_quorum>(source.quorums[static_cast<uint8_t>(quorum_type::obligations)]);
+      result.obligations = quorum;
+    }
+
+    if ((source.height + REORG_SAFETY_BUFFER_IN_BLOCKS) % CHECKPOINT_INTERVAL == 0)
+    {
+      auto quorum = std::make_shared<testing_quorum>(source.quorums[static_cast<uint8_t>(quorum_type::checkpointing)]);
+      result.checkpointing = quorum;
+    }
+
+    return result;
+  }
+  //----------------------------------------------------------------------------
   bool service_node_list::load(const uint64_t current_height)
   {
     LOG_PRINT_L1("service_node_list::load()");
@@ -1657,10 +1674,21 @@ namespace service_nodes
       CHECK_AND_ASSERT_MES(old_data || new_data, false, "Failed to parse service node data from blob");
       if (old_data)
       {
-        new_data_in.states.emplace_back();
-        new_data_in.quorum_states = std::move(old_data_in.quorum_states);
-        state_serialized &new_state = new_data_in.states.back();
+        new_data_in = {};
+        new_data_in.states.reserve(old_data_in.quorum_states.size() + 1);
+        for (quorum_for_serialization &entry : old_data_in.quorum_states)
+        {
+          if (entry.height == old_data_in.height)
+            continue;
 
+          new_data_in.states.emplace_back();
+          state_serialized &new_state = new_data_in.states.back();
+          new_state.height = entry.height;
+          new_state.quorums = std::move(entry);
+        }
+
+        new_data_in.states.emplace_back();
+        state_serialized &new_state = new_data_in.states.back();
         new_data_in.version = old_data_in.version;
         new_state.height = old_data_in.height;
         new_state.infos = std::move(old_data_in.infos);
@@ -1681,16 +1709,7 @@ namespace service_nodes
 
         quorums_by_height entry = {};
         entry.height = states.height;
-        {
-          auto quorum = std::make_shared<testing_quorum>(states.quorums[static_cast<uint8_t>(quorum_type::obligations)]);
-          entry.quorums.obligations = quorum;
-        }
-
-        if ((states.height + REORG_SAFETY_BUFFER_IN_BLOCKS) % CHECKPOINT_INTERVAL == 0)
-        {
-          auto quorum = std::make_shared<testing_quorum>(states.quorums[static_cast<uint8_t>(quorum_type::checkpointing)]);
-          entry.quorums.checkpointing = quorum;
-        }
+        entry.quorums = quorum_for_serialization_to_quorum_manager(states);
 
         if (states.height <= last_loaded_height)
         {
@@ -1704,18 +1723,26 @@ namespace service_nodes
 
     {
       assert(new_data_in.states.size() > 0);
+      size_t const start_index = new_data_in.states.size() >= (MAX_SHORT_TERM_STATE_HISTORY + 1) ? new_data_in.states.size() - (MAX_SHORT_TERM_STATE_HISTORY - 1) : 0;
       size_t const last_index = new_data_in.states.size() - 1;
-      m_state_history.resize(last_index);
+      m_state_history.reserve(MAX_SHORT_TERM_STATE_HISTORY);
       uint64_t last_loaded_height = 0;
-      for (size_t i = 0; i <= last_index; i++)
+      for (size_t i = start_index; i <= last_index; i++)
       {
         state_serialized &source = new_data_in.states[i];
-        state_t &dest = (i == last_index) ? m_state : m_state_history[i];
-        dest.height = source.height;
-        dest.key_image_blacklist = std::move(source.key_image_blacklist);
+        state_t *dest = &m_state;
+        if (i != last_index)
+        {
+          m_state_history.emplace_back();
+          dest = &m_state_history.back();
+        }
+
+        dest->height = source.height;
+        dest->key_image_blacklist = std::move(source.key_image_blacklist);
+        dest->quorums = quorum_for_serialization_to_quorum_manager(source.quorums);
 
         for (auto &pubkey_info : source.infos)
-          dest.service_nodes_infos[pubkey_info.pubkey] = std::move(pubkey_info.info);
+          dest->service_nodes_infos[pubkey_info.pubkey] = std::move(pubkey_info.info);
 
         if (source.height <= last_loaded_height)
         {

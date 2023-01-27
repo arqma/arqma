@@ -43,6 +43,8 @@
 
 #define RX_LOGCAT	"RandomARQ"
 
+#define alloc_err_msg(x) mdebug(RX_LOGCAT, x);
+
 static CTHR_RWLOCK_TYPE main_dataset_lock = CTHR_RWLOCK_INIT;
 static CTHR_RWLOCK_TYPE main_cache_lock = CTHR_RWLOCK_INIT;
 
@@ -216,7 +218,7 @@ static void rx_alloc_dataset(randomx_flags flags, randomx_dataset** dataset, int
 
   *dataset = randomx_alloc_dataset((flags | RANDOMX_FLAG_LARGE_PAGES) & ~disabled_flags());
   if (!*dataset) {
-    mwarning(RX_LOGCAT, "Couldn't allocate RandomARQ dataset using large pages");
+    alloc_err_msg("Couldn't allocate RandomARQ dataset using large pages");
     *dataset = randomx_alloc_dataset(flags & ~disabled_flags());
     if (!*dataset) {
       merror(RX_LOGCAT, "Couldn't allocate RandomARQ dataset");
@@ -232,7 +234,7 @@ static void rx_alloc_cache(randomx_flags flags, randomx_cache** cache)
 
   *cache = randomx_alloc_cache((flags | RANDOMX_FLAG_LARGE_PAGES) & ~disabled_flags());
   if (!*cache) {
-    mwarning(RX_LOGCAT, "Couldn't allocate RandomARQ cache using large pages");
+    alloc_err_msg("Couldn't allocate RandomARQ cache using large pages");
     *cache = randomx_alloc_cache(flags & ~disabled_flags());
     if (!*cache) local_abort("Couldn't allocate RandomARQ cache");
   }
@@ -250,7 +252,11 @@ static void rx_init_full_vm(randomx_flags flags, randomx_vm** vm)
 
   *vm = randomx_create_vm((flags | RANDOMX_FLAG_LARGE_PAGES | RANDOMX_FLAG_FULL_MEM) & ~disabled_flags(), NULL, main_dataset);
   if (!*vm) {
-    mwarning(RX_LOGCAT, "Couldn't allocate RandomARQ full VM using large pages");
+    static int shown = 0;
+    if (!shown) {
+      shown = 1;
+      alloc_err_msg("Couldn't allocate RandomARQ full VM using large pages (will print only once)");
+    }
     *vm = randomx_create_vm((flags | RANDOMX_FLAG_FULL_MEM) & ~disabled_flags(), NULL, main_dataset);
     if (!*vm) {
       merror(RX_LOGCAT, "Couldn't allocate RandomARQ full VM");
@@ -273,7 +279,11 @@ static void rx_init_light_vm(randomx_flags flags, randomx_vm** vm, randomx_cache
 
   *vm = randomx_create_vm((flags | RANDOMX_FLAG_LARGE_PAGES) & ~disabled_flags(), cache, NULL);
   if (!*vm) {
-    mwarning(RX_LOGCAT, "Couldn't allocate RandomARQ light VM using large pages");
+    static int shown = 0;
+    if (!shown) {
+      shown = 1;
+      alloc_err_msg("Couldn't allocate RandomARQ light VM using large pages (will print only once)");
+    }
     *vm = randomx_create_vm(flags & ~disabled_flags(), cache, NULL);
     if (!*vm) local_abort("Couldn't allocate RandomARQ light VM");
   }
