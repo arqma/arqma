@@ -35,7 +35,7 @@ arqma_add_executable(gen_ssl_cert
 target_link_libraries(gen_ssl_cert
   PRIVATE
     common
-    epee
+    ${EPEE_READLINE}
     version
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}

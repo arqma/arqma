@@ -80,7 +80,7 @@ target_link_libraries(daemon
     daemonizer
     serialization
     daemon_rpc_server
-    epee
+    ${EPEE_READLINE}
     version
     ${Boost_CHRONO_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
