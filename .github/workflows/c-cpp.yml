@@ -93,7 +93,7 @@ jobs:
     - name: build
       run: |
         ccache --max-size=150M
-        make release-static-win -j2
+        make release-static-win
     - name: Upload windows artifacts
       uses: actions/upload-artifact@master
       with:

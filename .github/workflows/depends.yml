@@ -78,7 +78,7 @@ jobs:
     - name: build
       run: |
         ${{env.CCACHE_SETTINGS}}
-        make depends target=${{ matrix.toolchain.host }} cmake_opts=${{ matrix.toolchain.cmake_opts }} -j2
+        make depends target=${{ matrix.toolchain.host }} cmake_opts=${{ matrix.toolchain.cmake_opts }}
     - uses: actions/upload-artifact@v2
       if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' || matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'aarch64-apple-darwin' || matrix.toolchain.host == 'aarch64-linux-gnu' || 'arm-linux-gnueabihf' }}
       with:
