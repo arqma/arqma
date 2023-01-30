@@ -127,8 +127,10 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT                   32
-#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST              1
+#define P2P_DEFAULT_CONNECTIONS_COUNT_OUT               8
+#define P2P_DEFAULT_CONNECTIONS_COUNT_IN                32
+#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_OUT          8
+#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_IN           8
 
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     52428800   // 50MB maximum packet size
@@ -365,6 +367,8 @@ namespace cryptonote
     network_version_14,
     network_version_15,
     network_version_16,
+
+    network_version_count,
   };
 
   enum network_type : uint8_t

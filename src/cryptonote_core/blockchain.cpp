@@ -478,9 +478,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   {
     m_timestamps_and_difficulties_height = 0;
     m_hardfork->reorganize_from_chain_height(get_current_blockchain_height());
-    uint64_t top_block_height;
-    crypto::hash top_block_hash = get_tail_id(top_block_height);
-    m_tx_pool.on_blockchain_dec(top_block_height, top_block_hash);
+    m_tx_pool.on_blockchain_dec();
   }
 
   if(zmq_enabled)
@@ -733,9 +731,7 @@ block Blockchain::pop_block_from_blockchain()
   m_blocks_txs_check.clear();
 
   CHECK_AND_ASSERT_THROW_MES(update_next_cumulative_weight_limit(), "Error updating next cumulative weight limit");
-  uint64_t top_block_height;
-  crypto::hash top_block_hash = get_tail_id(top_block_height);
-  m_tx_pool.on_blockchain_dec(top_block_height, top_block_hash);
+  m_tx_pool.on_blockchain_dec();
   invalidate_block_template_cache();
 
   return popped_block;
@@ -2151,10 +2147,11 @@ bool Blockchain::get_blocks(uint64_t start_offset, size_t count, std::vector<std
   if(start_offset >= height)
     return false;
 
-  blocks.reserve(blocks.size() + height - start_offset);
-  for(size_t i = start_offset; i < start_offset + count && i < height; i++)
+  const size_t num_blocks = std::min<uint64_t>(height - start_offset, count);
+  blocks.reserve(blocks.size() + num_blocks);
+  for (size_t i = 0; i < num_blocks; i++)
   {
-    blocks.push_back(std::make_pair(m_db->get_block_blob_from_height(i), block()));
+    blocks.emplace_back(m_db->get_block_blob_from_height(start_offset + i), block{});
     if (!parse_and_validate_block_from_blob(blocks.back().first, blocks.back().second))
     {
       LOG_ERROR("Invalid block");
@@ -2200,7 +2197,7 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
       try
       {
         checkpoint_t checkpoint;
-        if (m_db->get_block_checkpoint(block_height, checkpoint))
+        if (get_checkpoint(block_height, checkpoint))
           e.checkpoint = t_serializable_object_to_blob(checkpoint);
       }
       catch (const std::exception &e)
@@ -2587,7 +2584,7 @@ bool Blockchain::get_transactions(const std::vector<crypto::hash>& txs_ids, std:
       cryptonote::blobdata tx;
       if (m_db->get_tx_blob(tx_hash, tx))
       {
-        txs.push_back(transaction());
+        txs.emplace_back();
         if (!parse_and_validate_tx_from_blob(tx, txs.back()))
         {
           LOG_ERROR("Invalid transaction");
@@ -3500,8 +3497,8 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
         return false;
       }
 
-      service_nodes::service_node_info const &service_node_info = service_node_array[0].info;
-      if (!service_node_info.can_transition_to_state(state_change.state))
+      service_nodes::service_node_info const &service_node_info = *service_node_array[0].info;
+      if (!service_node_info.can_transition_to_state(state_change.block_height, state_change.state))
       {
         LOG_PRINT_L2("State change trying to vote Service Node into the same state it already is in, (similar to double_spend)");
         tvc.m_double_spend = true;
@@ -4330,8 +4327,7 @@ leave:
   bvc.m_added_to_main_chain = true;
   ++m_sync_counter;
 
-  m_tx_pool.on_blockchain_inc(new_height, id);
-
+  m_tx_pool.on_blockchain_inc(m_service_node_list, bl);
   get_difficulty_for_next_block(); // just to cache it
   invalidate_block_template_cache();
 
@@ -4518,7 +4514,7 @@ bool Blockchain::add_new_block(const block& bl, block_verification_context& bvc,
     uint64_t block_height = get_block_height(bl);
     try
     {
-      if (m_db->get_block_checkpoint(block_height, existing_checkpoint))
+      if (get_checkpoint(block_height, existing_checkpoint))
       {
         if (checkpoint->signatures.size() < existing_checkpoint.signatures.size())
           checkpoint = nullptr;
@@ -4633,6 +4629,12 @@ bool Blockchain::update_checkpoint(cryptonote::checkpoint_t const &checkpoint)
   }
 
   return result;
+}
+//------------------------------------------------------------------
+bool Blockchain::get_checkpoint(uint64_t height, checkpoint_t &checkpoint) const
+{
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  return m_checkpoints.get_checkpoint(height, checkpoint);
 }
 //------------------------------------------------------------------
 void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const

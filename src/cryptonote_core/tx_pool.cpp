@@ -1098,15 +1098,62 @@ namespace cryptonote
     }
   }
   //---------------------------------------------------------------------------------
-  bool tx_memory_pool::on_blockchain_inc(uint64_t new_block_height, const crypto::hash& top_block_id)
+  bool tx_memory_pool::on_blockchain_inc(service_nodes::service_node_list const &service_node_list, block const &blk)
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     m_input_cache.clear();
     m_parsed_tx_cache.clear();
+
+    std::vector<transaction> pool_txs;
+    get_transactions(pool_txs);
+    if (pool_txs.empty())
+      return true;
+
+    for (transaction const &pool_tx : pool_txs)
+    {
+      tx_extra_service_node_state_change state_change;
+      crypto::public_key service_node_pubkey;
+      if (pool_tx.type == txtype::state_change && get_service_node_state_change_from_tx_extra(pool_tx.extra, state_change))
+      {
+        if (service_node_list.get_quorum_pubkey(service_nodes::quorum_type::obligations, service_nodes::quorum_group::worker,
+                                                state_change.block_height, state_change.service_node_index, service_node_pubkey))
+        {
+          crypto::hash tx_hash;
+          if (!get_transaction_hash(pool_tx, tx_hash))
+          {
+            MERROR("Failed to get transaction hash from txpool to check if we can prune a state change");
+            continue;
+          }
+
+          txpool_tx_meta_t meta;
+          if (!m_blockchain.get_txpool_tx_meta(tx_hash, meta))
+          {
+            MERROR("Failed to get tx meta from txpool to check if we can prune a state change");
+            continue;
+          }
+
+          if (meta.kept_by_block)
+            continue;
+
+          std::vector<service_nodes::service_node_pubkey_info> service_node_array = service_node_list.get_service_node_list_state({service_node_pubkey});
+
+          if (service_node_array.empty() || !service_node_array[0].info->can_transition_to_state(state_change.block_height, state_change.state))
+          {
+            transaction tx;
+            cryptonote::blobdata blob;
+            size_t tx_weight;
+            uint64_t fee;
+            bool relayed, do_not_relay, double_spend_seen;
+            take_tx(tx_hash, tx, blob, tx_weight, fee, relayed, do_not_relay, double_spend_seen);
+          }
+        }
+      }
+    }
+
     return true;
   }
   //---------------------------------------------------------------------------------
-  bool tx_memory_pool::on_blockchain_dec(uint64_t new_block_height, const crypto::hash& top_block_id)
+  bool tx_memory_pool::on_blockchain_dec()
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     m_input_cache.clear();

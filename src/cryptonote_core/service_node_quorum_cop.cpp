@@ -58,7 +58,8 @@ namespace service_nodes
   {
     service_node_test_results result;
     uint64_t now = time(nullptr);
-    uint64_t time_since_last_uptime_proof = now - info.proof.timestamp;
+    proof_info const &proof = *info.proof;
+    uint64_t time_since_last_uptime_proof = now - std::max(proof.timestamp, proof.effective_timestamp);
 
     bool check_uptime_obligation = true;
     bool check_checkpoint_obligation = true;
@@ -71,7 +72,7 @@ namespace service_nodes
       result.uptime_proved = false;
     }
 
-    const auto &ips = info.proof.public_ips;
+    const auto &ips = proof.public_ips;
     if (ips[0].first && ips[1].first) {
       std::vector<cryptonote::block> blocks;
       if (m_core.get_blocks(info.last_ip_change_height, 1, blocks)) {
@@ -83,7 +84,6 @@ namespace service_nodes
 
     if (check_checkpoint_obligation && !info.is_decommissioned())
     {
-      proof_info const &proof = info.proof;
       int num_votes = 0;
       for (bool voted : proof.votes)
         num_votes += voted;
@@ -227,13 +227,17 @@ namespace service_nodes
                 break;
               total++;
 
-              const auto& node_key = worker_it->pubkey;
-              const auto& info = worker_it->info;
+              const auto &node_key = worker_it->pubkey;
+              const auto &info = *worker_it->info;
+
+              if (!info.can_be_voted_on(m_obligations_height))
+                continue;
 
               auto test_results = check_service_node(node_key, info);
+              bool passed = test_results.passed();
 
               new_state vote_for_state;
-              if (test_results.passed()) {
+              if (passed) {
                 if (info.is_decommissioned()) {
                   vote_for_state = new_state::recommission;
                   LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " is now passing required checks, voting to recommission");
@@ -387,20 +391,62 @@ namespace service_nodes
         if (votes.size() >= CHECKPOINT_MIN_VOTES)
         {
           cryptonote::checkpoint_t checkpoint = {};
-          checkpoint.type = cryptonote::checkpoint_type::service_node;
-          checkpoint.height = vote.block_height;
-          checkpoint.block_hash = vote.checkpoint.block_hash;
-          checkpoint.signatures.reserve(votes.size());
+          cryptonote::Blockchain &blockchain = m_core.get_blockchain_storage();
 
-          for (pool_vote_entry const &pool_vote : votes)
+          blockchain.lock();
+          ARQMA_DEFER { blockchain.unlock(); };
+
+          bool update_checkpoint = true;
+          if (blockchain.get_checkpoint(vote.block_height, checkpoint) && checkpoint.block_hash == vote.checkpoint.block_hash)
           {
-            voter_to_signature vts = {};
-            vts.voter_index = pool_vote.vote.index_in_group;
-            vts.signature = pool_vote.vote.signature;
-            checkpoint.signatures.push_back(vts);
+            update_checkpoint = checkpoint.signatures.size() != service_nodes::CHECKPOINT_QUORUM_SIZE;
+            if (update_checkpoint)
+            {
+              checkpoint.signatures.reserve(service_nodes::CHECKPOINT_QUORUM_SIZE);
+              std::sort(checkpoint.signatures.begin(), checkpoint.signatures.end(),
+                        [](service_nodes::voter_to_signature const &lhs, service_nodes::voter_to_signature const &rhs)
+              {
+                return lhs.voter_index < rhs.voter_index;
+              });
+
+              for (pool_vote_entry const &pool_vote : votes)
+              {
+                auto it = std::lower_bound(checkpoint.signatures.begin(), checkpoint.signatures.end(), pool_vote,
+                                           [](voter_to_signature const &lhs, pool_vote_entry const &vote)
+                {
+                  return lhs.voter_index < vote.vote.index_in_group;
+                });
+
+                if (it == checkpoint.signatures.end() || pool_vote.vote.index_in_group != it->voter_index)
+                {
+                  update_checkpoint = true;
+                  voter_to_signature vts = {};
+                  vts.voter_index = pool_vote.vote.index_in_group;
+                  vts.signature = pool_vote.vote.signature;
+                  checkpoint.signatures.insert(it, vts);
+                }
+              }
+            }
+          }
+          else
+          {
+            checkpoint = {};
+            checkpoint.type = cryptonote::checkpoint_type::service_node;
+            checkpoint.height = vote.block_height;
+            checkpoint.block_hash = vote.checkpoint.block_hash;
+            checkpoint.signatures.reserve(votes.size());
+
+            for (pool_vote_entry const &pool_vote : votes)
+            {
+              voter_to_signature vts = {};
+              vts.voter_index = pool_vote.vote.index_in_group;
+              vts.signature = pool_vote.vote.signature;
+              checkpoint.signatures.push_back(vts);
+            }
           }
 
-          m_core.get_blockchain_storage().update_checkpoint(checkpoint);
+          if (update_checkpoint)
+            m_core.get_blockchain_storage().update_checkpoint(checkpoint);
         }
         else
         {

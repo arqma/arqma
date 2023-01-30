@@ -58,7 +58,7 @@ namespace arqma
 
   #define ARQMA_TOKEN_COMBINE2(x, y) x ## y
   #define ARQMA_TOKEN_COMBINE(x, y) ARQMA_TOKEN_COMBINE2(x, y)
-  #define ARQMA_DEFER auto const ARQMA_TOKEN_COMBINE(arqma_defer_, __LINE__) == arqma::defer_helper() + [&]()
+  #define ARQMA_DEFER auto const ARQMA_TOKEN_COMBINE(arqma_defer_, __LINE__) = arqma::defer_helper() + [&]()
 
   template <typename T, size_t N>
   constexpr size_t array_count(T (&)[N]) { return N; }

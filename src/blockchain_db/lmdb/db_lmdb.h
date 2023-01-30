@@ -330,8 +330,6 @@ public:
   void remove_block_checkpoint(uint64_t height) override;
   bool get_block_checkpoint(uint64_t height, checkpoint_t &checkpoint) const override;
   bool get_top_checkpoint(checkpoint_t &checkpoint) const override;
-  std::vector<checkpoint_t> get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints = 0) const override;
-  bool get_immutable_checkpoint(checkpoint_t *checkpoint) const override;
 
   void set_batch_transactions(bool batch_transactions) override;
   bool batch_start(uint64_t batch_num_blocks=0, uint64_t batch_bytes=0) override;
@@ -462,8 +460,8 @@ private:
   void cleanup_batch();
 
   bool get_block_checkpoint_internal(uint64_t height, checkpoint_t &checkpoint, MDB_cursor_op op) const;
-  void set_service_node_data(const std::string &data) override;
-  bool get_service_node_data(std::string &data) override;
+  void set_service_node_data(const std::string &data, bool long_term) override;
+  bool get_service_node_data(std::string &data, bool long_term) override;
   void clear_service_node_data() override;
 
 private:

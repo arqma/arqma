@@ -67,6 +67,8 @@ namespace service_nodes
 
   constexpr uint64_t STATE_CHANGE_TX_LIFETIME_IN_BLOCKS             = VOTE_LIFETIME;
 
+  constexpr uint64_t VOTE_OR_TX_VERIFY_HEIGHT_BUFFER                = 5;
+
   using swarm_id_t = uint64_t;
   constexpr swarm_id_t UNASSIGNED_SWARM_ID                          = UINT64_MAX;
 

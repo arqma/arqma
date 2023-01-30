@@ -1412,7 +1412,7 @@ namespace cryptonote
     NOTIFY_UPTIME_PROOF::request req = m_service_node_list.generate_uptime_proof(m_service_node_pubkey, m_service_node_key, m_sn_public_ip, m_storage_port);
 
     cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
-    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context);
+    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context, true);
     if (relayed) MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_pubkey);
 
     return true;
@@ -1524,30 +1524,28 @@ namespace cryptonote
   bool core::handle_block_found(block& b, block_verification_context &bvc)
   {
     bvc = {};
-    m_miner.pause();
     std::vector<block_complete_entry> blocks;
-    try
+    m_miner.pause();
     {
-      blocks.push_back(get_block_complete_entry(b, m_mempool));
+      ARQMA_DEFER { m_miner.resume(); };
+      try
+      {
+        blocks.push_back(get_block_complete_entry(b, m_mempool));
+      }
+      catch (const std::exception &e)
+      {
+        return false;
+      }
+      std::vector<block> pblocks;
+      if (!prepare_handle_incoming_blocks(blocks, pblocks))
+      {
+        MERROR("Block found, but failed to prepare to add");
+        return false;
+      }
+      add_new_block(b, bvc, nullptr);
+      cleanup_handle_incoming_blocks(true);
+      m_miner.on_block_chain_update();
     }
-    catch (const std::exception& e)
-    {
-      m_miner.resume();
-      return false;
-    }
-    std::vector<block> pblocks;
-    if(!prepare_handle_incoming_blocks(blocks, pblocks))
-    {
-      MERROR("Block found, but failed to prepare to add");
-      m_miner.resume();
-      return false;
-    }
-    add_new_block(b, bvc, nullptr/*checkpoint*/);
-    cleanup_handle_incoming_blocks(true);
-    //anyway - update miner template
-    m_miner.on_block_chain_update();
-    m_miner.resume();
-
 
     CHECK_AND_ASSERT_MES(!bvc.m_verification_failed, false, "mined block failed verification");
     if(bvc.m_added_to_main_chain)
@@ -1774,11 +1772,11 @@ namespace cryptonote
   {
     std::vector<service_nodes::service_node_pubkey_info> const states = get_service_node_list_state({ m_service_node_pubkey });
     // wait one block before starting uptime proofs.
-    if(!states.empty() && (states[0].info.registration_height + 1) < get_current_blockchain_height())
+    if(!states.empty() && (states[0].info->registration_height + 1) < get_current_blockchain_height())
     {
-      service_nodes::service_node_info const &info = states[0].info;
+      service_nodes::service_node_info const &info = *states[0].info;
       m_check_uptime_proof_interval.do_call([&info, this]() {
-        if (info.proof.timestamp <= static_cast<uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
+        if (info.proof->timestamp <= static_cast<uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
         {
           if (!check_storage_server_ping(m_last_storage_server_ping))
           {
@@ -2048,20 +2046,17 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   const std::vector<service_nodes::key_image_blacklist_entry> &core::get_service_node_blacklisted_key_images() const
   {
-    const auto &result = m_service_node_list.get_blacklisted_key_images();
-    return result;
+    return m_service_node_list.get_blacklisted_key_images();
   }
   //-----------------------------------------------------------------------------------------------
   std::vector<service_nodes::service_node_pubkey_info> core::get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const
   {
-    std::vector<service_nodes::service_node_pubkey_info> result = m_service_node_list.get_service_node_list_state(service_node_pubkeys);
-    return result;
+    return m_service_node_list.get_service_node_list_state(service_node_pubkeys);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::add_service_node_vote(const service_nodes::quorum_vote_t& vote, vote_verification_context &vvc)
   {
-    bool result = m_quorum_cop.handle_vote(vote, vvc);
-    return result;
+    return m_quorum_cop.handle_vote(vote, vvc);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_service_node_keys(crypto::public_key &pub_key, crypto::secret_key &sec_key) const

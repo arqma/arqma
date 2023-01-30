@@ -341,6 +341,11 @@ namespace cryptonote
 
     if(m_core.have_block(hshd.top_id))
     {
+      if (target > m_core.get_current_blockchain_height())
+      {
+        MINFO(context << "peer is not ahead of us and we are syncing, disconnecting");
+        return false;
+      }
       context.m_state = cryptonote_connection_context::state_normal;
       if(is_inital && target == m_core.get_current_blockchain_height())
         on_connection_synchronized();
@@ -722,7 +727,7 @@ namespace cryptonote
     if(context.m_state != cryptonote_connection_context::state_normal)
       return 1;
     if(m_core.handle_uptime_proof(arg))
-      relay_uptime_proof(arg, context);
+      relay_uptime_proof(arg, context, false);
     return 1;
   }
   //------------------------------------------------------------------------------------------------------------------------
@@ -1353,6 +1358,12 @@ namespace cryptonote
                 MERROR("Checkpoint blob given but not expecting a checkpoint at this height");
                 return false;
               }
+
+              std::sort(checkpoint->signatures.begin(), checkpoint->signatures.end(),
+                        [](service_nodes::voter_to_signature const &lhs, service_nodes::voter_to_signature const &rhs)
+              {
+                return lhs.voter_index < rhs.voter_index;
+              });
 
 #if 0
               std::shared_ptr<const service_nodes::testing_quorum> quorum = get_testing_quorum(service_nodes::quorum_type::checkpointing, checkpoint.height);
@@ -2302,16 +2313,19 @@ skip:
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
-  bool t_cryptonote_protocol_handler<t_core>::relay_uptime_proof(NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& exclude_context)
+  bool t_cryptonote_protocol_handler<t_core>::relay_uptime_proof(NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& exclude_context, bool force_relay)
   {
-    bool result = relay_on_public_network_generic<NOTIFY_UPTIME_PROOF>(arg, exclude_context);
+    if (!is_synchronized() && !force_relay)
+      return false;
+
+    bool result = relay_to_synchronized_peers<NOTIFY_UPTIME_PROOF>(arg, exclude_context);
     return result;
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::relay_service_node_votes(NOTIFY_NEW_SERVICE_NODE_VOTE::request& arg, cryptonote_connection_context& exclude_context)
   {
-    bool result = relay_on_public_network_generic<NOTIFY_NEW_SERVICE_NODE_VOTE>(arg, exclude_context);
+    bool result = relay_to_synchronized_peers<NOTIFY_NEW_SERVICE_NODE_VOTE>(arg, exclude_context);
     return result;
   }
   //------------------------------------------------------------------------------------------------------------------------
