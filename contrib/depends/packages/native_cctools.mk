@@ -3,7 +3,7 @@ $(package)_version=04663295d0425abfac90a42440a7ec02d7155fea
 $(package)_download_path=https://github.com/tpoechtrager/cctools-port/archive
 $(package)_download_file=$($(package)_version).tar.gz
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
-$(package)_sha256_hash=782651b414123d8909c04f7d3df77fc69de31fa45eb3b4b795af8469e2493512
+$(package)_sha256_hash=70a7189418c2086d20c299c5d59250cf5940782c778892ccc899c66516ed240e
 $(package)_build_subdir=cctools
 $(package)_dependencies=native_clang native_libtapi
 

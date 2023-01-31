@@ -27,7 +27,7 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-arqma_add_library(epee
+add_library(epee
   STATIC
     hex.cpp
     http_auth.cpp
@@ -44,8 +44,9 @@ arqma_add_library(epee
     buffer.cpp
     net_ssl.cpp)
 
-if (USE_READLINE AND (GNU_READLINE_FOUND OR (DEPENDS AND NOT MINGW)))
-  arqma_add_library(epee_readline readline_buffer.cpp)
+if(TARGET readline)
+  target_sources(epee PUBLIC readline_buffer.cpp)
+  target_link_libraries(epee PUBLIC readline)
 endif()
 
 set_property(SOURCE memwipe.c PROPERTY C_STANDARD 11)
@@ -58,9 +59,6 @@ if(BUILD_GUI_DEPS)
     set(lib_folder lib)
   endif()
   install(TARGETS epee ARCHIVE DESTINATION ${lib_folder})
-  if (USE_READLINE AND GNU_READLINE_FOUND)
-    install(TARGETS epee_readline ARCHIVE DESTINATION ${lib_folder})
-  endif()
 endif()
 
 target_link_libraries(epee
@@ -74,14 +72,3 @@ target_link_libraries(epee
     ${OPENSSL_LIBRARIES}
   PRIVATE
     ${EXTRA_LIBRARIES})
-
-if (USE_READLINE AND (GNU_READLINE_FOUND OR (DEPENDS AND NOT MINGW)))
-  target_link_libraries(epee_readline
-    PUBLIC
-      easylogging
-      ${Boost_SYSTEM_LIBRARY}
-    PRIVATE
-      ${GNU_READLINE_LIBRARY})
-endif()
-
-target_include_directories(epee PUBLIC ../include "${OPENSSL_INCLUDE_DIR}")

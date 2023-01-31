@@ -38,7 +38,7 @@ target_link_libraries(gen_multisig
     cryptonote_core
     cncrypto
     common
-    ${EPEE_READLINE}
+    epee
     ${Boost_CHRONO_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
