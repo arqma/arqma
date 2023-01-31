@@ -17,69 +17,19 @@ namespace service_nodes
   uint64_t get_staking_requirement(cryptonote::network_type m_nettype, uint64_t height)
   {
     if(m_nettype != cryptonote::MAINNET)
-    {
-      constexpr int64_t heights[] = {
-        12800,
-        12825,
-        12850,
-        12875,
-        12900,
-        12950,
-        13100,
-        14500,
-      };
+      return 1000 * arqma_bc::ARQMA;
 
-      constexpr int64_t stake_req = 100;
-      constexpr int64_t max_stake_req = 250;
-      constexpr int64_t stake_inc = 25;
+    uint64_t hardfork_height = 1200000;
+    if (height < hardfork_height)
+      height = hardfork_height;
 
-      assert(static_cast<int64_t>(height) >= heights[0]);
-      constexpr uint64_t LAST_HT = heights[arqma::array_count(heights) - 1];
-      if(height >= LAST_HT)
-        return max_stake_req * arqma_bc::ARQMA;
+    uint64_t height_adjusted = height - hardfork_height;
 
-      size_t i = 0;
-      for(size_t index = 1; index < arqma::array_count(heights); index++)
-      {
-        if(heights[index] > static_cast<int64_t>(height))
-        {
-          i = (index - 1);
-          break;
-        }
-      }
+    uint64_t base = 45000 * arqma_bc::ARQMA;
+    uint64_t variable = (base / 2 * 3) / arqma::exp2(height_adjusted / 129600.0);
 
-      int64_t result = stake_req + (i * stake_inc);
-      return static_cast<uint64_t>(result) * arqma_bc::ARQMA;
-    }
-
-    constexpr int64_t heights[] = {
-      999999000,
-      999999900,
-      999999990,
-      // to be filled upon release
-    };
-
-    constexpr int64_t stake_req = 25000;
-    constexpr int64_t max_stake_req = 100000;
-    constexpr int64_t stake_inc = 10000;
-
-    assert(static_cast<int64_t>(height) >= heights[0]);
-    constexpr uint64_t LAST_HEIGHT = heights[arqma::array_count(heights) - 1];
-    if(height >= LAST_HEIGHT)
-      return max_stake_req * arqma_bc::ARQMA;
-
-    size_t i = 0;
-    for(size_t index = 1; index < arqma::array_count(heights); index++)
-    {
-      if(heights[index] > static_cast<int64_t>(height))
-      {
-        i = (index - 1);
-        break;
-      }
-    }
-
-    int64_t result = stake_req + (i * stake_inc);
-    return static_cast<uint64_t>(result) * arqma_bc::ARQMA;
+    uint64_t result = base + variable;
+    return result;
   }
 
   uint64_t portions_to_amount(uint64_t portions, uint64_t staking_requirement)
