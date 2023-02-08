@@ -772,27 +772,6 @@ namespace cryptonote
   };
 
   //-----------------------------------------------
-  struct COMMAND_RPC_GET_ALL_SERVICE_NODES_KEYS
-  {
-    struct request_t
-    {
-      bool active_nodes_only;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_OPT(active_nodes_only, (bool)true)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      std::vector<std::string> keys; // NOTE: Future reference.
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(keys)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-  //-----------------------------------------------
   struct COMMAND_RPC_STOP_MINING
   {
     struct request_t
@@ -2567,9 +2546,38 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     struct response_t
     {
       std::string service_node_pubkey;
+      std::string service_node_ed25519_pubkey;
+      std::string service_node_x25519_pubkey;
       std::string status;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(service_node_pubkey)
+        KV_SERIALIZE(service_node_ed25519_pubkey)
+        KV_SERIALIZE(service_node_x25519_pubkey)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_SERVICE_NODE_PRIVKEY
+  {
+    struct request_t
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::string service_node_privkey;
+      std::string service_node_ed25519_privkey;
+      std::string service_node_x25519_privkey;
+      std::string status;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(service_node_privkey)
+        KV_SERIALIZE(service_node_ed25519_privkey)
+        KV_SERIALIZE(service_node_x25519_privkey)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
@@ -2665,6 +2673,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         std::string operator_address;
         std::string public_ip;
         uint16_t storage_port;
+        std::string pubkey_ed25519;
+        std::string pubkey_x25519;
 
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(service_node_pubkey)
@@ -2688,6 +2698,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE(operator_address)
           KV_SERIALIZE(public_ip)
           KV_SERIALIZE(storage_port)
+          KV_SERIALIZE(pubkey_ed25519)
+          KV_SERIALIZE(pubkey_x25519)
         END_KV_SERIALIZE_MAP()
       };
 
@@ -2738,6 +2750,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       bool operator_address;
       bool public_ip;
       bool storage_port;
+      bool pubkey_ed25519;
+      bool pubkey_x25519;
       bool block_hash;
       bool height;
       bool target_height;
@@ -2765,6 +2779,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         KV_SERIALIZE_OPT2(operator_address, false)
         KV_SERIALIZE_OPT2(public_ip, false)
         KV_SERIALIZE_OPT2(storage_port, false)
+        KV_SERIALIZE_OPT2(pubkey_ed25519, false)
+        KV_SERIALIZE_OPT2(pubkey_x25519, false)
         KV_SERIALIZE_OPT2(block_hash, false)
         KV_SERIALIZE_OPT2(height, false)
         KV_SERIALIZE_OPT2(target_height, false)
@@ -2775,13 +2791,15 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     struct request_t
     {
       uint32_t limit;
-      bool fully_funded_only;
+      bool active_only;
       requested_fields_t fields;
+      std::string if_block_not_equal;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(limit)
-        KV_SERIALIZE(fully_funded_only)
+        KV_SERIALIZE(active_only)
         KV_SERIALIZE(fields)
+        KV_SERIALIZE(if_block_not_equal)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -2815,6 +2833,8 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         std::string operator_address; // The wallet address of the operator to which the operator cut of the staking reward is sent to.
         std::string public_ip; // The public ip address of the service node
         uint16_t storage_port; // The port number associated with the storage server
+        std::string pubkey_ed25519;
+        std::string pubkey_x25519;
 
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(service_node_pubkey)
@@ -2838,25 +2858,30 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(operator_address)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(public_ip)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(storage_port)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(pubkey_ed25519);
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(pubkey_x25519);
         END_KV_SERIALIZE_MAP()
       };
 
       requested_fields_t fields;
+      bool gave_if_not_equal;
 
       std::vector<entry> service_node_states; // Array of service node registration information
       uint64_t height; // Current block height
       uint64_t target_height;
       std::string block_hash; // Current block hash
+      bool unchanged;
       uint8_t hardfork;
       std::string status; // Generic RPC error code. "OK" is the success value.
 
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(service_node_states)
+        if (!this_ref.unchanged) KV_SERIALIZE(service_node_states)
         KV_SERIALIZE(status)
         if (this_ref.fields.height) KV_SERIALIZE(height)
         if (this_ref.fields.target_height) KV_SERIALIZE(target_height)
-        if (this_ref.fields.block_hash) KV_SERIALIZE(block_hash)
+        if (this_ref.fields.block_hash || (this_ref.gave_if_not_equal && !this_ref.unchanged)) KV_SERIALIZE(block_hash)
         if (this_ref.fields.hardfork) KV_SERIALIZE(hardfork)
+        if (this_ref.gave_if_not_equal) KV_SERIALIZE(unchanged)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;

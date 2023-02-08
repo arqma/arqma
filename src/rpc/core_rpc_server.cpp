@@ -226,22 +226,6 @@ namespace cryptonote
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_get_all_service_nodes_keys(const COMMAND_RPC_GET_ALL_SERVICE_NODES_KEYS::request& req, COMMAND_RPC_GET_ALL_SERVICE_NODES_KEYS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
-  {
-    std::vector<crypto::public_key> keys;
-    m_core.get_all_service_nodes_public_keys(keys, req.active_nodes_only);
-
-    res.keys.clear();
-    res.keys.resize(keys.size());
-    size_t i = 0;
-    for(const auto& key : keys)
-    {
-      std::string const hex64 = string_tools::pod_to_hex(key);
-      res.keys[i++] = arqma::hex64_to_base32z(hex64);
-    }
-    return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_net_stats(const COMMAND_RPC_GET_NET_STATS::request& req, COMMAND_RPC_GET_NET_STATS::response& res, const connection_context *ctx)
   {
     PERF_TIMER(on_get_net_stats);
@@ -2510,20 +2494,36 @@ namespace cryptonote
   {
     PERF_TIMER(on_get_service_node_key);
 
-    crypto::public_key pubkey;
-    crypto::secret_key seckey;
-    bool result = m_core.get_service_node_keys(pubkey, seckey);
-    if(result)
-      res.service_node_pubkey = string_tools::pod_to_hex(pubkey);
-    else
+    if (auto keys = m_core.get_service_node_keys())
     {
-      error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
-      error_resp.message = "Daemon queried is not a Service_node or wasn't launched with --service-node";
-      return false;
+      res.service_node_pubkey = string_tools::pod_to_hex(keys->pub);
+      res.service_node_ed25519_pubkey = string_tools::pod_to_hex(keys->pub_ed25519);
+      res.service_node_x25519_pubkey = string_tools::pod_to_hex(keys->pub_x25519);
+      res.status = CORE_RPC_STATUS_OK;
+      return true;
     }
 
-    res.status = CORE_RPC_STATUS_OK;
-    return result;
+    error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
+    error_resp.message = "Daemon queried is not a service node or did not launch with --service-node";
+    return false;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_get_service_node_privkey(const COMMAND_RPC_GET_SERVICE_NODE_PRIVKEY::request& req, COMMAND_RPC_GET_SERVICE_NODE_PRIVKEY::response& res, epee::json_rpc::error &error_resp, const connection_context *ctx)
+  {
+    PERF_TIMER(on_get_service_node_key);
+
+    if (auto keys = m_core.get_service_node_keys())
+    {
+      res.service_node_privkey = string_tools::pod_to_hex(keys->key.data);
+      res.service_node_ed25519_privkey = string_tools::pod_to_hex(keys->key_ed25519.data);
+      res.service_node_x25519_privkey = string_tools::pod_to_hex(keys->key_x25519.data);
+      res.status = CORE_RPC_STATUS_OK;
+      return true;
+    }
+
+    error_resp.code    = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
+    error_resp.message = "Daemon queried is not a service node or did not launch with --service-node";
+    return false;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_relay_tx(const COMMAND_RPC_RELAY_TX::request& req, COMMAND_RPC_RELAY_TX::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
@@ -2724,9 +2724,8 @@ namespace cryptonote
   {
     PERF_TIMER(on_get_service_node_registration_cmd_raw);
 
-    crypto::public_key service_node_pubkey;
-    crypto::secret_key service_node_key;
-    if(!m_core.get_service_node_keys(service_node_pubkey, service_node_key))
+    auto keys = m_core.get_service_node_keys();
+    if (!keys)
     {
       error_resp.code    = CORE_RPC_ERROR_CODE_WRONG_PARAM;
       error_resp.message = "Daemon has not been started in service node mode, please relaunch with --service-node flag.";
@@ -2734,7 +2733,7 @@ namespace cryptonote
     }
 
     std::string err_msg;
-    if(!service_nodes::make_registration_cmd(m_core.get_nettype(), req.staking_requirement, req.args, service_node_pubkey, service_node_key, res.registration_cmd, req.make_friendly, err_msg))
+    if(!service_nodes::make_registration_cmd(m_core.get_nettype(), req.staking_requirement, req.args, *keys, res.registration_cmd, req.make_friendly, err_msg))
     {
       error_resp.code    = CORE_RPC_ERROR_CODE_WRONG_PARAM;
       error_resp.message = "Failed to make registration command";
@@ -2806,6 +2805,8 @@ namespace cryptonote
     entry.service_node_version = {info.proof->version_major, info.proof->version_minor, info.proof->version_patch};
     entry.public_ip = string_tools::get_ip_string_from_int32(info.proof->public_ip);
     entry.storage_port = info.proof->storage_port;
+    entry.pubkey_ed25519 = info.proof->pubkey_ed25519 ? string_tools::pod_to_hex(info.proof->pubkey_ed25519) : "";
+    entry.pubkey_x25519 = info.proof->pubkey_x25519 ? string_tools::pod_to_hex(info.proof->pubkey_x25519) : "";
 
     entry.contributors.reserve(info.contributors.size());
 
@@ -2887,13 +2888,31 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_n_service_nodes(const COMMAND_RPC_GET_N_SERVICE_NODES::request& req, COMMAND_RPC_GET_N_SERVICE_NODES::response& res, epee::json_rpc::error&, const connection_context*)
   {
+    res.status = CORE_RPC_STATUS_OK;
+    const uint64_t height = m_core.get_current_blockchain_height();
+    res.height = height - 1;
+    res.target_height = m_core.get_target_blockchain_height();
+    res.block_hash = string_tools::pod_to_hex(m_core.get_block_id_by_height(res.height));
+    res.hardfork = m_core.get_hard_fork_version(res.height);
+
+    if (!req.if_block_not_equal.empty())
+    {
+      res.gave_if_not_equal = true;
+      if (req.if_block_not_equal == res.block_hash)
+      {
+        res.unchanged = true;
+        res.fields = req.fields;
+        return true;
+      }
+    }
+
     std::vector<service_nodes::service_node_pubkey_info> sn_infos = m_core.get_service_node_list_state({});
 
-    if (req.fully_funded_only)
+    if (req.active_only)
     {
       const auto end = std::remove_if(sn_infos.begin(), sn_infos.end(), [](const service_nodes::service_node_pubkey_info& snpk_info)
         {
-          return !snpk_info.info->is_fully_funded();
+          return !snpk_info.info->is_active();
         });
 
       sn_infos.erase(end, sn_infos.end());
@@ -2912,20 +2931,12 @@ namespace cryptonote
 
     res.service_node_states.reserve(sn_infos.size());
 
-    const uint64_t height = m_core.get_current_blockchain_height();
-
     for (auto &pubkey_info : sn_infos)
     {
       COMMAND_RPC_GET_N_SERVICE_NODES::response::entry entry = {res.fields};
       fill_sn_response_entry(entry, pubkey_info, height);
       res.service_node_states.push_back(entry);
     }
-
-    res.status = CORE_RPC_STATUS_OK;
-    res.height = height - 1;
-    res.target_height = m_core.get_target_blockchain_height();
-    res.block_hash = string_tools::pod_to_hex(m_core.get_block_id_by_height(res.height));
-    res.hardfork = m_core.get_hard_fork_version(res.height);
 
     res.fields = req.fields;
     return true;

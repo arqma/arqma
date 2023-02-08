@@ -75,7 +75,6 @@ set(common_private_headers
   arqma.h
   http_connection.h
   notify.h
-  pod-class.h
   pruning.h
   rpc_client.h
   scoped_message_writer.h

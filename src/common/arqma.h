@@ -37,7 +37,6 @@ namespace arqma
 {
   double round(double);
   double exp2(double);
-  std::string hex64_to_base32z(std::string const& src);
 
   template <typename lambda_t>
   struct defer

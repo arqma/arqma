@@ -61,6 +61,12 @@ namespace cryptonote {
     virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, struct block_reward_parts const &reward_parts) const = 0;
   };
 
+  class AltBlockAddedHook
+  {
+  public:
+    virtual void alt_block_added(const block &block, const std::vector<transaction>& txs) = 0;
+  };
+
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/

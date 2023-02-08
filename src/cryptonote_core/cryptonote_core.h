@@ -767,7 +767,7 @@ namespace cryptonote
       * @param include_old whether to look in the old quorum states (does nothing unless running with --store-full-quorum-history)
       * @return Null shared ptr if quorum has not been determined yet for height
       */
-     std::shared_ptr<const service_nodes::testing_quorum> get_testing_quorum(service_nodes::quorum_type type, uint64_t height, bool include_old = false) const;
+     std::shared_ptr<const service_nodes::testing_quorum> get_testing_quorum(service_nodes::quorum_type type, uint64_t height, bool include_old = false, std::vector<std::shared_ptr<const service_nodes::testing_quorum>> *alt_states = nullptr) const;
 
      /**
       * @brief get a non owning reference to the list of blacklisted key images
@@ -800,21 +800,14 @@ namespace cryptonote
       */
      bool add_service_node_vote(const service_nodes::quorum_vote_t& vote, vote_verification_context &vvc);
 
+     using service_node_keys = service_nodes::service_node_keys;
      /**
-      * @brief Return the account associated to this service node.
-      * @param pub_key The public key for the service node, unmodified if not a service node
-      * @param sec_key The secret key for the service node, unmodified if not a service node
-      * @return True if we are a service node
-      */
-     bool get_service_node_keys(crypto::public_key &pub_key, crypto::secret_key &sec_key) const;
-
-     /**
-      * @brief Get the public key of every service node.
+      * @brief Get the keys for this service node.
       *
-      * @param keys The container in which to return the keys
-      * @param active_nodes_only Only return nodes that are funded and actively working on the network
+      * @return shared point to service node keys. The shared pointer will be empty
+      * if this node is not running as a service node.
       */
-     void get_all_service_nodes_public_keys(std::vector<crypto::public_key>& keys, bool active_nodes_only) const;
+     std::shared_ptr<const service_node_keys> get_service_node_keys() const;
 
      /**
       * @brief attempts to submit an uptime proof to the network, if this is running in service node mode
@@ -1032,7 +1025,7 @@ namespace cryptonote
       *
       * @return true on success, false otherwise
       */
-     bool init_service_node_key();
+     bool init_service_node_keys();
 
      /**
       * @brief do the uptime proof logic and calls for idle loop.
@@ -1084,9 +1077,7 @@ namespace cryptonote
 
      std::atomic_flag m_checkpoints_updating; //!< set if checkpoints are currently updating to avoid multiple threads attempting to update at once
 
-     bool m_service_node;
-     crypto::secret_key m_service_node_key;
-     crypto::public_key m_service_node_pubkey;
+     std::shared_ptr<service_node_keys> m_service_node_keys;
 
      uint32_t m_sn_public_ip;
      uint16_t m_storage_port;

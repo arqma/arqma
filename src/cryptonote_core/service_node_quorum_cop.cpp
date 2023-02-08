@@ -145,12 +145,9 @@ namespace service_nodes
     if (hard_fork_version < cryptonote::network_version_16)
       return;
 
-    crypto::public_key my_pubkey;
-    crypto::secret_key my_seckey;
-    if(!m_core.get_service_node_keys(my_pubkey, my_seckey))
-      return;
+    auto my_keys = m_core.get_service_node_keys();
 
-    if (!m_core.is_service_node(my_pubkey, /*require_active=*/ true))
+    if (!m_core.is_service_node(my_keys->pub, /*require_active=*/ true))
       return;
 
     uint64_t const height = cryptonote::get_block_height(block);
@@ -207,7 +204,7 @@ namespace service_nodes
 
             if (quorum->workers.empty()) continue;
 
-            int index_in_group = find_index_in_quorum_group(quorum->validators, my_pubkey);
+            int index_in_group = find_index_in_quorum_group(quorum->validators, my_keys->pub);
             if (index_in_group <= -1) continue;
 
             //
@@ -280,7 +277,7 @@ namespace service_nodes
                 }
               }
 
-              quorum_vote_t vote = service_nodes::make_state_change_vote(m_obligations_height, static_cast<uint16_t>(index_in_group), node_index, vote_for_state, my_pubkey, my_seckey);
+              quorum_vote_t vote = service_nodes::make_state_change_vote(m_obligations_height, static_cast<uint16_t>(index_in_group), node_index, vote_for_state, *my_keys);
               cryptonote::vote_verification_context vvc;
               if (!handle_vote(vote, vvc))
                 LOG_ERROR("Failed to add uptime check_state vote; reason: " << print_vote_verification_context(vvc, nullptr));
@@ -313,7 +310,7 @@ namespace service_nodes
               continue;
             }
 
-            int index_in_group = find_index_in_quorum_group(quorum->workers, my_pubkey);
+            int index_in_group = find_index_in_quorum_group(quorum->workers, my_keys->pub);
             if (index_in_group <= -1) continue;
 
             //
@@ -332,7 +329,7 @@ namespace service_nodes
             vote.block_height = m_last_checkpointed_height;
             vote.group = quorum_group::worker;
             vote.index_in_group = static_cast<uint16_t>(index_in_group);
-            vote.signature = make_signature_from_vote(vote, my_pubkey, my_seckey);
+            vote.signature = make_signature_from_vote(vote, *my_keys);
 
             cryptonote::vote_verification_context vvc = {};
             if (!handle_vote(vote, vvc))

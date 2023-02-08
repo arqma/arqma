@@ -34,7 +34,6 @@
 #include <stddef.h>
 #include <iostream>
 
-#include "common/pod-class.h"
 #include "generic-ops.h"
 #include "hex.h"
 #include "span.h"
@@ -52,15 +51,12 @@ namespace crypto {
 #include "hash-ops.h"
   }
 
-#pragma pack(push, 1)
-  POD_CLASS hash {
+  struct hash {
     char data[HASH_SIZE];
   };
-  POD_CLASS hash8 {
+  struct hash8 {
     char data[8];
   };
-#pragma pack(pop)
-
 
   /*
     Cryptonight hash functions

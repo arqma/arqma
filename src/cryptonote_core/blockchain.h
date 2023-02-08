@@ -1013,6 +1013,7 @@ namespace cryptonote
     void hook_blockchain_detached(BlockchainDetachedHook& hook) { m_blockchain_detached_hooks.push_back(&hook); }
     void hook_init               (InitHook& hook)               { m_init_hooks.push_back(&hook); }
     void hook_validate_miner_tx  (ValidateMinerTxHook& hook)    { m_validate_miner_tx_hooks.push_back(&hook); }
+    void hook_alt_block_added    (AltBlockAddedHook& hook)      { m_alt_block_added_hooks.push_back(&hook); }
 
     /**
      * @brief removes blocks from the top of the blockchain
@@ -1088,6 +1089,7 @@ namespace cryptonote
     std::vector<BlockchainDetachedHook*> m_blockchain_detached_hooks;
     std::vector<InitHook*> m_init_hooks;
     std::vector<ValidateMinerTxHook*> m_validate_miner_tx_hooks;
+    std::vector<AltBlockAddedHook*> m_alt_block_added_hooks;
 
     checkpoints m_checkpoints;
 

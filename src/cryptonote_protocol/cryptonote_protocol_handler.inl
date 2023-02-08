@@ -1365,17 +1365,18 @@ namespace cryptonote
                 return lhs.voter_index < rhs.voter_index;
               });
 
-#if 0
-              std::shared_ptr<const service_nodes::testing_quorum> quorum = get_testing_quorum(service_nodes::quorum_type::checkpointing, checkpoint.height);
+#if 1
+              std::vector<std::shared_ptr<const service_nodes::testing_quorum>> alt_states;
+              std::shared_ptr<const service_nodes::testing_quorum> quorum = m_core.get_testing_quorum(service_nodes::quorum_type::checkpointing, checkpoint->height, false, &alt_states);
               if (!quorum)
               {
-                MERROR("Failed to get service node quorum for height: " << checkpoint.height << ", quorum should be available as we are syncing the chain and deriving the current relevant quorum");
+                MERROR("Failed to get service node quorum for height: " << checkpoint->height << ", quorum should be available as we are syncing the chain and deriving the current relevant quorum");
                 return false;
               }
 
-              if (!service_nodes::verify_checkpoint(checkpoint, *quorum))
+              if (!service_nodes::verify_checkpoint(*checkpoint, *quorum))
               {
-                MERROR("Failed to verify checkpoint at height: " << checkpoint.height);
+                MERROR("Failed to verify checkpoint at height: " << checkpoint->height);
                 return false;
               }
 #endif
