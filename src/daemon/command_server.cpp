@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -101,6 +101,42 @@ t_command_server::t_command_server(
     , std::bind(&t_command_parser_executor::print_transaction, &m_parser, p::_1)
     , "print_tx <transaction_hash> [+hex] [+json]"
     , "Print a given transaction."
+    );
+  m_command_lookup.set_handler(
+      "print_quorum_state"
+    , std::bind(&t_command_parser_executor::print_quorum_state, &m_parser, p::_1)
+    , "print_quorum_state [start_height] [end_height]"
+    , "Print the quorum state for the range of block heights, omit the height to print the latest quorum"
+    );
+  m_command_lookup.set_handler(
+      "print_sn_key"
+    , std::bind(&t_command_parser_executor::print_sn_key, &m_parser, p::_1)
+    , "print_sn_key"
+    , "Print this daemon's service_node key, if launched in service_node_mode and is service_node."
+    );
+  m_command_lookup.set_handler(
+      "print_stake_requirement"
+    , std::bind(&t_command_parser_executor::print_stake_requirement, &m_parser, p::_1)
+    , "print_stake_requirement <height>"
+    , "Print staking requirement for height given."
+    );
+  m_command_lookup.set_handler(
+      "prepare_registration"
+    , std::bind(&t_command_parser_executor::prepare_registration, &m_parser)
+    , "prepare_registration"
+    , "Interactive prompt to prepare Service Node registration command, Resulting registration command can be run in command-line wallet to send the registration to the blockchain."
+    );
+  m_command_lookup.set_handler(
+      "print_sn"
+    , std::bind(&t_command_parser_executor::print_sn, &m_parser, p::_1)
+    , "print_sn [<pubkey> [...]] [+json|+detail]"
+    , "Print Service_node registration info for the current height"
+    );
+  m_command_lookup.set_handler(
+      "print_sn_status"
+    , std::bind(&t_command_parser_executor::print_sn_status, &m_parser, p::_1)
+    , "print_sn_status [+json|+detail]"
+    , "Print Service Node registration info for this Service Node"
     );
   m_command_lookup.set_handler(
       "is_key_image_spent"
@@ -211,16 +247,6 @@ t_command_server::t_command_server(
     , "Set the <max_number> of in peers."
     );
     m_command_lookup.set_handler(
-      "start_save_graph"
-    , std::bind(&t_command_parser_executor::start_save_graph, &m_parser, p::_1)
-    , "Start saving data for dr Arqma."
-    );
-    m_command_lookup.set_handler(
-      "stop_save_graph"
-    , std::bind(&t_command_parser_executor::stop_save_graph, &m_parser, p::_1)
-    , "Stop saving data for dr Arqma."
-    );
-    m_command_lookup.set_handler(
       "hard_fork_info"
     , std::bind(&t_command_parser_executor::hard_fork_info, &m_parser, p::_1)
     , "Print the hard fork voting information."
@@ -272,12 +298,14 @@ t_command_server::t_command_server(
     , "bc_dyn_stats <last_block_count>"
     , "Print the information about current blockchain dynamic state."
     );
+#if 0
     m_command_lookup.set_handler(
       "update"
     , std::bind(&t_command_parser_executor::update, &m_parser, p::_1)
     , "update (check|download)"
     , "Check if an update is available, optionally downloads it if there is. Updating is not yet implemented."
     );
+#endif
     m_command_lookup.set_handler(
       "relay_tx"
     , std::bind(&t_command_parser_executor::relay_tx, &m_parser, p::_1)
@@ -296,11 +324,6 @@ t_command_server::t_command_server(
     , "Remove blocks from the end of the blockchain"
     );
     m_command_lookup.set_handler(
-      "rpc_payments"
-    , std::bind(&t_command_parser_executor::rpc_payments, &m_parser, p::_1)
-    , "Print information about RPC payments."
-    );
-    m_command_lookup.set_handler(
       "version"
     , std::bind(&t_command_parser_executor::version, &m_parser, p::_1)
     , "Print version information."
@@ -314,6 +337,18 @@ t_command_server::t_command_server(
       "check_blockchain_pruning"
     , std::bind(&t_command_parser_executor::check_blockchain_pruning, &m_parser, p::_1)
     , "Check the blockchain pruning."
+    );
+    m_command_lookup.set_handler(
+      "print_checkpoints"
+    , std::bind(&t_command_parser_executor::print_checkpoints, &m_parser, p::_1)
+    , "print_checkpoints [+json] [start_height] [end_height]"
+    , "Query the available checkpoints between the range, omit arguments to print the last 60 checkpoints"
+    );
+    m_command_lookup.set_handler(
+      "print_sn_state_changes"
+    , std::bind(&t_command_parser_executor::print_sn_state_changes, &m_parser, p::_1)
+    , "print_sn_state_changes <start_height> [end_height]"
+    , "Query the state changes between the range, omit the last argument to scan until the current block"
     );
 }
 

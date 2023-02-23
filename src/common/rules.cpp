@@ -1,5 +1,5 @@
-// Copyright (c) 2019, The Arqma Network
-// Copyright (c) 2018-2019, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c)      2018, The Loki Project
 //
 // All rights reserved.
 //
@@ -26,15 +26,39 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#pragma once
-
-#include <stdint.h>
-#include <string>
-#include "crypto/crypto.h"
+#include <ctime>
+#include "cryptonote_config.h"
 
 namespace cryptonote
 {
-  std::string make_rpc_payment_signature(const crypto::secret_key &skey);
-  bool verify_rpc_payment_signature(const std::string &message, crypto::public_key &pkey, uint64_t &ts);
-}
+  namespace rules
+  {
+    bool is_output_unlocked(uint64_t unlock_time, uint64_t height)
+    {
+      if(unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER)
+      {
+        // ND: Instead of calling get_current_blockchain_height(), call m_db->height()
+        //    directly as get_current_blockchain_height() locks the recursive mutex.
+        if(height - 1 + CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_BLOCKS >= unlock_time)
+          return true;
+        else
+          return false;
+      }
+      else
+      {
+        //interpret as time
+        uint64_t current_time = static_cast<uint64_t>(time(NULL));
+        if(current_time + config::tx_settings::ARQMA_TX_LOCK_SECONDS >= unlock_time)
+          return true;
+        else
+          return false;
+      }
+      return false;
+    }
+
+  } // namespace rules
+
+} // namespace cryptonote

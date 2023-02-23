@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -208,7 +208,7 @@ namespace tools
       struct output {
         uint64_t amount;
         std::string public_key;
-        uint64_t  index;
+        uint64_t index;
         uint64_t global_index;
         std::string rct;
         std::string tx_hash;

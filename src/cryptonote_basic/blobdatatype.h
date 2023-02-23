@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -32,11 +32,10 @@
 #pragma once
 
 #include <string>
-#include <boost/utility/string_ref_fwd.hpp>
 #include "span.h"
 
 namespace cryptonote
 {
   typedef std::string blobdata;
-  typedef boost::string_ref blobdata_ref;
+  typedef epee::span<const char> blobdata_ref;
 }

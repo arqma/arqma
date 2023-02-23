@@ -6,7 +6,7 @@
 
 */
 
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -70,6 +70,10 @@ public:
 
   ~t_rpc_command_executor();
 
+  bool print_checkpoints(uint64_t start_height, uint64_t end_height, bool print_json);
+
+  bool print_sn_state_changes(uint64_t start_height, uint64_t end_height);
+
   bool print_peer_list(bool white = true, bool gray = true, size_t limit = 0);
 
   bool print_peer_list_stats();
@@ -87,6 +91,8 @@ public:
   bool print_connections();
 
   bool print_blockchain_info(uint64_t start_block_index, uint64_t end_block_index);
+
+  bool print_quorum_state(uint64_t start_height, uint64_t end_height);
 
   bool set_log_level(int8_t level);
 
@@ -128,10 +134,6 @@ public:
 
   bool in_peers(bool set, uint32_t limit);
 
-  bool start_save_graph();
-
-  bool stop_save_graph();
-
   bool hard_fork_info(uint8_t version);
 
   bool print_bans();
@@ -162,9 +164,17 @@ public:
 
   bool check_blockchain_pruning();
 
-  bool rpc_payments();
-  
   bool print_net_stats();
+
+  bool print_sn_key();
+
+  bool print_sn_status(const std::vector<std::string>& args);
+
+  bool print_stake_requirement(uint64_t height);
+
+  bool prepare_registration();
+
+  bool print_sn(const std::vector<std::string> &args);
 };
 
 } // namespace daemonize

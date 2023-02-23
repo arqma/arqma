@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -59,11 +59,9 @@ class BlocksdatFile
 {
 public:
 
-  bool store_blockchain_raw(cryptonote::Blockchain* cs, cryptonote::tx_memory_pool* txp,
-      boost::filesystem::path& output_file, uint64_t use_block_height=0);
+  bool store_blockchain_raw(cryptonote::Blockchain* cs, cryptonote::tx_memory_pool* txp, boost::filesystem::path& output_file, uint64_t use_block_height = 0);
 
 protected:
-
   Blockchain* m_blockchain_storage;
 
   std::ofstream * m_raw_data_file;
@@ -72,11 +70,9 @@ protected:
   bool open_writer(const boost::filesystem::path& file_path, uint64_t block_stop);
   bool initialize_file(uint64_t block_stop);
   bool close();
-  void write_block(const crypto::hash &block_hash, uint64_t weight);
+  void write_block(const crypto::hash &block_hash);
 
 private:
-
   uint64_t m_cur_height; // tracks current height during export
   std::vector<crypto::hash> m_hashes;
-  std::vector<uint64_t> m_weights;
 };

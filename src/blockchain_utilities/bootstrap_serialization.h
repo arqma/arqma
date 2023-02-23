@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -32,12 +32,10 @@
 #include "cryptonote_basic/cryptonote_boost_serialization.h"
 #include "cryptonote_basic/difficulty.h"
 
-
 namespace cryptonote
 {
   namespace bootstrap
   {
-
     struct file_info
     {
       uint8_t  major_version;
@@ -83,7 +81,5 @@ namespace cryptonote
         VARINT_FIELD(coins_generated)
       END_SERIALIZE()
     };
-
   }
-
 }

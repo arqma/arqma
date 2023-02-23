@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -27,7 +27,10 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <forward_list>
+
 #include "common/dns_utils.h"
+#include "common/command_line.h"
 #include "version.h"
 #include "daemon/command_parser_executor.h"
 
@@ -46,6 +49,82 @@ t_command_parser_executor::t_command_parser_executor(
   )
   : m_executor(ip, port, login, ssl_options, is_rpc, rpc_server)
 {}
+
+template <typename T>
+static bool parse_if_present(std::forward_list<std::string> &list, T &var, const char *name)
+{
+  if (list.empty()) return true;
+  if (epee::string_tools::get_xtype_from_string(var, list.front()))
+  {
+    list.pop_front();
+    return true;
+  }
+
+  std::cout << "unexpected " << name << " argument: " << list.front() << std::endl;
+  return false;
+}
+
+bool t_command_parser_executor::print_checkpoints(const std::vector<std::string> &args)
+{
+  uint64_t start_height = cryptonote::COMMAND_RPC_GET_CHECKPOINTS::HEIGHT_SENTINEL_VALUE;
+  uint64_t end_height = cryptonote::COMMAND_RPC_GET_CHECKPOINTS::HEIGHT_SENTINEL_VALUE;
+
+  std::forward_list<std::string> args_list(args.begin(), args.end());
+  bool print_json = !args_list.empty() && args_list.front() == "+json";
+  if (print_json)
+    args_list.pop_front();
+
+  if (!parse_if_present(args_list, start_height, "start height"))
+    return false;
+
+  if (!parse_if_present(args_list, end_height, "end height"))
+    return false;
+
+  if (!args_list.empty())
+  {
+    std::cout << "use: print_checkpoints [+json] [start_height] [end_height]\n"
+              << "(omit arguments to print the last "
+              << cryptonote::COMMAND_RPC_GET_CHECKPOINTS::NUM_CHECKPOINTS_TO_QUERY_BY_DEFAULT << " checkpoints) "
+              << std::endl;
+    return false;
+  }
+
+  return m_executor.print_checkpoints(start_height, end_height, print_json);
+}
+
+bool t_command_parser_executor::print_sn_state_changes(const std::vector<std::string>& args)
+{
+  uint64_t start_height;
+  uint64_t end_height = cryptonote::COMMAND_RPC_GET_SN_STATE_CHANGES::HEIGHT_SENTINEL_VALUE;
+
+  if (args.empty())
+  {
+    std::cout << "Missing first argument start_height" << std::endl;
+    return false;
+  }
+
+  std::forward_list<std::string> args_list(args.begin(), args.end());
+  if (!epee::string_tools::get_xtype_from_string(start_height, args_list.front()))
+  {
+    std::cout << "start_height should be a number" << std::endl;
+    return false;
+  }
+
+  args_list.pop_front();
+
+  if (!parse_if_present(args_list, end_height, "end_height"))
+    return false;
+
+  if (!args_list.empty())
+  {
+    std::cout << "use: print_sn_state_changes <start_height> [end_height]"
+              << "(omit arguments to scan until the current block)"
+              << std::endl;
+    return false;
+  }
+
+  return m_executor.print_sn_state_changes(start_height, end_height);
+}
 
 bool t_command_parser_executor::print_peer_list(const std::vector<std::string>& args)
 {
@@ -158,6 +237,73 @@ bool t_command_parser_executor::print_blockchain_info(const std::vector<std::str
   return m_executor.print_blockchain_info(start_index, end_index);
 }
 
+bool t_command_parser_executor::print_quorum_state(const std::vector<std::string>& args)
+{
+  uint64_t start_height = cryptonote::COMMAND_RPC_GET_QUORUM_STATE::HEIGHT_SENTINEL_VALUE;
+  uint64_t end_height = cryptonote::COMMAND_RPC_GET_QUORUM_STATE::HEIGHT_SENTINEL_VALUE;
+
+  std::forward_list<std::string> args_list(args.begin(), args.end());
+  if (!parse_if_present(args_list, start_height, "start_height"))
+    return false;
+
+  if (!parse_if_present(args_list, end_height, "end_height"))
+    return false;
+
+  if (!args_list.empty())
+  {
+    std::cout << "use: print_quorum_state [start_height] [end_height]\n"
+              << "(omit arguments to print the latest quorums" << std::endl;
+    return false;
+  }
+
+  return m_executor.print_quorum_state(start_height, end_height);
+}
+
+bool t_command_parser_executor::print_sn_key(const std::vector<std::string>& args)
+{
+  if(!args.empty())
+    return false;
+  bool result = m_executor.print_sn_key();
+  return result;
+}
+
+bool t_command_parser_executor::print_stake_requirement(const std::vector<std::string>& args)
+{
+  if(args.size() != 1)
+  {
+    std::cout << "Expected 1 argument, <height>" << std::endl;
+    return false;
+  }
+
+  uint64_t height = 0;
+  if(!epee::string_tools::get_xtype_from_string(height, args[0]))
+  {
+    std::cout << "Wrong height given" << std::endl;
+    return false;
+  }
+
+  bool result = m_executor.print_stake_requirement(height);
+  return result;
+}
+
+bool t_command_parser_executor::prepare_registration()
+{
+  bool result = m_executor.prepare_registration();
+  return result;
+}
+
+bool t_command_parser_executor::print_sn(const std::vector<std::string>& args)
+{
+  bool result = m_executor.print_sn(args);
+  return result;
+}
+
+bool t_command_parser_executor::print_sn_status(const std::vector<std::string>& args)
+{
+  bool result = m_executor.print_sn_status(args);
+  return result;
+}
+
 bool t_command_parser_executor::set_log_level(const std::vector<std::string>& args)
 {
   if(args.size() > 1)
@@ -199,7 +345,7 @@ bool t_command_parser_executor::print_block(const std::vector<std::string>& args
   if (args.empty())
   {
     std::cout << "expected: print_block (<block_hash> | <block_height>)" << std::endl;
-    return false;
+    return true;
   }
 
   const std::string& arg = args.front();
@@ -217,7 +363,7 @@ bool t_command_parser_executor::print_block(const std::vector<std::string>& args
     }
   }
 
-  return false;
+  return true;
 }
 
 bool t_command_parser_executor::print_transaction(const std::vector<std::string>& args)
@@ -466,12 +612,12 @@ bool t_command_parser_executor::out_peers(const std::vector<std::string>& args)
       set = true;
     }
   }
-  
+
   catch(const std::exception& ex) {
     _erro("stoi exception");
     return false;
   }
-  
+
   return m_executor.out_peers(set, limit);
 }
 
@@ -487,25 +633,13 @@ bool t_command_parser_executor::in_peers(const std::vector<std::string>& args)
       set = true;
     }
   }
-  
+
   catch(const std::exception& ex) {
     _erro("stoi exception");
     return false;
   }
-  
+
   return m_executor.in_peers(set, limit);
-}
-
-bool t_command_parser_executor::start_save_graph(const std::vector<std::string>& args)
-{
-	if (!args.empty()) return false;
-	return m_executor.start_save_graph();
-}
-
-bool t_command_parser_executor::stop_save_graph(const std::vector<std::string>& args)
-{
-	if (!args.empty()) return false;
-	return m_executor.stop_save_graph();
 }
 
 bool t_command_parser_executor::hard_fork_info(const std::vector<std::string>& args)
@@ -751,13 +885,6 @@ bool t_command_parser_executor::pop_blocks(const std::vector<std::string>& args)
     std::cout << "number of blocks must be a number greater than 0" << std::endl;
   }
   return false;
-}
-
-bool t_command_parser_executor::rpc_payments(const std::vector<std::string>& args)
-{
-  if (args.size() != 0) return false;
-
-  return m_executor.rpc_payments();
 }
 
 bool t_command_parser_executor::version(const std::vector<std::string>& args)

@@ -21,7 +21,8 @@ created. To use it for Arqma:
 Common `host-platform-triplets` for cross compilation are:
 
 - `x86_64-w64-mingw32` for Win64
-- `x86_64-apple-darwin19.2.0` for MacOSX
+- `x86_64-apple-darwin` for macOS-x64
+- `aarch64-apple-darwin` for macOS-arm64 Apple Silicon
 - `arm-linux-gnueabihf` for Linux ARM 32 bit
 - `aarch64-linux-gnu` for Linux ARM 64 bit
 
@@ -32,7 +33,6 @@ The following can be set when running make: make FOO=bar
 
     SOURCES_PATH: downloaded sources will be placed here
     BASE_CACHE: built packages will be placed here
-    SDK_PATH: Path where sdk's can be found (used by OSX)
     FALLBACK_DOWNLOAD_PATH: If a source file can't be fetched, try here before giving up
     DEBUG: disable some optimizations and enable more runtime checking
     HOST_ID_SALT: Optional salt to use when generating host package ids
@@ -44,15 +44,6 @@ Additional targets:
     download-osx: run 'make download-osx' to fetch all sources needed for osx builds
     download-win: run 'make download-win' to fetch all sources needed for win builds
     download-linux: run 'make download-linux' to fetch all sources needed for linux builds
-
-#Darwin (macos) builds:
-
-To build with the x86_64-apple-darwin19.2.0 you require the mac os developer tools in MacOSX10.15.1.sdk.
-Download it from apple, or search for it on github. Create a new directoty called SDKs in this
-directory and place the entire MacOSX10.15.1.sdk folder in it. The depends build will then pick it up automatically
-(without requiring SDK_PATH).
-
-More info can be found on [macdeploy/README.md](macdeploy/README.md).
 
 #Mingw builds
 

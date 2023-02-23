@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -35,8 +35,8 @@
 #include <boost/algorithm/string.hpp>
 #include "misc_language.h"
 #include "syncobj.h"
-#include "cryptonote_basic_impl.h"
-#include "cryptonote_format_utils.h"
+#include "cryptonote_basic/cryptonote_basic_impl.h"
+#include "cryptonote_basic/cryptonote_format_utils.h"
 #include "cryptonote_core/cryptonote_tx_utils.h"
 #include "file_io_utils.h"
 #include "common/command_line.h"
@@ -78,6 +78,7 @@
 using namespace epee;
 
 #include "miner.h"
+#include "crypto/hash.h"
 
 namespace cryptonote
 {
@@ -148,8 +149,8 @@ namespace cryptonote
   bool miner::request_block_template()
   {
     block bl;
-    difficulty_type di = AUTO_VAL_INIT(di);
-    uint64_t height = AUTO_VAL_INIT(height);
+    difficulty_type di{};
+    uint64_t height{};
     uint64_t expected_reward; //only used for RPC calls - could possibly be useful here too?
 
     cryptonote::blobdata extra_nonce;
@@ -243,7 +244,7 @@ namespace cryptonote
           m_extra_messages[i] = buff;
       }
       m_config_folder_path = boost::filesystem::path(command_line::get_arg(vm, arg_extra_messages)).parent_path().string();
-      m_config = AUTO_VAL_INIT(m_config);
+      m_config = {};
       epee::serialization::load_t_from_json_file(m_config, m_config_folder_path + "/" + MINER_CONFIG_FILE_NAME);
       MINFO("Loaded " << m_extra_messages.size() << " extra messages, current index " << m_config.current_extra_message_index);
     }
@@ -350,7 +351,6 @@ namespace cryptonote
   {
     boost::interprocess::ipcdetail::atomic_write32(&m_stop, 1);
   }
-  extern "C" void rx_stop_mining(void);
   //-----------------------------------------------------------------------------------------------------
   bool miner::stop()
   {
@@ -379,7 +379,6 @@ namespace cryptonote
 
     MINFO("Mining has been stopped, " << m_threads.size() << " finished" );
     m_threads.clear();
-    rx_stop_mining();
     return true;
   }
   //-----------------------------------------------------------------------------------------------------
@@ -437,6 +436,8 @@ namespace cryptonote
   bool miner::worker_thread()
   {
     uint32_t th_local_index = boost::interprocess::ipcdetail::atomic_inc32(&m_thread_index);
+    crypto::rx_set_miner_thread(th_local_index, tools::get_max_concurrency());
+
     MLOG_SET_THREAD_NAME(std::string("[miner ") + std::to_string(th_local_index) + "]");
     MGINFO("Miner thread was started ["<< th_local_index << "]");
     uint32_t nonce = m_starter_nonce + th_local_index;

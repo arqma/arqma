@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -27,7 +27,9 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-include_directories(${OPENSSL_INCLUDE_DIR})
+## exp2 + round <-- if somebody would like to do some precise equations near future :)
+
+include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
 set(common_sources
   base58.cpp
@@ -36,11 +38,13 @@ set(common_sources
   download.cpp
   error.cpp
   expect.cpp
+  arqma.cpp
   util.cpp
   i18n.cpp
   notify.cpp
   password.cpp
   perf_timer.cpp
+  rules.cpp
   pruning.cpp
   spawn.cpp
   threadpool.cpp
@@ -68,9 +72,9 @@ set(common_private_headers
   download.h
   error.h
   expect.h
+  arqma.h
   http_connection.h
   notify.h
-  pod-class.h
   pruning.h
   rpc_client.h
   scoped_message_writer.h
@@ -80,6 +84,7 @@ set(common_private_headers
   i18n.h
   password.h
   perf_timer.h
+  rules.h
   spawn.h
   stack_trace.h
   threadpool.h
@@ -99,7 +104,6 @@ target_link_libraries(common
     cncrypto
     libunbound
     ${LIBUNWIND_LIBRARIES}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
@@ -107,5 +111,6 @@ target_link_libraries(common
     ${Boost_REGEX_LIBRARY}
     ${Boost_CHRONO_LIBRARY}
   PRIVATE
+    epee
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})

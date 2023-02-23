@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -30,13 +30,11 @@
 include_directories(${ZMQ_INCLUDE_DIRS})
 
 set(rpc_base_sources
-  rpc_args.cpp
-  rpc_handler.cpp)
+  rpc_args.cpp)
 
 set(rpc_sources
   core_rpc_server.cpp
-  rpc_payment.cpp
-  instanciations.cpp)
+  rpc_handler.cpp)
 
 set(daemon_messages_sources
   message.cpp
@@ -49,8 +47,7 @@ set(daemon_rpc_server_sources
 
 
 set(rpc_base_headers
-  rpc_args.h
-  rpc_handler.h)
+  rpc_args.h)
 
 set(rpc_headers
   rpc_handler.h)
@@ -60,7 +57,6 @@ set(daemon_rpc_server_headers)
 
 set(rpc_private_headers
   core_rpc_server.h
-  rpc_payment.h
   core_rpc_server_commands_defs.h
   core_rpc_server_error_codes.h)
 
@@ -105,7 +101,6 @@ arqma_add_library(daemon_rpc_server
 
 target_link_libraries(rpc_base
   PUBLIC
-    rpc_sig
     common
     epee
     ${Boost_REGEX_LIBRARY}
@@ -118,7 +113,6 @@ target_link_libraries(rpc
   PUBLIC
     arqma_mq
     rpc_base
-    rpc_sig
     common
     cryptonote_core
     cryptonote_protocol

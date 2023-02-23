@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -77,10 +77,6 @@ namespace wallet_args
   {
     return {"wallet-file", wallet_args::tr("Use wallet <arg>"), ""};
   }
-  command_line::arg_descriptor<std::string> arg_rpc_client_secret_key()
-  {
-    return {"rpc-client-secret-key", wallet_args::tr("Set RPC client secret key for RPC payments"), ""};
-  }
 
   const char* tr(const char* str)
   {
@@ -147,8 +143,7 @@ namespace wallet_args
       if (command_line::get_arg(vm, command_line::arg_help))
       {
         Print(print) << "ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << ENDL;
-        Print(print) << wallet_args::tr("This is the command line arqma wallet. It needs to connect to a arqma\n"
-												  "daemon to work correctly.") << ENDL;
+        Print(print) << wallet_args::tr("This is the command line arqma wallet. It needs to connect to a arqma\ndaemon to work correctly.") << ENDL;
         Print(print) << wallet_args::tr("Usage:") << ENDL << "  " << usage;
         Print(print) << desc_all;
         should_terminate = true;

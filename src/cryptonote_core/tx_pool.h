@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -37,7 +37,6 @@
 #include <unordered_set>
 #include <queue>
 #include <boost/serialization/version.hpp>
-#include <boost/utility.hpp>
 
 #include "string_tools.h"
 #include "syncobj.h"
@@ -49,6 +48,11 @@
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "rpc/message_data_structs.h"
 
+namespace service_nodes
+{
+  class service_node_list;
+};
+
 namespace cryptonote
 {
   class Blockchain;
@@ -56,21 +60,19 @@ namespace cryptonote
   /*                                                                      */
   /************************************************************************/
 
-  //! pair of <transaction fee, transaction hash> for organization
-  typedef std::pair<std::pair<double, std::time_t>, crypto::hash> tx_by_fee_and_receive_time_entry;
+  //! tuple of <deregister, transaction fee, receive time> for organization
+  typedef std::pair<std::tuple<bool, double, std::time_t>, crypto::hash> tx_by_fee_and_receive_time_entry;
 
   class txCompare
   {
   public:
     bool operator()(const tx_by_fee_and_receive_time_entry& a, const tx_by_fee_and_receive_time_entry& b) const
     {
-      // sort by greatest first, not least
-      if (a.first.first > b.first.first) return true;
-      else if (a.first.first < b.first.first) return false;
-      else if (a.first.second < b.first.second) return true;
-      else if (a.first.second > b.first.second) return false;
-      else if (a.second != b.second) return true;
-      else return false;
+      std::string ahash(a.second.data, sizeof(a.second.data));
+      std::string bhash(b.second.data, sizeof(b.second.data));
+      //      prioritize      deregister             fee                    arrival time          hash
+      return std::make_tuple(!std::get<0>(a.first), -std::get<1>(a.first), std::get<2>(a.first), ahash)
+           < std::make_tuple(!std::get<0>(b.first), -std::get<1>(b.first), std::get<2>(b.first), bhash);
     }
   };
 
@@ -108,7 +110,7 @@ namespace cryptonote
      * @param id the transaction's hash
      * @param tx_weight the transaction's weight
      */
-    bool add_tx(transaction &tx, const crypto::hash &id, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version);
+    bool add_tx(transaction &tx, const crypto::hash &id, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version, const service_nodes::service_node_list &service_node_list);
 
     /**
      * @brief add a transaction to the transaction pool
@@ -127,7 +129,7 @@ namespace cryptonote
      *
      * @return true if the transaction passes validations, otherwise false
      */
-    bool add_tx(transaction &tx, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version);
+    bool add_tx(transaction &tx, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version, service_nodes::service_node_list const &service_node_list);
 
     /**
      * @brief takes a transaction with the given hash from the pool
@@ -144,7 +146,7 @@ namespace cryptonote
      *
      * @return true unless the transaction cannot be found in the pool
      */
-    bool take_tx(const crypto::hash &id, transaction &tx, cryptonote::blobdata &txblob, size_t& tx_weight, uint64_t& fee, bool &relayed, bool &do_not_relay, bool &double_spend_seen, bool &pruned);
+    bool take_tx(const crypto::hash &id, transaction &tx, cryptonote::blobdata &txblob, size_t& tx_weight, uint64_t& fee, bool &relayed, bool &do_not_relay, bool &double_spend_seen);
 
     /**
      * @brief checks if the pool has a transaction with the given hash
@@ -158,26 +160,22 @@ namespace cryptonote
     /**
      * @brief action to take when notified of a block added to the blockchain
      *
-     * Currently does nothing
-     *
      * @param new_block_height the height of the blockchain after the change
      * @param top_block_id the hash of the new top block
      *
      * @return true
      */
-    bool on_blockchain_inc(uint64_t new_block_height, const crypto::hash& top_block_id);
+    bool on_blockchain_inc(service_nodes::service_node_list const &service_node_list, block const &blk);
 
     /**
      * @brief action to take when notified of a block removed from the blockchain
      *
-     * Currently does nothing
-     *
      * @param new_block_height the height of the blockchain after the change
      * @param top_block_id the hash of the new top block
      *
      * @return true
      */
-    bool on_blockchain_dec(uint64_t new_block_height, const crypto::hash& top_block_id);
+    bool on_blockchain_dec();
 
     /**
      * @brief action to take periodically
@@ -231,7 +229,7 @@ namespace cryptonote
      *
      * @return true
      */
-    bool fill_block_template(block &bl, size_t median_weight, uint64_t already_generated_coins, size_t &total_weight, uint64_t &fee, uint64_t &expected_reward, uint8_t version);
+    bool fill_block_template(block &bl, size_t median_weight, uint64_t already_generated_coins, size_t &total_weight, uint64_t &fee, uint64_t &expected_reward, uint8_t version, uint64_t height);
 
     /**
      * @brief get a list of all transactions in the pool
@@ -387,50 +385,6 @@ namespace cryptonote
      */
     void set_txpool_max_weight(size_t bytes);
 
-#define CURRENT_MEMPOOL_ARCHIVE_VER    11
-#define CURRENT_MEMPOOL_TX_DETAILS_ARCHIVE_VER    13
-
-    /**
-     * @brief information about a single transaction
-     */
-    struct tx_details
-    {
-      transaction tx;  //!< the transaction
-      size_t blob_size;  //!< the transaction's size
-      size_t weight;  //!< the transaction's weight
-      uint64_t fee;  //!< the transaction's fee amount
-      crypto::hash max_used_block_id;  //!< the hash of the highest block referenced by an input
-      uint64_t max_used_block_height;  //!< the height of the highest block referenced by an input
-
-      //! whether or not the transaction has been in a block before
-      /*! if the transaction was returned to the pool from the blockchain
-       *  due to a reorg, then this will be true
-       */
-      bool kept_by_block;
-
-      //! the highest block the transaction referenced when last checking it failed
-      /*! if verifying a transaction's inputs fails, it's possible this is due
-       *  to a reorg since it was created (if it used recently created outputs
-       *  as inputs).
-       */
-      uint64_t last_failed_height;
-
-      //! the hash of the highest block the transaction referenced when last checking it failed
-      /*! if verifying a transaction's inputs fails, it's possible this is due
-       *  to a reorg since it was created (if it used recently created outputs
-       *  as inputs).
-       */
-      crypto::hash last_failed_id;
-
-      time_t receive_time;  //!< the time when the transaction entered the pool
-
-      time_t last_relayed_time;  //!< the last time the transaction was relayed to the network
-      bool relayed;  //!< whether or not the transaction has been relayed to the network
-      bool do_not_relay; //!< to avoid relay this transaction to the network
-
-      bool double_spend_seen; //!< true iff another tx was seen double spending this one
-    };
-
   private:
 
     /**
@@ -459,6 +413,13 @@ namespace cryptonote
      * @return true if the spent key image is present, otherwise false
      */
     bool have_tx_keyimg_as_spent(const crypto::key_image& key_im) const;
+
+    /**
+     * @brief check if TX that does not have a key_image component has any duplicates in the pool
+     * @return true if it already exists
+     *
+     */
+    bool have_duplicated_non_standard_tx(transaction const &tx, service_nodes::service_node_list const &node_list) const;
 
     /**
      * @brief check if any spent key image in a transaction is in the pool
@@ -541,7 +502,7 @@ namespace cryptonote
      *  transaction on the assumption that the original will not be in a
      *  block again.
      */
-    typedef std::unordered_map<crypto::key_image, std::unordered_set<crypto::hash> > key_images_container;
+    typedef std::unordered_map<crypto::key_image, std::unordered_set<crypto::hash>> key_images_container;
 
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
 public:
@@ -592,35 +553,3 @@ private:
     std::unordered_map<crypto::hash, transaction> m_parsed_tx_cache;
   };
 }
-
-namespace boost
-{
-  namespace serialization
-  {
-    template<class archive_t>
-    void serialize(archive_t & ar, cryptonote::tx_memory_pool::tx_details& td, const unsigned int version)
-    {
-      ar & td.blob_size;
-      ar & td.fee;
-      ar & td.tx;
-      ar & td.max_used_block_height;
-      ar & td.max_used_block_id;
-      ar & td.last_failed_height;
-      ar & td.last_failed_id;
-      ar & td.receive_time;
-      ar & td.last_relayed_time;
-      ar & td.relayed;
-      if (version < 11)
-        return;
-      ar & td.kept_by_block;
-      if (version < 12)
-        return;
-      ar & td.do_not_relay;
-      if (version < 13)
-        return;
-      ar & td.weight;
-    }
-  }
-}
-BOOST_CLASS_VERSION(cryptonote::tx_memory_pool, CURRENT_MEMPOOL_ARCHIVE_VER)
-BOOST_CLASS_VERSION(cryptonote::tx_memory_pool::tx_details, CURRENT_MEMPOOL_TX_DETAILS_ARCHIVE_VER)

@@ -15,7 +15,7 @@ Core tests take longer than any other Monero tests, due to the high amount of co
 
 Tests are located in `tests/core_tests/`, and follow a straightforward naming convention. Most cases cover core functionality (`block_reward.cpp`, `chaingen.cpp`, `rct.cpp`, etc.), while some cover basic security tests (`double_spend.cpp` & `integer_overflow.cpp`).
 
-To run only Monero's core tests (after building):
+To run only Arqma's core tests (after building):
 
 ```
 cd build/debug/tests/core
@@ -34,7 +34,7 @@ Crypto tests are located under the `tests/crypto` directory.
 
 Tests correspond to components under `src/crypto/`. A quick comparison reveals the pattern, and new tests should continue the naming convention.
 
-To run only Monero's crypto tests (after building):
+To run only Arqma's crypto tests (after building):
 
 ```
 cd build/debug/tests/crypto
@@ -97,7 +97,7 @@ To run the same tests on a release build, replace `debug` with `release`.
 
 Unit tests are defined under the `tests/unit_tests` directory. Independent components are tested individually to ensure they work properly on their own.
 
-To run only Monero's unit tests (after building):
+To run only Arqma's unit tests (after building):
 
 ```
 cd build/debug/tests/unit_tests

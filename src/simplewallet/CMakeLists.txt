@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -45,7 +45,6 @@ target_link_libraries(simplewallet
   PRIVATE
     wallet
     rpc_base
-    rpc_sig
     cryptonote_core
     cncrypto
     common

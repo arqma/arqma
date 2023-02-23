@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -142,7 +142,7 @@ namespace rpc
 
     auto& chain = m_core.get_blockchain_storage();
 
-    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, NULL, res.start_height, res.current_height, false))
+    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, res.start_height, res.current_height, false))
     {
       res.status = Message::STATUS_FAILED;
       res.error_details = "Blockchain::find_blockchain_supplement() returned false";
@@ -203,7 +203,7 @@ namespace rpc
       }
     }
 
-    for (size_t i=0; i < found_hashes.size(); i++)
+    for(size_t i = 0; i < found_hashes.size(); i++)
     {
       cryptonote::rpc::transaction_info info;
       info.height = heights[i];
@@ -289,12 +289,12 @@ namespace rpc
       return;
     }
 
-    cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
-    tx_verification_context tvc = AUTO_VAL_INIT(tvc);
+    cryptonote_connection_context fake_context{};
+    tx_verification_context tvc{};
 
-    if(!m_core.handle_incoming_tx({tx_blob, crypto::null_hash}, tvc, false, false, !relay) || tvc.m_verifivation_failed)
+    if(!m_core.handle_incoming_tx(tx_blob, tvc, false, false, !relay) || tvc.m_verification_failed)
     {
-      if (tvc.m_verifivation_failed)
+      if (tvc.m_verification_failed)
       {
         MERROR("[SendRawTx]: tx verification failed");
       }
@@ -305,41 +305,67 @@ namespace rpc
       res.status = Message::STATUS_FAILED;
       res.error_details = "";
 
-      if (tvc.m_low_mixin)
+      if(tvc.m_low_mixin)
       {
         res.error_details = "mixin too low";
       }
-      if (tvc.m_double_spend)
+      if(tvc.m_double_spend)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "double spend";
       }
-      if (tvc.m_invalid_input)
+      if(tvc.m_invalid_input)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "invalid input";
       }
-      if (tvc.m_invalid_output)
+      if(tvc.m_invalid_output)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "invalid output";
       }
-      if (tvc.m_too_big)
+      if(tvc.m_too_big)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "too big";
       }
-      if (tvc.m_overspend)
+      if(tvc.m_overspend)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "overspend";
       }
-      if (tvc.m_fee_too_low)
+      if(tvc.m_fee_too_low)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "fee too low";
       }
-      if (res.error_details.empty())
+      if(tvc.m_too_few_outputs)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "too_few_outputs";
+      }
+      if(tvc.m_invalid_version)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx version below 2 is invalid and forbidden";
+      }
+      if(tvc.m_invalid_type)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx has an invalid type";
+      }
+      if(tvc.m_key_image_locked_by_snode)
+      {
+        if (!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx uses outputs that are locked by the service node network";
+      }
+      if(tvc.m_key_image_blacklisted)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx uses a key image that has been temporarily blacklisted by the service node network";
+      }
+
+      if(res.error_details.empty())
       {
         res.error_details = "an unknown issue was found with the transaction";
       }
@@ -640,7 +666,7 @@ namespace rpc
 
   bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
   {
-    b = boost::value_initialized<cryptonote::block>();
+    b = {};
     if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       res.status = Message::STATUS_FAILED;
@@ -848,7 +874,7 @@ namespace rpc
 
   void DaemonHandler::handle(const GetOutputHistogram::Request& req, GetOutputHistogram::Response& res)
   {
-    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t> > histogram;
+    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> histogram;
     try
     {
       histogram = m_core.get_blockchain_storage().get_output_histogram(req.amounts, req.unlocked, req.recent_cutoff);
@@ -975,6 +1001,14 @@ namespace rpc
     for (const auto& out : b.miner_tx.vout)
     {
       header.reward += out.amount;
+    }
+    if(b.major_version >= 16)
+    {
+      header.miner_reward = b.miner_tx.vout[0].amount;
+      header.miner_reward_unlock_block = b.miner_tx.output_unlock_times[0];
+    } else {
+      header.miner_reward = header.reward;
+      header.miner_reward_unlock_block = b.miner_tx.unlock_time;
     }
 
     header.difficulty = m_core.get_blockchain_storage().block_difficulty(header.height);

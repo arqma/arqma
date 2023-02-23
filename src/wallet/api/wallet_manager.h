@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -36,7 +36,7 @@
 
 namespace Monero {
 
-class WalletManagerImpl : public WalletManager
+class WalletManagerImpl : public WalletManagerBase
 {
 public:
     Wallet * createWallet(const std::string &path, const std::string &password,

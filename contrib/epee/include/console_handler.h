@@ -179,7 +179,7 @@ namespace epee
 #else
       while (m_run.load(std::memory_order_relaxed))
       {
-        int retval = ::WaitForSingleObject(::GetStdHandle(STD_INPUT_HANDLE), 100);
+        DWORD retval = ::WaitForSingleObject(::GetStdHandle(STD_INPUT_HANDLE), 100);
         switch (retval)
         {
           case WAIT_FAILED:
@@ -357,6 +357,7 @@ eof:
           if (m_stdin_reader.eos())
           {
             MGINFO("EOF on stdin, exiting");
+            std::cout << std::endl;
             break;
           }
           if (!get_line_ret)
@@ -481,7 +482,7 @@ eof:
   class command_handler {
   public:
     typedef boost::function<bool (const std::vector<std::string> &)> callback;
-    typedef std::map<std::string, std::pair<callback, std::pair<std::string, std::string>>> lookup;
+    typedef std::map<std::string, std::pair<callback, std::pair<std::string, std::string> > > lookup;
 
     std::string get_usage()
     {

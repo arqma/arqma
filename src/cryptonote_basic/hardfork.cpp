@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -326,10 +326,6 @@ HardFork::State HardFork::get_state(time_t t) const
   // no hard forks setup yet
   if (heights.size() <= 1)
     return Ready;
-
-  time_t t_last_fork = heights.back().time;
-  if (t >= t_last_fork + forked_time)
-    return LikelyForked;
   return Ready;
 }
 
@@ -343,7 +339,7 @@ uint8_t HardFork::get(uint64_t height) const
   CRITICAL_REGION_LOCAL(lock);
   if (height > db.height()) {
     assert(false);
-    return 255;
+    return INVALID_HARD_FORK_VERSION_FOR_HEIGHT;
   }
   if (height == db.height()) {
     return get_current_version();

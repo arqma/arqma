@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2019, The Arqma Network
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c)      2022, The Arqma Network
+// Copyright (c)      2019, The Loki Project
 //
 // All rights reserved.
 //
@@ -26,35 +26,8 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#pragma once
+#include "cryptonote_protocol_handler.h"
+#include "cryptonote_protocol_handler.inl"
 
-namespace boost
-{
-  namespace serialization
-  {
-
-
-    template<class archive_t>
-    void serialize(archive_t & ar, cryptonote::blockchain_storage::transaction_chain_entry& te, const unsigned int version)
-    {
-      ar & te.tx;
-      ar & te.m_keeper_block_height;
-      ar & te.m_blob_size;
-      ar & te.m_global_output_indexes;
-    }
-
-    template<class archive_t>
-    void serialize(archive_t & ar, cryptonote::blockchain_storage::block_extended_info& ei, const unsigned int version)
-    {
-      ar & ei.bl;
-      ar & ei.height;
-      ar & ei.cumulative_difficulty;
-      ar & ei.block_cumulative_size;
-      ar & ei.already_generated_coins;
-    }
-
-  }
-}
+namespace cryptonote { template class t_cryptonote_protocol_handler<cryptonote::core>; }

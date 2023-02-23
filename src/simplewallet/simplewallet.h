@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -144,9 +144,6 @@ namespace cryptonote
     bool set_segregation_height(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_ignore_fractional_outputs(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_track_uses(const std::vector<std::string> &args = std::vector<std::string>());
-    bool set_persistent_rpc_client_id(const std::vector<std::string> &args = std::vector<std::string>());
-    bool set_auto_mine_for_rpc_payment_threshold(const std::vector<std::string> &args = std::vector<std::string>());
-    bool set_credits_target(const std::vector<std::string> &args = std::vector<std::string>());
     bool help(const std::vector<std::string> &args = std::vector<std::string>());
     bool start_mining(const std::vector<std::string> &args);
     bool stop_mining(const std::vector<std::string> &args);
@@ -161,7 +158,21 @@ namespace cryptonote
     bool transfer_main(int transfer_type, const std::vector<std::string> &args);
     bool transfer(const std::vector<std::string> &args);
     bool locked_transfer(const std::vector<std::string> &args);
+    bool stake(const std::vector<std::string> &args_);
+    bool register_service_node(const std::vector<std::string> &args_);
+    bool request_stake_unlock(const std::vector<std::string> &args_);
+    bool print_locked_stakes(const std::vector<std::string>& /*args_*/);
+    bool query_locked_stakes(bool print_result);
     bool locked_sweep_all(const std::vector<std::string> &args);
+
+    enum class sweep_type_t
+    {
+      stake,
+      register_stake,
+      all_or_below,
+      single
+    };
+    bool sweep_main_internal(sweep_type_t sweep_type, std::vector<tools::wallet2::pending_tx> &ptx_vector, cryptonote::address_parse_info const &dest);
     bool sweep_main(uint64_t below, bool locked, const std::vector<std::string> &args);
     bool sweep_all(const std::vector<std::string> &args);
     bool sweep_below(const std::vector<std::string> &args);
@@ -232,14 +243,12 @@ namespace cryptonote
     bool blackball(const std::vector<std::string>& args);
     bool unblackball(const std::vector<std::string>& args);
     bool blackballed(const std::vector<std::string>& args);
-    bool rpc_payment_info(const std::vector<std::string> &args);
-    bool start_mining_for_rpc(const std::vector<std::string> &args);
-    bool stop_mining_for_rpc(const std::vector<std::string> &args);
     bool show_qr_code(const std::vector<std::string> &args);
     bool net_stats(const std::vector<std::string>& args);
-    bool public_nodes(const std::vector<std::string>& args);
     bool welcome(const std::vector<std::string>& args);
     bool version(const std::vector<std::string>& args);
+
+    bool register_service_node_main(const std::vector<std::string>& service_node_key_as_str, const cryptonote::account_public_address& address, uint32_t priority, const std::vector<uint64_t>& portions, const std::vector<uint8_t>& extra, std::set<uint32_t>& subaddr_indices, uint64_t bc_height, uint64_t staking_requirement);
 
     uint64_t get_daemon_blockchain_height(std::string& err);
     bool try_connect_to_daemon(bool silent = false, uint32_t* version = nullptr);
@@ -255,19 +264,25 @@ namespace cryptonote
 
     struct transfer_view
     {
-      std::string type;
+      struct dest_output
+      {
+        std::string wallet_addr;
+        uint64_t amount;
+        uint64_t unlock_time;
+      };
+
       boost::variant<uint64_t, std::string> block;
       uint64_t timestamp;
-      std::string direction;
+      tools::pay_type type;
       bool confirmed;
       uint64_t amount;
       crypto::hash hash;
       std::string payment_id;
       uint64_t fee;
-      std::vector<std::pair<std::string, uint64_t>> outputs;
+      std::vector<dest_output> outputs;
       std::set<uint32_t> index;
       std::string note;
-      std::string unlocked;
+      std::string lock_msg;
     };
     bool get_transfers(std::vector<std::string>& args_, std::vector<transfer_view>& transfers);
 
@@ -291,10 +306,6 @@ namespace cryptonote
      * \param ptx_vector Pending tx(es) created by transfer/sweep_all
      */
     void commit_or_save(std::vector<tools::wallet2::pending_tx>& ptx_vector, bool do_not_relay);
-
-    void handle_transfer_exception(const std::exception_ptr &e, bool trusted_daemon);
-
-    bool check_daemon_rpc_prices(const std::string &daemon_url, uint32_t &actual_cph, uint32_t &claimed_cph);
 
     //----------------- i_wallet2_callback ---------------------
     virtual void on_new_block(uint64_t height, const cryptonote::block& block);
@@ -382,6 +393,7 @@ namespace cryptonote
     uint64_t m_restore_height;  // optional
     bool m_do_not_relay;
     bool m_use_english_language_names;
+    bool m_has_locked_key_images;
 
     epee::console_handlers_binder m_cmd_binder;
 
@@ -397,13 +409,5 @@ namespace cryptonote
     bool m_auto_refresh_refreshing;
     std::atomic<bool> m_in_manual_refresh;
     uint32_t m_current_subaddress_account;
-
-    std::atomic<bool> m_need_payment;
-    boost::posix_time::ptime m_last_rpc_payment_mining_time;
-    bool m_rpc_payment_mining_requested;
-    bool m_daemon_rpc_payment_message_displayed;
-    float m_rpc_payment_hash_rate;
-
-    std::unordered_map<std::string, uint32_t> m_claimed_cph;
   };
 }

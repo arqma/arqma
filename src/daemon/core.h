@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -60,6 +60,15 @@ public:
     : m_core{nullptr}
     , m_vm_HACK{vm}
   {
+  }
+
+  void set_protocol(t_protocol_raw & protocol)
+  {
+    m_core.set_cryptonote_protocol(&protocol);
+  }
+
+  bool run()
+  {
     //initialize core here
     MGINFO("Initializing core...");
 #if defined(PER_BLOCK_CHECKPOINT)
@@ -72,16 +81,6 @@ public:
       throw std::runtime_error("Failed to initialize core");
     }
     MGINFO("Core initialized OK");
-  }
-
-  // TODO - get rid of circular dependencies in internals
-  void set_protocol(t_protocol_raw & protocol)
-  {
-    m_core.set_cryptonote_protocol(&protocol);
-  }
-
-  bool run()
-  {
     return true;
   }
 

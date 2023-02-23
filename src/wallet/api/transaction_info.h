@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -37,6 +37,13 @@ namespace Monero {
 
 class TransactionHistoryImpl;
 
+enum class reward_type
+{
+  unspecified,
+  service_node,
+  miner
+};
+
 class TransactionInfoImpl : public TransactionInfo
 {
 public:
@@ -61,11 +68,14 @@ public:
     virtual const std::vector<Transfer> &transfers() const override;
     virtual uint64_t confirmations() const override;
     virtual uint64_t unlockTime() const override;
+    bool isServiceNodeReward() const override;
+    bool isMinerReward() const override;
 
 private:
     int         m_direction;
     bool        m_pending;
     bool        m_failed;
+    reward_type m_reward_type;
     uint64_t    m_amount;
     uint64_t    m_fee;
     uint64_t    m_blockheight;

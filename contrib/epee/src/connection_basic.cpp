@@ -282,9 +282,5 @@ double connection_basic::get_sleep_time(size_t cb) {
     return t;
 }
 
-void connection_basic::set_save_graph(bool save_graph) {
-}
-
-
 } // namespace
 } // namespace

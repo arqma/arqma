@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -33,7 +33,11 @@
 #include <unordered_map>
 #include "crypto/crypto.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
-#include "ringct/rctTypes.h"
+
+namespace rct
+{
+  struct key;
+};
 
 namespace cryptonote
 {

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -81,9 +81,11 @@ namespace tools
     //         tx_not_possible
     //         not_enough_outs_to_mix
     //         tx_not_constructed
+    //         vote_rejected
     //         tx_rejected
     //         tx_sum_overflow
     //         tx_too_big
+    //         tx_amount_too_low
     //         zero_destination
     //       wallet_rpc_error *
     //         daemon_busy
@@ -91,7 +93,6 @@ namespace tools
     //         is_key_image_spent_error
     //         get_histogram_error
     //         get_output_distribution
-    //         payment_required
     //       wallet_files_doesnt_correspond
     //
     // * - class with protected ctor
@@ -124,14 +125,18 @@ namespace tools
       "failed to get blocks",
       "failed to get hashes",
       "failed to get out indices",
-      "failed to get random outs"
+      "failed to get random outs",
+      "failed to get service node data",
+      "failed to get hard fork version",
     };
     enum failed_rpc_request_message_indices
     {
       get_blocks_error_message_index,
       get_hashes_error_message_index,
       get_out_indices_error_message_index,
-      get_outs_error_message_index
+      get_outs_error_message_index,
+      get_service_nodes_error_message_index,
+      get_hard_fork_version_error_message_index,
     };
 
     template<typename Base, int msg_index>
@@ -381,6 +386,8 @@ namespace tools
     //----------------------------------------------------------------------------------------------------
     typedef failed_rpc_request<refresh_error, get_blocks_error_message_index> get_blocks_error;
     //----------------------------------------------------------------------------------------------------
+    typedef failed_rpc_request<refresh_error, get_service_nodes_error_message_index> get_service_nodes_error;
+    //----------------------------------------------------------------------------------------------------
     typedef failed_rpc_request<refresh_error, get_hashes_error_message_index> get_hashes_error;
     //----------------------------------------------------------------------------------------------------
     typedef failed_rpc_request<refresh_error, get_out_indices_error_message_index> get_out_indices_error;
@@ -437,6 +444,8 @@ namespace tools
       {
       }
     };
+    //----------------------------------------------------------------------------------------------------
+    typedef failed_rpc_request<transfer_error, get_hard_fork_version_error_message_index> get_hard_fork_version_error;
     //----------------------------------------------------------------------------------------------------
     typedef failed_rpc_request<transfer_error, get_outs_error_message_index> get_outs_error;
     //----------------------------------------------------------------------------------------------------
@@ -651,6 +660,34 @@ namespace tools
       std::string m_reason;
     };
     //----------------------------------------------------------------------------------------------------
+    struct vote_rejected : public transfer_error
+    {
+      explicit vote_rejected(std::string&& loc, const std::string& status, const std::string& reason)
+        : transfer_error(std::move(loc), "vote was rejected by daemon")
+        , m_status(status)
+        , m_reason(reason)
+      {
+      }
+
+      const std::string& status() const { return m_status; }
+      const std::string& reason() const { return m_reason; }
+
+      std::string to_string() const
+      {
+        std::ostringstream ss;
+        ss << transfer_error::to_string() << ", status = " << m_status;
+        if(!m_reason.empty())
+        {
+          ss << " (" << m_reason << ")";
+        }
+        return ss.str();
+      }
+
+    private:
+      std::string m_status;
+      std::string m_reason;
+    };
+    //----------------------------------------------------------------------------------------------------
     struct tx_sum_overflow : public transfer_error
     {
       explicit tx_sum_overflow(
@@ -733,6 +770,12 @@ namespace tools
       uint64_t m_tx_weight_limit;
     };
     //----------------------------------------------------------------------------------------------------
+    struct tx_amount_too_low : public transfer_error
+    {
+      explicit tx_amount_too_low(std::string&& loc)
+        :  transfer_error(std::move(loc), "ARQ Amount is too low") { }
+    };
+    //----------------------------------------------------------------------------------------------------
     struct zero_destination : public transfer_error
     {
       explicit zero_destination(std::string&& loc)
@@ -772,20 +815,6 @@ namespace tools
       }
       const std::string& status() const { return m_status; }
     private:
-      const std::string m_status;
-    };
-    //----------------------------------------------------------------------------------------------------
-    struct wallet_coded_rpc_error : public wallet_rpc_error
-    {
-      explicit wallet_coded_rpc_error(std::string&& loc, const std::string& request, int code, const std::string& status)
-        : wallet_rpc_error(std::move(loc), std::string("error ") + std::to_string(code) + (" in ") + request + " RPC: " + status, request),
-        m_code(code), m_status(status)
-      {
-      }
-      int code() const { return m_code; }
-      const std::string& status() const { return m_status; }
-    private:
-      int m_code;
       const std::string m_status;
     };
     //----------------------------------------------------------------------------------------------------
@@ -829,10 +858,10 @@ namespace tools
       }
     };
     //----------------------------------------------------------------------------------------------------
-    struct payment_required: public wallet_rpc_error
+    struct get_output_blacklist : public wallet_rpc_error
     {
-      explicit payment_required(std::string&& loc, const std::string& request)
-        : wallet_rpc_error(std::move(loc), "payment required", request)
+      explicit get_output_blacklist(std::string&& loc, const std::string& request)
+        : wallet_rpc_error(std::move(loc), "Failed to get output blacklist", request)
       {
       }
     };
