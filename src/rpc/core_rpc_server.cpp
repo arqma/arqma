@@ -818,8 +818,8 @@ namespace cryptonote
     }
     res.sanity_check_failed = false;
 
-    cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
-    tx_verification_context tvc = AUTO_VAL_INIT(tvc);
+    cryptonote_connection_context fake_context{};
+    tx_verification_context tvc{};
     if(!m_core.handle_incoming_tx(tx_blob, tvc, false, false, req.do_not_relay) || tvc.m_verification_failed)
     {
       const vote_verification_context &vvc = tvc.m_vote_ctx;
@@ -1221,7 +1221,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, epee::json_rpc::error &error_resp)
   {
-    b = boost::value_initialized<cryptonote::block>();
+    b = {};
     if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
@@ -1441,7 +1441,7 @@ namespace cryptonote
     template_req.reserve_size = 1;
     template_req.wallet_address = req.wallet_address;
     template_req.prev_block = req.prev_block;
-    submit_req.push_back(std::string{});
+    submit_req.emplace_back();
     res.height = m_core.get_blockchain_storage().get_current_blockchain_height();
 
     bool r = CORE_RPC_STATUS_OK;
@@ -1528,7 +1528,8 @@ namespace cryptonote
     response.depth = m_core.get_current_blockchain_height() - height - 1;
     response.hash = string_tools::pod_to_hex(hash);
     response.difficulty = m_core.get_blockchain_storage().block_difficulty(height);
-    response.cumulative_difficulty = response.block_size = m_core.get_blockchain_storage().get_db().get_block_cumulative_difficulty(height);
+    response.cumulative_difficulty = m_core.get_blockchain_storage().get_db().get_block_cumulative_difficulty(height);
+    response.block_weight = m_core.get_blockchain_storage().get_db().get_block_weight(height);
     response.reward = get_block_reward(blk);
     response.miner_reward = blk.major_version >= 16 ? blk.miner_tx.vout[0].amount : get_block_reward(blk);
     response.miner_reward_unlock_block = get_miner_reward_unlock_block(blk);
@@ -1537,6 +1538,7 @@ namespace cryptonote
     response.pow_hash = fill_pow_hash ? string_tools::pod_to_hex(get_block_longhash(&(m_core.get_blockchain_storage()), blk, height, 0)) : "";
     response.long_term_weight = m_core.get_blockchain_storage().get_db().get_block_long_term_weight(height);
     response.miner_tx_hash = string_tools::pod_to_hex(cryptonote::get_transaction_hash(blk.miner_tx));
+    response.service_node_winner = string_tools::pod_to_hex(cryptonote::get_service_node_winner_from_tx_extra(blk.miner_tx.extra));
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -1586,8 +1588,8 @@ namespace cryptonote
     }
     else if (mode == invoke_http_mode::JON_RPC)
     {
-      epee::json_rpc::request<typename COMMAND_TYPE::request> json_req = AUTO_VAL_INIT(json_req);
-      epee::json_rpc::response<typename COMMAND_TYPE::response, std::string> json_resp = AUTO_VAL_INIT(json_resp);
+      epee::json_rpc::request<typename COMMAND_TYPE::request> json_req{};
+      epee::json_rpc::response<typename COMMAND_TYPE::response, std::string> json_resp{};
       json_req.jsonrpc = "2.0";
       json_req.id = epee::serialization::storage_entry(0);
       json_req.method = command_name;
@@ -1922,7 +1924,6 @@ namespace cryptonote
       error_resp.message = "Internal error: can't produce valid response.";
       return false;
     }
-    res.miner_tx_hash = epee::string_tools::pod_to_hex(cryptonote::get_transaction_hash(blk.miner_tx));
     for (size_t n = 0; n < blk.tx_hashes.size(); ++n)
     {
       res.tx_hashes.push_back(epee::string_tools::pod_to_hex(blk.tx_hashes[n]));
@@ -2253,22 +2254,6 @@ namespace cryptonote
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_start_save_graph(const COMMAND_RPC_START_SAVE_GRAPH::request& req, COMMAND_RPC_START_SAVE_GRAPH::response& res, const connection_context *ctx)
-  {
-    PERF_TIMER(on_start_save_graph);
-    m_p2p.set_save_graph(true);
-    res.status = CORE_RPC_STATUS_OK;
-    return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_stop_save_graph(const COMMAND_RPC_STOP_SAVE_GRAPH::request& req, COMMAND_RPC_STOP_SAVE_GRAPH::response& res, const connection_context *ctx)
-  {
-    PERF_TIMER(on_stop_save_graph);
-    m_p2p.set_save_graph(false);
-    res.status = CORE_RPC_STATUS_OK;
-    return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_update(const COMMAND_RPC_UPDATE::request& req, COMMAND_RPC_UPDATE::response& res, const connection_context *ctx)
   {
     PERF_TIMER(on_update);
@@ -2548,7 +2533,7 @@ namespace cryptonote
       bool r = m_core.get_pool_transaction(txid, txblob);
       if (r)
       {
-        cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
+        cryptonote_connection_context fake_context{};
         NOTIFY_NEW_TRANSACTIONS::request r;
         r.txs.push_back(txblob);
         m_core.get_protocol()->relay_transactions(r, fake_context);
@@ -2796,7 +2781,6 @@ namespace cryptonote
     entry.requested_unlock_height = info.requested_unlock_height;
     entry.last_reward_block_height = info.last_reward_block_height;
     entry.last_reward_transaction_index = info.last_reward_transaction_index;
-    entry.last_uptime_proof = info.proof->timestamp;
     entry.active = info.is_active();
     entry.funded = info.is_fully_funded();
     entry.state_height = info.is_fully_funded() ? (info.is_decommissioned() ? info.last_decommission_height : info.active_since_height) : info.last_reward_block_height;
@@ -2805,6 +2789,7 @@ namespace cryptonote
     entry.service_node_version = {info.proof->version_major, info.proof->version_minor, info.proof->version_patch};
     entry.public_ip = string_tools::get_ip_string_from_int32(info.proof->public_ip);
     entry.storage_port = info.proof->storage_port;
+    entry.storage_server_reachable = info.proof->storage_server_reachable;
     entry.pubkey_ed25519 = info.proof->pubkey_ed25519 ? string_tools::pod_to_hex(info.proof->pubkey_ed25519) : "";
     entry.pubkey_x25519 = info.proof->pubkey_x25519 ? string_tools::pod_to_hex(info.proof->pubkey_x25519) : "";
 
@@ -2836,6 +2821,14 @@ namespace cryptonote
     entry.portions_for_operator = info.portions_for_operator;
     entry.operator_address = cryptonote::get_account_address_as_str(m_core.get_nettype(), false, info.operator_address);
     entry.swarm_id = info.swarm_id;
+
+    entry.last_uptime_proof = info.proof->timestamp;
+    entry.storage_server_reachable = info.proof->storage_server_reachable;
+    entry.storage_server_reachable_timestamp = info.proof->storage_server_reachable_timestamp;
+    entry.version_major = info.proof->version_major;
+    entry.version_minor = info.proof->version_minor;
+    entry.version_patch = info.proof->version_patch;
+    entry.votes = std::vector<service_nodes::checkpoint_vote_record>(info.proof->votes.begin(), info.proof->votes.end());
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_service_nodes(const COMMAND_RPC_GET_SERVICE_NODES::request& req, COMMAND_RPC_GET_SERVICE_NODES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
@@ -2879,7 +2872,6 @@ namespace cryptonote
     {
       COMMAND_RPC_GET_SERVICE_NODES::response::entry entry = {};
       fill_sn_response_entry(entry, pubkey_info, height);
-
       res.service_node_states.push_back(entry);
     }
 
@@ -3023,10 +3015,22 @@ namespace cryptonote
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_storage_server_ping(const COMMAND_RPC_STORAGE_SERVER_PING::request&, COMMAND_RPC_STORAGE_SERVER_PING::response& res, epee::json_rpc::error&, const connection_context*)
+  bool core_rpc_server::on_storage_server_ping(const COMMAND_RPC_STORAGE_SERVER_PING::request& req, COMMAND_RPC_STORAGE_SERVER_PING::response& res, epee::json_rpc::error&, const connection_context*)
   {
-    m_core.m_last_storage_server_ping = time(nullptr);
-    res.status = "OK";
+    const std::array<int, 3> cur_version = { req.version_major, req.version_minor, req.version_patch };
+    if (cur_version < service_nodes::MIN_STORAGE_SERVER_VERSION)
+    {
+      std::stringstream status;
+      status << "Oudated Storage Server. ";
+      status << "Current: " << req.version_major << "." << req.version_minor << "." << req.version_patch << ". ";
+      status << "Required: " << service_nodes::MIN_STORAGE_SERVER_VERSION[0] << "."
+             << service_nodes::MIN_STORAGE_SERVER_VERSION[1] << "." << service_nodes::MIN_STORAGE_SERVER_VERSION[2];
+      res.status = status.str();
+      MERROR(status.str());
+    } else {
+      m_core.m_last_storage_server_ping = time(nullptr);
+      res.status = "OK";
+    }
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -3183,6 +3187,35 @@ namespace cryptonote
           res.total_unlock++;
         }
       }
+    }
+
+    res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_report_peer_storage_server_status(const COMMAND_RPC_REPORT_PEER_SS_STATUS::request& req, COMMAND_RPC_REPORT_PEER_SS_STATUS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
+  {
+    crypto::public_key pubkey;
+    if (!string_tools::hex_to_pod(req.pubkey, pubkey))
+    {
+      MERROR("Could not parse public key: " << req.pubkey);
+      error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
+      error_resp.message = "Could not parse public key";
+      return false;
+    }
+
+    if (req.type == "reachability")
+    {
+      if (!m_core.set_storage_server_peer_reachable(pubkey, req.passed))
+      {
+        error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
+        error_resp.message = "Pubkey not found";
+        return false;
+      }
+    } else {
+      error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
+      error_resp.message = "Unknown status type";
+      return false;
     }
 
     res.status = CORE_RPC_STATUS_OK;

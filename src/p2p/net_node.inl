@@ -113,7 +113,6 @@ namespace nodetool
     command_line::add_arg(desc, arg_limit_rate_up);
     command_line::add_arg(desc, arg_limit_rate_down);
     command_line::add_arg(desc, arg_limit_rate);
-    command_line::add_arg(desc, arg_save_graph);
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -286,7 +285,7 @@ namespace nodetool
       std::vector<std::string> perrs = command_line::get_arg(vm, arg_p2p_add_peer);
       for(const std::string& pr_str: perrs)
       {
-        nodetool::peerlist_entry pe = AUTO_VAL_INIT(pe);
+        nodetool::peerlist_entry pe{};
         pe.id = crypto::rand<uint64_t>();
         const uint16_t default_port = cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT;
         expect<epee::net_utils::network_address> adr = net::get_network_address(pr_str, default_port);
@@ -308,11 +307,6 @@ namespace nodetool
           m_command_line_peers.push_back(pe);
         }
       }
-    }
-
-    if(command_line::has_arg(vm, arg_save_graph))
-    {
-      set_save_graph(true);
     }
 
     if (command_line::has_arg(vm,arg_p2p_add_exclusive_node))
@@ -915,7 +909,7 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::do_peer_timed_sync(const epee::net_utils::connection_context_base& context_, peerid_type peer_id)
   {
-    typename COMMAND_TIMED_SYNC::request arg = AUTO_VAL_INIT(arg);
+    typename COMMAND_TIMED_SYNC::request arg{};
     m_payload_handler.get_payload_sync_data(arg.payload_data);
 
     network_zone& zone = m_network_zones.at(context_.m_remote_address.get_zone());
@@ -1075,7 +1069,7 @@ namespace nodetool
     }
 
     con->m_anchor = peer_type == anchor;
-    peerid_type pi = AUTO_VAL_INIT(pi);
+    peerid_type pi{};
     bool res = do_handshake_with_peer(pi, *con, just_take_peerlist);
 
     if(!res)
@@ -1092,7 +1086,7 @@ namespace nodetool
       return true;
     }
 
-    peerlist_entry pe_local = AUTO_VAL_INIT(pe_local);
+    peerlist_entry pe_local{};
     pe_local.adr = na;
     pe_local.id = pi;
     time_t last_seen;
@@ -1104,7 +1098,7 @@ namespace nodetool
     zone.m_peerlist.append_with_peer_white(pe_local);
     //update last seen and push it to peerlist manager
 
-    anchor_peerlist_entry ape = AUTO_VAL_INIT(ape);
+    anchor_peerlist_entry ape{};
     ape.adr = na;
     ape.id = pi;
     ape.first_seen = first_seen_stamp ? first_seen_stamp : time(nullptr);
@@ -1132,7 +1126,7 @@ namespace nodetool
     }
 
     con->m_anchor = false;
-    peerid_type pi = AUTO_VAL_INIT(pi);
+    peerid_type pi{};
     const bool res = do_handshake_with_peer(pi, *con, true);
     if(!res)
     {
@@ -1295,7 +1289,7 @@ namespace nodetool
         continue;
 
       tried_peers.insert(random_index);
-      peerlist_entry pe = AUTO_VAL_INIT(pe);
+      peerlist_entry pe{};
       bool r = use_white_list ? zone.m_peerlist.get_white_peer_by_index(pe, random_index) : zone.m_peerlist.get_gray_peer_by_index(pe, random_index);
       CHECK_AND_ASSERT_MES(r, false, "Failed to get random peer from peerlist(white:" << use_white_list << ")");
 
@@ -2070,7 +2064,7 @@ namespace nodetool
   {
     network_zone& zone = m_network_zones.at(context.m_remote_address.get_zone());
     if (!zone.m_net_server.is_stop_signal_sent() && !context.m_is_income) {
-      epee::net_utils::network_address na = AUTO_VAL_INIT(na);
+      epee::net_utils::network_address na{};
       na = context.m_remote_address;
 
       zone.m_peerlist.remove_from_peer_anchor(na);

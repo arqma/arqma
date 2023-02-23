@@ -29,9 +29,13 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-project(easylogging CXX)
+project(easylogging)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(flags "-fPIC")
 
 find_package(Threads)
 find_package(Backtrace)
@@ -59,3 +63,4 @@ if (BUILD_GUI_DEPS)
         ARCHIVE DESTINATION ${lib_folder}
         LIBRARY DESTINATION ${lib_folder})
 endif()
+set_property(TARGET easylogging APPEND PROPERTY COMPILE_FLAGS "${flags}")

@@ -53,17 +53,6 @@ namespace service_nodes
 {
   struct testing_quorum;
 
-  struct voter_to_signature
-  {
-    uint16_t          voter_index;
-    crypto::signature signature;
-
-    BEGIN_SERIALIZE()
-      FIELD(voter_index)
-      FIELD(signature)
-    END_SERIALIZE()
-  };
-
   struct checkpoint_vote { crypto::hash block_hash; };
   struct state_change_vote { uint16_t worker_index; new_state state; };
 
@@ -104,12 +93,26 @@ namespace service_nodes
 
   struct service_node_keys;
 
-  quorum_vote_t make_state_change_vote(uint64_t block_height, uint16_t index_in_group, uint16_t worker_index, new_state state, const service_node_keys &keys);
+  struct voter_to_signature
+  {
+    voter_to_signature() = default;
+    voter_to_signature(quorum_vote_t const &vote) : voter_index(vote.index_in_group), signature(vote.signature) { }
+    uint16_t voter_index;
+    crypto::signature signature;
+    BEGIN_SERIALIZE()
+      FIELD(voter_index)
+      FIELD(signature)
+    END_SERIALIZE()
+  };
 
-  bool verify_checkpoint(cryptonote::checkpoint_t const &checkpoint, service_nodes::testing_quorum const &quorum);
+  quorum_vote_t make_state_change_vote(uint64_t block_height, uint16_t index_in_group, uint16_t worker_index, new_state state, const service_node_keys &keys);
+  quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
+  cryptonote::checkpoint_t make_empty_service_node_checkpoint(crypto::hash const &block_hash, uint64_t height);
+
+  bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::testing_quorum const &quorum);
   bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context& vvc, const service_nodes::testing_quorum &quorum);
   bool verify_vote_age(const quorum_vote_t& vote, uint64_t latest_height, cryptonote::vote_verification_context &vvc);
-  bool verify_vote_against_quorum(const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::testing_quorum &quorum);
+  bool verify_vote_signature(const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::testing_quorum &quorum);
   crypto::signature make_signature_from_vote(quorum_vote_t const &vote, const service_node_keys &keys);
   crypto::signature make_signature_from_tx_change_state(cryptonote::tx_extra_service_node_state_change const &state_change, const service_node_keys &keys);
 

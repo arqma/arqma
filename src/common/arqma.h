@@ -35,32 +35,34 @@
 
 namespace arqma
 {
-  double round(double);
-  double exp2(double);
+double round (double);
+double exp2 (double);
+uint64_t clamp_u64 (uint64_t val, uint64_t min, uint64_t max);
 
+template <typename lambda_t>
+struct defer
+{
+  lambda_t lambda;
+  defer(lambda_t lambda) : lambda(lambda) {}
+  ~defer() { lambda(); }
+};
+
+struct defer_helper
+{
   template <typename lambda_t>
-  struct defer
+  defer<lambda_t> operator+(lambda_t lambda)
   {
-    lambda_t lambda;
-    defer(lambda_t lambda) : lambda(lambda) {}
-    ~defer() { lambda(); }
-  };
+    return defer<lambda_t>(lambda);
+  }
+};
 
-  struct defer_helper
-  {
-    template <typename lambda_t>
-    defer<lambda_t> operator+(lambda_t lambda)
-    {
-      return defer<lambda_t>(lambda);
-    }
-  };
+#define ARQMA_TOKEN_COMBINE2(x, y) x ## y
+#define ARQMA_TOKEN_COMBINE(x, y) ARQMA_TOKEN_COMBINE2(x, y)
+#define ARQMA_DEFER auto const ARQMA_TOKEN_COMBINE(arqma_defer_, __LINE__) = arqma::defer_helper() + [&]()
 
-  #define ARQMA_TOKEN_COMBINE2(x, y) x ## y
-  #define ARQMA_TOKEN_COMBINE(x, y) ARQMA_TOKEN_COMBINE2(x, y)
-  #define ARQMA_DEFER auto const ARQMA_TOKEN_COMBINE(arqma_defer_, __LINE__) = arqma::defer_helper() + [&]()
+template <typename T, size_t N>
+constexpr size_t array_count(T (&)[N]) { return N; }
 
-  template <typename T, size_t N>
-  constexpr size_t array_count(T (&)[N]) { return N; }
 }; // namespace arqma
 
 #endif // ARQMA_H

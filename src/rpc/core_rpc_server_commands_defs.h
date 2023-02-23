@@ -46,6 +46,7 @@
 #include "checkpoints/checkpoints.h"
 
 #include "cryptonote_core/service_node_quorum_cop.h"
+#include "cryptonote_core/service_node_list.h"
 
 namespace
 {
@@ -94,7 +95,7 @@ namespace cryptonote
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define CORE_RPC_VERSION_MAJOR 4
-#define CORE_RPC_VERSION_MINOR 1
+#define CORE_RPC_VERSION_MINOR 2
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -994,6 +995,7 @@ namespace cryptonote
       std::string pow_hash;
       uint64_t long_term_weight;
       std::string miner_tx_hash;
+      std::string service_node_winner;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(major_version)
@@ -1016,6 +1018,7 @@ namespace cryptonote
         KV_SERIALIZE(pow_hash)
         KV_SERIALIZE_OPT(long_term_weight, (uint64_t)0)
         KV_SERIALIZE(miner_tx_hash)
+        KV_SERIALIZE(service_node_winner)
       END_KV_SERIALIZE_MAP()
   };
 
@@ -1795,46 +1798,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       std::string status;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(in_peers)
-        KV_SERIALIZE(status)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_START_SAVE_GRAPH
-  {
-    struct request_t
-    {
-      BEGIN_KV_SERIALIZE_MAP()
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-	  std::string status;
-
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(status)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_STOP_SAVE_GRAPH
-  {
-    struct request_t
-    {
-      BEGIN_KV_SERIALIZE_MAP()
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      std::string status;
-
-      BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
@@ -2657,7 +2620,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint64_t requested_unlock_height;
         uint64_t last_reward_block_height;
         uint32_t last_reward_transaction_index;
-        uint64_t last_uptime_proof;
         bool active;
         bool funded;
         uint64_t state_height;
@@ -2676,13 +2638,20 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         std::string pubkey_ed25519;
         std::string pubkey_x25519;
 
+        uint64_t last_uptime_proof;
+        bool storage_server_reachable;
+        uint64_t storage_server_reachable_timestamp;
+        uint16_t version_major;
+        uint16_t version_minor;
+        uint16_t version_patch;
+        std::vector<service_nodes::checkpoint_vote_record> votes;
+
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(service_node_pubkey)
           KV_SERIALIZE(registration_height)
           KV_SERIALIZE(requested_unlock_height)
           KV_SERIALIZE(last_reward_block_height)
           KV_SERIALIZE(last_reward_transaction_index)
-          KV_SERIALIZE(last_uptime_proof)
           KV_SERIALIZE(active)
           KV_SERIALIZE(funded)
           KV_SERIALIZE(state_height)
@@ -2700,6 +2669,13 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE(storage_port)
           KV_SERIALIZE(pubkey_ed25519)
           KV_SERIALIZE(pubkey_x25519)
+          KV_SERIALIZE(last_uptime_proof)
+          KV_SERIALIZE(storage_server_reachable)
+          KV_SERIALIZE(storage_server_reachable_timestamp)
+          KV_SERIALIZE(version_major)
+          KV_SERIALIZE(version_minor)
+          KV_SERIALIZE(version_patch)
+          KV_SERIALIZE(votes)
         END_KV_SERIALIZE_MAP()
       };
 
@@ -2734,7 +2710,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       bool requested_unlock_height;
       bool last_reward_block_height;
       bool last_reward_transaction_index;
-      bool last_uptime_proof;
       bool active;
       bool funded;
       bool state_height;
@@ -2752,6 +2727,13 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       bool storage_port;
       bool pubkey_ed25519;
       bool pubkey_x25519;
+      bool last_uptime_proof;
+      bool storage_server_reachable;
+      bool storage_server_reachable_timestamp;
+      bool version_major;
+      bool version_minor;
+      bool version_patch;
+      bool votes;
       bool block_hash;
       bool height;
       bool target_height;
@@ -2763,7 +2745,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         KV_SERIALIZE_OPT2(requested_unlock_height, false)
         KV_SERIALIZE_OPT2(last_reward_block_height, false)
         KV_SERIALIZE_OPT2(last_reward_transaction_index, false)
-        KV_SERIALIZE_OPT2(last_uptime_proof, false)
         KV_SERIALIZE_OPT2(active, false)
         KV_SERIALIZE_OPT2(funded, false)
         KV_SERIALIZE_OPT2(state_height, false)
@@ -2781,6 +2762,13 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         KV_SERIALIZE_OPT2(storage_port, false)
         KV_SERIALIZE_OPT2(pubkey_ed25519, false)
         KV_SERIALIZE_OPT2(pubkey_x25519, false)
+        KV_SERIALIZE_OPT2(last_uptime_proof, false)
+        KV_SERIALIZE_OPT2(storage_server_reachable, false)
+        KV_SERIALIZE_OPT2(storage_server_reachable_timestamp, false)
+        KV_SERIALIZE_OPT2(version_major, false)
+        KV_SERIALIZE_OPT2(version_minor, false)
+        KV_SERIALIZE_OPT2(version_patch, false)
+        KV_SERIALIZE_OPT2(votes, false)
         KV_SERIALIZE_OPT2(block_hash, false)
         KV_SERIALIZE_OPT2(height, false)
         KV_SERIALIZE_OPT2(target_height, false)
@@ -2817,7 +2805,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint64_t requested_unlock_height; // The height at which contributions will be released and the Service Node expires. 0 if not requested yet.
         uint64_t last_reward_block_height; // The last height at which this Service Node received a reward.
         uint32_t last_reward_transaction_index; // When multiple Service Nodes register on the same height, the order the transaction arrive dictate the order you receive rewards.
-        uint64_t last_uptime_proof; // The last time this Service Node's uptime proof was relayed by atleast 1 Service Node other than itself in unix epoch time.
         bool active; // True if fully funded and not currently decommissioned (and so `active && !funded` implicitly defines decommissioned)
         bool funded; // True if the required stakes have been submitted to activate this Service Node
         uint64_t state_height; // If active: the state at which registration was completed; if decommissioned: the decommissioning height; if awaiting: the last contribution (or registration) height
@@ -2835,6 +2822,13 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint16_t storage_port; // The port number associated with the storage server
         std::string pubkey_ed25519;
         std::string pubkey_x25519;
+        uint64_t last_uptime_proof;
+        bool storage_server_reachable;
+        uint64_t storage_server_reachable_timestamp;
+        uint16_t version_major;
+        uint16_t version_minor;
+        uint16_t version_patch;
+        std::vector<service_nodes::checkpoint_vote_record> votes;
 
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(service_node_pubkey)
@@ -2842,7 +2836,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(requested_unlock_height)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(last_reward_block_height)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(last_reward_transaction_index)
-          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(last_uptime_proof)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(active)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(funded)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(state_height)
@@ -2860,6 +2853,13 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(storage_port)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(pubkey_ed25519);
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(pubkey_x25519);
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(last_uptime_proof)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(storage_server_reachable)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(storage_server_reachable_timestamp)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(version_major)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(version_minor)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(version_patch)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(votes)
         END_KV_SERIALIZE_MAP()
       };
 
@@ -2891,7 +2891,13 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
   {
     struct request
     {
+      int version_major;
+      int version_minor;
+      int version_patch;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(version_major)
+        KV_SERIALIZE(version_minor)
+        KV_SERIALIZE(version_patch)
       END_KV_SERIALIZE_MAP()
     };
 
@@ -3113,6 +3119,31 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         KV_SERIALIZE(total_unlock)
         KV_SERIALIZE(start_height)
         KV_SERIALIZE(end_height)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_REPORT_PEER_SS_STATUS
+  {
+    struct request_t
+    {
+      std::string type;
+      std::string pubkey;
+      bool passed;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(type)
+        KV_SERIALIZE(pubkey)
+        KV_SERIALIZE(passed)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::string status;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;

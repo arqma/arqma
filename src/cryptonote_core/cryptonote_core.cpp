@@ -228,7 +228,7 @@ namespace cryptonote
               m_miner(this, [this](const cryptonote::block &b, uint64_t height, const crypto::hash *seed_hash, unsigned int threads, crypto::hash &hash) {
                 return cryptonote::get_block_longhash(&m_blockchain_storage, b, hash, height, seed_hash, threads);
               }),
-              m_miner_address(account_public_address{}),
+              m_miner_address{},
               m_starter_message_showed(false),
               m_target_blockchain_height(0),
               m_checkpoints_path(""),
@@ -236,7 +236,7 @@ namespace cryptonote
               m_update_download(0),
               m_nettype(UNDEFINED),
               m_update_available(false),
-              m_last_storage_server_ping(time(nullptr)),
+              m_last_storage_server_ping(0),
               m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
@@ -1437,8 +1437,8 @@ namespace cryptonote
     std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
     if (m_mempool.get_relayable_transactions(txs) && !txs.empty())
     {
-      cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
-      tx_verification_context tvc = AUTO_VAL_INIT(tvc);
+      cryptonote_connection_context fake_context{};
+      tx_verification_context tvc{};
       NOTIFY_NEW_TRANSACTIONS::request r;
       for (auto it = txs.begin(); it != txs.end(); ++it)
       {
@@ -1455,7 +1455,7 @@ namespace cryptonote
     if (!m_service_node_keys) return true;
     NOTIFY_UPTIME_PROOF::request req = m_service_node_list.generate_uptime_proof(*m_service_node_keys, m_sn_public_ip, m_storage_port);
 
-    cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
+    cryptonote_connection_context fake_context{};
     bool relayed = get_protocol()->relay_uptime_proof(req, fake_context, true);
     if (relayed) MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_keys->pub);
 
@@ -1487,7 +1487,7 @@ namespace cryptonote
     req.votes = m_quorum_cop.get_relayable_votes(get_current_blockchain_height());
     if(req.votes.size())
     {
-      cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
+      cryptonote_connection_context fake_context{};
       if(get_protocol()->relay_service_node_votes(req, fake_context))
       {
         m_quorum_cop.set_votes_relayed(req.votes);
@@ -1605,8 +1605,8 @@ namespace cryptonote
       CHECK_AND_ASSERT_MES(txs.size() == b.tx_hashes.size() && !missed_txs.size(), false, "can't find some transactions in found block:" << get_block_hash(b) << " txs.size()=" << txs.size()
         << ", b.tx_hashes.size()=" << b.tx_hashes.size() << ", missed_txs.size()" << missed_txs.size());
 
-      cryptonote_connection_context exclude_context = {};
-      NOTIFY_NEW_FLUFFY_BLOCK::request arg = AUTO_VAL_INIT(arg);
+      cryptonote_connection_context exclude_context{};
+      NOTIFY_NEW_FLUFFY_BLOCK::request arg{};
       arg.current_blockchain_height = m_blockchain_storage.get_current_blockchain_height();
       arg.b = blocks[0];
 
@@ -1657,7 +1657,7 @@ namespace cryptonote
     return success;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_block(const blobdata& block_blob, const block *b, block_verification_context& bvc, checkpoint_t const *checkpoint, bool update_miner_blocktemplate)
+  bool core::handle_incoming_block(const blobdata& block_blob, const block *b, block_verification_context& bvc, checkpoint_t *checkpoint, bool update_miner_blocktemplate)
   {
     TRY_ENTRY();
 
@@ -1806,7 +1806,8 @@ namespace cryptonote
     const auto elapsed = std::time(nullptr) - last_time_storage_server_pinged;
     if (elapsed > STORAGE_SERVER_PING_LIFETIME)
     {
-      MWARNING("Have not heard from the storage server since at least: " << tools::get_human_readable_timespan(std::chrono::seconds(last_time_storage_server_pinged)));
+      MWARNING("Have not heard from the storage server " << (!last_time_storage_server_pinged ? "since starting" :
+               "for more than " + tools::get_human_readable_timespan(std::chrono::seconds(elapsed))));
       return false;
     }
     return true;
@@ -2034,6 +2035,11 @@ namespace cryptonote
       MCLOG_RED(level, "global", "Free space is below 1 GB on " << m_config_folder);
     }
     return true;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::set_storage_server_peer_reachable(crypto::public_key const &pubkey, bool value)
+  {
+    return m_service_node_list.set_storage_server_peer_reachable(pubkey, value);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::update_blockchain_pruning()

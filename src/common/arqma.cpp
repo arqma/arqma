@@ -499,3 +499,12 @@ arqma::round (double x)
     }
   return z;
 }
+
+uint64_t
+arqma::clamp_u64(uint64_t val, uint64_t min, uint64_t max)
+{
+  assert(min <= max);
+  if (val < min) val = min;
+  else if (val > max) val = max;
+  return val;
+}

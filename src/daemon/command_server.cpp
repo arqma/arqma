@@ -129,13 +129,13 @@ t_command_server::t_command_server(
   m_command_lookup.set_handler(
       "print_sn"
     , std::bind(&t_command_parser_executor::print_sn, &m_parser, p::_1)
-    , "print_sn [<pubkey> [...]] [+json]"
+    , "print_sn [<pubkey> [...]] [+json|+detail]"
     , "Print Service_node registration info for the current height"
     );
   m_command_lookup.set_handler(
       "print_sn_status"
     , std::bind(&t_command_parser_executor::print_sn_status, &m_parser, p::_1)
-    , "print_sn_status [+json]"
+    , "print_sn_status [+json|+detail]"
     , "Print Service Node registration info for this Service Node"
     );
   m_command_lookup.set_handler(
@@ -245,16 +245,6 @@ t_command_server::t_command_server(
     , std::bind(&t_command_parser_executor::in_peers, &m_parser, p::_1)
     , "in_peers <max_number>"
     , "Set the <max_number> of in peers."
-    );
-    m_command_lookup.set_handler(
-      "start_save_graph"
-    , std::bind(&t_command_parser_executor::start_save_graph, &m_parser, p::_1)
-    , "Start saving data for dr Arqma."
-    );
-    m_command_lookup.set_handler(
-      "stop_save_graph"
-    , std::bind(&t_command_parser_executor::stop_save_graph, &m_parser, p::_1)
-    , "Stop saving data for dr Arqma."
     );
     m_command_lookup.set_handler(
       "hard_fork_info"

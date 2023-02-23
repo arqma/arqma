@@ -133,21 +133,23 @@ namespace {
   void print_block_header(cryptonote::block_header_response const & header)
   {
     tools::success_msg_writer()
-      << "timestamp: " << boost::lexical_cast<std::string>(header.timestamp) << std::endl
-      << "previous hash: " << header.prev_hash << std::endl
-      << "nonce: " << boost::lexical_cast<std::string>(header.nonce) << std::endl
-      << "is orphan: " << header.orphan_status << std::endl
-      << "height: " << boost::lexical_cast<std::string>(header.height) << std::endl
-      << "depth: " << boost::lexical_cast<std::string>(header.depth) << std::endl
-      << "hash: " << header.hash << std::endl
-      << "difficulty: " << boost::lexical_cast<std::string>(header.difficulty) << std::endl
-      << "POW hash: " << header.pow_hash << std::endl
-      << "block size: " << header.block_size << std::endl
-      << "block weight: " << header.block_weight << std::endl
-      << "long term weight: " << header.long_term_weight << std::endl
-      << "num txes: " << header.num_txes << std::endl
-      << "reward: " << cryptonote::print_money(header.reward) << std::endl
-      << "miner_reward: " << cryptonote::print_money(header.miner_reward);
+      << "timestamp: " << boost::lexical_cast<std::string>(header.timestamp) << "\n"
+      << "previous hash: " << header.prev_hash << "\n"
+      << "nonce: " << boost::lexical_cast<std::string>(header.nonce) << "\n"
+      << "is orphan: " << header.orphan_status << "\n"
+      << "height: " << boost::lexical_cast<std::string>(header.height) << "\n"
+      << "depth: " << boost::lexical_cast<std::string>(header.depth) << "\n"
+      << "hash: " << header.hash << "\n"
+      << "difficulty: " << boost::lexical_cast<std::string>(header.difficulty) << "\n"
+      << "cumulative_difficulty: " << boost::lexical_cast<std::string>(header.cumulative_difficulty) << "\n"
+      << "POW hash: " << header.pow_hash << "\n"
+      << "block size: " << header.block_size << "\n"
+      << "block weight: " << header.block_weight << "\n"
+      << "long term weight: " << header.long_term_weight << "\n"
+      << "num txes: " << header.num_txes << "\n"
+      << "reward: " << cryptonote::print_money(header.reward) << "\n"
+      << "miner_reward: " << cryptonote::print_money(header.miner_reward) << "\n"
+      << "service node winner: " << header.service_node_winner << std::endl;
   }
 
   std::string get_human_time_ago(time_t t, time_t now)
@@ -157,7 +159,7 @@ namespace {
     time_t dt = t > now ? t - now : now - t;
     std::string s;
     if (dt < 90)
-      s = boost::lexical_cast<std::string>(dt) + " seconds";
+      s = boost::lexical_cast<std::string>(dt) + (dt == 1 ? " second" :" seconds");
     else if (dt < 90 * 60)
       s = boost::lexical_cast<std::string>(dt/60) + " minutes";
     else if (dt < 36 * 3600)
@@ -174,7 +176,7 @@ namespace {
 
     struct tm tm;
     epee::misc_utils::get_gmt_time(t, tm);
-    strftime(buf, sizeof(buf), "%Y-%m-%d %I:%M:%S %p", &tm);
+    strftime(buf, sizeof(buf), "%Y-%m-%d %I:%M:%S %p UTC", &tm);
     return buf;
   }
 
@@ -635,6 +637,46 @@ bool t_rpc_command_executor::show_status()
     }
   }
 
+  std::string my_sn_key;
+  int64_t my_decomm_remaining = 0;
+  uint64_t my_sn_last_uptime = 0;
+  bool my_sn_registered = false, my_sn_staked = false, my_sn_active = false;
+  {
+    cryptonote::COMMAND_RPC_GET_SERVICE_NODE_KEY::request req = {};
+    cryptonote::COMMAND_RPC_GET_SERVICE_NODE_KEY::response res = {};
+    epee::json_rpc::error error_resp;
+    std::string fail_message = "Unsuccessful";
+
+    bool good = false;
+    if (m_is_rpc)
+      good = m_rpc_client->json_rpc_request(req, res, "get_service_node_key", fail_message.c_str());
+    else
+      good = m_rpc_server->on_get_service_node_key(req, res, error_resp) && res.status == CORE_RPC_STATUS_OK;
+
+    if (good)
+    {
+      my_sn_key = std::move(res.service_node_pubkey);
+      cryptonote::COMMAND_RPC_GET_SERVICE_NODES::request sn_req = {};
+      cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response sn_res = {};
+
+      sn_req.service_node_pubkeys.push_back(my_sn_key);
+      if (m_is_rpc)
+        good = m_rpc_client->json_rpc_request(sn_req, sn_res, "get_service_nodes", fail_message.c_str()) && sn_res.service_node_states.size() == 1;
+      else
+        good = m_rpc_server->on_get_service_nodes(sn_req, sn_res, error_resp) && sn_res.status == CORE_RPC_STATUS_OK && sn_res.service_node_states.size() == 1;
+
+      if (good)
+      {
+        auto &entry = sn_res.service_node_states.front();
+        my_sn_registered = true;
+        my_sn_staked = entry.total_contributed >= entry.staking_requirement;
+        my_sn_active = entry.active;
+        my_decomm_remaining = entry.earned_downtime_blocks;
+        my_sn_last_uptime = entry.last_uptime_proof;
+      }
+    }
+  }
+
   std::time_t uptime = std::time(nullptr) - ires.start_time;
   uint64_t net_height = ires.target_height > ires.height ? ires.target_height : ires.height;
   std::string bootstrap_msg;
@@ -651,7 +693,8 @@ bool t_rpc_command_executor::show_status()
     }
   }
 
-  tools::success_msg_writer() << boost::format("Height: %llu/%llu (%.1f%%) on %s%s, %s, net hash %s, v%u%s, %s, %u(out)+%u(in) connections")
+  std::stringstream str;
+  str << boost::format("Height: %llu/%llu (%.1f%%) on %s%s, %s, net hash %s, v%u%s, %s, %u(out)+%u(in) connections")
     % (unsigned long long)ires.height
     % (unsigned long long)net_height
     % get_sync_percentage(ires)
@@ -665,6 +708,28 @@ bool t_rpc_command_executor::show_status()
     % (unsigned)ires.outgoing_connections_count
     % (unsigned)ires.incoming_connections_count
   ;
+
+  if (ires.start_time)
+  {
+    str << boost::format(", uptime %ud %uh %um %us")
+      % (unsigned int)floor(uptime / 60.0 / 60.0 / 24.0)
+      % (unsigned int)floor(fmod((uptime / 60.0 / 60.0), 24.0))
+      % (unsigned int)floor(fmod((uptime / 60.0), 60.0))
+      % (unsigned int)fmod(uptime, 60.0)
+    ;
+  }
+
+  tools::success_msg_writer() << str.str();
+
+  if (!my_sn_key.empty())
+  {
+    str.str("");
+    if (!my_sn_registered)
+      str << "SN: " << my_sn_key << " -- not registered";
+    else
+      str << "SN: " << my_sn_key << " -- " << (!my_sn_staked ? "awaiting" : my_sn_active ? "active" : "DECOMMISSIONED (" + std::to_string(my_decomm_remaining) + " blocks credit)") << ", last uptime: " << (my_sn_last_uptime ? get_human_time_ago(my_sn_last_uptime, time(nullptr)) : "(never)");
+    tools::success_msg_writer() << str.str();
+  }
 
   return true;
 }
@@ -1676,59 +1741,6 @@ bool t_rpc_command_executor::in_peers(bool set, uint32_t limit)
 	return true;
 }
 
-bool t_rpc_command_executor::start_save_graph()
-{
-	cryptonote::COMMAND_RPC_START_SAVE_GRAPH::request req;
-	cryptonote::COMMAND_RPC_START_SAVE_GRAPH::response res;
-	std::string fail_message = "Unsuccessful";
-
-	if (m_is_rpc)
-	{
-		if (!m_rpc_client->rpc_request(req, res, "/start_save_graph", fail_message.c_str()))
-		{
-			return true;
-		}
-	}
-
-	else
-    {
-		if (!m_rpc_server->on_start_save_graph(req, res) || res.status != CORE_RPC_STATUS_OK)
-		{
-			tools::fail_msg_writer() << make_error(fail_message, res.status);
-			return true;
-		}
-	}
-
-	tools::success_msg_writer() << "Saving graph is now on";
-	return true;
-}
-
-bool t_rpc_command_executor::stop_save_graph()
-{
-	cryptonote::COMMAND_RPC_STOP_SAVE_GRAPH::request req;
-	cryptonote::COMMAND_RPC_STOP_SAVE_GRAPH::response res;
-	std::string fail_message = "Unsuccessful";
-
-	if (m_is_rpc)
-	{
-		if (!m_rpc_client->rpc_request(req, res, "/stop_save_graph", fail_message.c_str()))
-		{
-			return true;
-		}
-	}
-
-	else
-    {
-		if (!m_rpc_server->on_stop_save_graph(req, res) || res.status != CORE_RPC_STATUS_OK)
-		{
-			tools::fail_msg_writer() << make_error(fail_message, res.status);
-			return true;
-		}
-	}
-	tools::success_msg_writer() << "Saving graph is now off";
-	return true;
-}
-
 bool t_rpc_command_executor::hard_fork_info(uint8_t version)
 {
     cryptonote::COMMAND_RPC_HARD_FORK_INFO::request req;
@@ -2449,7 +2461,7 @@ static std::string to_string_rounded(double d, int precision) {
   return ss.str();
 }
 
-static void append_printable_service_node_list_entry(cryptonote::network_type nettype, uint8_t hard_fork_version, uint64_t curr_height, uint64_t entry_index, cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry const &entry, std::string &buffer)
+static void append_printable_service_node_list_entry(cryptonote::network_type nettype, bool detailed_view, uint64_t curr_height, uint64_t entry_index, cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry const &entry, std::string &buffer)
 {
   const char indent1[] = "    ";
   const char indent2[] = "        ";
@@ -2463,26 +2475,36 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
     buffer.append(indent1);
     buffer.append("[");
     buffer.append(std::to_string(entry_index));
-    buffer.append("] Service Node: ");
+    buffer.append("] ");
+    buffer.append("Service Node: ");
     buffer.append(entry.service_node_pubkey);
+    buffer.append(" v");
+    buffer.append(std::to_string(entry.version_major));
+    buffer.append(".");
+    buffer.append(std::to_string(entry.version_minor));
+    buffer.append(".");
+    buffer.append(std::to_string(entry.version_patch));
     buffer.append("\n");
 
-    buffer.append(indent2);
-    buffer.append("Total Contributed/Staking Requirement: ");
-    buffer.append(cryptonote::print_money(entry.total_contributed));
-    buffer.append("/");
-    buffer.append(cryptonote::print_money(entry.staking_requirement));
-    buffer.append("\n");
+    if (detailed_view)
+    {
+      buffer.append(indent2);
+      buffer.append("Total Contributed/Staking Requirement: ");
+      buffer.append(cryptonote::print_money(entry.total_contributed));
+      buffer.append("/");
+      buffer.append(cryptonote::print_money(entry.staking_requirement));
+      buffer.append("\n");
 
-    buffer.append(indent2);
-    buffer.append("Total Reserved: ");
-    buffer.append(cryptonote::print_money(entry.total_reserved));
-    buffer.append("\n");
+      buffer.append(indent2);
+      buffer.append("Total Reserved: ");
+      buffer.append(cryptonote::print_money(entry.total_reserved));
+      buffer.append("\n");
+    }
   }
 
   // Print Expiry Info
+  uint64_t const now = time(nullptr);
   {
-    uint64_t const now = time(nullptr);
     uint64_t expiry_height = 0;
 
     buffer.append(indent2);
@@ -2504,7 +2526,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
       buffer.append(") blocks\n");
 
       buffer.append(indent2);
-      buffer.append("Expiry Date (Est. UTC): ");
+      buffer.append("Expiry Date (estimated): ");
       buffer.append(get_date_time(expiry_epoch_time));
       buffer.append(" (");
       buffer.append(get_human_time_ago(expiry_epoch_time, now));
@@ -2512,7 +2534,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
     }
   }
 
-  if(is_registered) // Print reward status
+  if(detailed_view && is_registered) // Print reward status
   {
     buffer.append(indent2);
     buffer.append("Last Reward At (Height/TX Index): ");
@@ -2523,6 +2545,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
   }
 
   // Print operator information
+  if (detailed_view)
   {
     buffer.append(indent2);
     buffer.append("Operator Cut (\% Of Reward): ");
@@ -2542,23 +2565,62 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
     buffer.append(indent2);
     if(entry.last_uptime_proof == 0)
     {
-      buffer.append("Last Uptime Proof Received: Yet Not Received");
+      buffer.append("Last Uptime Proof Received: (Awaiting confirmation from network)");
     }
     else
     {
       buffer.append("Last Uptime Proof Received: ");
       buffer.append(get_human_time_ago(entry.last_uptime_proof, time(nullptr)));
+    }
 
-      buffer.append("\n");
-      buffer.append(indent2);
-      buffer.append("IP Address: ");
+    buffer.append("\n");
+    buffer.append(indent2);
+    buffer.append("IP Address & Port: ");
+    if (entry.public_ip == "0.0.0.0")
+    {
+      buffer.append("(Awaiting confirmation from network)");
+    }
+    else
+    {
       buffer.append(entry.public_ip);
-
-      buffer.append("\n");
-      buffer.append(indent2);
-      buffer.append("Storage Server Port: ");
+      buffer.append(":");
       buffer.append(std::to_string(entry.storage_port));
     }
+    buffer.append("\n");
+
+    buffer.append(indent2);
+    buffer.append("Storage Server Reachable: ");
+    buffer.append(entry.storage_server_reachable ? "Yes" : "No");
+
+    buffer.append(" (");
+    if (entry.storage_server_reachable_timestamp == 0)
+      buffer.append("Awaiting first test");
+    else
+      buffer.append(get_human_time_ago(entry.storage_server_reachable_timestamp, now));
+    buffer.append(")\n");
+
+    buffer.append(indent2);
+    buffer.append("Checkpoint Participation [Height: Voted]: ");
+    for (size_t i = 0; i < entry.votes.size(); i++)
+    {
+      service_nodes::checkpoint_vote_record const &record = entry.votes[i];
+      if (record.height == service_nodes::INVALID_HEIGHT)
+      {
+        buffer.append("[N/A: N/A]");
+      }
+      else
+      {
+        buffer.append("[");
+        buffer.append(std::to_string(record.height));
+        buffer.append(": ");
+        buffer.append(record.voted ? "Yes" : "No");
+        buffer.append("]");
+      }
+      if (i < (entry.votes.size() - 1))
+        buffer.append(",");
+      buffer.append(" ");
+    }
+
     buffer.append("\n");
     buffer.append(indent2);
     if (entry.active) {
@@ -2571,12 +2633,11 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
       buffer.append(indent2);
       buffer.append("Remaining Decommission Time Until DEREGISTRATION: " + std::to_string(entry.earned_downtime_blocks) + " blocks");
     }
-    buffer.append("\n");
   }
 
-  // Print contributors
+  buffer.append("\n");
+  if (detailed_view) // Print contributors
   {
-    buffer.append("\n");
     for(size_t j = 0; j < entry.contributors.size(); ++j)
     {
       const cryptonote::service_node_contributor &contributor = entry.contributors[j];
@@ -2605,16 +2666,20 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
   std::string fail_message = "Unsuccessful";
   epee::json_rpc::error error_resp;
 
+  bool detailed_view = false;
   for(unsigned int i = 0; i < args.size(); ++i)
   {
-    if(!(args[i] == "+json"))
-    {
-      req.service_node_pubkeys.push_back(args[i]);
-    }
-    else
+    if(args[i] == "+json")
     {
       req.include_json = true;
+      continue;
     }
+    else if (args[i] == "+detail")
+    {
+      detailed_view = true;
+      continue;
+    }
+    req.service_node_pubkeys.push_back(args[i]);
   }
 
   cryptonote::COMMAND_RPC_GET_INFO::request get_info_req;
@@ -2731,7 +2796,7 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
   for(size_t i = 0; i < unregistered.size(); i++)
   {
     cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry const &entry = (*unregistered[i]);
-    append_printable_service_node_list_entry(nettype, entry.registration_height, curr_height, i, entry, unregistered_print_data);
+    append_printable_service_node_list_entry(nettype, detailed_view, curr_height, i, entry, unregistered_print_data);
     if(i < unregistered.size())
       unregistered_print_data.append("\n");
   }
@@ -2739,7 +2804,7 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
   for(size_t i = 0; i < registered.size(); i++)
   {
     cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry const &entry = (*registered[i]);
-    append_printable_service_node_list_entry(nettype, entry.registration_height, curr_height, i, entry, registered_print_data);
+    append_printable_service_node_list_entry(nettype, detailed_view, curr_height, i, entry, registered_print_data);
     if(i < registered.size())
       registered_print_data.append("\n");
   }
@@ -2785,16 +2850,13 @@ bool t_rpc_command_executor::print_sn_status(const std::vector<std::string>& arg
     return false;
   }
 
-  bool result = false;
-  if(args.size() == 1)
-  {
-    result = print_sn({res.service_node_pubkey, args[0]});
-  }
-  else
-  {
-    result = print_sn({res.service_node_pubkey});
-  }
+  std::vector<std::string> real_args = {};
+  real_args.reserve(1 + args.size());
+  real_args.push_back(res.service_node_pubkey);
+  for (const std::string &arg : args)
+    real_args.push_back(arg);
 
+  bool result = print_sn(real_args);
   return result;
 }
 

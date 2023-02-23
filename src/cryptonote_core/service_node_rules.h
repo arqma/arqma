@@ -19,9 +19,9 @@ namespace service_nodes
   constexpr uint64_t CHECKPOINT_STORE_PERSISTENTLY_INTERVAL        = 60;
   constexpr uint64_t CHECKPOINT_VOTE_LIFETIME                      = CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
 
-  constexpr int16_t CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK = 8;
-  constexpr int16_t CHECKPOINT_MAX_MISSABLE_VOTES                                    = 4;
-  static_assert(CHECKPOINT_MAX_MISSABLE_VOTES < CHECKPOINT_MIN_QUORUMS_NODE_MUST_VOTE_IN_BEFORE_DEREGISTER_CHECK,
+  constexpr int16_t CHECKPOINT_NUM_QUORUMS_TO_PARTICIPATE_IN = 8;
+  constexpr int16_t CHECKPOINT_MAX_MISSABLE_VOTES            = 4;
+  static_assert(CHECKPOINT_MAX_MISSABLE_VOTES < CHECKPOINT_NUM_QUORUMS_TO_PARTICIPATE_IN,
                 "The maximum number of votes a service node can miss can not be greater than the amount of checkpoint "
                 "quorums they must participate in before we check if they should be deregistered or not.");
 
@@ -68,6 +68,8 @@ namespace service_nodes
   constexpr uint64_t STATE_CHANGE_TX_LIFETIME_IN_BLOCKS             = VOTE_LIFETIME;
 
   constexpr uint64_t VOTE_OR_TX_VERIFY_HEIGHT_BUFFER                = 5;
+
+  constexpr std::array<int, 3> MIN_STORAGE_SERVER_VERSION           = {1, 0, 0};
 
   using swarm_id_t = uint64_t;
   constexpr swarm_id_t UNASSIGNED_SWARM_ID                          = UINT64_MAX;

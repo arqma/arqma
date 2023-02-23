@@ -287,8 +287,8 @@ namespace arqmaMQ
 	    return;
 	  }
 
-    cryptonote::cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
-    cryptonote::tx_verification_context tvc = AUTO_VAL_INIT(tvc);
+    cryptonote::cryptonote_connection_context fake_context{};
+    cryptonote::tx_verification_context tvc{};
 
     if(!m_core.handle_incoming_tx(tx_blob, tvc, false, false, !relay) || tvc.m_verification_failed)
     {
@@ -623,7 +623,7 @@ namespace arqmaMQ
 
   bool ZmqHandler::get_block_template(const cryptonote::account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, cryptonote::block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, cryptonote::rpc::GetBlockTemplate::Response& res)
   {
-    b = boost::value_initialized<cryptonote::block>();
+    b = {};
     if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       res.status = cryptonote::rpc::Message::STATUS_FAILED;

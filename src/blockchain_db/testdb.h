@@ -164,6 +164,7 @@ public:
   virtual bool get_block_checkpoint(uint64_t height, struct checkpoint_t &checkpoint) const override { return false; }
   virtual bool get_top_checkpoint(struct checkpoint_t &checkpoint) const override { return false; }
   virtual void remove_block_checkpoint(uint64_t height) override { }
+  std::vector<cryptonote::checkpoint_t> get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints = BlockchainDB::GET_ALL_CHECKPOINTS) const override { return {}; }
 
   virtual bool get_output_blacklist(std::vector<uint64_t> &blacklist) const override { return false; }
   virtual void add_output_blacklist(std::vector<uint64_t> const &blacklist) override { }
@@ -171,12 +172,12 @@ public:
   virtual bool get_service_node_data(std::string& data, bool long_term) override { return false; }
   virtual void clear_service_node_data() override { }
 
-  virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob) override {}
-  virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob) override { return false; }
+  virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob, const cryptonote::blobdata *checkpoint) override {}
+  virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob, cryptonote::blobdata *checkpoint) override { return false; }
   virtual void remove_alt_block(const crypto::hash &blkid) override {}
   virtual uint64_t get_alt_block_count() override { return 0; }
   virtual void drop_alt_blocks() override {}
-  virtual bool for_all_alt_blocks(std::function<bool(const crypto::hash &blkid, const alt_block_data_t &data, const cryptonote::blobdata *blob)> f, bool include_blob = false) const override { return true; }
+  virtual bool for_all_alt_blocks(std::function<bool(const crypto::hash &blkid, const alt_block_data_t &data, const cryptonote::blobdata *block_blob, const cryptonote::blobdata *checkpoint_blob)> f, bool include_blob = false) const override { return true; }
 };
 
 }

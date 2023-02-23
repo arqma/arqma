@@ -149,8 +149,8 @@ namespace cryptonote
   bool miner::request_block_template()
   {
     block bl;
-    difficulty_type di = AUTO_VAL_INIT(di);
-    uint64_t height = AUTO_VAL_INIT(height);
+    difficulty_type di{};
+    uint64_t height{};
     uint64_t expected_reward; //only used for RPC calls - could possibly be useful here too?
 
     cryptonote::blobdata extra_nonce;
@@ -244,7 +244,7 @@ namespace cryptonote
           m_extra_messages[i] = buff;
       }
       m_config_folder_path = boost::filesystem::path(command_line::get_arg(vm, arg_extra_messages)).parent_path().string();
-      m_config = AUTO_VAL_INIT(m_config);
+      m_config = {};
       epee::serialization::load_t_from_json_file(m_config, m_config_folder_path + "/" + MINER_CONFIG_FILE_NAME);
       MINFO("Loaded " << m_extra_messages.size() << " extra messages, current index " << m_config.current_extra_message_index);
     }

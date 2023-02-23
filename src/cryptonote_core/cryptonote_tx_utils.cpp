@@ -29,6 +29,7 @@
 //
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
+#include <cstdlib>
 #include <unordered_set>
 #include <random>
 #include "include_base_utils.h"
@@ -110,7 +111,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
   {
-    crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
+    crypto::key_derivation derivation{};
     bool r = crypto::generate_key_derivation(address.m_view_public_key, tx_key.sec, derivation);
     CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << address.m_view_public_key << ", " << tx_key.sec << ")");
 
@@ -249,8 +250,8 @@ namespace cryptonote
 
     // Miner Reward
     {
-      crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
-      crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+      crypto::key_derivation derivation{};
+      crypto::public_key out_eph_public_key{};
       bool r = crypto::generate_key_derivation(miner_address.m_view_public_key, txkey.sec, derivation);
       CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << miner_address.m_view_public_key << ", " << txkey.sec << ")");
 
@@ -266,7 +267,7 @@ namespace cryptonote
       tx.vout.push_back(out);
       if(hard_fork_version >= 16)
       {
-        uint64_t unlock_blocks = miner_tx_context.nettype == cryptonote::MAINNET ? 32 : 2;
+        uint64_t unlock_blocks = rand() % 100 + 1; // miner_tx_context.nettype == cryptonote::MAINNET ? (rand() % 100 + 1) : 2;
         tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS + unlock_blocks);
       }
       else
@@ -280,8 +281,8 @@ namespace cryptonote
     {
       for(size_t i = 0; i < service_node_info.size(); i++)
       {
-        crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
-        crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+        crypto::key_derivation derivation{};
+        crypto::public_key out_eph_public_key{};
         bool r = crypto::generate_key_derivation(service_node_info[i].first.m_view_public_key, gov_key.sec, derivation);
         CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << service_node_info[i].first.m_view_public_key << ", " << gov_key.sec << ")");
         r = crypto::derive_public_key(derivation, 1+i, service_node_info[i].first.m_spend_public_key, out_eph_public_key);
@@ -303,7 +304,7 @@ namespace cryptonote
     {
       cryptonote::address_parse_info governance_wallet_address;
       cryptonote::get_account_address_from_str(governance_wallet_address, nettype, *cryptonote::get_config(nettype, hard_fork_version).GOVERNANCE_WALLET_ADDRESS);
-      crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+      crypto::public_key out_eph_public_key{};
 
       if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
       {
@@ -326,7 +327,7 @@ namespace cryptonote
     {
       cryptonote::address_parse_info development_wallet_address;
       cryptonote::get_account_address_from_str(development_wallet_address, nettype, *cryptonote::get_config(nettype, hard_fork_version).DEV_WALLET_ADDRESS);
-      crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+      crypto::public_key out_eph_public_key{};
 
       if(!get_deterministic_output_key(development_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
       {

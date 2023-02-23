@@ -226,7 +226,6 @@ namespace nodetool
         m_hide_my_port(false),
         m_igd(no_igd),
         m_offline(false),
-        m_save_graph(false),
         is_closing(false),
         m_network_id()
     {}
@@ -393,12 +392,6 @@ namespace nodetool
 
     public:
 
-    void set_save_graph(bool save_graph)
-    {
-      m_save_graph = save_graph;
-      epee::net_utils::connection_basic::set_save_graph(save_graph);
-    }
-
     void set_rpc_port(uint16_t rpc_port)
     {
       m_rpc_port = rpc_port;
@@ -424,7 +417,6 @@ namespace nodetool
     bool m_hide_my_port;
     igd_t m_igd;
     bool m_offline;
-    std::atomic<bool> m_save_graph;
     std::atomic<bool> is_closing;
     std::unique_ptr<boost::thread> mPeersLoggerThread;
     //critical_section m_connections_lock;
@@ -442,7 +434,7 @@ namespace nodetool
     std::list<epee::net_utils::network_address>   m_priority_peers;
     std::vector<epee::net_utils::network_address> m_exclusive_peers;
     std::vector<epee::net_utils::network_address> m_seed_nodes;
-    bool m_fallback_seed_nodes_added; 
+    bool m_fallback_seed_nodes_added;
 //   bool m_seed_nodes_initialized = false;
  //   boost::shared_mutex m_seed_nodes_lock;
  //   std::atomic_flag m_fallback_seed_nodes_added;
@@ -504,8 +496,6 @@ namespace nodetool
     extern const command_line::arg_descriptor<int64_t> arg_limit_rate_up;
     extern const command_line::arg_descriptor<int64_t> arg_limit_rate_down;
     extern const command_line::arg_descriptor<int64_t> arg_limit_rate;
-
-    extern const command_line::arg_descriptor<bool> arg_save_graph;
 }
 
 POP_WARNINGS

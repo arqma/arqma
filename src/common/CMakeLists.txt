@@ -104,7 +104,6 @@ target_link_libraries(common
     cncrypto
     libunbound
     ${LIBUNWIND_LIBRARIES}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
@@ -112,5 +111,6 @@ target_link_libraries(common
     ${Boost_REGEX_LIBRARY}
     ${Boost_CHRONO_LIBRARY}
   PRIVATE
+    epee
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})
