@@ -16,15 +16,11 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 ## Other Arqma related websites
 
 - Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
-- Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
-- Arqma Blockchain Explorer 2: [explorer.arqma.com](https://explorer.arqma.com)
-- Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
+- Arqma Blockchain Explorer: [explorer.arqma.com](https://explorer.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
 - Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
-- Arqma Payment Gateway: [https://pg.arqma.com](https://pg.arqma.com)
 - Arqma WooCommerce Payment Plugin: [https://github.com/arqma/arqma-payments-woocommerce-gateway](https://github.com/arqma/arqma-payments-woocommerce-gateway)
 - Arqma Off-line Wallet Address Generator: [https://generate.arqma.com](https://generate.arqma.com)
-- myArqma - Arqma Web-Wallet Interface: [https://myarqma.com](https://myarqma.com)
 - arqmaDroid - Arqma Android Wallet: [https://play.google.com/store/apps/details?id=com.arqma.Droid](https://play.google.com/store/apps/details?id=com.arqma.Droid)
 - Arqma GUI electron wallet: [https://github.com/arqma/arqma-electron-wallet](https://github.com/arqma/arqma-electron-wallet)
 
@@ -38,8 +34,6 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 ## Arqma Exchange Websites
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
-- Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
-- Citex: [https://trade.citex.co.kr/trade/ARQ_BTC](https://trade.citex.co.kr/trade/ARQ_BTC) **Not Avaialble in the USA**
 
 ## Introduction
 
