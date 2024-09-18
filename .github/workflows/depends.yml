@@ -12,7 +12,7 @@ env:
         ccache --set-config=compression=true
 jobs:
   build-macos:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       CCACHE_TEMPDIR: /tmp/.ccache-temp
     strategy:
