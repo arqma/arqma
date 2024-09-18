@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2018-2024, The Arqma Network
 // Copyright (c)2020, Gary Rusher
 // Copyright (c) 2017-2018, The Monero Project
 //
