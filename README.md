@@ -17,7 +17,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 ## Other Arqma related websites
 
 - Arqma Information Centre: [https://arqma.github.io](https://github.com/arqma/arqma/wiki)
-- Arqma Blockchain Explorer 2: [explorer.arqma.com](https://explorer.arqma.com)
+- Arqma Blockchain Explorer: [explorer.arqma.com](https://explorer.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
 - Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
 - Arqma WooCommerce Payment Plugin: [https://github.com/arqma/arqma-payments-woocommerce-gateway](https://github.com/arqma/arqma-payments-woocommerce-gateway)
