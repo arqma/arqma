@@ -1120,7 +1120,7 @@ endif()
 
 if(MINGW)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wa,-mbig-obj")
-  set(EXTRA_LIBRARIES mswsock ws2_32 iphlpapi crypt32 bcrypt)
+  set(EXTRA_LIBRARIES mswsock ws2_32 iphlpapi crypt32 bcrypt ssp)
   if(DEPENDS)
     set(ICU_LIBRARIES icuio icui18n icuuc icudata icutu iconv)
   else()
