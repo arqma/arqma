@@ -1,7 +1,7 @@
 ## Arqma Network
 
-Copyright (c) 2018-2021, The Arqma Network    
-Copyright (c) 2014-2021, The Monero Project  
+Copyright (c) 2018-2024, The Arqma Network    
+Copyright (c) 2014-2024, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
@@ -12,20 +12,16 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 - Discord: [https://chat.arqma.com](https://chat.arqma.com)
 - Telegram: [https://telegram.arqma.com](https://telegram.arqma.com)
 - Matrix chat: [#arqma:matrix.org or Internal room ID: !YqTIhVcMbLHivbYegN:matrix.org](https://#arqma:matrix.org)
+- Trello board: [https://trello.com/b/QoMWmhFp/arqma](https://trello.com/b/QoMWmhFp/arqma)
 
 ## Other Arqma related websites
 
-- Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
-- Arqma Blockchain Explorer: [blockexplorer.arqma.com](https://blockexplorer.arqma.com)
+- Arqma Information Centre: [https://arqma.github.io](https://github.com/arqma/arqma/wiki)
 - Arqma Blockchain Explorer 2: [explorer.arqma.com](https://explorer.arqma.com)
-- Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
 - Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
-- Arqma Payment Gateway: [https://pg.arqma.com](https://pg.arqma.com)
 - Arqma WooCommerce Payment Plugin: [https://github.com/arqma/arqma-payments-woocommerce-gateway](https://github.com/arqma/arqma-payments-woocommerce-gateway)
 - Arqma Off-line Wallet Address Generator: [https://generate.arqma.com](https://generate.arqma.com)
-- myArqma - Arqma Web-Wallet Interface: [https://myarqma.com](https://myarqma.com)
-- arqmaDroid - Arqma Android Wallet: [https://play.google.com/store/apps/details?id=com.arqma.Droid](https://play.google.com/store/apps/details?id=com.arqma.Droid)
 - Arqma GUI electron wallet: [https://github.com/arqma/arqma-electron-wallet](https://github.com/arqma/arqma-electron-wallet)
 
 ## Arqma Social-Media Websites
@@ -38,8 +34,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 ## Arqma Exchange Websites
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
-- Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
-- Citex: [https://trade.citex.co.kr/trade/ARQ_BTC](https://trade.citex.co.kr/trade/ARQ_BTC) **Not Avaialble in the USA**
+- NonKYC: [https://nonkyc.io/market/ARQ_USDT](https://nonkyc.io/market/ARQ_USDT)
 
 ## Introduction
 
