@@ -45,7 +45,7 @@
 
 namespace cryptonote
 {
-  struct Blockchain;
+  class Blockchain;
   enum struct checkpoint_type
   {
     hardcoded,

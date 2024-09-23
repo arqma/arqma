@@ -1892,7 +1892,7 @@ namespace boost
         if(ver < 5)
         {
           x.tx_type = cryptonote::txtype::standard;
-          x.hard_fork_version = cryptonote::network_version_16;
+          x.hard_fork_version = cryptonote::network_version_15;
         }
       }
       if(ver < 2)

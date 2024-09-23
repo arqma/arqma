@@ -5080,7 +5080,7 @@ void wallet2::load(const std::string& wallet_, const epee::wipeable_string& pass
           catch (...)
           {
             LOG_PRINT_L0("Failed to open portable binary, trying unportable");
-            boost::filesystem::copy_file(m_wallet_file, m_wallet_file + ".unportable", boost::filesystem::copy_option::overwrite_if_exists);
+            tools::copy_file(m_wallet_file, m_wallet_file + ".unportable");
             std::stringstream iss;
             iss.str("");
             iss << cache_data;
@@ -5102,7 +5102,7 @@ void wallet2::load(const std::string& wallet_, const epee::wipeable_string& pass
       catch (...)
       {
         LOG_PRINT_L0("Failed to open portable binary, trying unportable");
-        boost::filesystem::copy_file(m_wallet_file, m_wallet_file + ".unportable", boost::filesystem::copy_option::overwrite_if_exists);
+        tools::copy_file(m_wallet_file, m_wallet_file + ".unportable");
         std::stringstream iss;
         iss.str("");
         iss << buf;
@@ -5867,7 +5867,7 @@ void wallet2::commit_tx(pending_tx& ptx)
     cryptonote::COMMAND_RPC_SUBMIT_RAW_TX::request oreq;
     cryptonote::COMMAND_RPC_SUBMIT_RAW_TX::response ores;
     oreq.address = get_account().get_public_address_str(m_nettype);
-    oreq.view_key = string_tools::pod_to_hex(get_account().get_keys().m_view_secret_key);
+    oreq.view_key = string_tools::pod_to_hex(unwrap(unwrap(get_account().get_keys().m_view_secret_key)));
     oreq.tx = epee::string_tools::buff_to_hex_nodelimer(tx_to_blob(ptx.tx));
     m_daemon_rpc_mutex.lock();
     bool r = epee::net_utils::invoke_http_json("/submit_raw_tx", oreq, ores, m_http_client, rpc_timeout, "POST");
@@ -8853,7 +8853,7 @@ bool wallet2::light_wallet_login(bool &new_address)
   tools::COMMAND_RPC_LOGIN::request request;
   tools::COMMAND_RPC_LOGIN::response response;
   request.address = get_account().get_public_address_str(m_nettype);
-  request.view_key = string_tools::pod_to_hex(get_account().get_keys().m_view_secret_key);
+  request.view_key = string_tools::pod_to_hex(unwrap(unwrap(get_account().get_keys().m_view_secret_key)));
   // Always create account if it doesn't exist.
   request.create_account = true;
   m_daemon_rpc_mutex.lock();
@@ -8880,7 +8880,7 @@ bool wallet2::light_wallet_import_wallet_request(tools::COMMAND_RPC_IMPORT_WALLE
   MDEBUG("Light wallet import wallet request");
   tools::COMMAND_RPC_IMPORT_WALLET_REQUEST::request oreq;
   oreq.address = get_account().get_public_address_str(m_nettype);
-  oreq.view_key = string_tools::pod_to_hex(get_account().get_keys().m_view_secret_key);
+  oreq.view_key = string_tools::pod_to_hex(unwrap(unwrap(get_account().get_keys().m_view_secret_key)));
   m_daemon_rpc_mutex.lock();
   bool r = epee::net_utils::invoke_http_json("/import_wallet_request", oreq, response, m_http_client, rpc_timeout, "POST");
   m_daemon_rpc_mutex.unlock();
@@ -8899,7 +8899,7 @@ void wallet2::light_wallet_get_unspent_outs()
 
   oreq.amount = "0";
   oreq.address = get_account().get_public_address_str(m_nettype);
-  oreq.view_key = string_tools::pod_to_hex(get_account().get_keys().m_view_secret_key);
+  oreq.view_key = string_tools::pod_to_hex(unwrap(unwrap(get_account().get_keys().m_view_secret_key)));
   // openMonero specific
   oreq.dust_threshold = boost::lexical_cast<std::string>(::config::DEFAULT_DUST_THRESHOLD);
   // below are required by openMonero api - but are not used.
@@ -9054,7 +9054,7 @@ bool wallet2::light_wallet_get_address_info(tools::COMMAND_RPC_GET_ADDRESS_INFO:
   tools::COMMAND_RPC_GET_ADDRESS_INFO::request request;
 
   request.address = get_account().get_public_address_str(m_nettype);
-  request.view_key = string_tools::pod_to_hex(get_account().get_keys().m_view_secret_key);
+  request.view_key = string_tools::pod_to_hex(unwrap(unwrap(get_account().get_keys().m_view_secret_key)));
   m_daemon_rpc_mutex.lock();
   bool r = epee::net_utils::invoke_http_json("/get_address_info", request, response, m_http_client, rpc_timeout, "POST");
   m_daemon_rpc_mutex.unlock();
@@ -9071,7 +9071,7 @@ void wallet2::light_wallet_get_address_txs()
   tools::COMMAND_RPC_GET_ADDRESS_TXS::response ires;
 
   ireq.address = get_account().get_public_address_str(m_nettype);
-  ireq.view_key = string_tools::pod_to_hex(get_account().get_keys().m_view_secret_key);
+  ireq.view_key = string_tools::pod_to_hex(unwrap(unwrap(get_account().get_keys().m_view_secret_key)));
   m_daemon_rpc_mutex.lock();
   bool r = epee::net_utils::invoke_http_json("/get_address_txs", ireq, ires, m_http_client, rpc_timeout, "POST");
   m_daemon_rpc_mutex.unlock();
@@ -9302,7 +9302,7 @@ bool wallet2::light_wallet_key_image_is_ours(const crypto::key_image& key_image,
   const account_keys& ack = get_account().get_keys();
   crypto::key_derivation derivation;
   bool r = crypto::generate_key_derivation(tx_public_key, ack.m_view_secret_key, derivation);
-  CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << tx_public_key << ", " << ack.m_view_secret_key << ")");
+  CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << tx_public_key << ", " << crypto::secret_key_explicit_print_ref{ack.m_view_secret_key} << ")");
 
   r = crypto::derive_public_key(derivation, out_index, ack.m_account_address.m_spend_public_key, in_ephemeral.pub);
   CHECK_AND_ASSERT_MES(r, false, "failed to derive_public_key (" << derivation << ", " << out_index << ", " << ack.m_account_address.m_spend_public_key << ")");
@@ -9310,7 +9310,7 @@ bool wallet2::light_wallet_key_image_is_ours(const crypto::key_image& key_image,
   crypto::derive_secret_key(derivation, out_index, ack.m_spend_secret_key, in_ephemeral.sec);
   crypto::public_key out_pkey_test;
   r = crypto::secret_key_to_public_key(in_ephemeral.sec, out_pkey_test);
-  CHECK_AND_ASSERT_MES(r, false, "failed to secret_key_to_public_key(" << in_ephemeral.sec << ")");
+  CHECK_AND_ASSERT_MES(r, false, "failed to secret_key_to_public_key(" << crypto::secret_key_explicit_print_ref{in_ephemeral.sec} << ")");
   CHECK_AND_ASSERT_MES(in_ephemeral.pub == out_pkey_test, false, "derived secret key doesn't match derived public key");
 
   crypto::generate_key_image(in_ephemeral.pub, in_ephemeral.sec, calculated_key_image);

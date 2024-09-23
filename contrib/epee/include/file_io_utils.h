@@ -104,29 +104,6 @@ namespace file_io_utils
 	}
 
 	inline
-	bool get_file_time(const std::string& path_to_file, time_t& ft)
-	{
-		boost::system::error_code ec;
-		ft = boost::filesystem::last_write_time(boost::filesystem::path(path_to_file), ec);
-		if(!ec)
-			return true;
-		else
-			return false;
-	}
-
-	inline
-		bool set_file_time(const std::string& path_to_file, const time_t& ft)
-	{
-		boost::system::error_code ec;
-		boost::filesystem::last_write_time(boost::filesystem::path(path_to_file), ft, ec);
-		if(!ec)
-			return true;
-		else
-			return false;
-	}
-
-
-	inline
 		bool load_file_to_string(const std::string& path_to_file, std::string& target_str, size_t max_size = 1000000000)
 	{
 #ifdef WIN32
@@ -173,26 +150,6 @@ namespace file_io_utils
 			return false;
 		}
 #endif
-	}
-
-	inline
-		bool append_string_to_file(const std::string& path_to_file, const std::string& str)
-	{
-                // No special Windows implementation because so far not used in Monero code
-		try
-		{
-			std::ofstream fstream;
-			fstream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-			fstream.open(path_to_file.c_str(), std::ios_base::binary | std::ios_base::out | std::ios_base::app);
-			fstream << str;
-			fstream.close();
-			return true;
-		}
-
-		catch(...)
-		{
-			return false;
-		}
 	}
 
 	inline

@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <functional>
 #include <utility>
+#include <deque>
 #include <vector>
 #include <stdexcept>
 
