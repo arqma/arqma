@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -86,16 +86,6 @@ target_link_libraries(cncrypto
     sodium
   PRIVATE
     ${EXTRA_LIBRARIES})
-
-if (ARM)
-  option(NO_OPTIMIZED_MULTIPLY_ON_ARM
-	   "Compute multiply using generic C implementation instead of ARM ASM" OFF)
-  if(NO_OPTIMIZED_MULTIPLY_ON_ARM)
-    message(STATUS "Using generic C implementation for multiply")
-    set_property(SOURCE slow-hash.c
-      PROPERTY COMPILE_DEFINITIONS "NO_OPTIMIZED_MULTIPLY_ON_ARM")
-  endif()
-endif()
 
 # Because of the way Qt works on android with JNI, the code does not live in the main android thread
 # So this code runs with a 1 MB default stack size.

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Project
+# Copyright (c) 2018-2022, The Arqma Project
 # Copyright (c) 2018-2020, The Monero Project
 #
 # All rights reserved.
@@ -51,8 +51,4 @@ target_link_libraries(net
   PUBLIC
     common
     epee
-    miniupnpc
-    libunbound
-    ${Boost_ASIO_LIBRARY}
-  PRIVATE
-    ${EXTRA_LIBRARIES})
+    ${Boost_ASIO_LIBRARY})

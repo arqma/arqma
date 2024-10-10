@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -28,3 +28,4 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 add_subdirectory(src)
+target_include_directories(epee PUBLIC include)

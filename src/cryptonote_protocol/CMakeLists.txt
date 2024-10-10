@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -27,18 +27,23 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+cmake_minimum_required(VERSION 3.10)
+project(arqma CXX)
+
 set(cryptonote_protocol_sources
   block_queue.cpp
   cryptonote_protocol_handler-base.cpp
-  cryptonote_protocol_handler.inl)
+  cryptonote_protocol_handler.inl
+  core_protocol_instantiation.cpp
+  p2p_net_node_instantiation.cpp)
 
 set(cryptonote_protocol_headers)
 
 set(cryptonote_protocol_private_headers
   block_queue.h
   cryptonote_protocol_defs.h
-  cryptonote_protocol_handler.h
-  cryptonote_protocol_handler_common.h)
+  cryptonote_protocol_handler_common.h
+  cryptonote_protocol_handler.h)
 
 arqma_private_headers(cryptonote_protocol
   ${cryptonote_protocol_private_headers})
@@ -52,4 +57,5 @@ target_link_libraries(cryptonote_protocol
   PUBLIC
     p2p
   PRIVATE
+    easylogging
     ${EXTRA_LIBRARIES})

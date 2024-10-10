@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -68,5 +68,8 @@ target_link_libraries(device
     cncrypto
     ringct_basic
     ${OPENSSL_CRYPTO_LIBRARIES}
+    ${Boost_SERIALIZATION_LIBRARY}
   PRIVATE
+    version
+    blocks
     ${EXTRA_LIBRARIES})

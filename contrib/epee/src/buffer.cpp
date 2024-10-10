@@ -26,6 +26,7 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <limits>
 #include <string.h>
 #include "net/buffer.h"
 
@@ -61,7 +62,7 @@ void buffer::append(const void *data, size_t sz)
     {
       NET_BUFFER_LOG("appending " << sz << " from " << size() << " by reallocating");
       std::vector<uint8_t> new_storage;
-      size_t reserve = (((size() + sz) * 3 / 2) + 4095) & ~4095;
+      size_t reserve = (((size() + sz) * 3 / 2) + 8190) & ~8190;
       new_storage.reserve(reserve);
       new_storage.resize(size());
       if(size() > 0)
@@ -73,7 +74,7 @@ void buffer::append(const void *data, size_t sz)
   else
   {
     // we have space already
-    if (size() <= 4096 && offset > 4096 * 16 && offset >= capacity / 2)
+    if (size() <= 8192 && offset > 8192 * 16 && offset >= capacity / 2)
     {
       // we have little to move, and we're far enough into the buffer that it's probably a win to move anyway
       const size_t pos = storage.size() - offset;

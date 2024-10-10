@@ -2,9 +2,7 @@
 
 SOURCES_PATH ?= $(BASEDIR)/sources
 BASE_CACHE ?= $(BASEDIR)/built
-SDK_PATH ?= $(BASEDIR)/SDKs
-FALLBACK_DOWNLOAD_PATH ?= https://downloads.sourceforge.net/project/boost/boost/1.73.0/
-MULTIPROCESS ?=
+FALLBACK_DOWNLOAD_PATH ?=
 
 BUILD = $(shell ./config.guess)
 HOST ?= $(BUILD)
@@ -54,7 +52,10 @@ endif
 host_arch=$(firstword $(subst -, ,$(canonical_host)))
 host_vendor=$(word 2,$(subst -, ,$(canonical_host)))
 full_host_os:=$(subst $(host_arch)-$(host_vendor)-,,$(canonical_host))
+host_os:=$(findstring android,$(full_host_os))
+ifeq ($(host_os),)
 host_os:=$(findstring linux,$(full_host_os))
+endif
 host_os+=$(findstring darwin,$(full_host_os))
 host_os+=$(findstring mingw32,$(full_host_os))
 host_os:=$(strip $(host_os))
@@ -74,6 +75,9 @@ host_cmake=Linux
 endif
 ifeq ($(host_os),darwin)
 host_cmake=Darwin
+endif
+ifeq ($(host_os),android)
+host_cmake=Android
 endif
 
 AT_$(V):=
@@ -102,15 +106,8 @@ $(host_arch)_$(host_os)_id_string+=$(shell $(host_CXX) --version 2>/dev/null)
 $(host_arch)_$(host_os)_id_string+=$(shell $(host_RANLIB) --version 2>/dev/null)
 $(host_arch)_$(host_os)_id_string+=$(shell $(host_STRIP) --version 2>/dev/null)
 
-multiprocess_packages_$(MULTIPROCESS) = $(multiprocess_packages)
-
 packages += $($(host_arch)_$(host_os)_packages) $($(host_os)_packages)
 native_packages += $($(host_arch)_$(host_os)_native_packages) $($(host_os)_native_packages)
-
-ifeq ($(multiprocess_packages_),)
-packages += $(multiprocess_packages)
-native_packages += $(multiprocess_native_packages)
-endif
 
 all_packages = $(packages) $(native_packages)
 
@@ -128,10 +125,9 @@ build-only-$(1)_$(3): CMAKE_TOOLCHAIN_DIR  = $(PREFIX)/$(3)/share/cmake/mxe-conf
 build-only-$(1)_$(3): CMAKE_STATIC_BOOL = $(if $(findstring shared,$(3)),OFF,ON)
 build-only-$(1)_$(3): CMAKE_SHARED_BOOL = $(if $(findstring shared,$(3)),ON,OFF)
 
-
 toolchain_path=$($($(host_arch)_$(host_os)_native_toolchain)_prefixbin)
-final_build_id_long+=$(shell $(build_SHA256SUM) toolchain.cmake.in)
 final_build_id_long+=$(shell $(build_SHA256SUM) config.site.in)
+final_build_id_long+=$(shell $(build_SHA256SUM) toolchain.cmake.in)
 final_build_id+=$(shell echo -n "$(final_build_id_long)" | $(build_SHA256SUM) | cut -c-$(HASH_LENGTH))
 $(host_prefix)/.stamp_$(final_build_id): $(native_packages) $(packages)
 	$(AT)rm -rf $(@D)
@@ -150,6 +146,9 @@ $(host_prefix)/share/config.site : config.site.in $(host_prefix)/.stamp_$(final_
             -e 's|@RANLIB@|$(toolchain_path)$(host_RANLIB)|' \
             -e 's|@NM@|$(toolchain_path)$(host_NM)|' \
             -e 's|@STRIP@|$(toolchain_path)$(host_STRIP)|' \
+            -e 's|@OTOOL@|$(toolchain_path)$(host_OTOOL)|' \
+            -e 's|@INSTALL_NAME_TOOL@|$(toolchain_path)$(host_INSTALL_NAME_TOOL)|' \
+            -e 's|@DSYMUTIL@|$(toolchain_path)$(host_DSYMUTIL)|' \
             -e 's|@build_os@|$(build_os)|' \
             -e 's|@host_os@|$(host_os)|' \
             -e 's|@CFLAGS@|$(strip $(host_CFLAGS) $(host_$(release_type)_CFLAGS))|' \
@@ -157,7 +156,6 @@ $(host_prefix)/share/config.site : config.site.in $(host_prefix)/.stamp_$(final_
             -e 's|@CPPFLAGS@|$(strip $(host_CPPFLAGS) $(host_$(release_type)_CPPFLAGS))|' \
             -e 's|@LDFLAGS@|$(strip $(host_LDFLAGS) $(host_$(release_type)_LDFLAGS))|' \
             -e 's|@allow_host_packages@|$(ALLOW_HOST_PACKAGES)|' \
-            -e 's|@multiprocess@|$(MULTIPROCESS)|' \
             -e 's|@debug@|$(DEBUG)|' \
             $< > $@
 	$(AT)touch $@
@@ -171,6 +169,9 @@ $(host_prefix)/share/toolchain.cmake : toolchain.cmake.in $(host_prefix)/.stamp_
             -e 's|@RANLIB@|$(toolchain_path)$(host_RANLIB)|' \
             -e 's|@NM@|$(toolchain_path)$(host_NM)|' \
             -e 's|@STRIP@|$(toolchain_path)$(host_STRIP)|' \
+            -e 's|@OTOOL@|$(toolchain_path)$(host_OTOOL)|' \
+            -e 's|@INSTALL_NAME_TOOL@|$(toolchain_path)$(host_INSTALL_NAME_TOOL)|' \
+            -e 's|@DSYMUTIL@|$(toolchain_path)$(host_DSYMUTIL)|' \
             -e 's|@build_os@|$(build_os)|' \
             -e 's|@host_os@|$(host_os)|' \
             -e 's|@CFLAGS@|$(strip $(host_CFLAGS) $(host_$(release_type)_CFLAGS))|' \
@@ -182,9 +183,8 @@ $(host_prefix)/share/toolchain.cmake : toolchain.cmake.in $(host_prefix)/.stamp_
             -e 's|@release_type@|$(release_type)|' \
             -e 's|@build_tests@|$(build_tests)|' \
             -e 's|@depends@|$(host_cmake)|' \
-            -e 's|@prefix@|$($(host_arch)_$(host_os)_prefix)|'\
-            -e 's|@sdk@|$(SDK_PATH)|'\
-            -e 's|@arch@|$(host_arch)|'\
+            -e 's|@prefix@|$($(host_arch)_$(host_os)_prefix)|' \
+            -e 's|@arch@|$(host_arch)|' \
             $< > $@
 	$(AT)touch $@
 
@@ -219,12 +219,14 @@ download-one: check-sources $(all_sources)
 
 download-osx:
 	@$(MAKE) -s HOST=x86_64-apple-darwin download-one
+download-osx-arm:
+	@$(MAKE) -s HOST=aarch64-apple-darwin download-one
 download-linux:
 	@$(MAKE) -s HOST=x86_64-unknown-linux-gnu download-one
 download-win:
 	@$(MAKE) -s HOST=x86_64-w64-mingw32 download-one
-download: download-osx download-linux download-win
+download: download-osx download-osx-arm download-linux download-win
 
  $(foreach package,$(all_packages),$(eval $(call ext_add_stages,$(package))))
 
-.PHONY: install cached download-one download-osx download-linux download-win download check-packages check-sources
+.PHONY: install cached download-one download-osx download-osx-arm download-linux download-win download check-packages check-sources

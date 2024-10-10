@@ -1,5 +1,6 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2020-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018-2020, The Loki Project
 //
 // All rights reserved.
 //
@@ -26,19 +27,42 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#pragma once
+#ifndef ARQMA_H
+#define ARQMA_H
 
-// FIXME: Why is this ifdef needed?  Hopefully making it struct won't break things.
+#include <string>
 
-/*
-#if defined(_MSC_VER)
-#define POD_CLASS struct
-#else
-#define POD_CLASS class
-#endif
-*/
+namespace arqma
+{
+double round (double);
+double exp2 (double);
+uint64_t clamp_u64 (uint64_t val, uint64_t min, uint64_t max);
 
-#define POD_CLASS struct
+template <typename lambda_t>
+struct defer
+{
+  lambda_t lambda;
+  defer(lambda_t lambda) : lambda(lambda) {}
+  ~defer() { lambda(); }
+};
+
+struct defer_helper
+{
+  template <typename lambda_t>
+  defer<lambda_t> operator+(lambda_t lambda)
+  {
+    return defer<lambda_t>(lambda);
+  }
+};
+
+#define ARQMA_TOKEN_COMBINE2(x, y) x ## y
+#define ARQMA_TOKEN_COMBINE(x, y) ARQMA_TOKEN_COMBINE2(x, y)
+#define ARQMA_DEFER auto const ARQMA_TOKEN_COMBINE(arqma_defer_, __LINE__) = arqma::defer_helper() + [&]()
+
+template <typename T, size_t N>
+constexpr size_t array_count(T (&)[N]) { return N; }
+
+}; // namespace arqma
+
+#endif // ARQMA_H

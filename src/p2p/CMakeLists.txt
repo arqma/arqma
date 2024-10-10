@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -26,6 +26,9 @@
 # INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+cmake_minimum_required(VERSION 3.10)
+project(arqma)
 
 set(p2p_sources
   net_node.cpp
@@ -55,7 +58,6 @@ target_link_libraries(p2p
     version
     cryptonote_core
     net
-    libunbound
     miniupnpc
     ${Boost_CHRONO_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}

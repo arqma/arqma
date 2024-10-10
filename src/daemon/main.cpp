@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -34,7 +34,7 @@
 #include "common/password.h"
 #include "common/util.h"
 #include "cryptonote_core/cryptonote_core.h"
-#include "cryptonote_basic/miner.h"
+#include "cryptonote_core/miner.h"
 #include "daemon/command_server.h"
 #include "daemon/daemon.h"
 #include "daemon/executor.h"

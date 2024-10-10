@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -29,29 +29,26 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-
-# This is broken up into two parts: first we check for miniupnp, compile it if we can't
-# find it, and thereafter we check for libunbound, and compile it if we can't find it.
-# We always compile if we are building statically to reduce static dependency issues...
-# ...except for FreeBSD, because FreeBSD is a special case that doesn't play well with
-# others.
-
 if(DEPENDS)
   add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
   set_target_properties(libzmq_vendor PROPERTIES IMPORTED_LOCATION ${ZMQ_LIBRARIES})
   target_include_directories(libzmq_vendor INTERFACE ${ZMQ_INCLUDE_DIRS})
   statusinfo("${ZMQ_INCLUDE_DIRS} ${ZMQ_LIBRARIES}")
+elseif(APPLE)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(ZMQ libzmq>=4.3.2 REQUIRED IMPORTED_TARGET)
+  add_library(libzmq_vendor INTERFACE)
+  target_link_libraries(libzmq_vendor INTERFACE PkgConfig::ZMQ)
+  set_target_properties(libzmq_vendor PROPERTIES IMPORTED_TARGET_LOCATION ${ZMQ_LIBRARIES})
+  target_include_directories(libzmq_vendor INTERFACE ${ZMQ_INCLUDE_DIRS})
 else()
   include(ExternalProject)
   include(ProcessorCount)
 
   set(zmq_prefix ${CMAKE_BINARY_DIR}/external/libzmq)
-  set(zmq_patch git stash && patch -p0 < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
+  set(zmq_patch git stash && patch -p1 < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
   set(zmq_autogen ./autogen.sh)
   set(zmq_configure ./configure --prefix=${zmq_prefix})
-  if(APPLE OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    set(zmq_configure ${zmq_configure} --host=x86_64-apple-darwin)
-  endif()
 
   set(zmq_configure ${zmq_configure} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2016-2020, The Monero Project
 #
 # All rights reserved.
@@ -43,6 +43,7 @@ arqma_add_library(serialization
   ${serialization_private_headers})
 target_link_libraries(serialization
   PRIVATE
+    cryptonote_basic
     cryptonote_core
     cryptonote_protocol
     epee

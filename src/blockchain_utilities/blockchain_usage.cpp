@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -34,6 +34,7 @@
 #include "cryptonote_core/tx_pool.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/blockchain.h"
+#include "blockchain_objects.h"
 #include "blockchain_db/blockchain_db.h"
 #include "version.h"
 
@@ -52,7 +53,7 @@ struct output_data
   mutable uint64_t height;
   output_data(uint64_t a, uint64_t i, bool cb, uint64_t h): amount(a), index(i), coinbase(cb), height(h) {}
   bool operator==(const output_data &other) const { return other.amount == amount && other.index == index; }
-  void info(bool c, uint64_t h) const { coinbase = c; height =h; }
+  void info(bool c, uint64_t h) const { coinbase = c; height = h; }
 };
 namespace std
 {
@@ -151,10 +152,11 @@ int main(int argc, char* argv[])
   // tx_memory_pool, Blockchain's constructor takes tx_memory_pool object.
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
   const std::string input = command_line::get_arg(vm, arg_input);
-  std::unique_ptr<Blockchain> core_storage;
-  tx_memory_pool m_mempool(*core_storage);
-  core_storage.reset(new Blockchain(m_mempool));
-  BlockchainDB* db = new_db();
+
+  blockchain_objects_t blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.m_blockchain;
+  tx_memory_pool& m_mempool = blockchain_objects.m_mempool;
+  BlockchainDB *db = new_db();
   if (db == NULL)
   {
     LOG_ERROR("Failed to initialize a database");

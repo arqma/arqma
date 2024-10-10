@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -36,9 +36,8 @@
 #include "common/varint.h"
 #include "serialization/crypto.h"
 #include "cryptonote_basic/cryptonote_boost_serialization.h"
-#include "cryptonote_core/tx_pool.h"
 #include "cryptonote_core/cryptonote_core.h"
-#include "cryptonote_core/blockchain.h"
+#include "blockchain_objects.h"
 #include "blockchain_db/blockchain_db.h"
 #include "wallet/ringdb.h"
 #include "version.h"
@@ -1022,7 +1021,7 @@ int main(int argc, char* argv[])
   const command_line::arg_descriptor<bool> arg_rct_only  = {"rct-only", "Only work on ringCT outputs", false};
   const command_line::arg_descriptor<bool> arg_check_subsets  = {"check-subsets", "Check ring subsets (very expensive)", false};
   const command_line::arg_descriptor<bool> arg_verbose  = {"verbose", "Verbose output)", false};
-  const command_line::arg_descriptor<std::vector<std::string> > arg_inputs = {"inputs", "Path to Arqma DB, and path to any fork DBs"};
+  const command_line::arg_descriptor<std::vector<std::string>> arg_inputs = {"inputs", "Path to Arqma DB, and path to any fork DBs"};
   const command_line::arg_descriptor<std::string> arg_db_sync_mode = {
     "db-sync-mode"
   , "Specify sync option, using format [safe|fast|fastest]:[nrecords_per_sync]."

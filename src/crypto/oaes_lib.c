@@ -34,10 +34,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// OS X, FreeBSD, and OpenBSD don't need malloc.h
-#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) \
-  && !defined(__DragonFly__)
- #include <malloc.h>
+#if !defined(__APPLE__)
+#include <malloc.h>
 #endif
 
 #ifdef WIN32
@@ -465,34 +463,36 @@ OAES_RET oaes_sprintf(
 }
 
 #ifdef OAES_HAVE_ISAAC
-static void oaes_get_seed(char buf[RANDSIZ + 1])
+static void oaes_get_seed( char buf[RANDSIZ + 1] )
 {
   struct timeval tv;
-  struct tm *ts = gmtime(&tv.tv_sec);
+  struct tm *gmTimer;
   char * _test = NULL;
 
   gettimeofday(&tv, NULL);
-  _test = (char *)calloc(sizeof(char), tv.tv_usec);
-  sprintf(buf, "%04d%02d%02d%02d%02d%02d%03d%p%d", ts->tm_year + 1900, ts->tm_mon + 1,
-               ts->tm_mday, ts->tm_hour, ts->tm_min, ts->tm_sec, tv.tv_usec,
-               _test + tv.tv_usec, GETPID());
-  if(_test)
-    free(_test);
+  gmTimer = gntime( &tv.tv_sec );
+  _test = (char *) calloc( sizeof( char ), tv.tv_usec/1000 );
+  sprintf( buf, "%04d%02d%02d%02d%02d%02d%03d%p%d", gmTimer->tm_year + 1900, gmTimer->tm_mon + 1,
+               gmTimer->tm_mday, gmTimer->tm_hour, gmTimer->tm_min, gmTimer->tm_sec, tv.tv_usec/1000,
+               _test + tv.tv_usec/1000, GETPID() );
+  if( _test )
+    free( _test );
 }
 #else
 static uint32_t oaes_get_seed(void)
 {
   struct timeval tv;
-  struct tm *ts = gmtime(&tv.tv_sec);
+  struct tm *gmTimer;
   char * _test = NULL;
   uint32_t _ret = 0;
 
   gettimeofday(&tv, NULL);
-  _test = (char *)calloc(sizeof(char), tv.tv_usec);
-  _ret = ts->tm_year + 1900 + ts->tm_mon + 1 + ts->tm_mday + ts->tm_hour +
-         ts->tm_min + ts->tm_sec + tv.tv_usec + (uintptr_t)(_test + tv.tv_usec) + GETPID();
-  if(_test)
-    free(_test);
+  gmTimer = gmtime( &tv.tv_sec );
+  _test = (char *) calloc( sizeof( char ), tv.tv_usec/1000 );
+  _ret = gmTimer->tm_year + 1900 + gmTimer->tm_mon + 1 + gmTimer->tm_mday + gmTimer->tm_hour +
+         gmTimer->tm_min + gmTimer->tm_sec + tv.tv_usec/1000 + (uintptr_t)( _test + tv.tv_usec/1000 ) + GETPID();
+  if( _test )
+    free( _test );
 
   return _ret;
 }

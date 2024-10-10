@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The ArQmA Network
+// Copyright (c) 2018-2022, The ArQmA Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -514,7 +514,7 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
   // Prevent infinite recursion when distributing
   if (dns_urls.empty()) return false;
 
-  std::vector<std::vector<std::string> > records;
+  std::vector<std::vector<std::string>> records;
   records.resize(dns_urls.size());
 
   size_t first_index = crypto::rand_idx(dns_urls.size());

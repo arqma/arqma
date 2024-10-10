@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -49,16 +49,11 @@ all: release-all
 
 depends:
 	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target)/release
-	cd build/$(target)/release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake $(cmake_opts) ../../.. && $(MAKE)
+	cd build/$(target)/release && cmake -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake ../../.. && $(MAKE)
 
 depends-noaes:
-
-	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target)-noaes/release
-	cd build/$(target)-noaes/release && cmake -DNO_AES=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake ../../.. && $(MAKE)
-
-depends-compat:
-	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target)-compat/release
-	cd build/$(target)-compat/release && cmake -DCMAKE_BUILD_TYPE=Release -DBACKCOMPAT=ON -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake ../../.. && $(MAKE)
+	cd contrib/depends && $(MAKE) HOST=$(target) && cd ../.. && mkdir -p build/$(target)-RaspberryPi/release
+	cd build/$(target)-RaspberryPi/release && cmake -DNO_AES=ON -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/contrib/depends/$(target)/share/toolchain.cmake $(cmake_opts) ../../.. && $(MAKE)
 
 cmake-debug:
 	mkdir -p $(builddir)/debug
@@ -75,7 +70,7 @@ debug: cmake-debug
 
 debug-all:
 	mkdir -p $(builddir)/debug
-	cd $(builddir)/debug && cmake -D BUILD_TESTS=OFF -D BUILD_SHARED_LIBS=OFF -D CMAKE_BUILD_TYPE=Debug $(topdir) && $(MAKE)
+	cd $(builddir)/debug && cmake -D BUILD_TESTS=OFF -D BUILD_SHARED_LIBS=ON -D STATIC=OFF -D CMAKE_BUILD_TYPE=Debug $(topdir) && $(MAKE)
 
 debug-static-all:
 	mkdir -p $(builddir)/debug
@@ -103,10 +98,6 @@ debug-asan:
 release-all:
 	mkdir -p $(builddir)/release
 	cd $(builddir)/release && cmake -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
-
-release-rpi:
-	mkdir -p $(builddir)/release-rpi
-	cd $(builddir)/release-rpi && cmake -D NO_AES=ON -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
 
 release-static:
 	mkdir -p $(builddir)/release
@@ -142,19 +133,19 @@ release-static-linux-armv8:
 
 release-static-linux-x86_64:
 	mkdir -p $(builddir)/release
-	cd $(builddir)/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="linux-x64" $(topdir) && $(MAKE)
-
-release-static-freebsd-x86_64:
-	mkdir -p $(builddir)/release
-	cd $(builddir)/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="freebsd-x64" $(topdir) && $(MAKE)
+	cd $(builddir)/release && cmake -D BUILD_TESTS=OFF -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="linux-x64" $(topdir) && $(MAKE)
 
 release-static-mac-x86_64:
 	mkdir -p $(builddir)/release
-	cd $(builddir)/release && cmake -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="mac-x64" $(topdir) && $(MAKE)
+	cd $(builddir)/release && cmake -D BUILD_TESTS=OFF -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="mac-x64" $(topdir) && $(MAKE)
+
+release-static-mac-arm64:
+	mkdir -p $(builddir)/release
+	cd $(builddir)/release && cmake -D BUILD_TESTS=OFF -D STATIC=ON -D ARCH="arm64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="mac-arm64" $(topdir) && $(MAKE)
 
 release-static-win:
 	mkdir -p $(builddir)/release
-	cd $(builddir)/release && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D_FORTIFY_SOURCE=0 -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="win-x64" -D CMAKE_TOOLCHAIN_FILE=$(topdir)/cmake/64-bit-toolchain.cmake -D MSYS2_FOLDER=$(shell cd ${MINGW_PREFIX}/.. && pwd -W) $(topdir) && $(MAKE)
+	cd $(builddir)/release && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="win-x64" -D CMAKE_TOOLCHAIN_FILE=$(topdir)/cmake/64-bit-toolchain.cmake -D MSYS2_FOLDER=$(shell cd ${MINGW_PREFIX}/.. && pwd -W) $(topdir) && $(MAKE)
 
 service-nodes:
 	@echo "\n\033[6;31mYou are wiling to build ArQmA Service Node daemon. This means you want to contribute to Public Tests. \nRunning that command it will fetch, merge and compile Pull Request made by Devs.\033[0m\n" ; \
@@ -162,9 +153,8 @@ service-nodes:
 	[ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] || (echo "Exiting."; exit 1;)
 	mkdir -p $(builddir)/release
 	git config --local user.name "user" && git config --local user.email "user@github.com"
-	git fetch origin pull/297/head:s_n && git merge s_n --no-verify
-	git submodule init && git submodule update
-	cd $(builddir)/release && cmake -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
+	git fetch origin pull/297/head:s_n && git merge s_n --no-edit --quiet
+	cd $(builddir)/release && cmake -D BUILD_64=ON -D BUILD_TESTS=OFF -D CMAKE_BUILD_TYPE=Release $(topdir) && $(MAKE)
 
 #fuzz:
 #	mkdir -p $(builddir)/fuzz
