@@ -19,9 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         toolchain:
-          - name: "build-depends-armv7"
-            host: "arm-linux-gnueabihf"
-            packages: "python3 gperf g++-arm-linux-gnueabihf"
           - name: "build-depends-armv8"
             host: "aarch64-linux-gnu"
             packages: "python3 gperf g++-aarch64-linux-gnu"
@@ -80,7 +77,7 @@ jobs:
         ${{env.CCACHE_SETTINGS}}
         make depends target=${{ matrix.toolchain.host }} cmake_opts=${{ matrix.toolchain.cmake_opts }}
     - uses: actions/upload-artifact@v4
-      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' || matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'aarch64-apple-darwin' || matrix.toolchain.host == 'aarch64-linux-gnu' || 'arm-linux-gnueabihf' }}
+      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' || matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'aarch64-apple-darwin' || matrix.toolchain.host == 'aarch64-linux-gnu' }}
       with:
         name: ${{ matrix.toolchain.name }}
         path: |
@@ -89,7 +86,9 @@ jobs:
 #Upload artifacts
     - name: Copy files via ssh
       uses: appleboy/scp-action@v0.1.7
+      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' || matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'aarch64-apple-darwin' || matrix.toolchain.host == 'aarch64-linux-gnu' }}
       with:
+          name: ${{ matrix.toolchain.name }}
           host: ${{ secrets.HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PRIVATE_KEY }}
