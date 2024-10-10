@@ -85,3 +85,15 @@ jobs:
         name: ${{ matrix.toolchain.name }}
         path: |
           /home/runner/work/arqma/arqma/build/${{ matrix.toolchain.host }}/release/bin/arqma*
+
+#Upload artifacts
+    - name: copy file via ssh password
+        if: matrix.os == 'ubuntu22204-ex'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          source: /home/runner/work/arqma/arqma/build/${{ matrix.toolchain.host }}/*
+          target: downloads/${{ matrix.toolchain.host }}
