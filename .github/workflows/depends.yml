@@ -23,7 +23,7 @@ jobs:
             host: "aarch64-linux-gnu"
             packages: "python3 gperf g++-aarch64-linux-gnu"
           - name: "build-depends-armv8 RPi"
-            host: "aarch64-linux-gnu-RPi"
+            host: "aarch64-linux-gnu"
             packages: "python3 gperf g++-aarch64-linux-gnu"
             cmake_opts: "-DNO_AES=ON"
           - name: "build-depends-windows-x64"
