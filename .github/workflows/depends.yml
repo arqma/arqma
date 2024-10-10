@@ -12,7 +12,7 @@ env:
         ccache --set-config=compression=true
 jobs:
   build-macos:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu2204-ex
     env:
       CCACHE_TEMPDIR: /tmp/.ccache-temp
     strategy:
@@ -85,3 +85,14 @@ jobs:
         name: ${{ matrix.toolchain.name }}
         path: |
           /home/runner/work/arqma/arqma/build/${{ matrix.toolchain.host }}/release/bin/arqma*
+
+#Upload artifacts
+    - name: copy file via ssh password
+      uses: appleboy/scp-action@v0.1.7
+      with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          source: /home/runner/work/arqma/arqma/build/${{ matrix.toolchain.host }}/*
+          target: downloads/${{ matrix.toolchain.host }}
