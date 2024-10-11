@@ -91,4 +91,4 @@ jobs:
           port: ${{ secrets.PORT }}
           source: ${{ github.workspace }}/build/${{ matrix.toolchain.host }}/release/bin/arqma*
           target: downloads/${{ matrix.toolchain.host }}
-          strip_components: 3
+          strip_components: 4
