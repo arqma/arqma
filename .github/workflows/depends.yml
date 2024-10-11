@@ -89,5 +89,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
+          strip_components: 1
           source: ${{ github.workspace }}/build/${{ matrix.toolchain.host }}/release/bin/arqma*
           target: downloads/${{ matrix.toolchain.host }}
