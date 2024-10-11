@@ -79,6 +79,10 @@ jobs:
         name: ${{ matrix.toolchain.name }}
         path: |
           ${{ github.workspace }}/build/${{ matrix.toolchain.host }}/release/bin/arqma*
+    - uses: actions/download-artifact@v4
+      with:
+        name: ${{ matrix.toolchain.name }}
+        path: distfiles
 
 #Upload artifacts
     - name: Copy files via ssh
@@ -89,6 +93,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
-          source: ${{ github.workspace }}/build/${{ matrix.toolchain.host }}/release/bin/arqma*
+#          source: ${{ github.workspace }}/build/${{ matrix.toolchain.host }}/release/bin/arqma*
+          source: distfiles
           target: downloads/${{ matrix.toolchain.host }}
-          strip_components: 4
+          strip_components: 1
