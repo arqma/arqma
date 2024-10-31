@@ -122,6 +122,11 @@ namespace cryptonote {
       MERROR("Block cumulative weight too big: " << current_block_weight << ", expected less than: " << 2 * median_weight);
       return false;
     }
+    if (hard_fork_version >= 16)
+    {
+      reward = arqma_bc::HF16_BL_REWARD;
+      return true;
+    }
 
     assert(median_weight < std::numeric_limits<uint32_t>::max());
     assert(current_block_weight < std::numeric_limits<uint32_t>::max());

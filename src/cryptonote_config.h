@@ -284,6 +284,7 @@ namespace config
      static const uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
      static const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
      static const uint8_t min_output_age = 20;
+     static const uint64_t HF16_BL_REWARD = 20 * ARQMA;
    }
 
    namespace tx_settings
