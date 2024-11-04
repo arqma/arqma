@@ -324,7 +324,6 @@ namespace arqma
     "it-support.mal-bit.com",
     "38.242.135.157", //ArqTras DE
     "154.38.165.93", //ArqTras US
-    "home.ar-net.info", //ArqTras PL
     "154.38.161.92", //ArqTras US 2
     "194.233.64.43" //Malbit Asia
   };
@@ -343,7 +342,6 @@ namespace arqma
     "it-support.mal-bit.com",
     "38.242.135.157", //ArqTras DE
     "154.38.165.93", //ArqTras US
-    "home.ar-net.info", //ArqTras PL
     "154.38.161.92", //ArqTras US 2
     "194.233.64.43" //Malbit Asia
   };
