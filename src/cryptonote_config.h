@@ -268,8 +268,8 @@ namespace config
      boost::uuids::uuid const NETWORK_ID = { {
          0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
        } }; // Bender's daydream
-     std::string const GOVERNANCE_WALLET_ADDRESS = "as2H2hydWETBhUdFiRD5qZHw3QsVdirAsAc3P4HQSSWx6KMv3PQZPtkU3VeKtJaVe9a7SP1pqxb8rCdh2WJtVK7B2RMzQBFRJ";
-     std::string const DEV_WALLET_ADDRESS = "as2V1HH36fNQXrzb3aSwcbEfmQHAoWgBabhSrfimiGNV7gVjJaSvbed7XndTpNe5yHczdwVWF2FtCg2Yd7z3pker2VCsS5Gzq";
+     std::string const GOVERNANCE_WALLET_ADDRESS = "as3DH2He8go7QzsiWc2PK4by2XdQZmUTF8Bv2bKY3egmRH9zPAF3iwWFteTPYaob4m5GuCNTLHFgtVdA6nbuP3Gp1x4Fvjv5G";
+     std::string const DEV_WALLET_ADDRESS = "as1gAmaQQZMDy8SQzeqQSxGJJJpinLxSpgALxxZEDyNL6QB6hREvXzoVDi9LrFGJVu1x33toQVe9hWeXdhsjnkg7199GtodQy";
    }
 
    namespace blockchain_settings
@@ -319,35 +319,33 @@ namespace arqma
   static constexpr size_t seed_nodes_qty = 12;
   const char *const mainnet_core_nodes[] =
   {
-    "144.217.242.16",
-    "161.97.102.172",
+    "161.97.102.172", //Malbit
+    "207.244.249.105", //Malbit US
     "it-support.mal-bit.com",
-    "207.244.249.105",
-    "139.99.106.122",
-    "194.233.64.43",
-    "38.242.135.157",
-    "209.126.84.37"
+    "38.242.135.157", //ArqTras DE
+    "154.38.165.93", //ArqTras US
+    "home.ar-net.info", //ArqTras PL
+    "154.38.161.92", //ArqTras US 2
+    "194.233.64.43" //Malbit Asia
   };
 
   const char *const testnet_core_nodes[] =
   {
     "161.97.102.172",
-    "139.99.106.122",
-    "77.93.206.172",
     "it-support.mal-bit.com",
     "194.233.64.43"
   };
 
   const char *const stagenet_core_nodes[] =
   {
-    "161.97.102.172",
-    "139.99.106.122",
-    "77.93.206.172",
+    "161.97.102.172", //Malbit
+    "207.244.249.105", //Malbit US
     "it-support.mal-bit.com",
-    "38.242.135.157",
-    "144.217.242.16",
-    "194.233.64.43",
-    "209.126.84.37"
+    "38.242.135.157", //ArqTras DE
+    "154.38.165.93", //ArqTras US
+    "home.ar-net.info", //ArqTras PL
+    "154.38.161.92", //ArqTras US 2
+    "194.233.64.43" //Malbit Asia
   };
 }
 

@@ -121,15 +121,15 @@ const forks_t stagenet_hard_forks[] =
 {
   { network_version_1,       0, 0, 1341378000 },
   { network_version_7,       1, 0, 1528750800 },
-  { network_version_8,     100, 0, 1528751200 },
-  { network_version_9,     200, 0, 1530248400 },
-  { network_version_10,    500, 0, 1538352000 },
-  { network_version_11,    800, 0, 1552424400 },
-  { network_version_12,   1500, 0, 1554336000 },
-  { network_version_13,   2000, 0, 1560348000 },
-  { network_version_14,   2720, 0, 1560351600 },
-  { network_version_15,  12100, 0, 1570414500 },
-  { network_version_16,  12800, 0, 1570414510 }
+  { network_version_8,      10, 0, 1528751200 },
+  { network_version_9,      20, 0, 1530248400 },
+  { network_version_10,     40, 0, 1538352000 },
+  { network_version_11,     60, 0, 1552424400 },
+  { network_version_12,     80, 0, 1554336000 },
+  { network_version_13,    100, 0, 1560348000 },
+  { network_version_14,    120, 0, 1560351600 },
+  { network_version_15,    140, 0, 1570414500 },
+  { network_version_16,    160, 0, 1570414510 }
 };
 
 const size_t num_mainnet_hard_forks = sizeof(mainnet_hard_forks) / sizeof(mainnet_hard_forks[0]);
