@@ -375,7 +375,7 @@ namespace cryptonote {
     return  next_D;
   }
 //v16 diffculty algo
-  difficulty_type next_difficulty_v16(std::vector<uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, uint64_t height, const uint8_t version) {
+  difficulty_type next_difficulty_v16(std::vector<uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties) {
 
     uint64_t  T = DIFFICULTY_TARGET_V16;
     uint64_t  N = DIFFICULTY_WINDOW_V16; // N=45, 60, and 90 for T=600, 120, 60.

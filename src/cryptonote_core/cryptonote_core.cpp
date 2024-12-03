@@ -105,6 +105,11 @@ namespace cryptonote
   , "Fixed difficulty used for testing."
   , 0
   };
+  const command_line::arg_descriptor<bool> arg_dev_allow_local = {
+    "dev-allow-local-ips"
+  , "Allow local IPs for local and received service node public IP (for local testing only)"
+  , false
+  };
   const command_line::arg_descriptor<std::string, false, true, 2> arg_data_dir = {
     "data-dir"
   , "Specify data directory"
@@ -297,6 +302,7 @@ namespace cryptonote
     command_line::add_arg(desc, arg_stagenet_on);
     command_line::add_arg(desc, arg_regtest_on);
     command_line::add_arg(desc, arg_fixed_difficulty);
+    command_line::add_arg(desc, arg_dev_allow_local);
     command_line::add_arg(desc, arg_prep_blocks_threads);
     command_line::add_arg(desc, arg_fast_block_sync);
     command_line::add_arg(desc, arg_show_time_stats);
@@ -338,10 +344,13 @@ namespace cryptonote
     if (command_line::get_arg(vm, arg_test_drop_download) == true)
       test_drop_download();
 
+    if (command_line::get_arg(vm, arg_dev_allow_local))
+      m_service_node_list.debug_allow_local_ips = true;
+
     bool service_node = command_line::get_arg(vm, arg_service_node);
 
     if (service_node) {
-      m_service_node_keys = std::make_shared<service_node_keys>();
+      m_service_node_keys = std::make_unique<service_node_keys>();
 
       m_storage_port = command_line::get_arg(vm, arg_sn_bind_port);
 
@@ -359,9 +368,17 @@ namespace cryptonote
           storage_ok = false;
         }
 
-        if (!epee::net_utils::is_ip_public(m_sn_public_ip)) {
-          MERROR("Address given for public-ip is not public: " << epee::string_tools::get_ip_string_from_int32(m_sn_public_ip));
-          storage_ok = false;
+        if (!epee::net_utils::is_ip_public(m_sn_public_ip))
+        {
+          if (m_service_node_list.debug_allow_local_ips)
+          {
+            MWARNING("Address given for public-ip is not public. Allowing it because dev-allow-local-ips was specified. This Service Node WILL NOT WORK ON ONE PUBLIC ARQMA NETWORK!");
+          }
+          else
+          {
+            MERROR("Address given for public-ip is not public: " << epee::string_tools::get_ip_string_from_int32(m_sn_public_ip));
+            storage_ok = false;
+          }
         }
       }
       else
@@ -470,7 +487,7 @@ namespace cryptonote
     {
       r = init_service_node_keys();
       CHECK_AND_ASSERT_MES(r, false, "Failed to create or load service node key");
-      m_service_node_list.set_my_service_node_keys(m_service_node_keys);
+      m_service_node_list.set_my_service_node_keys(m_service_node_keys.get());
     }
 
     boost::filesystem::path folder(m_config_folder);
@@ -600,7 +617,7 @@ namespace cryptonote
       if (db_salvage)
         db_flags |= DBF_SALVAGE;
 
-      db->open(filename, db_flags);
+      db->open(filename, m_nettype, db_flags);
       if(!db->m_open)
         return false;
     }
@@ -643,17 +660,13 @@ namespace cryptonote
       MERROR("Failed to parse reorg notify spec");
     }
 
-    const std::pair<uint8_t, uint64_t> regtest_hard_forks[3] = {std::make_pair(1, 0), std::make_pair(Blockchain::get_hard_fork_heights(MAINNET).back().version, 1), std::make_pair(0, 0)};
+    const std::vector<std::pair<uint8_t, uint64_t>> regtest_hard_forks = {std::make_pair(cryptonote::network_version_count - 1, 1)};
     const cryptonote::test_options regtest_test_options = {
-      regtest_hard_forks, 0
+      regtest_hard_forks
     };
-    const difficulty_type fixed_difficulty = command_line::get_arg(vm, arg_fixed_difficulty);
 
-    BlockchainDB *initialized_db = db.release();
     // SN
     {
-      m_service_node_list.set_db_pointer(initialized_db);
-
       m_service_node_list.set_quorum_history_storage(command_line::get_arg(vm, arg_store_quorum_history));
 
       m_blockchain_storage.hook_block_added(m_service_node_list);
@@ -675,7 +688,8 @@ namespace cryptonote
       m_checkpoints_path = checkpoint_json_hashfile_fullpath.string();
     }
 
-    r = m_blockchain_storage.init(initialized_db, m_nettype, m_offline, regtest ? &regtest_test_options : test_options, fixed_difficulty, get_checkpoints);
+    const difficulty_type fixed_difficulty = command_line::get_arg(vm, arg_fixed_difficulty);
+    r = m_blockchain_storage.init(db.release(), m_nettype, m_offline, regtest ? &regtest_test_options : test_options, fixed_difficulty, get_checkpoints);
 
     r = m_mempool.init(max_txpool_weight);
     CHECK_AND_ASSERT_MES(r, false, "Failed to initialize memory pool");
@@ -724,7 +738,7 @@ namespace cryptonote
       CHECK_AND_ASSERT_MES(m_blockchain_storage.prune_blockchain(), false, "Failed to prune blockchain");
     }
 
-    return load_state_data();
+    return true;
   }
   //-----------------------------------------------------------------------------------------------
   template <typename Privkey, typename Pubkey, typename GetPubkey, typename GeneratePair>
@@ -802,17 +816,9 @@ namespace cryptonote
     return m_blockchain_storage.reset_and_set_genesis_block(b);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::load_state_data()
-  {
-    // may be some code later
-    return true;
-  }
-  //-----------------------------------------------------------------------------------------------
   bool core::deinit()
   {
     m_service_node_list.store();
-    m_service_node_list.set_db_pointer(nullptr);
-
     m_miner.stop();
     m_mempool.deinit();
     m_blockchain_storage.deinit();
@@ -1428,7 +1434,7 @@ namespace cryptonote
     }
 
     uint8_t version = m_blockchain_storage.get_current_hard_fork_version();
-    return m_mempool.add_tx(tx, tx_hash, blob, tx_weight, tvc, keeped_by_block, relayed, do_not_relay, version, m_service_node_list);
+    return m_mempool.add_tx(tx, tx_hash, blob, tx_weight, tvc, keeped_by_block, relayed, do_not_relay, version);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::relay_txpool_transactions()
@@ -1452,19 +1458,22 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::submit_uptime_proof()
   {
-    if (!m_service_node_keys) return true;
+    if (!m_service_node_keys)
+      return true;
+
     NOTIFY_UPTIME_PROOF::request req = m_service_node_list.generate_uptime_proof(*m_service_node_keys, m_sn_public_ip, m_storage_port);
 
     cryptonote_connection_context fake_context{};
-    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context, true);
-    if (relayed) MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_keys->pub);
+    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context);
+    if (relayed)
+      MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_keys->pub);
 
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_uptime_proof(const NOTIFY_UPTIME_PROOF::request &proof)
+  bool core::handle_uptime_proof(const NOTIFY_UPTIME_PROOF::request &proof, bool &my_uptime_proof_confirmation)
   {
-    return m_service_node_list.handle_uptime_proof(proof);
+    return m_service_node_list.handle_uptime_proof(proof, my_uptime_proof_confirmation);
   }
   //-----------------------------------------------------------------------------------------------
   void core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
@@ -1819,19 +1828,22 @@ namespace cryptonote
     // wait one block before starting uptime proofs.
     if(!states.empty() && (states[0].info->registration_height + 1) < get_current_blockchain_height())
     {
-      service_nodes::service_node_info const &info = *states[0].info;
-      m_check_uptime_proof_interval.do_call([&info, this]() {
-        if (info.proof->timestamp <= static_cast<uint64_t>(time(nullptr) - UPTIME_PROOF_FREQUENCY_IN_SECONDS))
-        {
-          if (!check_storage_server_ping(m_last_storage_server_ping))
-          {
-            MGINFO_RED("Failed to submit uptime proof: have not heard from the storage server recently. "
-                       "Make sure that it is running! It is required to run alongside with Arqma Daemon.");
-            return true;
-          }
+      m_check_uptime_proof_interval.do_call([this]()
+      {
+        uint64_t next_proof_time = 0;
+        m_service_node_list.access_proof(m_service_node_keys->pub, [&](auto &proof) { next_proof_time = proof.timestamp; });
+        next_proof_time += UPTIME_PROOF_FREQUENCY_IN_SECONDS + UPTIME_PROOF_TIMER_SECONDS/2;
 
-          this->submit_uptime_proof();
+        if ((uint64_t) std::time(nullptr) < next_proof_time)
+          return true;
+
+        if (!check_storage_server_ping(m_last_storage_server_ping))
+        {
+          MGINFO_RED("Failed to submit uptime proof: have not heard from the storage server recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon");
+          return true;
         }
+
+        submit_uptime_proof();
 
         return true;
       });
@@ -1839,7 +1851,7 @@ namespace cryptonote
     else
     {
       // reset the interval so that we're ready when we register.
-      m_check_uptime_proof_interval = epee::math_helper::once_a_time_seconds<UPTIME_PROOF_BUFFER_IN_SECONDS, true>();
+      m_check_uptime_proof_interval = {};
     }
   }
   //-----------------------------------------------------------------------------------------------
@@ -1863,9 +1875,10 @@ namespace cryptonote
     m_service_node_vote_relayer.do_call(boost::bind(&core::relay_service_node_votes, this));
     m_check_disk_space_interval.do_call(boost::bind(&core::check_disk_space, this));
     m_blockchain_pruning_interval.do_call(boost::bind(&core::update_blockchain_pruning, this));
+    m_sn_proof_cleanup_interval.do_call([&snl=m_service_node_list] { snl.cleanup_proofs(); return true; });
 
     time_t const lifetime = time(nullptr) - get_start_time();
-    if(m_service_node_keys && lifetime > DIFFICULTY_TARGET_V16)
+    if(m_service_node_keys && lifetime > UPTIME_PROOF_INITIAL_DELAY_SECONDS)
     {
       do_uptime_proof_call();
     }
@@ -1918,7 +1931,7 @@ namespace cryptonote
     if (!tools::check_updates(software, buildtag, version, hash))
       return false;
 
-    if (tools::vercmp(version.c_str(), ARQMA_VERSION) <= 0)
+    if (tools::vercmp(version.c_str(), ARQMA_VERSION_STR) <= 0)
     {
       m_update_available = false;
       return true;
@@ -2084,9 +2097,9 @@ namespace cryptonote
     return get_blockchain_storage().prune_blockchain(pruning_seed);
   }
   //-----------------------------------------------------------------------------------------------
-  std::shared_ptr<const service_nodes::testing_quorum> core::get_testing_quorum(service_nodes::quorum_type type, uint64_t height, bool include_old, std::vector<std::shared_ptr<const service_nodes::testing_quorum>> *alt_states) const
+  std::shared_ptr<const service_nodes::quorum> core::get_quorum(service_nodes::quorum_type type, uint64_t height, bool include_old, std::vector<std::shared_ptr<const service_nodes::quorum>> *alt_states) const
   {
-    return m_service_node_list.get_testing_quorum(type, height, include_old, alt_states);
+    return m_service_node_list.get_quorum(type, height, include_old, alt_states);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::is_service_node(const crypto::public_key& pubkey, bool require_active) const
@@ -2109,9 +2122,9 @@ namespace cryptonote
     return m_quorum_cop.handle_vote(vote, vvc);
   }
   //-----------------------------------------------------------------------------------------------
-  std::shared_ptr<const core::service_node_keys> core::get_service_node_keys() const
+  const core::service_node_keys* core::get_service_node_keys() const
   {
-    return m_service_node_keys;
+    return m_service_node_keys.get();
   }
   //-----------------------------------------------------------------------------------------------
   std::time_t core::get_start_time() const

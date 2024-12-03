@@ -35,6 +35,7 @@
 #include "cryptonote_basic/connection_context.h"
 #include "cryptonote_protocol/cryptonote_protocol_defs.h"
 #include "checkpoints/checkpoints.h"
+#include "common/util.h"
 
 #include "misc_log_ex.h"
 #include "string_tools.h"
@@ -79,20 +80,14 @@ namespace service_nodes
   {
     uint16_t state_int = static_cast<uint16_t>(state);
 
-    char buf[sizeof(block_height) + sizeof(service_node_index) + sizeof(state_int)];
+    auto buf = tools::memcpy_le(block_height, service_node_index, state_int);
 
-    boost::endian::native_to_little_inplace(block_height);
-    boost::endian::native_to_little_inplace(service_node_index);
-    boost::endian::native_to_little_inplace(state_int);
-    memcpy(buf, &block_height, sizeof(block_height));
-    memcpy(buf + sizeof(block_height), &service_node_index, sizeof(service_node_index));
-    memcpy(buf + sizeof(block_height) + sizeof(service_node_index), &state_int, sizeof(state_int));
-
-    auto size = sizeof(buf);
-    if (state == new_state::deregister) size -= sizeof(uint16_t);
+    auto size = buf.size();
+    if (state == new_state::deregister)
+      size -= sizeof(state_int);
 
     crypto::hash result;
-    crypto::cn_fast_hash(buf, size, result);
+    crypto::cn_fast_hash(buf.data(), size, result);
     return result;
   }
 
@@ -134,7 +129,7 @@ namespace service_nodes
     return result;
   }
 
-  static bool bounds_check_worker_index(service_nodes::testing_quorum const &quorum, uint32_t worker_index, cryptonote::vote_verification_context *vvc)
+  static bool bounds_check_worker_index(service_nodes::quorum const &quorum, uint32_t worker_index, cryptonote::vote_verification_context *vvc)
   {
     if (worker_index >= quorum.workers.size())
     {
@@ -145,7 +140,7 @@ namespace service_nodes
     return true;
   }
 
-  static bool bounds_check_validator_index(service_nodes::testing_quorum const &quorum, uint32_t validator_index, cryptonote::vote_verification_context *vvc)
+  static bool bounds_check_validator_index(service_nodes::quorum const &quorum, uint32_t validator_index, cryptonote::vote_verification_context *vvc)
   {
     if (validator_index >= quorum.validators.size())
     {
@@ -161,7 +156,7 @@ namespace service_nodes
     return false;
   }
 
-  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context &tvc, const service_nodes::testing_quorum &quorum)
+  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context &tvc, const service_nodes::quorum &quorum)
   {
     auto &vvc = tvc.m_vote_ctx;
     if (state_change.votes.size() < service_nodes::STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE)
@@ -229,7 +224,7 @@ namespace service_nodes
       crypto::public_key const &key = quorum.validators[vote.validator_index];
       if (!crypto::check_signature(hash, key, vote.signature))
       {
-        LOG_PRINT_L1("Invalid signatures for votes");
+        LOG_PRINT_L1("Invalid signature for voter " << vote.validator_index << "/" << key);
         vvc.m_signature_not_valid = true;
         return bad_tx(tvc);
       }
@@ -238,7 +233,7 @@ namespace service_nodes
     return true;
   }
 
-  bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::testing_quorum const &quorum)
+  bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum)
   {
     if (checkpoint.type == cryptonote::checkpoint_type::service_node)
     {
@@ -364,10 +359,10 @@ namespace service_nodes
     return result;
   }
 
-  bool verify_vote_signature(const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::testing_quorum &quorum)
+  bool verify_vote_signature(const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::quorum &quorum)
   {
     bool result = true;
-    if (vote.type >= quorum_type::count)
+    if (vote.type >= quorum_type::_count)
     {
       vvc.m_invalid_vote_type = true;
       result = false;

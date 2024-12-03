@@ -31,7 +31,7 @@ namespace service_nodes
 
   constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
   constexpr size_t STATE_CHANGE_QUORUM_SIZE                        = 10;
-  constexpr ptrdiff_t MIN_TIME_IN_S_BEFORE_VOTING                  = 0;
+  constexpr int MIN_TIME_IN_S_BEFORE_VOTING                        = UPTIME_PROOF_MAX_TIME_IN_SECONDS;
   constexpr size_t CHECKPOINT_QUORUM_SIZE                          = 20;
   constexpr size_t CHECKPOINT_MIN_VOTES                            = 13;
 
@@ -61,7 +61,6 @@ namespace service_nodes
   constexpr size_t   SWARM_BUFFER                                   = 5;
   // if a swarm has strictly less nodes than this, it is considered unhealthy
   // and nearby swarms will mirror it's data. It will disappear, and is already considered gone.
-  constexpr int      MAX_KEY_IMAGES_PER_CONTRIBUTOR                 = 1;
   constexpr uint64_t QUEUE_SWARM_ID                                 = 0;
   constexpr uint64_t KEY_IMAGE_AWAITING_UNLOCK_HEIGHT               = 0;
 
@@ -74,6 +73,12 @@ namespace service_nodes
   using swarm_id_t = uint64_t;
   constexpr swarm_id_t UNASSIGNED_SWARM_ID                          = UINT64_MAX;
 
+  inline quorum_type max_quorum_type_for_hf(uint8_t hard_fork_version)
+  {
+    quorum_type result = quorum_type::checkpointing;
+    assert(result != quorum_type::_count);
+    return result;
+  }
 
   inline uint64_t staking_num_lock_blocks(cryptonote::network_type nettype)
   {

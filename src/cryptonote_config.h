@@ -217,11 +217,15 @@ static_assert(STAKING_SHARE_PARTS % MAX_NUMBER_OF_CONTRIBUTORS == 0, "Use a mult
 static_assert(STAKING_SHARE_PARTS % 2 == 0, "Use a multiple of two, so that it divides easily by two contributors.");
 static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it divides easily by three contributors.");
 
+#define UPTIME_PROOF_BASE_MINUTE                        60
 #define UPTIME_PROOF_BUFFER_IN_SECONDS                  (300)
-#define UPTIME_PROOF_FREQUENCY_IN_SECONDS               (3600)
+#define UPTIME_PROOF_INITIAL_DELAY_SECONDS              (2 * UPTIME_PROOF_BASE_MINUTE)
+#define UPTIME_PROOF_TIMER_SECONDS                      (5 * UPTIME_PROOF_BASE_MINUTE)
+#define UPTIME_PROOF_FREQUENCY_IN_SECONDS               (60 * UPTIME_PROOF_BASE_MINUTE)
 #define UPTIME_PROOF_MAX_TIME_IN_SECONDS                (UPTIME_PROOF_FREQUENCY_IN_SECONDS * 2 + UPTIME_PROOF_BUFFER_IN_SECONDS)
 
 #define STORAGE_SERVER_PING_LIFETIME                    UPTIME_PROOF_FREQUENCY_IN_SECONDS
+
 namespace config
 {
   const uint64_t DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!

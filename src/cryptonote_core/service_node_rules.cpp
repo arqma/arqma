@@ -83,12 +83,11 @@ namespace service_nodes
   uint64_t get_min_node_contribution(uint64_t staking_requirement, uint64_t total_reserved, size_t num_contributions)
   {
     const uint64_t needed = staking_requirement - total_reserved;
-    const size_t max_num_of_contributions = MAX_NUMBER_OF_CONTRIBUTORS * MAX_KEY_IMAGES_PER_CONTRIBUTOR;
-    assert(max_num_of_contributions > num_contributions);
-    if(max_num_of_contributions <= num_contributions)
+    assert(MAX_NUMBER_OF_CONTRIBUTORS > num_contributions);
+    if(MAX_NUMBER_OF_CONTRIBUTORS <= num_contributions)
       return UINT64_MAX;
 
-    const size_t num_contributions_remaining_avail = max_num_of_contributions - num_contributions;
+    const size_t num_contributions_remaining_avail = MAX_NUMBER_OF_CONTRIBUTORS - num_contributions;
     return needed / num_contributions_remaining_avail;
   }
 

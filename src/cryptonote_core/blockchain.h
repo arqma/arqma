@@ -70,23 +70,6 @@
 namespace service_nodes { class service_node_list; struct voting_pool; }
 namespace tools { class Notify; }
 
-struct forks_t
-{
-  uint8_t version;
-  uint64_t height;
-  uint8_t threshold;
-  time_t time;
-  forks_t(uint8_t version, uint64_t height, uint8_t threshold, time_t time): version(version), height(height), threshold(threshold), time(time) {}
-};
-
-extern const forks_t mainnet_hard_forks[];
-extern const forks_t testnet_hard_forks[];
-extern const forks_t stagenet_hard_forks[];
-
-extern const size_t num_mainnet_hard_forks;
-extern const size_t num_testnet_hard_forks;
-extern const size_t num_stagenet_hard_forks;
-
 namespace cryptonote
 {
   struct block_and_checkpoint
@@ -799,13 +782,6 @@ namespace cryptonote
     HardFork::State get_hard_fork_state() const;
 
     /**
-     * @brief gets the hardfork heights of given network
-     *
-     * @return the HardFork object
-     */
-    static const std::vector<HardFork::Params>& get_hard_fork_heights(network_type nettype);
-
-    /**
      * @brief gets the current hardfork version in use/voted for
      *
      * @return the version
@@ -943,6 +919,9 @@ namespace cryptonote
      */
     bool for_all_outputs(uint64_t amount, std::function<bool(uint64_t height)>) const;
 
+
+    bool has_db() const { return m_db; }
+
     /**
      * @brief get a reference to the BlockchainDB in use by Blockchain
      *
@@ -962,6 +941,9 @@ namespace cryptonote
     {
       return *m_db;
     }
+
+    const service_nodes::service_node_list &get_service_node_list() const { return m_service_node_list; }
+    service_nodes::service_node_list &get_service_node_list() { return m_service_node_list; }
 
     /**
      * @brief get a number of outputs of a specific amount
@@ -1005,8 +987,13 @@ namespace cryptonote
     bool update_blockchain_pruning();
     bool check_blockchain_pruning();
 
-    void lock();
-    void unlock();
+    void lock() const { m_blockchain_lock.lock(); }
+    void unlock() const { m_blockchain_lock.unlock(); }
+    bool try_lock() const { return m_blockchain_lock.try_lock(); }
+
+    void lock() { m_blockchain_lock.lock(); }
+    void unlock() { m_blockchain_lock.unlock(); }
+    bool try_lock() { return m_blockchain_lock.try_lock(); }
 
     void cancel();
 
@@ -1051,7 +1038,7 @@ namespace cryptonote
 
     service_nodes::service_node_list& m_service_node_list;
 
-    mutable epee::critical_section m_blockchain_lock; // TODO: add here reader/writer lock
+    mutable boost::recursive_mutex m_blockchain_lock; // TODO: add here reader/writer lock
 
     // main chain
     size_t m_current_block_cumul_weight_limit;
@@ -1085,7 +1072,7 @@ namespace cryptonote
     mutable crypto::hash m_long_term_block_weights_cache_tip_hash;
     mutable epee::misc_utils::rolling_median_t<uint64_t> m_long_term_block_weights_cache_rolling_median;
 
-    epee::critical_section m_difficulty_lock;
+    std::mutex m_difficulty_lock;
     crypto::hash m_difficulty_for_next_block_top_hash;
     difficulty_type m_difficulty_for_next_block;
 

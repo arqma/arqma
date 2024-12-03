@@ -300,9 +300,7 @@ namespace cryptonote
 
     struct request_t
     {
-      uint16_t arqma_snode_major;
-      uint16_t arqma_snode_minor;
-      uint16_t arqma_snode_patch;
+      std::array<uint16_t, 3> arqma_snode_version;
 
       uint64_t timestamp;
       crypto::public_key pubkey;
@@ -314,9 +312,9 @@ namespace cryptonote
       uint16_t arqnet_port;
 
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(arqma_snode_major)
-        KV_SERIALIZE(arqma_snode_minor)
-        KV_SERIALIZE(arqma_snode_patch)
+        KV_SERIALIZE_N(arqma_snode_version[0], "arqma_snode_major")
+        KV_SERIALIZE_N(arqma_snode_version[1], "arqma_snode_minor")
+        KV_SERIALIZE_N(arqma_snode_version[2], "arqma_snode_patch")
         KV_SERIALIZE(timestamp)
         KV_SERIALIZE(public_ip)
         KV_SERIALIZE(storage_port)

@@ -2371,6 +2371,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
   struct COMMAND_RPC_GET_QUORUM_STATE
   {
     static constexpr uint64_t HEIGHT_SENTINEL_VALUE = UINT64_MAX;
+    static constexpr uint8_t ALL_QUORUMS_SENTINEL_VALUE = 255;
     struct request_t
     {
       uint64_t start_height;
@@ -2379,7 +2380,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_OPT(start_height, HEIGHT_SENTINEL_VALUE)
         KV_SERIALIZE_OPT(end_height, HEIGHT_SENTINEL_VALUE)
-        KV_SERIALIZE_OPT(quorum_type, (uint8_t)service_nodes::quorum_type::rpc_request_all_quorums_sentinel_value)
+        KV_SERIALIZE_OPT(quorum_type, ALL_QUORUMS_SENTINEL_VALUE)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -2617,6 +2618,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       {
         std::string service_node_pubkey;
         uint64_t registration_height;
+        uint16_t registration_hf_version;
         uint64_t requested_unlock_height;
         uint64_t last_reward_block_height;
         uint32_t last_reward_transaction_index;
@@ -2625,7 +2627,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint64_t state_height;
         uint32_t decommission_count;
         int64_t earned_downtime_blocks;
-        std::vector<uint16_t> service_node_version;
+        std::array<uint16_t, 3> service_node_version;
         std::vector<service_node_contributor> contributors;
         uint64_t total_contributed;
         uint64_t total_reserved;
@@ -2649,6 +2651,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(service_node_pubkey)
           KV_SERIALIZE(registration_height)
+          KV_SERIALIZE(registration_hf_version)
           KV_SERIALIZE(requested_unlock_height)
           KV_SERIALIZE(last_reward_block_height)
           KV_SERIALIZE(last_reward_transaction_index)
@@ -2707,6 +2710,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
 
       bool service_node_pubkey;
       bool registration_height;
+      bool registration_hf_version;
       bool requested_unlock_height;
       bool last_reward_block_height;
       bool last_reward_transaction_index;
@@ -2742,6 +2746,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_OPT2(service_node_pubkey, false)
         KV_SERIALIZE_OPT2(registration_height, false)
+        KV_SERIALIZE_OPT2(registration_hf_version, false)
         KV_SERIALIZE_OPT2(requested_unlock_height, false)
         KV_SERIALIZE_OPT2(last_reward_block_height, false)
         KV_SERIALIZE_OPT2(last_reward_transaction_index, false)
@@ -2802,6 +2807,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
 
         std::string service_node_pubkey; // The public key of the Service Node.
         uint64_t registration_height; // The height at which the registration for the Service Node arrived on the blockchain.
+        uint64_t registration_hf_version;
         uint64_t requested_unlock_height; // The height at which contributions will be released and the Service Node expires. 0 if not requested yet.
         uint64_t last_reward_block_height; // The last height at which this Service Node received a reward.
         uint32_t last_reward_transaction_index; // When multiple Service Nodes register on the same height, the order the transaction arrive dictate the order you receive rewards.
@@ -2810,7 +2816,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         uint64_t state_height; // If active: the state at which registration was completed; if decommissioned: the decommissioning height; if awaiting: the last contribution (or registration) height
         uint32_t decommission_count; // The number of times ther Service Node has been decommisioned since registration.
         int64_t earned_downtime_blocks; // The number of blocks earned towards decommissioning, or the number of blocks remaining until deregistration if currently decommissioned
-        std::vector<uint16_t> service_node_version; // The major, minor, patch version of the Service Node respectively.
+        std::array<uint16_t, 3> service_node_version; // The major, minor, patch version of the Service Node respectively.
         std::vector<service_node_contributor> contributors; // Array of contributors, contributing to this Service Node.
         uint64_t total_contributed; // The total amount of Loki in atomic units contributed to this Service Node.
         uint64_t total_reserved; // The total amount of Loki in atomic units reserved in this Service Node.
@@ -2833,6 +2839,7 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(service_node_pubkey)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(registration_height)
+          KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(registration_hf_version)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(requested_unlock_height)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(last_reward_block_height)
           KV_SERIALIZE_ENTRY_FIELD_IF_REQUESTED(last_reward_transaction_index)

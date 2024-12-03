@@ -324,8 +324,8 @@ namespace hw {
     bool device_ledger::reset() {
       reset_buffer();
       int offset = set_command_header_noopt(INS_RESET);
-      memmove(this->buffer_send+offset, ARQMA_VERSION, strlen(ARQMA_VERSION));
-      offset += strlen(ARQMA_VERSION);
+      memmove(this->buffer_send+offset, ARQMA_VERSION_STR, strlen(ARQMA_VERSION_STR));
+      offset += strlen(ARQMA_VERSION_STR);
       this->buffer_send[4] = offset-5;
       this->length_send = offset;
       this->exchange();

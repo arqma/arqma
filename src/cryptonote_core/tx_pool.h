@@ -110,7 +110,7 @@ namespace cryptonote
      * @param id the transaction's hash
      * @param tx_weight the transaction's weight
      */
-    bool add_tx(transaction &tx, const crypto::hash &id, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version, const service_nodes::service_node_list &service_node_list);
+    bool add_tx(transaction &tx, const crypto::hash &id, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version);
 
     /**
      * @brief add a transaction to the transaction pool
@@ -129,7 +129,7 @@ namespace cryptonote
      *
      * @return true if the transaction passes validations, otherwise false
      */
-    bool add_tx(transaction &tx, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version, service_nodes::service_node_list const &service_node_list);
+    bool add_tx(transaction &tx, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version);
 
     /**
      * @brief takes a transaction with the given hash from the pool
@@ -165,7 +165,7 @@ namespace cryptonote
      *
      * @return true
      */
-    bool on_blockchain_inc(service_nodes::service_node_list const &service_node_list, block const &blk);
+    bool on_blockchain_inc(block const &blk);
 
     /**
      * @brief action to take when notified of a block removed from the blockchain
@@ -187,12 +187,18 @@ namespace cryptonote
     /**
      * @brief locks the transaction pool
      */
-    void lock() const;
+    void lock() const { m_transactions_lock.lock(); }
 
     /**
      * @brief unlocks the transaction pool
      */
-    void unlock() const;
+    void unlock() const { m_transactions_lock.unlock(); }
+
+    bool try_lock() const { return m_transactions_lock.try_lock(); }
+
+    void lock() { m_transactions_lock.lock(); }
+    void unlock() { m_transactions_lock.unlock(); }
+    bool try_lock() { return m_transactions_lock.try_lock(); }
 
     // load/store operations
 
@@ -419,7 +425,7 @@ namespace cryptonote
      * @return true if it already exists
      *
      */
-    bool have_duplicated_non_standard_tx(transaction const &tx, service_nodes::service_node_list const &node_list) const;
+    bool have_duplicated_non_standard_tx(transaction const &tx) const;
 
     /**
      * @brief check if any spent key image in a transaction is in the pool
@@ -486,6 +492,8 @@ namespace cryptonote
      */
     void mark_double_spend(const transaction &tx);
 
+    bool remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta = nullptr, const sorted_tx_container::iterator *stc_it = nullptr);
+
     /**
      * @brief prune lowest fee/byte txes till we're not above bytes
      *
@@ -507,7 +515,7 @@ namespace cryptonote
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
 public:
 #endif
-    mutable epee::critical_section m_transactions_lock;  //!< lock for the pool
+    mutable boost::recursive_mutex m_transactions_lock;  //!< mutex for the pool
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
 private:
 #endif

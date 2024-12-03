@@ -51,7 +51,7 @@ namespace cryptonote
 
 namespace service_nodes
 {
-  struct testing_quorum;
+  struct quorum;
 
   struct checkpoint_vote { crypto::hash block_hash; };
   struct state_change_vote { uint16_t worker_index; new_state state; };
@@ -60,21 +60,20 @@ namespace service_nodes
   {
     obligations = 0,
     checkpointing,
-    count,
-    rpc_request_all_quorums_sentinel_value = 255,
+    _count
   };
 
-  inline char const *quorum_type_to_string(quorum_type v)
+  inline std::ostream &operator<<(std::ostream &os, quorum_type v)
   {
     switch(v)
     {
-      case quorum_type::obligations: return "obligations";
-      case quorum_type::checkpointing: return "checkpointing";
-      default: assert(false); return "xx_unhandled_type";
+      case quorum_type::obligations: return os << "obligations";
+      case quorum_type::checkpointing: return os << "checkpointing";
+      default: assert(false); return os << "xx_unhandled_type";
     }
   }
 
-  enum struct quorum_group : uint8_t { invalid, validator, worker };
+  enum struct quorum_group : uint8_t { invalid, validator, worker, _count };
   struct quorum_vote_t
   {
     uint8_t           version = 0;
@@ -105,14 +104,16 @@ namespace service_nodes
     END_SERIALIZE()
   };
 
+  struct service_node_keys;
+
   quorum_vote_t make_state_change_vote(uint64_t block_height, uint16_t index_in_group, uint16_t worker_index, new_state state, const service_node_keys &keys);
   quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
   cryptonote::checkpoint_t make_empty_service_node_checkpoint(crypto::hash const &block_hash, uint64_t height);
 
-  bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::testing_quorum const &quorum);
-  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context& vvc, const service_nodes::testing_quorum &quorum);
+  bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum);
+  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context& vvc, const service_nodes::quorum &quorum);
   bool verify_vote_age(const quorum_vote_t& vote, uint64_t latest_height, cryptonote::vote_verification_context &vvc);
-  bool verify_vote_signature(const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::testing_quorum &quorum);
+  bool verify_vote_signature(const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::quorum &quorum);
   crypto::signature make_signature_from_vote(quorum_vote_t const &vote, const service_node_keys &keys);
   crypto::signature make_signature_from_tx_change_state(cryptonote::tx_extra_service_node_state_change const &state_change, const service_node_keys &keys);
 

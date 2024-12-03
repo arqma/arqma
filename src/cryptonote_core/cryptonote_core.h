@@ -1,3 +1,4 @@
+
 // Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
@@ -59,7 +60,7 @@ DISABLE_VS_WARNINGS(4355)
 namespace cryptonote
 {
    struct test_options {
-     const std::pair<uint8_t, uint64_t> *hard_forks;
+     const std::vector<std::pair<uint8_t, uint64_t>> hard_forks;
      const size_t long_term_block_weight_window;
    };
 
@@ -68,6 +69,7 @@ namespace cryptonote
   extern const command_line::arg_descriptor<bool, false> arg_stagenet_on;
   extern const command_line::arg_descriptor<bool, false> arg_regtest_on;
   extern const command_line::arg_descriptor<difficulty_type> arg_fixed_difficulty;
+  extern const command_line::arg_descriptor<bool> arg_dev_allow_local;
   extern const command_line::arg_descriptor<bool> arg_offline;
   extern const command_line::arg_descriptor<size_t> arg_block_download_max_size;
 
@@ -119,7 +121,7 @@ namespace cryptonote
       *
       * @return true if we haven't seen it before and thus need to relay.
       */
-     bool handle_uptime_proof(const NOTIFY_UPTIME_PROOF::request &proof);
+     bool handle_uptime_proof(const NOTIFY_UPTIME_PROOF::request &proof, bool &my_uptime_proof_confirmation);
 
      /**
       * @brief handles an incoming transaction
@@ -583,6 +585,9 @@ namespace cryptonote
       */
      const Blockchain& get_blockchain_storage()const{return m_blockchain_storage;}
 
+     const service_nodes::service_node_list &get_service_node_list() const { return m_service_node_list; }
+     service_nodes::service_node_list &get_service_node_list() { return m_service_node_list; }
+
      /**
       * @copydoc tx_memory_pool::print_pool
       *
@@ -767,7 +772,7 @@ namespace cryptonote
       * @param include_old whether to look in the old quorum states (does nothing unless running with --store-full-quorum-history)
       * @return Null shared ptr if quorum has not been determined yet for height
       */
-     std::shared_ptr<const service_nodes::testing_quorum> get_testing_quorum(service_nodes::quorum_type type, uint64_t height, bool include_old = false, std::vector<std::shared_ptr<const service_nodes::testing_quorum>> *alt_states = nullptr) const;
+     std::shared_ptr<const service_nodes::quorum> get_quorum(service_nodes::quorum_type type, uint64_t height, bool include_old = false, std::vector<std::shared_ptr<const service_nodes::quorum>> *alt_states = nullptr) const;
 
      /**
       * @brief get a non owning reference to the list of blacklisted key images
@@ -781,7 +786,7 @@ namespace cryptonote
       *
       * @return All the service nodes that can be matched with pubkeys at param
       */
-     std::vector<service_nodes::service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key>& service_node_pubkeys) const;
+     std::vector<service_nodes::service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key>& service_node_pubkeys = {}) const;
 
      /**
       * @brief get whether 'pubkey' is know as a service node
@@ -807,7 +812,7 @@ namespace cryptonote
       * @return shared point to service node keys. The shared pointer will be empty
       * if this node is not running as a service node.
       */
-     std::shared_ptr<const service_node_keys> get_service_node_keys() const;
+     const service_node_keys* get_service_node_keys() const;
 
      /**
       * @brief attempts to submit an uptime proof to the network, if this is running in service node mode
@@ -902,15 +907,6 @@ namespace cryptonote
       * @note see Blockchain::add_new_block
       */
      bool add_new_block(const block& b, block_verification_context& bvc, checkpoint_t const *checkpoint);
-
-     /**
-      * @brief load any core state stored on disk
-      *
-      * currently does nothing, but may have state to load in the future.
-      *
-      * @return true
-      */
-     bool load_state_data();
 
      /**
       * @copydoc parse_tx_from_blob(transaction&, crypto::hash&, crypto::hash&, const blobdata&) const
@@ -1065,9 +1061,9 @@ namespace cryptonote
      epee::math_helper::once_a_time_seconds<60*60*12, true> m_check_updates_interval; //!< interval for checking for new versions
      epee::math_helper::once_a_time_seconds<60*10, true> m_check_disk_space_interval; //!< interval for checking for disk space
      epee::math_helper::once_a_time_seconds<60*60*5, true> m_blockchain_pruning_interval; //!< interval for incremental blockchain pruning
-     epee::math_helper::once_a_time_seconds<UPTIME_PROOF_BUFFER_IN_SECONDS, true> m_check_uptime_proof_interval; //!< interval for submitting uptime proof
-
+     epee::math_helper::once_a_time_seconds<UPTIME_PROOF_TIMER_SECONDS, true> m_check_uptime_proof_interval; //!< interval for submitting uptime proof
      epee::math_helper::once_a_time_seconds<60*2, false> m_service_node_vote_relayer;
+     epee::math_helper::once_a_time_seconds<60*60, false> m_sn_proof_cleanup_interval;
 
      std::atomic<bool> m_starter_message_showed; //!< has the "daemon will sync now" message been shown?
 
@@ -1082,7 +1078,7 @@ namespace cryptonote
 
      std::atomic_flag m_checkpoints_updating; //!< set if checkpoints are currently updating to avoid multiple threads attempting to update at once
 
-     std::shared_ptr<service_node_keys> m_service_node_keys;
+     std::unique_ptr<service_node_keys> m_service_node_keys;
 
      uint32_t m_sn_public_ip;
      uint16_t m_storage_port;

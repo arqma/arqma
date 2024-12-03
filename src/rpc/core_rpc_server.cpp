@@ -219,7 +219,7 @@ namespace cryptonote
     }
     res.database_size = m_core.get_blockchain_storage().get_db().get_database_size();
     res.update_available = m_core.is_update_available();
-    res.version = ARQMA_VERSION_FULL;
+    res.version = restricted ? std::to_string(ARQMA_VERSION[0]) : ARQMA_VERSION_STR;
     res.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = CORE_RPC_STATUS_OK;
@@ -2278,7 +2278,7 @@ namespace cryptonote
       res.status = "Error checking for updates";
       return true;
     }
-    if (tools::vercmp(version.c_str(), ARQMA_VERSION) <= 0)
+    if (tools::vercmp(version.c_str(), ARQMA_VERSION_STR) <= 0)
     {
       res.update = false;
       res.status = CORE_RPC_STATUS_OK;
@@ -2353,7 +2353,8 @@ namespace cryptonote
   {
     PERF_TIMER(on_get_quorum_state);
 
-    if (req.quorum_type >= (decltype(req.quorum_type))service_nodes::quorum_type::count && req.quorum_type != (decltype(req.quorum_type))service_nodes::quorum_type::rpc_request_all_quorums_sentinel_value)
+    if (req.quorum_type >= tools::enum_count<service_nodes::quorum_type> &&
+        req.quorum_type != COMMAND_RPC_GET_QUORUM_STATE::ALL_QUORUMS_SENTINEL_VALUE)
     {
       error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
       error_resp.message = "Quorum type specifies an invalid value: ";
@@ -2416,7 +2417,7 @@ namespace cryptonote
         auto start_quorum_iterator = static_cast<service_nodes::quorum_type>(0);
         auto end_quorum_iterator = static_cast<service_nodes::quorum_type>(1);
 
-        if (req.quorum_type != (decltype(req.quorum_type))service_nodes::quorum_type::rpc_request_all_quorums_sentinel_value)
+        if (req.quorum_type != COMMAND_RPC_GET_QUORUM_STATE::ALL_QUORUMS_SENTINEL_VALUE)
         {
           start_quorum_iterator = static_cast<service_nodes::quorum_type>(req.quorum_type);
           end_quorum_iterator = start_quorum_iterator;
@@ -2425,7 +2426,7 @@ namespace cryptonote
         for (int quorum_int = (int)start_quorum_iterator; quorum_int <= (int)end_quorum_iterator; quorum_int++)
         {
           auto type = static_cast<service_nodes::quorum_type>(quorum_int);
-          if (std::shared_ptr<const service_nodes::testing_quorum> quorum = m_core.get_testing_quorum(type, height, true))
+          if (std::shared_ptr<const service_nodes::quorum> quorum = m_core.get_quorum(type, height, true))
           {
             COMMAND_RPC_GET_QUORUM_STATE::quorum_for_height entry = {};
             entry.height = height;
@@ -2786,12 +2787,24 @@ namespace cryptonote
     entry.state_height = info.is_fully_funded() ? (info.is_decommissioned() ? info.last_decommission_height : info.active_since_height) : info.last_reward_block_height;
     entry.earned_downtime_blocks = service_nodes::quorum_cop::calculate_decommission_credit(info, current_height);
     entry.decommission_count = info.decommission_count;
-    entry.service_node_version = {info.proof->version_major, info.proof->version_minor, info.proof->version_patch};
-    entry.public_ip = string_tools::get_ip_string_from_int32(info.proof->public_ip);
-    entry.storage_port = info.proof->storage_port;
-    entry.storage_server_reachable = info.proof->storage_server_reachable;
-    entry.pubkey_ed25519 = info.proof->pubkey_ed25519 ? string_tools::pod_to_hex(info.proof->pubkey_ed25519) : "";
-    entry.pubkey_x25519 = info.proof->pubkey_x25519 ? string_tools::pod_to_hex(info.proof->pubkey_x25519) : "";
+
+    m_core.get_service_node_list().access_proof(sn_info.pubkey, [&entry](const auto &proof)
+    {
+      entry.service_node_version = proof.version;
+      entry.public_ip = string_tools::get_ip_string_from_int32(proof.public_ip);
+      entry.storage_port = proof.storage_port;
+      entry.storage_server_reachable = proof.storage_server_reachable;
+      entry.pubkey_ed25519 = proof.pubkey_ed25519 ? string_tools::pod_to_hex(proof.pubkey_ed25519) : "";
+      entry.pubkey_x25519 = proof.pubkey_x25519 ? string_tools::pod_to_hex(proof.pubkey_x25519) : "";
+
+      entry.last_uptime_proof = proof.timestamp;
+      entry.storage_server_reachable = proof.storage_server_reachable;
+      entry.storage_server_reachable_timestamp = proof.storage_server_reachable_timestamp;
+      entry.version_major = proof.version[0];
+      entry.version_minor = proof.version[1];
+      entry.version_patch = proof.version[2];
+      entry.votes = std::vector<service_nodes::checkpoint_vote_record>(proof.votes.begin(), proof.votes.end());
+    });
 
     entry.contributors.reserve(info.contributors.size());
 
@@ -2821,14 +2834,7 @@ namespace cryptonote
     entry.portions_for_operator = info.portions_for_operator;
     entry.operator_address = cryptonote::get_account_address_as_str(m_core.get_nettype(), false, info.operator_address);
     entry.swarm_id = info.swarm_id;
-
-    entry.last_uptime_proof = info.proof->timestamp;
-    entry.storage_server_reachable = info.proof->storage_server_reachable;
-    entry.storage_server_reachable_timestamp = info.proof->storage_server_reachable_timestamp;
-    entry.version_major = info.proof->version_major;
-    entry.version_minor = info.proof->version_minor;
-    entry.version_patch = info.proof->version_patch;
-    entry.votes = std::vector<service_nodes::checkpoint_vote_record>(info.proof->votes.begin(), info.proof->votes.end());
+    entry.registration_hf_version = info.registration_hf_version;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_service_nodes(const COMMAND_RPC_GET_SERVICE_NODES::request& req, COMMAND_RPC_GET_SERVICE_NODES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
@@ -2898,7 +2904,7 @@ namespace cryptonote
       }
     }
 
-    std::vector<service_nodes::service_node_pubkey_info> sn_infos = m_core.get_service_node_list_state({});
+    std::vector<service_nodes::service_node_pubkey_info> sn_infos = m_core.get_service_node_list_state();
 
     if (req.active_only)
     {

@@ -33,6 +33,9 @@
 
 #include <string>
 
+#define ARQMA_HOUR(val) ((val) * ARQMA_MINUTES(60))
+#define ARQMA_MINUTES(val) val * 60
+
 namespace arqma
 {
 double round (double);

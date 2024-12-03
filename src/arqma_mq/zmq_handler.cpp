@@ -480,7 +480,7 @@ namespace arqmaMQ
     res.info.block_size_limit = res.info.block_weight_limit = m_core.get_blockchain_storage().get_current_cumulative_block_weight_limit();
     res.info.block_size_median = res.info.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
     res.info.start_time = (uint64_t)m_core.get_start_time();
-    res.info.version = ARQMA_VERSION;
+    res.info.version = ARQMA_VERSION_STR;
     res.info.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = cryptonote::rpc::Message::STATUS_OK;

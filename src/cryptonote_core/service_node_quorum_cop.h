@@ -47,7 +47,7 @@ namespace service_nodes
 {
   struct service_node_info;
 
-  struct testing_quorum
+  struct quorum
   {
     std::vector<crypto::public_key> validators;
     std::vector<crypto::public_key> workers;
@@ -60,10 +60,10 @@ namespace service_nodes
 
   struct quorum_manager
   {
-    std::shared_ptr<const testing_quorum> obligations;
-    std::shared_ptr<const testing_quorum> checkpointing;
+    std::shared_ptr<const quorum> obligations;
+    std::shared_ptr<const quorum> checkpointing;
 
-    std::shared_ptr<const testing_quorum> get(quorum_type type) const
+    std::shared_ptr<const quorum> get(quorum_type type) const
     {
       if (type == quorum_type::obligations) return obligations;
       else if (type == quorum_type::checkpointing) return checkpointing;
@@ -79,6 +79,7 @@ namespace service_nodes
     bool voted_in_checkpoints = true;
     bool storage_server_reachable = true;
 
+    char const *why() const;
     bool passed() const { return uptime_proved && voted_in_checkpoints && storage_server_reachable; }
   };
 

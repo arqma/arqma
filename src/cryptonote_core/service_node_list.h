@@ -1,6 +1,5 @@
 // Copyright (c)      2018-2022, The Arqma Project
 // Copyright (c)      2018, The Loki Project
-// Copyright (c) 2021-2022, The ArQmA Network
 //
 // All rights reserved.
 //
@@ -31,11 +30,15 @@
 #pragma once
 
 #include <boost/variant.hpp>
+#include <mutex>
+#include <shared_mutex>
+#include <boost/thread/shared_mutex.hpp>
 #include "serialization/serialization.h"
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "cryptonote_core/service_node_rules.h"
 #include "cryptonote_core/service_node_voting.h"
 #include "cryptonote_core/service_node_quorum_cop.h"
+#include "common/util.h"
 
 namespace cryptonote
 {
@@ -61,7 +64,6 @@ namespace service_nodes
   {
     uint64_t timestamp = 0;
     uint64_t effective_timestamp = 0;
-    uint16_t version_major = 0, version_minor = 0, version_patch = 0;
     std::array<checkpoint_vote_record, CHECKPOINT_NUM_QUORUMS_TO_PARTICIPATE_IN> votes;
     uint8_t vote_index = 0;
     std::array<std::pair<uint32_t, uint64_t>, 2> public_ips = {};
@@ -70,40 +72,44 @@ namespace service_nodes
     uint64_t storage_server_reachable_timestamp = 0;
     proof_info() { votes.fill({}); }
 
-    void update_timestamp(uint64_t ts) { timestamp = ts; effective_timestamp = ts; }
-
     uint32_t public_ip;
     uint16_t storage_port;
+    std::array<uint16_t, 3> version{{0,0,0}};
     crypto::ed25519_public_key pubkey_ed25519 = crypto::ed25519_public_key::null();
     crypto::x25519_public_key pubkey_x25519 = crypto::x25519_public_key::null();
+    void update_pubkey(const crypto::ed25519_public_key &pk);
+    bool update(uint64_t ts, uint32_t ip, uint16_t s_port, std::array<uint16_t, 3> ver, const crypto::ed25519_public_key &pk_ed, const crypto::x25519_public_key &pk_x2);
+    void store(const crypto::public_key &pubkey, cryptonote::Blockchain &blockchain);
   };
 
   struct service_node_info // registration information
   {
     enum class version_t : uint8_t
     {
-      version_1,
-      count
+      v0,
+
+      _count
     };
 
     struct contribution_t
     {
       enum class version_t : uint8_t {
         v0,
-        count
+
+        _count
       };
 
       version_t version{version_t::v0};
-      crypto::public_key key_image_pub_key;
-      crypto::key_image key_image;
-      uint64_t amount;
+      crypto::public_key key_image_pub_key{};
+      crypto::key_image key_image{};
+      uint64_t amount = 0;
 
       contribution_t() = default;
       contribution_t(version_t version, const crypto::public_key &pubkey, const crypto::key_image &key_image, uint64_t amount)
         : version{version}, key_image_pub_key{pubkey}, key_image{key_image}, amount{amount} {}
 
       BEGIN_SERIALIZE_OBJECT()
-        ENUM_FIELD(version, version < version_t::count)
+        ENUM_FIELD(version, version < version_t::_count)
         FIELD(key_image_pub_key)
         FIELD(key_image)
         VARINT_FIELD(amount)
@@ -112,10 +118,10 @@ namespace service_nodes
 
     struct contributor_t
     {
-      uint8_t version;
-      uint64_t amount;
-      uint64_t reserved;
-      cryptonote::account_public_address address;
+      uint8_t version = 0;
+      uint64_t amount = 0;
+      uint64_t reserved = 0;
+      cryptonote::account_public_address address{};
       std::vector<contribution_t> locked_contributions;
 
       contributor_t() = default;
@@ -135,24 +141,23 @@ namespace service_nodes
       END_SERIALIZE()
     };
 
-    uint64_t registration_height;
-    uint64_t requested_unlock_height;
-    uint64_t last_reward_block_height;
-    uint32_t last_reward_transaction_index;
-    uint32_t decommission_count;
-    uint64_t active_since_height;
-    uint64_t last_decommission_height;
+    uint64_t registration_height = 0;
+    uint64_t requested_unlock_height = 0;
+    uint64_t last_reward_block_height = 0;
+    uint32_t last_reward_transaction_index = 0;
+    uint32_t decommission_count = 0;
+    uint64_t active_since_height = 0;
+    uint64_t last_decommission_height = 0;
     std::vector<contributor_t> contributors;
-    uint64_t total_contributed;
-    uint64_t total_reserved;
-    uint64_t staking_requirement;
-    uint64_t portions_for_operator;
-    swarm_id_t swarm_id;
-    cryptonote::account_public_address operator_address;
-    uint64_t last_ip_change_height;
-    version_t version = version_t::version_1;
-
-    std::shared_ptr<proof_info> proof = std::make_shared<proof_info>();
+    uint64_t total_contributed = 0;
+    uint64_t total_reserved = 0;
+    uint64_t staking_requirement = 0;
+    uint64_t portions_for_operator = 0;
+    swarm_id_t swarm_id = 0;
+    cryptonote::account_public_address operator_address{};
+    uint64_t last_ip_change_height = 0;
+    version_t version = tools::enum_top<version_t>;
+    uint8_t registration_hf_version = 0;
 
     service_node_info() = default;
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
@@ -163,10 +168,8 @@ namespace service_nodes
     bool can_be_voted_on(uint64_t block_height) const;
     size_t total_num_locked_contributions() const;
 
-    void derive_x25519_pubkey_from_ed25519();
-
     BEGIN_SERIALIZE_OBJECT()
-      ENUM_FIELD(version, version < version_t::count)
+      ENUM_FIELD(version, version < version_t::_count)
       VARINT_FIELD(registration_height)
       VARINT_FIELD(requested_unlock_height)
       VARINT_FIELD(last_reward_block_height)
@@ -181,14 +184,8 @@ namespace service_nodes
       VARINT_FIELD(portions_for_operator)
       FIELD(operator_address)
       VARINT_FIELD(swarm_id)
-      VARINT_FIELD_N("public_ip", proof->public_ip)
-      VARINT_FIELD_N("storage_port", proof->storage_port)
       VARINT_FIELD(last_ip_change_height)
-      if (version >= version_t::version_1) {
-        FIELD_N("pubkey_ed25519", proof->pubkey_ed25519)
-        if (!W)
-          derive_x25519_pubkey_from_ed25519();
-      }
+      VARINT_FIELD(registration_hf_version)
     END_SERIALIZE()
   };
 
@@ -264,8 +261,11 @@ namespace service_nodes
       public cryptonote::AltBlockAddedHook
   {
   public:
-    service_node_list(cryptonote::Blockchain& blockchain);
-    ~service_node_list();
+    explicit service_node_list(cryptonote::Blockchain& blockchain);
+
+    service_node_list(const service_node_list &) = delete;
+    service_node_list &operator=(const service_node_list &) = delete;
+
     bool block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const *checkpoint) override;
     void blockchain_detached(uint64_t height) override;
     void init() override;
@@ -277,30 +277,58 @@ namespace service_nodes
     bool is_service_node(const crypto::public_key& pubkey, bool require_cative = true) const;
     bool is_key_image_locked(crypto::key_image const &check_image, uint64_t *unlock_height = nullptr, service_node_info::contribution_t *the_locked_contribution = nullptr) const;
 
-    std::shared_ptr<const testing_quorum> get_testing_quorum(quorum_type type, uint64_t height, bool include_old = false, std::vector<std::shared_ptr<const testing_quorum>> *alt_states = nullptr) const;
+    std::shared_ptr<const quorum> get_quorum(quorum_type type, uint64_t height, bool include_old = false, std::vector<std::shared_ptr<const quorum>> *alt_states = nullptr) const;
     bool get_quorum_pubkey(quorum_type type, quorum_group group, uint64_t height, size_t quorum_size, crypto::public_key &key) const;
 
-    std::vector<service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const;
+    size_t get_service_node_count() const;
+    std::vector<service_node_pubkey_info> get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys = {}) const;
     const std::vector<key_image_blacklist_entry> &get_blacklisted_key_images() const { return m_state.key_image_blacklist; }
+
+    template <typename Func>
+    void access_proof(const crypto::public_key &pubkey, Func f) const
+    {
+      std::unique_lock<boost::recursive_mutex> lock;
+      auto it = m_proofs.find(pubkey);
+      if (it != m_proofs.end())
+        f(it->second);
+    }
 
     crypto::public_key get_pubkey_from_x25519(const crypto::x25519_public_key &x25519) const;
 
-    void set_db_pointer(cryptonote::BlockchainDB* db);
-    void set_my_service_node_keys(std::shared_ptr<const service_node_keys> keys);
+    void initialize_x25519_map();
+
+    template <typename It, typename Func>
+    void for_each_service_node_info_and_proof(It begin, It end, Func f) const
+    {
+      static const proof_info empty_proof{};
+      std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+      for (auto sni_end = m_state.service_nodes_infos.end(); begin != end; ++begin)
+      {
+        auto it = m_state.service_nodes_infos.find(*begin);
+        if (it != sni_end)
+        {
+          auto pit = m_proofs.find(it->first);
+          f(it->first, *it->second, (pit != m_proofs.end() ? pit->second : empty_proof));
+        }
+      }
+    }
+
+    void set_my_service_node_keys(const service_node_keys *keys);
     void set_quorum_history_storage(uint64_t hist_size); // 0 = none (default), 1 = unlimited, N = # of blocks
     bool store();
 
     cryptonote::NOTIFY_UPTIME_PROOF::request generate_uptime_proof(const service_node_keys &keys, uint32_t public_ip, uint16_t storage_port) const;
-    bool handle_uptime_proof(cryptonote::NOTIFY_UPTIME_PROOF::request const &proof);
+    bool handle_uptime_proof(cryptonote::NOTIFY_UPTIME_PROOF::request const &proof, bool &my_uptime_proof_confirmation);
 
     void record_checkpoint_vote(crypto::public_key const &pubkey, uint64_t height, bool voted);
+    void cleanup_proofs();
     bool set_storage_server_peer_reachable(crypto::public_key const &pubkey, bool value);
 
     struct quorum_for_serialization
     {
       uint8_t version;
       uint64_t height;
-      testing_quorum quorums[static_cast<uint8_t>(quorum_type::count)];
+      quorum quorums[tools::enum_count<quorum_type>];
 
       BEGIN_SERIALIZE_OBJECT()
         FIELD(version)
@@ -314,10 +342,10 @@ namespace service_nodes
     {
       enum struct version_t : uint8_t
       {
-        version_1,
+        version_0,
         count,
       };
-      static version_t get_version(uint8_t) { return version_t::version_1; }
+      static version_t get_version(uint8_t) { return version_t::version_0; }
 
       version_t version;
       uint64_t height;
@@ -358,34 +386,40 @@ namespace service_nodes
       END_SERIALIZE()
     };
 
+    struct state_t;
+    using state_set = std::set<state_t, std::less<>>;
     using block_height = uint64_t;
-    using keys_ptr = std::shared_ptr<const service_node_keys>;
     struct state_t
     {
-      crypto::hash block_hash;
-      bool only_loaded_quorums;
+      crypto::hash block_hash{crypto::null_hash};
+      bool only_loaded_quorums{false};
       service_nodes_infos_t service_nodes_infos;
       std::vector<key_image_blacklist_entry> key_image_blacklist;
       block_height height{0};
       mutable quorum_manager quorums;
+      service_node_list* sn_list;
 
       constexpr bool operator()(const state_t &lhs, const state_t &rhs) const { return lhs.height < rhs.height; }
 
-      state_t() = default;
-      state_t(block_height height) : height{height} {}
-      state_t(cryptonote::Blockchain const &blockchain, state_serialized &&state);
+      state_t(service_node_list* snl) : sn_list{snl} {}
+      state_t(service_node_list* snl, state_serialized &&state);
 
-      constexpr bool operator<(const state_t &other) const { return this->height < other.height; }
+      friend bool operator<(const state_t &a, const state_t &b) { return a.height < b.height; }
+      friend bool operator<(const state_t &s, block_height h) { return s.height < h; }
+      friend bool operator<(block_height h, const state_t &s) { return h < s.height; }
+
       std::vector<pubkey_and_sninfo> active_service_nodes_infos() const;
       std::vector<pubkey_and_sninfo> decommissioned_service_nodes_infos() const;
       std::vector<crypto::public_key> get_expired_nodes(cryptonote::BlockchainDB const &db, cryptonote::network_type nettype, uint64_t block_height) const;
-      void update_from_block(cryptonote::BlockchainDB const &db, cryptonote::network_type nettype, std::set<state_t> const &state_history, std::unordered_map<crypto::hash, state_t> const &alt_states, const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, const keys_ptr &my_keys);
+      void update_from_block(cryptonote::BlockchainDB const &db, cryptonote::network_type nettype, state_set const &state_history, state_set const &state_archive, std::unordered_map<crypto::hash, state_t> const &alt_states, const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, const service_node_keys *my_keys);
 
-      bool process_registration_tx(cryptonote::network_type nettype, cryptonote::block const &block, const cryptonote::transaction& tx, uint32_t index, const keys_ptr &my_keys);
+      bool process_registration_tx(cryptonote::network_type nettype, cryptonote::block const &block, const cryptonote::transaction& tx, uint32_t index, const service_node_keys *my_keys);
       bool process_contribution_tx(cryptonote::network_type nettype, cryptonote::block const &block, const cryptonote::transaction& tx, uint32_t index);
-      bool process_state_change_tx(std::set<state_t> const &state_history, std::unordered_map<crypto::hash, state_t> const &alt_states, cryptonote::network_type nettype, const cryptonote::block &block, const cryptonote::transaction& tx, const keys_ptr &my_keys);
+      bool process_state_change_tx(state_set const &state_history, state_set const &state_archive, std::unordered_map<crypto::hash, state_t> const &alt_states, cryptonote::network_type nettype, const cryptonote::block &block, const cryptonote::transaction& tx, const service_node_keys *my_keys);
       bool process_key_image_unlock_tx(cryptonote::network_type nettype, uint64_t block_height, const cryptonote::transaction &tx);
     };
+
+    bool debug_allow_local_ips = false;
 
   private:
 
@@ -395,12 +429,11 @@ namespace service_nodes
     void reset(bool delete_db_entry = false);
     bool load(uint64_t current_height);
 
-    cryptonote::Blockchain& m_blockchain;
-    keys_ptr m_service_node_keys;
-    cryptonote::BlockchainDB *m_db;
-    uint64_t m_store_quorum_history;
-
     mutable boost::recursive_mutex m_sn_mutex;
+    cryptonote::Blockchain& m_blockchain;
+    const service_node_keys *m_service_node_keys;
+    uint64_t m_store_quorum_history = 0;
+    mutable std::shared_mutex m_x25519_map_mutex;
 
     std::unordered_map<crypto::x25519_public_key, std::pair<crypto::public_key, time_t>> m_x25519_to_pub;
     time_t m_x25519_map_last_pruned = 0;
@@ -414,10 +447,11 @@ namespace service_nodes
     };
 
     std::deque<quorums_by_height> m_old_quorum_states;
-    std::set<state_t> m_state_history;
-    std::set<state_t> m_state_archive;
+    state_set m_state_history;
+    state_set m_state_archive;
     state_t m_state;
     std::unordered_map<crypto::hash, state_t> m_alt_state;
+    std::unordered_map<crypto::public_key, proof_info> m_proofs;
 
     bool m_state_added_to_archive;
     data_for_serialization m_cache_long_term_data;
