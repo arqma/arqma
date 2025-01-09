@@ -403,7 +403,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
     );
 
     boost::system::error_code error{};
-    proxy = ip::tcp::endpoint{ip::address::from_string(std::string{proxy_host}, error), port_value};
+    proxy = ip::tcp::endpoint{ip::make_address(std::string{proxy_host}, error), port_value};
     THROW_WALLET_EXCEPTION_IF(bool(error), tools::error::wallet_internal_error, std::string{"Invalid IP address specified for --"} + opts.proxy.name);
   }
 

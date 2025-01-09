@@ -51,11 +51,9 @@
 #include "common/dns_utils.h"
 #include "common/pruning.h"
 #include "net/error.h"
-#include "net/net_helper.h"
 #include "math_helper.h"
 #include "misc_log_ex.h"
 #include "p2p_protocol_defs.h"
-#include "net/local_ip.h"
 #include "crypto/crypto.h"
 #include "storages/levin_abstract_invoke2.h"
 #include "cryptonote_core/cryptonote_core.h"
@@ -69,8 +67,6 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.p2p"
 
-#define NET_MAKE_IP(b1,b2,b3,b4)  ((LPARAM)(((DWORD)(b1)<<24)+((DWORD)(b2)<<16)+((DWORD)(b3)<<8)+((DWORD)(b4))))
-
 using namespace boost::placeholders;
 
 namespace nodetool
@@ -78,8 +74,8 @@ namespace nodetool
   template<class t_payload_net_handler>
   node_server<t_payload_net_handler>::~node_server()
   {
-    // tcp server uses io_service in destructor, and every zone uses
-    // io_service from public zone.
+    // tcp server uses io_context in destructor, and every zone uses
+    // io_context from public zone.
     for (auto current = m_network_zones.begin(); current != m_network_zones.end(); /* below */)
     {
       if (current->first != epee::net_utils::zone::public_)
@@ -425,26 +421,24 @@ namespace nodetool
     }
     MINFO("Resolving node address: host=" << host << ", port=" << port);
 
-    io_service io_srv;
-    ip::tcp::resolver resolver(io_srv);
-    ip::tcp::resolver::query query(host, port, boost::asio::ip::tcp::resolver::query::canonical_name);
     boost::system::error_code ec;
-    ip::tcp::resolver::iterator i = resolver.resolve(query, ec);
-    CHECK_AND_ASSERT_MES(!ec, false, "Failed to resolve host name '" << host << "': " << ec.message() << ':' << ec.value());
+    io_context io_srv;
+    ip::tcp::resolver resolver(io_srv);
+    const auto results = resolver.resolve(host, port, boost::asio::ip::tcp::resolver::canonical_name, ec);
+    CHECK_AND_ASSERT_MES(!ec && !results.empty(), false, "Failed to resolve host name '" << host << "': " << ec.message() << ':' << ec.value());
 
-    ip::tcp::resolver::iterator iend;
-    for (; i != iend; ++i)
+    for (const auto& result : results)
     {
-      ip::tcp::endpoint endpoint = *i;
+      const auto& endpoint = result.endpoint();
       if (endpoint.address().is_v4())
       {
-        epee::net_utils::network_address na{epee::net_utils::ipv4_network_address{boost::asio::detail::socket_ops::host_to_network_long(endpoint.address().to_v4().to_ulong()), endpoint.port()}};
+        epee::net_utils::network_address na{epee::net_utils::ipv4_network_address{boost::asio::detail::socket_ops::host_to_network_long(endpoint.address().to_v4().to_uint()), endpoint.port()}};
         seed_nodes.push_back(na);
         MINFO("Added node: " << na.str());
       }
       else
       {
-        MWARNING("IPv6 unsupported, skip '" << host << "' -> " << endpoint.address().to_v6().to_string(ec));
+        MWARNING("IPv6 unsupported");
       }
     }
     return true;
@@ -484,7 +478,7 @@ namespace nodetool
       return zone_->second;
 
     network_zone& public_zone = m_network_zones[epee::net_utils::zone::public_];
-    return m_network_zones.emplace_hint(zone_, std::piecewise_construct, std::make_tuple(zone), std::tie(public_zone.m_net_server.get_io_service()))->second;
+    return m_network_zones.emplace_hint(zone_, std::piecewise_construct, std::make_tuple(zone), std::tie(public_zone.m_net_server.get_io_context()))->second;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -643,7 +637,7 @@ namespace nodetool
 
     //configure self
 
-    public_zone.m_net_server.set_threads_prefix("P2P"); // all zones use these threads/asio::io_service
+    public_zone.m_net_server.set_threads_prefix("P2P"); // all zones use these threads/asio::io_context
 
     // from here onwards, it's online stuff
     if (m_offline)
@@ -2400,7 +2394,7 @@ namespace nodetool
   boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>
   node_server<t_payload_net_handler>::socks_connect(network_zone& zone, const epee::net_utils::network_address& remote, epee::net_utils::ssl_support_t ssl_support)
   {
-    auto result = socks_connect_internal(zone.m_net_server.get_stop_signal(), zone.m_net_server.get_io_service(), zone.m_proxy_address, remote);
+    auto result = socks_connect_internal(zone.m_net_server.get_stop_signal(), zone.m_net_server.get_io_context(), zone.m_proxy_address, remote);
     if (result) // if no error
     {
       p2p_connection_context context{};

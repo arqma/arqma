@@ -29,6 +29,7 @@
 
 add_library(epee
   STATIC
+    byte_slice.cpp
     hex.cpp
     http_auth.cpp
     mlog.cpp

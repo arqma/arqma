@@ -30,12 +30,13 @@
 #define _NET_UTILS_BASE_H_
 
 #include <boost/uuid/uuid.hpp>
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 #include <typeinfo>
 #include <type_traits>
+#include "byte_slice.h"
 #include "enums.h"
-#include "serialization/keyvalue_serialization.h"
 #include "misc_log_ex.h"
+#include "serialization/keyvalue_serialization.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
@@ -45,9 +46,9 @@
 #endif
 
 #if BOOST_VERSION >= 107000
-#define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
+#define ARQMA_GET_EXECUTOR(type) type . get_executor()
 #else
-#define GET_IO_SERVICE(s) ((s).get_io_service())
+#define ARQMA_GET_EXECUTOR(type) type . get_io_context()
 #endif
 
 namespace net
@@ -322,12 +323,12 @@ namespace net_utils
 	/************************************************************************/
 	struct i_service_endpoint
 	{
-    virtual bool do_send(const void* ptr, size_t cb) = 0;
+    virtual bool do_send(byte_slice message) = 0;
     virtual bool close() = 0;
     virtual bool send_done() = 0;
     virtual bool call_run_once_service_io() = 0;
     virtual bool request_callback() = 0;
-    virtual boost::asio::io_service& get_io_service() = 0;
+    virtual boost::asio::io_context& get_io_context() = 0;
     //protect from deletion connection object(with protocol instance) during external call "invoke"
     virtual bool add_ref() = 0;
     virtual bool release() = 0;

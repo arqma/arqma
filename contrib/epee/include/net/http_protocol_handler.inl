@@ -589,9 +589,10 @@ namespace net_utils
 
     LOG_PRINT_L3("HTTP_RESPONSE_HEAD: << \r\n" << response_data);
 
-		m_psnd_hndlr->do_send((void*)response_data.data(), response_data.size());
 		if ((response.m_body.size() && (query_info.m_http_method != http::http_method_head)) || (query_info.m_http_method == http::http_method_options))
-			m_psnd_hndlr->do_send((void*)response.m_body.data(), response.m_body.size());
+		  response_data += response.m_body;
+
+		m_psnd_hndlr->do_send(byte_slice{std::move(response_data)});
 		m_psnd_hndlr->send_done();
 		return res;
 	}
