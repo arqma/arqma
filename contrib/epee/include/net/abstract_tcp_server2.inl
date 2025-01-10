@@ -46,6 +46,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <functional>
+#include <random>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
