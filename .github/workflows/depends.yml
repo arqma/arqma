@@ -12,7 +12,7 @@ env:
         ccache --set-config=compression=true
 jobs:
   build-macos:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     env:
       CCACHE_TEMPDIR: /tmp/.ccache-temp
     strategy:
