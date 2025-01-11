@@ -63,11 +63,13 @@ namespace string_tools
   {
     if (str.size() != length)
       return false;
-    for (char c: str)
+    for (char c : str)
       if (!isxdigit(c))
         return false;
     return true;
   }
+  //----------------------------------------------------------------------------
+
 }
 }
 

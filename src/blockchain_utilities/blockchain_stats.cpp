@@ -36,6 +36,7 @@
 #include "cryptonote_core/blockchain.h"
 #include "blockchain_db/blockchain_db.h"
 #include "blockchain_objects.h"
+#include "time_helper.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
