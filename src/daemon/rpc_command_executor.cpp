@@ -2488,7 +2488,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
   {
     uint64_t expiry_height = 0;
 
-    stream << indent2 << "Registration: Hardfork Version: " << entry.registration_hf_version << "; Height: " << entry.registration_height << "; Expiry: ";
+    stream << indent2 << "Registration Height: " << entry.registration_height << "; Expiry: ";
     if(expiry_height == service_nodes::KEY_IMAGE_AWAITING_UNLOCK_HEIGHT)
     {
       stream << "Staking Infinitely (stake unlock not requested)\n";
@@ -2531,7 +2531,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
       stream << "Last Uptime Proof Received: " << get_human_time_ago(entry.last_uptime_proof, time(nullptr));
     }
 
-    stream << "\n";
+/*    stream << "\n";
     stream << indent2 << "IP Address & Port: ";
     if (entry.public_ip == "0.0.0.0")
     {
@@ -2539,7 +2539,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
     }
     else
       stream << entry.public_ip << ":" << entry.storage_port;
-
+*/
     stream << "\n";
     if (detailed_view)
       stream << indent2 << "Auxiliary Public Keys:\n"

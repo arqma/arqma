@@ -157,7 +157,6 @@ namespace service_nodes
     cryptonote::account_public_address operator_address{};
     uint64_t last_ip_change_height = 0;
     version_t version = tools::enum_top<version_t>;
-    uint8_t registration_hf_version = 0;
 
     service_node_info() = default;
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
@@ -185,7 +184,6 @@ namespace service_nodes
       FIELD(operator_address)
       VARINT_FIELD(swarm_id)
       VARINT_FIELD(last_ip_change_height)
-      VARINT_FIELD(registration_hf_version)
     END_SERIALIZE()
   };
 
