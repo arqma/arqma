@@ -46,7 +46,7 @@
 #if BOOST_VERSION >= 107300
   #define ARQMA_HOSTNAME_VERIFY boost::asio::ssl::host_name_verification
 #else
-  #define ARQMA_HOSTNAME_VEFIRY boost::asio::ssl::rfc2818_verification
+  #define ARQMA_HOSTNAME_VERIFY boost::asio::ssl::rfc2818_verification
 #endif
 
 // openssl genrsa -out /tmp/KEY 4096
