@@ -724,10 +724,18 @@ bool t_rpc_command_executor::show_status()
   if (!my_sn_key.empty())
   {
     str.str("");
+    str << "SN: " << my_sn_key << ' ';
     if (!my_sn_registered)
-      str << "SN: " << my_sn_key << " -- not registered";
+      str << "not registered";
     else
-      str << "SN: " << my_sn_key << " -- " << (!my_sn_staked ? "awaiting" : my_sn_active ? "active" : "DECOMMISSIONED (" + std::to_string(my_decomm_remaining) + " blocks credit)") << ", last uptime: " << (my_sn_last_uptime ? get_human_time_ago(my_sn_last_uptime, time(nullptr)) : "(never)");
+      str << (!my_sn_staked ? "awaiting" : my_sn_active ? "active" : "DECOMMISSIONED (" + std::to_string(my_decomm_remaining) + " blocks credit)")
+          << ", proof: " << (my_sn_last_uptime ? get_human_time_ago(my_sn_last_uptime, time(nullptr)) : "(never)");
+    str << ", storage-server: ";
+    if (ires.last_storage_server_ping > 0)
+      str << "last ping: " << get_human_time_ago(ires.last_storage_server_ping, time(nullptr));
+    else
+      str << "NO PING RECEIVED";
+
     tools::success_msg_writer() << str.str();
   }
 
@@ -2531,7 +2539,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
       stream << "Last Uptime Proof Received: " << get_human_time_ago(entry.last_uptime_proof, time(nullptr));
     }
 
-/*    stream << "\n";
+    stream << "\n";
     stream << indent2 << "IP Address & Port: ";
     if (entry.public_ip == "0.0.0.0")
     {
@@ -2539,7 +2547,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
     }
     else
       stream << entry.public_ip << ":" << entry.storage_port;
-*/
+
     stream << "\n";
     if (detailed_view)
       stream << indent2 << "Auxiliary Public Keys:\n"

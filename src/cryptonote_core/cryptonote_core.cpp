@@ -351,7 +351,7 @@ namespace cryptonote
 
     if (service_node) {
       m_service_node_keys = std::make_unique<service_node_keys>();
-/*
+
       m_storage_port = command_line::get_arg(vm, arg_sn_bind_port);
 
       bool storage_ok = true;
@@ -394,7 +394,6 @@ namespace cryptonote
       }
 
       MGINFO("Storage server endpoint is set to: " << (epee::net_utils::ipv4_network_address{ m_sn_public_ip, m_storage_port }).str());
-    */
     }
 
     epee::debug::g_test_dbg_lock_sleep() = command_line::get_arg(vm, arg_test_dbg_lock_sleep);

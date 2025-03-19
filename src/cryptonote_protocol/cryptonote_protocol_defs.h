@@ -309,7 +309,6 @@ namespace cryptonote
       crypto::ed25519_signature sig_ed25519;
       uint32_t public_ip;
       uint16_t storage_port;
-      uint16_t arqnet_port;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_N(arqma_snode_version[0], "arqma_snode_major")
@@ -318,7 +317,6 @@ namespace cryptonote
         KV_SERIALIZE(timestamp)
         KV_SERIALIZE(public_ip)
         KV_SERIALIZE(storage_port)
-        KV_SERIALIZE(arqnet_port)
         KV_SERIALIZE_VAL_POD_AS_BLOB(pubkey)
         KV_SERIALIZE_VAL_POD_AS_BLOB(sig)
         KV_SERIALIZE_VAL_POD_AS_BLOB(pubkey_ed25519)

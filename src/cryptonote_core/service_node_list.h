@@ -158,6 +158,8 @@ namespace service_nodes
     uint64_t last_ip_change_height = 0;
     version_t version = tools::enum_top<version_t>;
 
+    std::shared_ptr<proof_info> proof = std::make_shared<proof_info>();
+
     service_node_info() = default;
     bool is_fully_funded() const { return total_contributed >= staking_requirement; }
     bool is_decommissioned() const { return active_since_height < 0; }
@@ -183,7 +185,10 @@ namespace service_nodes
       VARINT_FIELD(portions_for_operator)
       FIELD(operator_address)
       VARINT_FIELD(swarm_id)
+      VARINT_FIELD_N("public_ip", proof->public_ip)
+      VARINT_FIELD_N("storage_port", proof->storage_port)
       VARINT_FIELD(last_ip_change_height)
+      FIELD_N("pubkey_ed25519", proof->pubkey_ed25519)
     END_SERIALIZE()
   };
 
@@ -286,8 +291,8 @@ namespace service_nodes
     void access_proof(const crypto::public_key &pubkey, Func f) const
     {
       std::unique_lock<boost::recursive_mutex> lock;
-      auto it = m_proofs.find(pubkey);
-      if (it != m_proofs.end())
+      auto it = proofs.find(pubkey);
+      if (it != proofs.end())
         f(it->second);
     }
 
@@ -305,8 +310,8 @@ namespace service_nodes
         auto it = m_state.service_nodes_infos.find(*begin);
         if (it != sni_end)
         {
-          auto pit = m_proofs.find(it->first);
-          f(it->first, *it->second, (pit != m_proofs.end() ? pit->second : empty_proof));
+          auto pit = proofs.find(it->first);
+          f(it->first, *it->second, (pit != proofs.end() ? pit->second : empty_proof));
         }
       }
     }
@@ -397,8 +402,6 @@ namespace service_nodes
       mutable quorum_manager quorums;
       service_node_list* sn_list;
 
-      constexpr bool operator()(const state_t &lhs, const state_t &rhs) const { return lhs.height < rhs.height; }
-
       state_t(service_node_list* snl) : sn_list{snl} {}
       state_t(service_node_list* snl, state_serialized &&state);
 
@@ -433,8 +436,9 @@ namespace service_nodes
     uint64_t m_store_quorum_history = 0;
     mutable std::shared_mutex m_x25519_map_mutex;
 
-    std::unordered_map<crypto::x25519_public_key, std::pair<crypto::public_key, time_t>> m_x25519_to_pub;
-    time_t m_x25519_map_last_pruned = 0;
+    std::unordered_map<crypto::x25519_public_key, std::pair<crypto::public_key, time_t>> x25519_to_pub;
+    time_t x25519_map_last_pruned = 0;
+    std::unordered_map<crypto::public_key, proof_info> proofs;
 
     struct quorums_by_height
     {
@@ -444,17 +448,19 @@ namespace service_nodes
       quorum_manager quorums;
     };
 
-    std::deque<quorums_by_height> m_old_quorum_states;
-    state_set m_state_history;
-    state_set m_state_archive;
-    state_t m_state;
-    std::unordered_map<crypto::hash, state_t> m_alt_state;
-    std::unordered_map<crypto::public_key, proof_info> m_proofs;
+    struct
+    {
+      std::deque<quorums_by_height> old_quorum_states;
+      state_set state_history;
+      state_set state_archive;
+      std::unordered_map<crypto::hash, state_t> alt_state;
+      bool state_added_to_archive;
+      data_for_serialization cache_long_term_data;
+      data_for_serialization cache_short_term_data;
+      std::string cache_data_blob;
+    } m_transient = {};
 
-    bool m_state_added_to_archive;
-    data_for_serialization m_cache_long_term_data;
-    data_for_serialization m_cache_short_term_data;
-    std::string m_cache_data_blob;
+    state_t m_state;
   };
 
   bool is_registration_tx(cryptonote::network_type nettype, uint8_t hard_fork_version, const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index, crypto::public_key& key, service_node_info& info);

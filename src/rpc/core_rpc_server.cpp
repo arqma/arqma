@@ -208,6 +208,7 @@ namespace cryptonote
     res.block_size_limit = res.block_weight_limit = m_core.get_blockchain_storage().get_current_cumulative_block_weight_limit();
     res.block_size_median = res.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
     res.start_time = restricted ? 0 : (uint64_t)m_core.get_start_time();
+    res.last_storage_server_ping = restricted ? 0 : (uint64_t)m_core.m_last_storage_server_ping;
     res.free_space = restricted ? std::numeric_limits<uint64_t>::max() : m_core.get_free_space();
     res.offline = m_core.offline();
     res.bootstrap_daemon_address = restricted ? "" : m_bootstrap_daemon_address;
@@ -2793,14 +2794,14 @@ namespace cryptonote
     m_core.get_service_node_list().access_proof(sn_info.pubkey, [&entry](const auto &proof)
     {
       entry.service_node_version = proof.version;
-//      entry.public_ip = string_tools::get_ip_string_from_int32(proof.public_ip);
-//      entry.storage_port = proof.storage_port;
+      entry.public_ip = string_tools::get_ip_string_from_int32(proof.public_ip);
+      entry.storage_port = proof.storage_port;
       entry.pubkey_ed25519 = proof.pubkey_ed25519 ? string_tools::pod_to_hex(proof.pubkey_ed25519) : "";
       entry.pubkey_x25519 = proof.pubkey_x25519 ? string_tools::pod_to_hex(proof.pubkey_x25519) : "";
 
       entry.last_uptime_proof = proof.timestamp;
-//      entry.storage_server_reachable = proof.storage_server_reachable;
-//      entry.storage_server_reachable_timestamp = proof.storage_server_reachable_timestamp;
+      entry.storage_server_reachable = proof.storage_server_reachable;
+      entry.storage_server_reachable_timestamp = proof.storage_server_reachable_timestamp;
       entry.version_major = proof.version[0];
       entry.version_minor = proof.version[1];
       entry.version_patch = proof.version[2];

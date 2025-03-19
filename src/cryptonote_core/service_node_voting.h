@@ -60,7 +60,8 @@ namespace service_nodes
   {
     obligations = 0,
     checkpointing,
-    _count
+    _count,
+    rpc_request_all_quorums_sentinel_value = 255,
   };
 
   inline std::ostream &operator<<(std::ostream &os, quorum_type v)
@@ -103,8 +104,6 @@ namespace service_nodes
       FIELD(signature)
     END_SERIALIZE()
   };
-
-  struct service_node_keys;
 
   quorum_vote_t make_state_change_vote(uint64_t block_height, uint16_t index_in_group, uint16_t worker_index, new_state state, const service_node_keys &keys);
   quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);

@@ -688,6 +688,7 @@ namespace cryptonote
       uint64_t block_size_median;
       uint64_t block_weight_median;
       uint64_t start_time;
+      uint64_t last_storage_server_ping;
       uint64_t free_space;
       bool offline;
       bool untrusted;
@@ -724,6 +725,7 @@ namespace cryptonote
         KV_SERIALIZE(block_size_median)
         KV_SERIALIZE_OPT(block_weight_median, (uint64_t)0)
         KV_SERIALIZE(start_time)
+        KV_SERIALIZE(last_storage_server_ping)
         KV_SERIALIZE(free_space)
         KV_SERIALIZE(offline)
         KV_SERIALIZE(untrusted)
