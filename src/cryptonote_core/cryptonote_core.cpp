@@ -205,17 +205,17 @@ namespace cryptonote
   };
   static const command_line::arg_descriptor<bool> arg_service_node = {
     "service-node"
-  , "Run as a Arqma Network Service Node" //, options 'service-node-public-ip' and 'storage-server-port' must be set"
+  , "Run as a Arqma Network Service Node" //, options 'sn-ip' and 'ss-port' must be set"
   };
   static const command_line::arg_descriptor<std::string> arg_public_ip = {
-    "service-node-public-ip"
+    "sn-ip"
   , "Public IP address on which this service node's services (such as the Arqma "
     "storage server) are accessible. This IP address will be advertised to the "
     "network via the service node uptime proofs. Required if operating as a "
     "service node."
   };
   static const command_line::arg_descriptor<uint16_t> arg_sn_bind_port = {
-    "storage-server-port"
+    "ss-port"
   , "The port on which this service node's storage server is accessible. A listening "
     "storage server is required for service nodes."
   , 0};
