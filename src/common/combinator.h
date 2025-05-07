@@ -33,6 +33,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cstdint>
 #include <stdexcept>
 
 namespace tools {

@@ -19,3 +19,5 @@ android_debug_CFLAGS=-g -O0
 android_debug_CXXFLAGS=$(android_debug_CFLAGS)
 
 android_native_toolchain=android_ndk
+
+android_cmake_system=Android

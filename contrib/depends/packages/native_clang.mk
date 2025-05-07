@@ -1,28 +1,34 @@
 package=native_clang
-$(package)_version=10.0.1
-$(package)_download_path=https://github.com/llvm/llvm-project/releases/download/llvmorg-$($(package)_version)
+$(package)_version=9.0.0
+$(package)_download_path=https://releases.llvm.org/$($(package)_version)
 ifneq (,$(findstring aarch64,$(BUILD)))
-$(package)_file_name=clang+llvm-$($(package)_version)-aarch64-linux-gnu.tar.xz
-$(package)_sha256_hash=90dc69a4758ca15cd0ffa45d07fbf5bf4309d47d2c7745a9f0735ecffde9c31f
+$(package)_download_file=clang+llvm-$($(package)_version)-aarch64-linux-gnu.tar.xz
+$(package)_file-name=clang-llvm-$($(package)_version)-aarch64-linux-gnu.tar.xz
+$(package)_sha256_hash=f8f3e6bdd640079a140a7ada4eb6f5f05aeae125cf54b94d44f733b0e8691dc2
 else
-$(package)_file_name=clang+llvm-$($(package)_version)-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-$(package)_sha256_hash=48b83ef827ac2c213d5b64f5ad7ed082c8bcb712b46644e0dc5045c6f462c231
+$(package)_download_file=clang+llvm-$($(package)_version)-x86_64-linux-gnu-ubuntu-18.04.tar.xz
+$(package)_file_name=clang-llvm-$($(package)_version)-x86_64-linux-gnu-ubuntu-18.04.tar.xz
+$(package)_sha256_hash=a23b082b30c128c9831dbdd96edad26b43f56624d0ad0ea9edec506f5385038d
 endif
 
-define $(package)_preprocess_cmds
-  rm -f $($(package)_extract_dir)/lib/libc++abi.so*
+define $(package)_extract_cmds
+  echo $($(package)_sha256_hash) $($(package)_source) | sha256sum -c &&\
+  mkdir -p toolchain/bin toolchain/lib/clang/3.5/include && \
+  tar --strip-components=1 -C toolchain -xf $($(package)_source) && \
+  rm -f toolchain/lib/libc++abi.so* && \
+  echo "#!/bin/sh" > toolchain/bin/$(host)-dsymutil && \
+  echo "exit 0" >> toolchain/bin/$(host)-dsymutil && \
+  chmod +x toolchain/bin/$(host)-dsymutil
 endef
 
 define $(package)_stage_cmds
+  cd $($(package)_extract_dir)/toolchain && \
   mkdir -p $($(package)_staging_prefix_dir)/lib/clang/$($(package)_version)/include && \
-  mkdir -p $($(package)_staging_prefix_dir)/bin && \
-  mkdir -p $($(package)_staging_prefix_dir)/include/llvm-c && \
-  cp bin/clang $($(package)_staging_prefix_dir)/bin/ && \
-  cp -P bin/clang++ $($(package)_staging_prefix_dir)/bin/ && \
-  cp bin/dsymutil $($(package)_staging_prefix_dir)/bin/$(host)-dsymutil && \
-  cp bin/llvm-config $($(package)_staging_prefix_dir)/bin/ && \
-  cp include/llvm-c/ExternC.h $($(package)_staging_prefix_dir)/include/llvm-c && \
-  cp include/llvm-c/lto.h $($(package)_staging_prefix_dir)/include/llvm-c && \
+  mkdir -p $($(package)_staging_prefix_dir)/bin $($(package)_staging_prefix_dir)/include && \
+  cp bin/clang $($(package)_staging_prefix_dir)/bin/ &&\
+  cp -P bin/clang++ $($(package)_staging_prefix_dir)/bin/ &&\
   cp lib/libLTO.so $($(package)_staging_prefix_dir)/lib/ && \
-  cp -r lib/clang/$($(package)_version)/include/* $($(package)_staging_prefix_dir)/lib/clang/$($(package)_version)/include/
+  cp -rf lib/clang/$($(package)_version)/include/* $($(package)_staging_prefix_dir)/lib/clang/$($(package)_version)/include/ && \
+  cp bin/dsymutil $($(package)_staging_prefix_dir)/bin/$(host)-dsymutil && \
+  if `test -d lib/c++/`; then cp -rf lib/c++/ $($(package)_staging_prefix_dir)/lib/; fi
 endef
