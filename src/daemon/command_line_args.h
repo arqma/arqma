@@ -112,12 +112,6 @@ namespace daemon_args
   , "Disable Arqma ZMQ server"
   };
 
-/*  const command_line::arg_descriptor<uint16_t> arg_zmq_max_clients = {
-    "zmq-max_clients"
-  , "Maximum ZMQ Client Connections Allowed"
-  , 2
-  }; */
-
   const command_line::arg_descriptor<std::string> arg_zmq_rpc_bind_ip = {
     "zmq-rpc-bind-ip"
   , "IP Address for Arqma ZMQ server to bind on"

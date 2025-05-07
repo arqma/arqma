@@ -82,6 +82,10 @@ namespace cryptonote
     command_line::add_arg(desc, arg_bootstrap_daemon_address);
     command_line::add_arg(desc, arg_bootstrap_daemon_login);
     cryptonote::rpc_args::init_options(desc, true);
+    command_line::add_arg(desc, arg_rpc_max_connections_per_public_ip);
+    command_line::add_arg(desc, arg_rpc_max_connections_per_private_ip);
+    command_line::add_arg(desc, arg_rpc_max_connections);
+    command_line::add_arg(desc, arg_rpc_response_soft_limit);
   }
   //------------------------------------------------------------------------------------------------------------------------------
   core_rpc_server::core_rpc_server(
@@ -155,6 +159,21 @@ namespace cryptonote
       rpc_config->ssl_options.auth = epee::net_utils::ssl_authentication_t{ssl_base_path + ".key", ssl_base_path + ".crt"};
     }
 
+    const auto max_connections_public = command_line::get_arg(vm, arg_rpc_max_connections_per_public_ip);
+    const auto max_connections_private = command_line::get_arg(vm, arg_rpc_max_connections_per_private_ip);
+    const auto max_connections = command_line::get_arg(vm, arg_rpc_max_connections);
+
+    if (max_connections < max_connections_public)
+    {
+      MFATAL(arg_rpc_max_connections_per_public_ip.name << " is bigger than " << arg_rpc_max_connections.name);
+      return false;
+    }
+    if (max_connections < max_connections_private)
+    {
+      MFATAL(arg_rpc_max_connections_per_private_ip.name << " is bigger than " << arg_rpc_max_connections.name);
+      return false;
+    }
+
     auto rng = [](size_t len, uint8_t *ptr){ return crypto::rand(len, ptr); };
     const bool inited = epee::http_server_impl_base<core_rpc_server, connection_context>::init(
       rng, std::move(port),
@@ -164,7 +183,11 @@ namespace cryptonote
       std::move(rpc_config->require_ipv4),
       std::move(rpc_config->access_control_origins),
       std::move(http_login),
-      std::move(rpc_config->ssl_options)
+      std::move(rpc_config->ssl_options),
+      max_connections_public,
+      max_connections_private,
+      max_connections,
+      command_line::get_arg(vm, arg_rpc_response_soft_limit)
     );
 
     if (store_ssl_key && inited)
@@ -3289,28 +3312,52 @@ namespace cryptonote
           return std::to_string(config::stagenet::RPC_DEFAULT_PORT);
         return val;
       }
-    };
+  };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_restricted_bind_port = {
       "rpc-restricted-bind-port"
     , "Port for restricted RPC server"
     , ""
-    };
+  };
   const command_line::arg_descriptor<bool> core_rpc_server::arg_restricted_rpc = {
       "restricted-rpc"
     , "Restrict RPC to view only commands and do not return privacy sensitive data in RPC calls"
     , false
-    };
+  };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_bootstrap_daemon_address = {
       "bootstrap-daemon-address"
     , "URL of a 'bootstrap' remote daemon that the connected wallets can use while this daemon is still not fully synced"
     , ""
-    };
+  };
 
   const command_line::arg_descriptor<std::string> core_rpc_server::arg_bootstrap_daemon_login = {
       "bootstrap-daemon-login"
     , "Specify username:password for the bootstrap daemon login"
     , ""
-    };
+  };
+
+  const command_line::arg_descriptor<std::size_t> core_rpc_server::arg_rpc_max_connections_per_public_ip = {
+      "rpc-max-connections-per-public-ip"
+    , "Max RPC connections per public IP permitted"
+    , DEFAULT_RPC_MAX_CONNECTIONS_PER_PUBLIC_IP
+  };
+
+  const command_line::arg_descriptor<std::size_t> core_rpc_server::arg_rpc_max_connections_per_private_ip = {
+      "rpc-max-connections-per-private-ip"
+    , "Max RPC connections per private and localhost IP permitted"
+    , DEFAULT_RPC_MAX_CONNECTIONS_PER_PRIVATE_IP
+  };
+
+  const command_line::arg_descriptor<std::size_t> core_rpc_server::arg_rpc_max_connections = {
+      "rpc-max-connections"
+    , "Max RPC connections permitted"
+    , DEFAULT_RPC_MAX_CONNECTIONS
+  };
+
+  const command_line::arg_descriptor<std::size_t> core_rpc_server::arg_rpc_response_soft_limit = {
+      "rpc-response-soft-limit"
+    , "Max response bytes that can be queued, enforced at next response attempt"
+    , DEFAULT_RPC_SOFT_LIMIT_SIZE
+  };
 }  // namespace cryptonote

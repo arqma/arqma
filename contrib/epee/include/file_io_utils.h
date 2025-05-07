@@ -27,6 +27,7 @@
 #ifndef _FILE_IO_UTILS_H_
 #define _FILE_IO_UTILS_H_
 
+#include <cstdint>
 #include <string>
 #include <ctime>
 

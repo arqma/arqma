@@ -51,6 +51,7 @@
 
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
+#define M_SUPPLY_ADJUST                                 ((uint64_t)25000000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
@@ -132,6 +133,11 @@
 #define COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT        20000
 #define COMMAND_RPC_GET_CHECKPOINTS_MAX_COUNT           256
 #define COMMAND_RPC_GET_QUORUM_STATE_MAX_COUNT          256
+
+#define DEFAULT_RPC_MAX_CONNECTIONS_PER_PUBLIC_IP       3
+#define DEFAULT_RPC_MAX_CONNECTIONS_PER_PRIVATE_IP      25
+#define DEFAULT_RPC_MAX_CONNECTIONS                     100
+#define DEFAULT_RPC_SOFT_LIMIT_SIZE                     25 * 1024 * 1024 // 25 MiB
 
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
