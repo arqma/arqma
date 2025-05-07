@@ -41,6 +41,7 @@
 #include <vector>
 #include <sstream>
 #include <boost/format.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace std;
 

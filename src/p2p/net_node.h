@@ -39,14 +39,15 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <chrono>
 #include <functional>
 #include <utility>
 #include <vector>
 
 #include "cryptonote_config.h"
+#include "cryptonote_protocol/levin_notify.h"
 #include "warnings.h"
 #include "net/abstract_tcp_server2.h"
-#include "net/levin_protocol_handler.h"
 #include "net/levin_protocol_handler_async.h"
 #include "p2p_protocol_defs.h"
 #include "storages/levin_abstract_invoke2.h"
@@ -67,12 +68,14 @@ namespace nodetool
     proxy()
       : max_connections(-1),
         address(),
-        zone(epee::net_utils::zone::invalid)
+        zone(epee::net_utils::zone::invalid),
+        noise(true)
     {}
 
     std::int64_t max_connections;
     boost::asio::ip::tcp::endpoint address;
     epee::net_utils::zone zone;
+    bool noise;
   };
 
   struct anonymous_inbound
@@ -108,6 +111,8 @@ namespace nodetool
   {
     p2p_connection_context_t(): peer_id(0), support_flags(0), m_in_timedsync(false) {}
 
+    static constexpr int handshake_command() noexcept { return 1001; }
+
     peerid_type peer_id;
     uint32_t support_flags;
     bool m_in_timedsync;
@@ -117,7 +122,8 @@ namespace nodetool
   template<class t_payload_net_handler>
   class node_server: public epee::levin::levin_commands_handler<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>,
                      public i_p2p_endpoint<typename t_payload_net_handler::connection_context>,
-                     public epee::net_utils::i_connection_filter
+                     public epee::net_utils::i_connection_filter,
+                     public epee::net_utils::i_connection_limit
   {
     struct by_conn_id{};
     struct by_peer_id{};
@@ -127,6 +133,7 @@ namespace nodetool
 
     typedef COMMAND_HANDSHAKE_T<typename t_payload_net_handler::payload_type> COMMAND_HANDSHAKE;
     typedef COMMAND_TIMED_SYNC_T<typename t_payload_net_handler::payload_type> COMMAND_TIMED_SYNC;
+    static_assert(p2p_connection_context::handshake_command() == COMMAND_HANDSHAKE::ID, "Invalid handshake command id");
 
     typedef epee::net_utils::boosted_tcp_server<epee::levin::async_protocol_handler<p2p_connection_context>> net_server;
 
@@ -153,7 +160,10 @@ namespace nodetool
         : m_connect(nullptr),
           m_net_server(epee::net_utils::e_connection_type_P2P),
           m_bind_ip(),
+          m_bind_ipv6_address(),
           m_port(),
+          m_port_ipv6(),
+          m_notifier(),
           m_our_address(),
           m_peerlist(),
           m_config{},
@@ -169,7 +179,10 @@ namespace nodetool
         : m_connect(nullptr),
           m_net_server(public_service, epee::net_utils::e_connection_type_P2P),
           m_bind_ip(),
+          m_bind_ipv6_address(),
           m_port(),
+          m_port_ipv6(),
+          m_notifier(),
           m_our_address(),
           m_peerlist(),
           m_config{},
@@ -184,7 +197,10 @@ namespace nodetool
       connect_func* m_connect;
       net_server m_net_server;
       std::string m_bind_ip;
+      std::string m_bind_ipv6_address;
       std::string m_port;
+      std::string m_port_ipv6;
+      cryptonote::levin::notify m_notifier;
       epee::net_utils::network_address m_our_address; // in anonymity networks
       peerlist_manager m_peerlist;
       config m_config;
@@ -221,7 +237,6 @@ namespace nodetool
       : m_payload_handler(payload_handler),
         m_external_port(0),
         m_rpc_port(0),
-        m_zmq_port(0),
         m_allow_local_ip(false),
         m_hide_my_port(false),
         m_igd(no_igd),
@@ -251,7 +266,6 @@ namespace nodetool
     size_t get_public_white_peers_count();
     size_t get_public_gray_peers_count();
     void get_public_peerlist(std::vector<peerlist_entry>& gray, std::vector<peerlist_entry>& white);
-    size_t get_zone_count() const { return m_network_zones.size(); }
 
     void change_max_out_public_peers(size_t count);
     uint32_t get_max_out_public_peers() const;
@@ -308,6 +322,7 @@ namespace nodetool
     virtual void callback(p2p_connection_context& context);
     //----------------- i_p2p_endpoint -------------------------------------------------------------
     virtual bool relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections);
+    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, const bool pad_txs);
     virtual bool invoke_command_to_peer(int command, const epee::span<const uint8_t> req_buff, std::string& resp_buff, const epee::net_utils::connection_context_base& context);
     virtual bool invoke_notify_to_peer(int command, const epee::span<const uint8_t> req_buff, const epee::net_utils::connection_context_base& context);
     virtual bool drop_connection(const epee::net_utils::connection_context_base& context);
@@ -317,6 +332,8 @@ namespace nodetool
     virtual bool add_host_fail(const epee::net_utils::network_address &address);
     //----------------- i_connection_filter  --------------------------------------------------------
     virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address);
+    //-----------------------------------------------------------------------------------------------
+    virtual bool is_host_limit(const epee::net_utils::network_address &address);
     //-----------------------------------------------------------------------------------------------
     bool parse_peer_from_string(epee::net_utils::network_address& pe, const std::string& node_addr, uint16_t default_port = 0);
     bool handle_command_line(
@@ -341,7 +358,13 @@ namespace nodetool
     bool is_peer_used(const peerlist_entry& peer);
     bool is_peer_used(const anchor_peerlist_entry& peer);
     bool is_addr_connected(const epee::net_utils::network_address& peer);
-    void add_upnp_port_mapping(uint32_t port);
+    void add_upnp_port_mapping_impl(uint32_t port, bool ipv6=false);
+    void add_upnp_port_mapping_v4(uint32_t port);
+    void add_upnp_port_mapping_v6(uint32_t port);
+    void add_upnp_port_mapping(uint32_t port, bool ipv4=true, bool ipv6=false);
+    void delete_upnp_port_mapping_impl(uint32_t port, bool ipv6=false);
+    void delete_upnp_port_mapping_v4(uint32_t port);
+    void delete_upnp_port_mapping_v6(uint32_t port);
     void delete_upnp_port_mapping(uint32_t port);
     template<class t_callback>
     bool try_ping(basic_node_data& node_data, p2p_connection_context& context, const t_callback &cb);
@@ -397,26 +420,21 @@ namespace nodetool
       m_rpc_port = rpc_port;
     }
 
-    void set_zmq_port(uint16_t zmq_port)
-    {
-      m_zmq_port = zmq_port;
-    }
-
   private:
     std::string m_config_folder;
 
     bool m_have_address;
     bool m_first_connection_maker_call;
     uint32_t m_listening_port;
+    uint32_t m_listening_port_ipv6;
     uint32_t m_external_port;
     uint16_t m_rpc_port;
-    uint16_t m_zmq_port;
-    uint16_t m_zmq_max_clients;
-    bool m_zmq_enabled;
     bool m_allow_local_ip;
     bool m_hide_my_port;
     igd_t m_igd;
     bool m_offline;
+    bool m_use_ipv6;
+    bool m_require_ipv4;
     std::atomic<bool> is_closing;
     std::unique_ptr<boost::thread> mPeersLoggerThread;
     //critical_section m_connections_lock;
@@ -475,7 +493,11 @@ namespace nodetool
     const int64_t default_limit_up = P2P_DEFAULT_LIMIT_RATE_UP;
     const int64_t default_limit_down = P2P_DEFAULT_LIMIT_RATE_DOWN;
     extern const command_line::arg_descriptor<std::string> arg_p2p_bind_ip;
+    extern const command_line::arg_descriptor<std::string> arg_p2p_bind_ipv6_address;
     extern const command_line::arg_descriptor<std::string, false, true, 2> arg_p2p_bind_port;
+    extern const command_line::arg_descriptor<std::string, false, true, 2> arg_p2p_bind_port_ipv6;
+    extern const command_line::arg_descriptor<bool> arg_p2p_use_ipv6;
+    extern const command_line::arg_descriptor<bool> arg_p2p_ignore_ipv4;
     extern const command_line::arg_descriptor<uint32_t> arg_p2p_external_port;
     extern const command_line::arg_descriptor<bool> arg_p2p_allow_local_ip;
     extern const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_peer;

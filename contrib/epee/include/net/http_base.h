@@ -27,13 +27,13 @@
 
 
 #pragma once
-#include <boost/lexical_cast.hpp>
-#include <boost/regex.hpp>
+#include "memwipe.h"
+
 #include <boost/utility/string_ref.hpp>
+
 #include <string>
 #include <utility>
-
-#include "string_tools.h"
+#include <list>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.http"
@@ -63,36 +63,10 @@ namespace net_utils
 			http_content_type_not_set
 		};
 
-		typedef std::list<std::pair<std::string, std::string> > fields_list;
+		typedef std::list<std::pair<std::string, std::string>> fields_list;
 
-		inline
-		std::string get_value_from_fields_list(const std::string& param_name, const net_utils::http::fields_list& fields)
-		{
-			fields_list::const_iterator it = fields.begin();
-			for(; it != fields.end(); it++)
-				if(!string_tools::compare_no_case(param_name, it->first))
-					break;
-
-			if(it==fields.end())
-				return std::string();
-
-			return it->second;
-		}
-
-
-		inline
-			std::string get_value_from_uri_line(const std::string& param_name, const std::string& uri)
-		{
-			std::string buff = "([\\?|&])";
-			buff += param_name + "=([^&]*)";
-			boost::regex match_param(buff.c_str(), boost::regex::icase | boost::regex::normal);
-			boost::smatch	result;
-			if(boost::regex_search(uri, result, match_param, boost::match_default) && result[0].matched)
-			{
-				return result[2];
-			}
-			return std::string();
-		}
+    std::string get_value_from_fields_list(const std::string& param_name, const net_utils::http::fields_list& fields);
+    std::string get_value_from_uri_line(const std::string& param_name, const std::string& uri);
 
 		static inline void add_field(std::string& out, const boost::string_ref name, const boost::string_ref value)
 		{
@@ -190,7 +164,7 @@ namespace net_utils
 			std::string			m_response_comment;
 			fields_list	        m_additional_fields;
 			std::string			m_body;
-			std::string			m_mime_tipe;
+			std::string			m_mime_type;
 			http_header_info    m_header_info;
 			int                 m_http_ver_hi;// OUT paramter only
 			int                 m_http_ver_lo;// OUT paramter only

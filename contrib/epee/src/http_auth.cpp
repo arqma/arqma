@@ -692,7 +692,7 @@ namespace
     epee::net_utils::http::http_response_info rc{};
     rc.m_response_code = 401;
     rc.m_response_comment = u8"Unauthorized";
-    rc.m_mime_tipe = u8"text/html";
+    rc.m_mime_type = u8"text/html";
     rc.m_body =
       u8"<html><head><title>Unauthorized Access</title></head><body><h1>401 Unauthorized</h1></body></html>";
 

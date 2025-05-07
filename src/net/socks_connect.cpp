@@ -39,6 +39,7 @@
 #include "net/net_utils_base.h"
 #include "net/socks.h"
 #include "string_tools.h"
+#include "string_tools_lexical.h"
 
 namespace net
 {

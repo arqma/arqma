@@ -37,13 +37,7 @@ set(p2p_sources
 
 set(p2p_headers)
 
-set(p2p_private_headers
-  net_node.h
-  net_node_common.h
-  net_peerlist.h
-  net_peerlist_boost_serialization.h
-  p2p_protocol_defs.h
-  stdafx.h)
+arqma_find_all_headers(p2p_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(p2p
   ${p2p_private_headers})

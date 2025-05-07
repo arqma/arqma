@@ -42,18 +42,7 @@ set(cryptonote_core_sources
 
 set(cryptonote_core_headers)
 
-set(cryptonote_core_private_headers
-  blockchain.h
-  service_node_rules.h
-  service_node_list.h
-  service_node_quorum_cop.h
-  service_node_swarm.h
-  cryptonote_core.h
-  service_node_voting.h
-  tx_pool.h
-  tx_sanity_check.h
-  miner.h
-  cryptonote_tx_utils.h)
+arqma_find_all_headers(cryptonote_core_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(cryptonote_core
   ${cryptonote_core_private_headers})
@@ -70,7 +59,6 @@ target_link_libraries(cryptonote_core
     multisig
     ringct
     device
-    arqma_mq
     daemonizer
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}

@@ -32,8 +32,10 @@
 #pragma once
 #include <unordered_set>
 #include <atomic>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "net/net_utils_base.h"
 #include "copyable_atomic.h"
+#include "crypto/hash.h"
 
 namespace cryptonote
 {
@@ -51,6 +53,8 @@ namespace cryptonote
       state_idle,
       state_normal
     };
+
+    bool handshake_complete() const noexcept { return m_state != state_before_handshake; }
 
     state m_state;
     std::vector<crypto::hash> m_needed_objects;

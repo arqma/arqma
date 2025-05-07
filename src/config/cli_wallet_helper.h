@@ -197,7 +197,9 @@ namespace command_helper
                   "  Set the lookahead sizes for the subaddress hash table.\n "
                   "  Set this if you are not sure whether you will spend on a key reusing ArQmA fork later.\n "
                   "segregation-height <n>\n "
-                  "  Set to the height of a key reusing fork you want to use, 0 to use default.\n");
+                  "  Set to the height of a key reusing fork you want to use, 0 to use default.\n"
+                  "export-format <\"binary\"|\"ascii\">\n "
+                  "  Save all exported files as binary (cannot be copied and pasted) or ascii (can be).\n ");
   const char* ENCRYPTED_KEY("Display the encrypted Electrum-style mnemonic seed.");
   const char* RESCAN_SPENT("Rescan the blockchain for spent outputs.");
   const char* GET_TX_KEY("Get the transaction key (r) for a given <txid>.");

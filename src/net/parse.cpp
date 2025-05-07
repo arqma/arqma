@@ -28,35 +28,81 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "parse.h"
+#include <boost/version.hpp>
 
 #include "net/tor_address.h"
 #include "net/i2p_address.h"
 #include "string_tools.h"
+#include "string_tools_lexical.h"
 
 namespace net
 {
-    expect<epee::net_utils::network_address>
-    get_network_address(const boost::string_ref address, const std::uint16_t default_port)
+  void get_network_address_host_and_port(const std::string& address, std::string& host, std::string& port)
+  {
+    if (address.find(']') != std::string::npos)
     {
-        const boost::string_ref host = address.substr(0, address.rfind(':'));
-
-        if (host.empty())
-            return make_error_code(net::error::invalid_host);
-        if (host.ends_with(".onion"))
-            return tor_address::make(address, default_port);
-        if (host.ends_with(".i2p"))
-            return i2p_address::make(address, default_port);
-
-        std::uint16_t port = default_port;
-        if (host.size() < address.size())
-        {
-            if (!epee::string_tools::get_xtype_from_string(port, std::string{address.substr(host.size() + 1)}))
-                return make_error_code(net::error::invalid_port);
-        }
-
-        std::uint32_t ip = 0;
-        if (epee::string_tools::get_ip_int32_from_string(ip, std::string{host}))
-            return {epee::net_utils::ipv4_network_address{ip, port}};
-        return make_error_code(net::error::unsupported_address);
+      host = address.substr(1, address.rfind(']') - 1);
+      if ((host.size() + 2) < address.size())
+      {
+        port = address.substr(address.rfind(':') + 1);
+      }
     }
+    else
+    {
+      host = address.substr(0, address.rfind(':'));
+      if (host.size() < address.size())
+      {
+        port = address.substr(host.size() + 1);
+      }
+    }
+  }
+
+  expect<epee::net_utils::network_address>
+  get_network_address(const boost::string_ref address, const std::uint16_t default_port)
+  {
+    std::string host_str = "";
+    std::string port_str = "";
+
+    bool ipv6 = false;
+
+    get_network_address_host_and_port(std::string(address), host_str, port_str);
+
+    boost::string_ref host_str_ref(host_str);
+    boost::string_ref port_str_ref(port_str);
+
+    if (host_str.empty())
+      return make_error_code(net::error::invalid_host);
+    if (host_str_ref.ends_with(".onion"))
+      return tor_address::make(address, default_port);
+    if (host_str_ref.ends_with(".i2p"))
+      return i2p_address::make(address, default_port);
+
+    boost::system::error_code ec;
+#if BOOST_VERSION >= 106600
+    auto v6 = boost::asio::ip::make_address_v6(host_str, ec);
+#else
+    auto v6 = boost::asio::ip::address_v6::from_string(host_str, ec);
+#endif
+    ipv6 = !ec;
+
+    std::uint16_t port = default_port;
+    if (port_str.size())
+    {
+      if (!epee::string_tools::get_xtype_from_string(port, port_str))
+        return make_error_code(net::error::invalid_port);
+    }
+
+    if (ipv6)
+    {
+      return {epee::net_utils::ipv6_network_address{v6, port}};
+    }
+    else
+    {
+      std::uint32_t ip = 0;
+      if (epee::string_tools::get_ip_int32_from_string(ip, host_str))
+        return {epee::net_utils::ipv4_network_address{ip, port}};
+    }
+
+    return make_error_code(net::error::unsupported_address);
+  }
 }

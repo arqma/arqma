@@ -54,15 +54,11 @@
   bool handled = false; \
   if(false) return true; //just a stub to have "else if"
 
-#define MAP_URI2(pattern, callback)  else if(std::string::npos != query_info.m_URI.find(pattern)) return callback(query_info, response_info, &m_conn_context);
-
-#define MAP_URI_AUTO_XML2(s_pattern, callback_f, command_type) //TODO: don't think i ever again will use xml - ambiguous and "overtagged" format
-
 #define MAP_URI_AUTO_JON2_IF(s_pattern, callback_f, command_type, cond) \
     else if((query_info.m_URI == s_pattern) && (cond)) \
     { \
       handled = true; \
-      uint64_t ticks = misc_utils::get_tick_count(); \
+      uint64_t ticks = epee::misc_utils::get_tick_count(); \
       command_type::request req{}; \
       bool parse_res = epee::serialization::load_t_from_json(req, query_info.m_body); \
       CHECK_AND_ASSERT_MES(parse_res, false, "Failed to parse json: \r\n" << query_info.m_body); \
@@ -78,7 +74,7 @@
       uint64_t ticks2 = epee::misc_utils::get_tick_count(); \
       epee::serialization::store_t_to_json(resp, response_info.m_body); \
       uint64_t ticks3 = epee::misc_utils::get_tick_count(); \
-      response_info.m_mime_tipe = "application/json"; \
+      response_info.m_mime_type = "application/json"; \
       response_info.m_header_info.m_content_type = " application/json"; \
       MDEBUG( s_pattern << " processed with " << ticks1-ticks << "/"<< ticks2-ticks1 << "/" << ticks3-ticks2 << "ms"); \
     }
@@ -89,12 +85,12 @@
     else if(query_info.m_URI == s_pattern) \
     { \
       handled = true; \
-      uint64_t ticks = misc_utils::get_tick_count(); \
+      uint64_t ticks = epee::misc_utils::get_tick_count(); \
       command_type::request req{}; \
       bool parse_res = epee::serialization::load_t_from_binary(req, epee::strspan<uint8_t>(query_info.m_body)); \
       CHECK_AND_ASSERT_MES(parse_res, false, "Failed to parse bin body data, body size=" << query_info.m_body.size()); \
-      uint64_t ticks1 = misc_utils::get_tick_count(); \
-      command_type::response resp{};\
+      uint64_t ticks1 = epee::misc_utils::get_tick_count(); \
+      command_type::response resp{}; \
       if(!callback_f(req, resp, &m_conn_context)) \
       { \
         LOG_ERROR("Failed to " << #callback_f << "()"); \
@@ -102,22 +98,22 @@
         response_info.m_response_comment = "Internal Server Error"; \
         return true; \
       } \
-      uint64_t ticks2 = misc_utils::get_tick_count(); \
-      epee::serialization::store_t_to_binary(resp, response_info.m_body); \
+      uint64_t ticks2 = epee::misc_utils::get_tick_count(); \
+      epee::byte_slice buffer; \
+      epee::serialization::store_t_to_binary(resp, buffer, 64 * 1024); \
       uint64_t ticks3 = epee::misc_utils::get_tick_count(); \
-      response_info.m_mime_tipe = " application/octet-stream"; \
+      response_info.m_body.assign(reinterpret_cast<const char*>(buffer.data()), buffer.size()); \
+      response_info.m_mime_type = " application/octet-stream"; \
       response_info.m_header_info.m_content_type = " application/octet-stream"; \
       MDEBUG( s_pattern << "() processed with " << ticks1-ticks << "/"<< ticks2-ticks1 << "/" << ticks3-ticks2 << "ms"); \
     }
 
-#define CHAIN_URI_MAP2(callback) else {callback(query_info, response_info, m_conn_context);handled = true;}
-
 #define END_URI_MAP2() return handled;}
-
 
 #define BEGIN_JSON_RPC_MAP(uri)    else if(query_info.m_URI == uri) \
     { \
     uint64_t ticks = epee::misc_utils::get_tick_count(); \
+    response_info.m_mime_type = "application/json"; \
     epee::serialization::portable_storage ps; \
     if(!ps.load_from_json(query_info.m_body)) \
     { \
@@ -146,6 +142,7 @@
 
 #define PREPARE_OBJECTS_FROM_JSON(command_type) \
   handled = true; \
+  response_info.m_mime_type = "application/json"; \
   epee::json_rpc::request<command_type::request> req{}; \
   if(!req.load(ps)) \
   { \
@@ -166,7 +163,7 @@
   uint64_t ticks2 = epee::misc_utils::get_tick_count(); \
   epee::serialization::store_t_to_json(resp, response_info.m_body); \
   uint64_t ticks3 = epee::misc_utils::get_tick_count(); \
-  response_info.m_mime_tipe = "application/json"; \
+  response_info.m_mime_type = "application/json"; \
   response_info.m_header_info.m_content_type = " application/json"; \
   MDEBUG( query_info.m_URI << "[" << method_name << "] processed with " << ticks1-ticks << "/"<< ticks2-ticks1 << "/" << ticks3-ticks2 << "ms");
 
@@ -187,22 +184,6 @@
 }
 
 #define MAP_JON_RPC_WE(method_name, callback_f, command_type) MAP_JON_RPC_WE_IF(method_name, callback_f, command_type, true)
-
-#define MAP_JON_RPC_WERI(method_name, callback_f, command_type) \
-    else if(callback_name == method_name) \
-{ \
-  PREPARE_OBJECTS_FROM_JSON(command_type) \
-  epee::json_rpc::error_response fail_resp{}; \
-  fail_resp.jsonrpc = "2.0"; \
-  fail_resp.id = req.id; \
-  if(!callback_f(req.params, resp.result, fail_resp.error, response_info, &m_conn_context)) \
-  { \
-    epee::serialization::store_t_to_json(fail_resp, response_info.m_body); \
-    return true; \
-  } \
-  FINALIZE_OBJECTS_TO_JSON(method_name) \
-  return true;\
-}
 
 #define MAP_JON_RPC(method_name, callback_f, command_type) \
     else if(callback_name == method_name) \

@@ -33,6 +33,8 @@
 #include "common/command_line.h"
 #include "version.h"
 #include "daemon/command_parser_executor.h"
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "daemon"

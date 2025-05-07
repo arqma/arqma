@@ -33,14 +33,7 @@ set(lmdb_sources
   table.cpp
   value_stream.cpp)
 
-set(lmdb_headers
-  database.h
-  error.h
-  key_stream.h
-  table.h
-  transaction.h
-  util.h
-  value_stream.h)
+arqma_find_all_headers(lmdb_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_add_library(lmdb_lib
   ${lmdb_sources}

@@ -283,6 +283,15 @@ if(MINGW)
   export_all_symbols()
 endif()
 
+macro (arqma_find_all_headers headers_found module_root_dir)
+  file(GLOB ${headers_found}
+           "${module_root_dir}/*.h*"
+           "${module_root_dir}/**/*.h*"
+           "${module_root_dir}/*.inl"
+           "${module_root_dir}/**/*.inl"
+  )
+endmacro()
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
   statusinfo("Setting default build type: ${CMAKE_BUILD_TYPE}")
@@ -583,7 +592,7 @@ endif()
 
 if(APPLE AND NOT IOS)
   if(NOT OPENSSL_ROOT_DIR)
-      EXECUTE_PROCESS(COMMAND brew --prefix openssl@1.1
+      EXECUTE_PROCESS(COMMAND brew --prefix openssl
         OUTPUT_VARIABLE OPENSSL_ROOT_DIR
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     statusinfo("Using OpenSSL found at ${OPENSSL_ROOT_DIR}")

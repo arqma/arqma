@@ -24,17 +24,19 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-
-
 #ifndef _LEVIN_BASE_H_
 #define _LEVIN_BASE_H_
 
+#include <cstdint>
+
 #include "net_utils_base.h"
+#include "span.h"
 
 #define LEVIN_SIGNATURE  0x0101010101012101LL  //Bender's nightmare
 
 namespace epee
 {
+class byte_slice;
 namespace levin
 {
 #pragma pack(push)
@@ -67,12 +69,14 @@ namespace levin
 #pragma pack(pop)
 
 
-#define LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED   0
-#define LEVIN_DEFAULT_MAX_PACKET_SIZE         104857600      //100MB by default
+#define LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED            0
+#define LEVIN_INITIAL_MAX_PACKET_SIZE           256*1024
+#define LEVIN_DEFAULT_MAX_PACKET_SIZE          100000000      //100MB by default
 
 #define LEVIN_PACKET_REQUEST			            0x00000001
 #define LEVIN_PACKET_RESPONSE		              0x00000002
-
+#define LEVIN_PACKET_BEGIN                    0x00000004
+#define LEVIN_PACKET_END                      0x00000008
 
 #define LEVIN_PROTOCOL_VER_0                  0
 #define LEVIN_PROTOCOL_VER_1                  1
@@ -80,7 +84,7 @@ namespace levin
   template<class t_connection_context = net_utils::connection_context_base>
   struct levin_commands_handler
   {
-    virtual int invoke(int command, const epee::span<const uint8_t> in_buff, std::string& buff_out, t_connection_context& context)=0;
+    virtual int invoke(int command, const epee::span<const uint8_t> in_buff, byte_slice& buff_out, t_connection_context& context)=0;
     virtual int notify(int command, const epee::span<const uint8_t> in_buff, t_connection_context& context)=0;
     virtual void callback(t_connection_context& context){};
 
@@ -118,6 +122,12 @@ namespace levin
     }
   }
 
+  bucket_head2 make_header(uint32_t command, uint64_t msg_size, uint32_t flags, bool expect_response) noexcept;
+
+  byte_slice make_notify(int command, epee::span<const std::uint8_t> payload);
+
+  byte_slice make_noise_notify(std::size_t noise_bytes);
+  byte_slice make_fragmented_notify(const byte_slice& noise, int command, epee::span<const std::uint8_t> payload);
 
 }
 }

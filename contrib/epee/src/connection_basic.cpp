@@ -129,6 +129,7 @@ connection_basic::connection_basic(boost::asio::io_context &io_context, boost::a
   socket_(io_context, get_context(m_state.get())),
   m_want_close_connection(false),
   m_was_shutdown(false),
+  m_is_multithreaded(false),
   m_ssl_support(ssl_support)
 {
     // add nullptr checks if removed
@@ -153,6 +154,7 @@ connection_basic::connection_basic(boost::asio::io_context &io_context, std::sha
 	socket_(io_context, get_context(m_state.get())),
   m_want_close_connection(false),
   m_was_shutdown(false),
+  m_is_multithreaded(false),
 	m_ssl_support(ssl_support)
 {
     // add nullptr checks if removed

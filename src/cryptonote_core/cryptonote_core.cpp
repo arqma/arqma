@@ -35,8 +35,6 @@
 #include "string_tools.h"
 using namespace epee;
 
-#include "arqma_mq/arqmaMQ.h"
-
 #include <unordered_set>
 #include <iomanip>
 
@@ -50,6 +48,7 @@ extern "C" {
 #include "common/download.h"
 #include "common/threadpool.h"
 #include "common/command_line.h"
+#include "cryptonote_basic/events.h"
 #include "daemon/command_line_args.h"
 #include "warnings.h"
 #include "crypto/crypto.h"
@@ -61,11 +60,13 @@ extern "C" {
 #include "ringct/rctTypes.h"
 #include "blockchain_db/blockchain_db.h"
 #include "ringct/rctSigs.h"
+#include "rpc/zmq_pub.h"
 #include "common/notify.h"
 #include "version.h"
 #include "memwipe.h"
 #include "common/i18n.h"
 #include "net/local_ip.h"
+#include <boost/filesystem.hpp>
 
 #include "config/ascii.h"
 
@@ -80,8 +81,6 @@ DISABLE_VS_WARNINGS(4355)
 
 // basically at least how many bytes the block itself serializes to without the miner tx
 #define BLOCK_SIZE_SANITY_LEEWAY 100
-
-using namespace arqmaMQ;
 
 namespace cryptonote
 {
@@ -275,6 +274,12 @@ namespace cryptonote
       graceful_exit();
     }
     return res;
+  }
+  //-----------------------------------------------------------------------------------
+  void core::set_txpool_listener(boost::function<void(std::vector<txpool_event>)> zmq_pub)
+  {
+    CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
+    m_zmq_pub = std::move(zmq_pub);
   }
   //-----------------------------------------------------------------------------------
   void core::stop()
@@ -632,23 +637,25 @@ namespace cryptonote
     try
     {
       if(!command_line::is_arg_defaulted(vm, arg_block_notify))
-        m_blockchain_storage.set_block_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_block_notify).c_str())));
+      {
+        struct hash_notify
+        {
+          tools::Notify cmdline;
+
+          void operator()(std::uint64_t, epee::span<const block> blocks) const
+          {
+            for (const block bl : blocks)
+              cmdline.notify("%s", epee::string_tools::pod_to_hex(get_block_hash(bl)).c_str(), NULL);
+          }
+        };
+
+        m_blockchain_storage.add_block_notify(hash_notify{{command_line::get_arg(vm, arg_block_notify).c_str()}});
+      }
     }
     catch (const std::exception& e)
     {
       MERROR("Failed to parse block notify spec");
     }
-
-    try
-    {
-      bool zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled);
-      std::string zmq_ip_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_ip);
-      std::string zmq_port_str = command_line::get_arg(vm, daemon_args::arg_zmq_bind_port);
-      uint16_t zmq_max_clients = command_line::get_arg(vm, daemon_args::arg_zmq_max_clients);
-      if(zmq_enabled)
-        m_blockchain_storage.set_zmq_options(zmq_ip_str, zmq_port_str, zmq_max_clients, zmq_enabled);
-    }
-    catch(...) {}
 
     try
     {
@@ -1081,8 +1088,7 @@ namespace cryptonote
     TRY_ENTRY();
     CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
 
-    struct result { bool res; cryptonote::transaction tx; crypto::hash hash; };
-    std::vector<result> results(tx_blobs.size());
+    std::vector<txpool_event> results(tx_blobs.size());
 
     tvc.resize(tx_blobs.size());
     tools::threadpool& tpool = tools::threadpool::getInstance();
@@ -1146,6 +1152,7 @@ namespace cryptonote
     if (!tx_info.empty())
       handle_incoming_tx_accumulated_batch(tx_info, keeped_by_block);
 
+    bool valid_events = false;
     bool ok = true;
     it = tx_blobs.begin();
     for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
@@ -1171,10 +1178,18 @@ namespace cryptonote
         MERROR_VER("Transaction verification impossible: " << results[i].hash);
 
       if(tvc[i].m_added_to_pool)
+      {
         MDEBUG("tx added: " << results[i].hash);
+        valid_events = true;
+      }
+      else
+        results[i].res = false;
     }
-    return ok;
 
+    if (valid_events && m_zmq_pub)
+      m_zmq_pub(std::move(results));
+
+    return ok;
     CATCH_ENTRY_L0("core::handle_incoming_txs()", false);
   }
   //-----------------------------------------------------------------------------------------------

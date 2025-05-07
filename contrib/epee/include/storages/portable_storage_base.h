@@ -29,10 +29,10 @@
 #pragma once
 
 #include <boost/variant.hpp>
-#include <boost/any.hpp>
 #include <string>
 #include <vector>
 #include <deque>
+#include <map>
 #include "misc_log_ex.h"
 
 #define PORTABLE_STORAGE_SIGNATUREA 0x01011101

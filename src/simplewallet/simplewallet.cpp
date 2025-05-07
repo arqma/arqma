@@ -49,6 +49,7 @@
 #include <boost/format.hpp>
 #include <boost/regex.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+#include <boost/filesystem.hpp>
 #include "include_base_utils.h"
 #include "common/i18n.h"
 #include "common/command_line.h"
@@ -1078,7 +1079,7 @@ bool simple_wallet::export_multisig(const std::vector<std::string> &args)
   {
     cryptonote::blobdata ciphertext = m_wallet->export_multisig();
 
-    bool r = epee::file_io_utils::save_string_to_file(filename, ciphertext);
+    bool r = m_wallet->save_to_file(filename, ciphertext);
     if (!r)
     {
       fail_msg_writer() << tr("failed to save file ") << filename;
@@ -1128,7 +1129,7 @@ bool simple_wallet::import_multisig(const std::vector<std::string> &args)
   {
     const std::string filename = args[n];
     std::string data;
-    bool r = epee::file_io_utils::load_file_to_string(filename, data);
+    bool r = m_wallet->load_from_file(filename, data);
     if (!r)
     {
       fail_msg_writer() << tr("failed to read file ") << filename;
@@ -1372,7 +1373,7 @@ bool simple_wallet::export_raw_multisig(const std::vector<std::string> &args)
       if (!filenames.empty())
         filenames += ", ";
       filenames += filename;
-      if (!epee::file_io_utils::save_string_to_file(filename, cryptonote::tx_to_blob(ptx.tx)))
+      if (!m_wallet->save_to_file(filename, cryptonote::tx_to_blob(ptx.tx)))
       {
         fail_msg_writer() << tr("Failed to export multisig transaction to file ") << filename;
         return true;
@@ -2335,6 +2336,35 @@ bool simple_wallet::set_track_uses(const std::vector<std::string> &args/* = std:
   return true;
 }
 
+bool simple_wallet::set_export_format(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
+{
+  if (args.size() < 2)
+  {
+    fail_msg_writer() << tr("Export format not specified");
+    return true;
+  }
+
+  if (boost::algorithm::iequals(args[1], "ascii"))
+  {
+    m_wallet->set_export_format(tools::wallet2::ExportFormat::Ascii);
+  }
+  else if (boost::algorithm::iequals(args[1], "binary"))
+  {
+    m_wallet->set_export_format(tools::wallet2::ExportFormat::Binary);
+  }
+  else
+  {
+    fail_msg_writer() << tr("Export format not recognized");
+    return true;
+  }
+  const auto pwd_container = get_and_verify_password();
+  if (pwd_container)
+  {
+    m_wallet->rewrite(m_wallet_file, pwd_container->password());
+  }
+  return true;
+}
+
 bool simple_wallet::help(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
 {
   if(args.empty())
@@ -2729,6 +2759,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     success_msg_writer() << "ignore-fractional-outputs = " << m_wallet->ignore_fractional_outputs();
     success_msg_writer() << "device_name = " << m_wallet->device_name();
     success_msg_writer() << "track-uses = " << m_wallet->track_uses();
+    success_msg_writer() << "export-format = " << (m_wallet->export_format() == tools::wallet2::ExportFormat::Ascii ? "ascii" : "binary");
     return true;
   }
   else
@@ -2785,6 +2816,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     CHECK_SIMPLE_VARIABLE("segregation-height", set_segregation_height, tr("unsigned integer"));
     CHECK_SIMPLE_VARIABLE("ignore-fractional-outputs", set_ignore_fractional_outputs, tr("0 or 1"));
     CHECK_SIMPLE_VARIABLE("track-uses", set_track_uses, tr("0 or 1"));
+    CHECK_SIMPLE_VARIABLE("export-format", set_export_format, tr("\"binary\" or \"ascii\""));
   }
   fail_msg_writer() << tr("set: unrecognized argument(s)");
   return true;
@@ -6733,7 +6765,7 @@ bool simple_wallet::get_tx_proof(const std::vector<std::string> &args)
   {
     std::string sig_str = m_wallet->get_tx_proof(txid, info.address, info.is_subaddress, args.size() == 3 ? args[2] : "");
     const std::string filename = "arqma_tx_proof";
-    if (epee::file_io_utils::save_string_to_file(filename, sig_str))
+    if (m_wallet->save_to_file(filename, sig_str, true))
       success_msg_writer() << tr("signature file saved to: ") << filename;
     else
       fail_msg_writer() << tr("failed to save signature file");
@@ -6861,7 +6893,7 @@ bool simple_wallet::check_tx_proof(const std::vector<std::string> &args)
 
   // read signature file
   std::string sig_str;
-  if (!epee::file_io_utils::load_file_to_string(args[2], sig_str))
+  if (!m_wallet->load_from_file(args[2], sig_str))
   {
     fail_msg_writer() << tr("failed to load signature file");
     return true;
@@ -6948,7 +6980,7 @@ bool simple_wallet::get_spend_proof(const std::vector<std::string> &args)
   {
     const std::string sig_str = m_wallet->get_spend_proof(txid, args.size() == 2 ? args[1] : "");
     const std::string filename = "arqma_spend_proof";
-    if (epee::file_io_utils::save_string_to_file(filename, sig_str))
+    if (m_wallet->save_to_file(filename, sig_str, true))
       success_msg_writer() << tr("signature file saved to: ") << filename;
     else
       fail_msg_writer() << tr("failed to save signature file");
@@ -6981,7 +7013,7 @@ bool simple_wallet::check_spend_proof(const std::vector<std::string> &args)
   }
 
   std::string sig_str;
-  if (!epee::file_io_utils::load_file_to_string(args[1], sig_str))
+  if (!m_wallet->load_from_file(args[1], sig_str))
   {
     fail_msg_writer() << tr("failed to load signature file");
     return true;
@@ -7043,7 +7075,7 @@ bool simple_wallet::get_reserve_proof(const std::vector<std::string> &args)
   {
     const std::string sig_str = m_wallet->get_reserve_proof(account_minreserve, args.size() == 2 ? args[1] : "");
     const std::string filename = "arqma_reserve_proof";
-    if (epee::file_io_utils::save_string_to_file(filename, sig_str))
+    if (m_wallet->save_to_file(filename, sig_str, true))
       success_msg_writer() << tr("signature file saved to: ") << filename;
     else
       fail_msg_writer() << tr("failed to save signature file");
@@ -7081,7 +7113,7 @@ bool simple_wallet::check_reserve_proof(const std::vector<std::string> &args)
   }
 
   std::string sig_str;
-  if (!epee::file_io_utils::load_file_to_string(args[1], sig_str))
+  if (!m_wallet->load_from_file(args[1], sig_str))
   {
     fail_msg_writer() << tr("failed to load signature file");
     return true;
@@ -8482,7 +8514,7 @@ bool simple_wallet::sign(const std::vector<std::string> &args)
   SCOPED_WALLET_UNLOCK();
   std::string filename = args[0];
   std::string data;
-  bool r = epee::file_io_utils::load_file_to_string(filename, data);
+  bool r = m_wallet->load_from_file(filename, data);
   if (!r)
   {
     fail_msg_writer() << tr("failed to read file ") << filename;
@@ -8505,7 +8537,7 @@ bool simple_wallet::verify(const std::vector<std::string> &args)
   std::string signature= args[2];
 
   std::string data;
-  bool r = epee::file_io_utils::load_file_to_string(filename, data);
+  bool r = m_wallet->load_from_file(filename, data);
   if (!r)
   {
     fail_msg_writer() << tr("failed to read file ") << filename;
@@ -8655,7 +8687,7 @@ bool simple_wallet::export_outputs(const std::vector<std::string> &args)
   try
   {
     std::string data = m_wallet->export_outputs_to_str();
-    bool r = epee::file_io_utils::save_string_to_file(filename, data);
+    bool r = m_wallet->save_to_file(filename, data);
     if (!r)
     {
       fail_msg_writer() << tr("failed to save file ") << filename;
@@ -8688,7 +8720,7 @@ bool simple_wallet::import_outputs(const std::vector<std::string> &args)
   std::string filename = args[0];
 
   std::string data;
-  bool r = epee::file_io_utils::load_file_to_string(filename, data);
+  bool r = m_wallet->load_from_file(filename, data);
   if (!r)
   {
     fail_msg_writer() << tr("failed to read file ") << filename;
@@ -8910,7 +8942,7 @@ void simple_wallet::commit_or_save(std::vector<tools::wallet2::pending_tx>& ptx_
       tx_to_blob(ptx.tx, blob);
       const std::string blob_hex = epee::string_tools::buff_to_hex_nodelimer(blob);
       const std::string filename = "raw_arqma_tx" + (ptx_vector.size() == 1 ? "" : ("_" + std::to_string(i++)));
-      bool success = epee::file_io_utils::save_string_to_file(filename, blob_hex);
+      bool success = m_wallet->save_to_file(filename, blob_hex, true);
 
       if(success)
         msg_buf += tr("Transaction successfully saved to ");

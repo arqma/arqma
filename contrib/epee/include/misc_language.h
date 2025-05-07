@@ -28,8 +28,8 @@
 
 #pragma once
 
+#include <boost/shared_ptr.hpp>
 #include <vector>
-#include <boost/thread.hpp>
 namespace epee
 {
 namespace misc_utils
@@ -42,15 +42,7 @@ namespace misc_utils
       return it;
     }
 
-	inline
-	bool sleep_no_w(long ms )
-	{
-		boost::this_thread::sleep(
-			boost::get_system_time() +
-			boost::posix_time::milliseconds( std::max<long>(ms,0) ) );
-
-		return true;
-	}
+	bool sleep_no_w(long ms );
 
   template<typename T>
   T get_mid(const T &a, const T &b)
@@ -83,21 +75,21 @@ namespace misc_utils
   /*                                                                      */
   /************************************************************************/
 
-  struct call_befor_die_base
+  struct call_before_die_base
   {
-    virtual ~call_befor_die_base(){}
+    virtual ~call_before_die_base() = default;
   };
 
-  typedef boost::shared_ptr<call_befor_die_base> auto_scope_leave_caller;
+  typedef std::shared_ptr<call_before_die_base> auto_scope_leave_caller;
 
 
   template<class t_scope_leave_handler>
-  struct call_befor_die: public call_befor_die_base
+  struct call_before_die : public call_before_die_base
   {
     t_scope_leave_handler m_func;
-    call_befor_die(t_scope_leave_handler f):m_func(f)
+    call_before_die(t_scope_leave_handler f):m_func(f)
     {}
-    ~call_befor_die()
+    ~call_before_die()
     {
       try { m_func(); }
       catch (...) { /* ignore */ }
@@ -107,7 +99,7 @@ namespace misc_utils
   template<class t_scope_leave_handler>
   auto_scope_leave_caller create_scope_leave_handler(t_scope_leave_handler f)
   {
-    auto_scope_leave_caller slc(new call_befor_die<t_scope_leave_handler>(f));
+    auto_scope_leave_caller slc = std::make_shared<call_before_die<t_scope_leave_handler>>(f);
     return slc;
   }
 

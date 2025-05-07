@@ -44,10 +44,6 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "WalletAPI"
 
-namespace epee {
-    unsigned int g_test_dbg_lock_sleep = 0;
-}
-
 namespace Monero {
 
 Wallet *WalletManagerImpl::createWallet(const std::string &path, const std::string &password,

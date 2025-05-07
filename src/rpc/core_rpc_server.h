@@ -41,8 +41,6 @@
 #include "p2p/net_node.h"
 #include "cryptonote_protocol/cryptonote_protocol_handler.h"
 
-// yes, epee doesn't properly use its full namespace when calling its
-// functions from macros.  *sigh*
 using namespace epee;
 
 namespace cryptonote

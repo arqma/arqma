@@ -31,7 +31,6 @@
 
 #include <sstream>
 #include <numeric>
-#include <boost/interprocess/detail/atomic.hpp>
 #include <boost/algorithm/string.hpp>
 #include "misc_language.h"
 #include "syncobj.h"
@@ -318,8 +317,8 @@ namespace cryptonote
 
     request_block_template();//lets update block template
 
-    boost::interprocess::ipcdetail::atomic_write32(&m_stop, 0);
-    boost::interprocess::ipcdetail::atomic_write32(&m_thread_index, 0);
+    m_stop = false;
+    m_thread_index = 0;
     set_is_background_mining_enabled(do_background);
     set_ignore_battery(ignore_battery);
 
@@ -351,7 +350,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------------
   void miner::send_stop_signal()
   {
-    boost::interprocess::ipcdetail::atomic_write32(&m_stop, 1);
+    m_stop = true;
   }
   //-----------------------------------------------------------------------------------------------------
   bool miner::stop()
@@ -437,7 +436,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------------
   bool miner::worker_thread()
   {
-    uint32_t th_local_index = boost::interprocess::ipcdetail::atomic_inc32(&m_thread_index);
+    const uint32_t th_local_index = m_thread_index++;
     bool rx_set = false;
 
     MLOG_SET_THREAD_NAME(std::string("[miner ") + std::to_string(th_local_index) + "]");

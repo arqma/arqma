@@ -32,8 +32,7 @@ set(serialization_sources
 
 set(serialization_headers)
 
-set(serialization_private_headers
-  json_object.h)
+arqma_find_all_headers(serialization_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(serialization
   ${serialization_private_headers})

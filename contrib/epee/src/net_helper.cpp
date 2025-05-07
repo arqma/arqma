@@ -24,12 +24,40 @@ namespace net_utils
 		// Get a list of endpoints corresponding to the server name.
 		//////////////////////////////////////////////////////////////////////////
 		boost::asio::ip::tcp::resolver resolver(ARQMA_GET_EXECUTOR(timeout));
-		boost::asio::ip::tcp::resolver::results_type results{};
-		results = resolver.resolve(boost::asio::ip::tcp::v4(), addr, port, boost::asio::ip::tcp::resolver::canonical_name);
-		if(results.empty())
-			throw boost::system::system_error{boost::asio::error::fault, "Failed to resolve " + addr};
 
-		//////////////////////////////////////////////////////////////////////////
+		bool try_ipv6 = false;
+		boost::asio::ip::tcp::resolver::results_type results{};
+		boost::system::error_code resolve_error;
+
+		try
+		{
+		  results = resolver.resolve(
+		    boost::asio::ip::tcp::v4(), addr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error
+		  );
+
+		  if (results.empty())
+		  {
+		    try_ipv6 = true;
+		  }
+		}
+		catch (const boost::system::system_error& e)
+		{
+		  if (resolve_error != boost::asio::error::host_not_found &&
+		      resolve_error != boost::asio::error::host_not_found_try_again)
+		  {
+		    throw;
+		  }
+		  try_ipv6 = true;
+		}
+
+		if (try_ipv6)
+		{
+		  results = resolver.resolve(
+		    boost::asio::ip::tcp::v6(), addr, port, boost::asio::ip::tcp::resolver::canonical_name
+		  );
+		  if (results.empty())
+		    throw boost::system::system_error{boost::asio::error::fault, "Failed to resolve " + addr};
+		}
 
 		const auto shared = std::make_shared<new_connection>(ARQMA_GET_EXECUTOR(timeout));
 		timeout.async_wait([shared] (boost::system::error_code error)

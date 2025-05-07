@@ -35,15 +35,12 @@ set(cryptonote_protocol_sources
   cryptonote_protocol_handler-base.cpp
   cryptonote_protocol_handler.inl
   core_protocol_instantiation.cpp
-  p2p_net_node_instantiation.cpp)
+  p2p_net_node_instantiation.cpp
+  levin_notify.cpp)
 
 set(cryptonote_protocol_headers)
 
-set(cryptonote_protocol_private_headers
-  block_queue.h
-  cryptonote_protocol_defs.h
-  cryptonote_protocol_handler_common.h
-  cryptonote_protocol_handler.h)
+arqma_find_all_headers(cryptonote_protocol_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(cryptonote_protocol
   ${cryptonote_protocol_private_headers})

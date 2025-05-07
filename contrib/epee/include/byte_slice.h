@@ -39,10 +39,20 @@
 namespace epee
 {
   struct byte_slice_data;
+  class byte_stream;
 
   struct release_byte_slice
   {
-    void operator()(byte_slice_data*) const noexcept;
+    static void call(void*, void* ptr) noexcept;
+    void operator()(byte_slice_data* ptr) const noexcept
+    {
+      call(nullptr, ptr);
+    }
+  };
+
+  struct release_byte_buffer
+  {
+    void operator()(std::uint8_t* buf) const noexcept;
   };
 
   /*! Inspired by slices in golang. Storage is thread-safe reference counted,
@@ -99,6 +109,8 @@ namespace epee
     //! Convert `buffer` into a slice using one allocation for shared count.
     explicit byte_slice(std::string&& buffer);
 
+    explicit byte_slice(byte_stream&& stream, bool shrink = true);
+
     byte_slice(byte_slice&& source) noexcept;
     ~byte_slice() noexcept = default;
 
@@ -140,6 +152,12 @@ namespace epee
         \throw std::out_of_range If `size() < end`.
         \return Slice starting at `data() + begin` of size `end - begin`. */
     byte_slice get_slice(std::size_t begin, std::size_t end) const;
+
+    std::unique_ptr<byte_slice_data, release_byte_slice> take_buffer() noexcept;
   };
+
+  using byte_buffer = std::unique_ptr<std::uint8_t, release_byte_buffer>;
+  byte_buffer byte_buffer_resize(byte_buffer buf, std::size_t length) noexcept;
+  byte_buffer byte_buffer_increase(byte_buffer buf, std::size_t current, std::size_t more);
 } // epee
 

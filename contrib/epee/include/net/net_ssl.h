@@ -37,6 +37,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/filesystem/path.hpp>
 #include <boost/system/error_code.hpp>
 
 #define SSL_FINGERPRINT_SIZE 32
@@ -125,6 +126,8 @@ class ssl_options_t
 
 	bool create_ec_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
 	bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
+
+	boost::system::error_code store_ssl_keys(boost::asio::ssl::context& ssl, const boost::filesystem::path& base);
 }
 }
 

@@ -1,4 +1,3 @@
-
 // Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
@@ -35,6 +34,7 @@
 #include "wipeable_string.h"
 #include "common/i18n.h"
 #include "string_tools.h"
+#include "string_tools_lexical.h"
 #include "serialization/string.h"
 #include "cryptonote_format_utils.h"
 #include "cryptonote_config.h"

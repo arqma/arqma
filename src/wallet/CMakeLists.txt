@@ -34,15 +34,7 @@ set(wallet_sources
   ringdb.cpp
   node_rpc_proxy.cpp)
 
-set(wallet_private_headers
-  wallet2.h
-  wallet_args.h
-  wallet_errors.h
-  wallet_rpc_server.h
-  wallet_rpc_server_commands_defs.h
-  wallet_rpc_server_error_codes.h
-  ringdb.h
-  node_rpc_proxy.h)
+arqma_find_all_headers(wallet_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(wallet
   ${wallet_private_headers})

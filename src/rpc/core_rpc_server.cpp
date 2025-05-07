@@ -33,6 +33,7 @@
 #include <boost/endian/conversion.hpp>
 #include <algorithm>
 #include <cstring>
+#include <boost/filesystem.hpp>
 #include "include_base_utils.h"
 #include "string_tools.h"
 using namespace epee;
@@ -104,6 +105,19 @@ namespace cryptonote
     if (!rpc_config)
       return false;
 
+    std::string bind_ip_str = rpc_config->bind_ip;
+    std::string bind_ipv6_str = rpc_config->bind_ipv6_address;
+    if (restricted)
+    {
+      const auto restricted_rpc_port_arg = cryptonote::core_rpc_server::arg_rpc_restricted_bind_port;
+      const bool has_restricted_rpc_port_arg = !command_line::is_arg_defaulted(vm, restricted_rpc_port_arg);
+      if (has_restricted_rpc_port_arg && port == command_line::get_arg(vm, restricted_rpc_port_arg))
+      {
+        bind_ip_str = rpc_config->restricted_bind_ip;
+        bind_ipv6_str = rpc_config->restricted_bind_ipv6_address;
+      }
+    }
+    const std::string data_dir{command_line::get_arg(vm, cryptonote::arg_data_dir)};
     m_bootstrap_daemon_address = command_line::get_arg(vm, arg_bootstrap_daemon_address);
     if (!m_bootstrap_daemon_address.empty())
     {
@@ -133,9 +147,33 @@ namespace cryptonote
     if (rpc_config->login)
       http_login.emplace(std::move(rpc_config->login->username), std::move(rpc_config->login->password).password());
 
-    auto rng = [](size_t len, uint8_t *ptr){ return crypto::rand(len, ptr); };
-    const bool inited = epee::http_server_impl_base<core_rpc_server, connection_context>::init(rng, std::move(port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login), std::move(rpc_config->ssl_options));
+    bool store_ssl_key = !restricted && rpc_config->ssl_options.auth.certificate_path.empty();
+    const auto ssl_base_path = (boost::filesystem::path{data_dir} / "rpc_ssl").string();
+    if (store_ssl_key && boost::filesystem::exists(ssl_base_path + ".crt"))
+    {
+      store_ssl_key = false;
+      rpc_config->ssl_options.auth = epee::net_utils::ssl_authentication_t{ssl_base_path + ".key", ssl_base_path + ".crt"};
+    }
 
+    auto rng = [](size_t len, uint8_t *ptr){ return crypto::rand(len, ptr); };
+    const bool inited = epee::http_server_impl_base<core_rpc_server, connection_context>::init(
+      rng, std::move(port),
+      std::move(bind_ip_str),
+      std::move(bind_ipv6_str),
+      std::move(rpc_config->use_ipv6),
+      std::move(rpc_config->require_ipv4),
+      std::move(rpc_config->access_control_origins),
+      std::move(http_login),
+      std::move(rpc_config->ssl_options)
+    );
+
+    if (store_ssl_key && inited)
+    {
+      const auto error = epee::net_utils::store_ssl_keys(m_net_server.get_ssl_context(), ssl_base_path);
+      if (error)
+        MFATAL("Failed to store HTTP SSL cert/key for " << (restricted ? "restricted " : "") << "RPC server: " << error.message());
+      return !bool(error);
+    }
     return inited;
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -970,6 +1008,11 @@ namespace cryptonote
       if (entry.adr.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
         res.white_list.emplace_back(entry.id, entry.adr.as<epee::net_utils::ipv4_network_address>().ip(),
             entry.adr.as<epee::net_utils::ipv4_network_address>().port(), entry.last_seen, entry.pruning_seed, entry.rpc_port);
+      else if (entry.adr.get_type_id() == epee::net_utils::ipv6_network_address::get_type_id())
+      {
+        res.white_list.emplace_back(entry.id, entry.adr.as<epee::net_utils::ipv6_network_address>().host_str(),
+            entry.adr.as<epee::net_utils::ipv6_network_address>().port(), entry.last_seen, entry.pruning_seed, entry.rpc_port);
+      }
       else
         res.white_list.emplace_back(entry.id, entry.adr.str(), entry.last_seen, entry.pruning_seed, entry.rpc_port);
     }
@@ -980,6 +1023,11 @@ namespace cryptonote
       if (entry.adr.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
         res.gray_list.emplace_back(entry.id, entry.adr.as<epee::net_utils::ipv4_network_address>().ip(),
             entry.adr.as<epee::net_utils::ipv4_network_address>().port(), entry.last_seen, entry.pruning_seed, entry.rpc_port);
+      else if (entry.adr.get_type_id() == epee::net_utils::ipv6_network_address::get_type_id())
+      {
+        res.gray_list.emplace_back(entry.id, entry.adr.as<epee::net_utils::ipv6_network_address>().host_str(),
+            entry.adr.as<epee::net_utils::ipv6_network_address>().port(), entry.last_seen, entry.pruning_seed, entry.rpc_port);
+      }
       else
         res.gray_list.emplace_back(entry.id, entry.adr.str(), entry.last_seen, entry.pruning_seed, entry.rpc_port);
     }
