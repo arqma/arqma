@@ -27,6 +27,9 @@
 #include <algorithm>
 #include <vector>
 
+namespace arqma
+{
+
 static_assert(std::numeric_limits<double>::is_iec559, "We require IEEE Standard Compliant doubles.");
 
 /* Best possible approximation of log(2) as a 'double'.  */
@@ -43,7 +46,7 @@ static_assert(std::numeric_limits<double>::is_iec559, "We require IEEE Standard 
 
 
 double
-arqma::exp2(double x)
+exp2(double x)
 {
   /* exp2(x) = exp(x*log(2)).
      If we would compute it like this, there would be rounding errors for
@@ -437,7 +440,7 @@ arqma::exp2(double x)
 #endif
 
 double
-arqma::round (double x)
+round (double x)
 {
   /* 2^(DBL_MANT_DIG-1).  */
   static const double TWO_MANT_DIG =
@@ -500,11 +503,12 @@ arqma::round (double x)
   return z;
 }
 
-uint64_t
-arqma::clamp_u64(uint64_t val, uint64_t min, uint64_t max)
+uint64_t clamp_u64(uint64_t val, uint64_t min, uint64_t max)
 {
   assert(min <= max);
   if (val < min) val = min;
   else if (val > max) val = max;
   return val;
 }
+
+} // namespace arqma

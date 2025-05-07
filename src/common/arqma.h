@@ -31,6 +31,7 @@
 #ifndef ARQMA_H
 #define ARQMA_H
 
+#include <cstdint>
 #include <string>
 
 #define ARQMA_HOUR(val) ((val) * ARQMA_MINUTES(60))
