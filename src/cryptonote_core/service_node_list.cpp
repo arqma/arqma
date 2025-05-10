@@ -50,6 +50,7 @@ extern "C" {
 #include "common/lock.h"
 #include "service_node_quorum_cop.h"
 #include "net/local_ip.h"
+#include "time_helper.h"
 
 #include "service_node_list.h"
 #include "service_node_rules.h"

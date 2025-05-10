@@ -128,8 +128,8 @@ namespace string_encoding
 		return convert_to_unicode(str_from);
 	}
 
-	inline 
-	std::string& base64_chars()
+	inline
+	const std::string& base64_chars()
 	{
 
 		static std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
