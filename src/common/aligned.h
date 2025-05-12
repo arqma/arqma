@@ -30,7 +30,10 @@
 #pragma once
 
 #ifdef __cplusplus
+#include <cstddef>
 extern "C" {
+#else
+#include <stddef.h>
 #endif
 
 void *aligned_malloc(size_t bytes, size_t align);

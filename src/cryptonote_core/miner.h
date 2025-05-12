@@ -38,6 +38,8 @@
 #include "cryptonote_basic/verification_context.h"
 #include "cryptonote_basic/difficulty.h"
 #include "math_helper.h"
+#include "syncobj.h"
+#include "cryptonote_basic/blobdatatype.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif

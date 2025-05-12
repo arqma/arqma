@@ -524,13 +524,17 @@ int main(int argc, char* argv[])
   // because unlike blockchain_storage constructor, which takes a pointer to
   // tx_memory_pool, Blockchain's constructor takes tx_memory_pool object.
   MINFO("Initializing source blockchain (BlockchainDB)");
-  std::array<Blockchain *, 2> core_storage;
+  //std::array<Blockchain *, 2> core_storage;
+  std::array<std::unique_ptr<BlockchainAndSNlistAndPool>, 2> core_storage{
+    std::make_unique<BlockchainAndSNlistAndPool>(),
+    std::make_unique<BlockchainAndSNlistAndPool>()};
+
   boost::filesystem::path paths[2];
   bool already_pruned = false;
   for (size_t n = 0; n < core_storage.size(); ++n)
   {
-    blockchain_objects_t blockchain_objects = {};
-    core_storage[n] = &(blockchain_objects.m_blockchain);
+    //blockchain_objects_t blockchain_objects = {};
+    //core_storage[n] = &(blockchain_objects.m_blockchain);
     BlockchainDB* db = new_db();
     if (db == NULL)
     {
@@ -568,19 +572,19 @@ int main(int argc, char* argv[])
 
     try
     {
-      db->open(paths[n].string(), core_storage[n]->nettype(), n == 0 ? DBF_RDONLY : 0);
+      db->open(paths[n].string(), core_storage[n]->blockchain.nettype(), n == 0 ? DBF_RDONLY : 0);
     }
     catch (const std::exception& e)
     {
       MERROR("Error opening database: " << e.what());
       return 1;
     }
-    r = core_storage[n]->init(db, net_type);
+    r = core_storage[n]->blockchain.init(db, net_type);
 
     std::string source_dest = n == 0 ? "source" : "pruned";
     CHECK_AND_ASSERT_MES(r, 1, "Failed to initialize " << source_dest << " blockchain storage");
     MINFO(source_dest << " blockchain storage initialized OK");
-    if (n == 0 && core_storage[0]->get_blockchain_pruning_seed())
+    if (n == 0 && core_storage[0]->blockchain.get_blockchain_pruning_seed())
     {
       if (!opt_copy_pruned_database)
       {
@@ -590,10 +594,10 @@ int main(int argc, char* argv[])
       already_pruned = true;
     }
   }
-  core_storage[0]->deinit();
-  delete core_storage[0];
-  core_storage[1]->deinit();
-  delete core_storage[1];
+  core_storage[0]->blockchain.deinit();
+  core_storage[0].reset(NULL);
+  core_storage[1]->blockchain.deinit();
+  core_storage[1].reset(NULL);
 
   MINFO("Pruning...");
   MDB_env *env0 = NULL, *env1 = NULL;

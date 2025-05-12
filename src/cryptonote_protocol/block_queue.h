@@ -37,6 +37,7 @@
 #include <unordered_set>
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/uuid/uuid.hpp>
+#include "crypto/crypto.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn.block_queue"

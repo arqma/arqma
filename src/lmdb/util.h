@@ -31,6 +31,7 @@
 #include <cstring>
 #include "lmdb/liblmdb/lmdb.h"
 #include <type_traits>
+#include <cassert>
 #include <utility>
 
 #include "span.h"

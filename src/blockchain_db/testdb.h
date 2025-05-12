@@ -35,6 +35,8 @@
 #include <vector>
 #include <map>
 
+#include <cryptonote_basic/cryptonote_format_utils.h>
+
 #include "blockchain_db.h"
 #include "cryptonote_core/service_node_list.h"
 
@@ -52,8 +54,6 @@ public:
   virtual std::vector<std::string> get_filenames() const override { return std::vector<std::string>(); }
   virtual bool remove_data_file(const std::string& folder) const override { return true; }
   virtual std::string get_db_name() const override { return std::string(); }
-  virtual bool lock() override { return true; }
-  virtual void unlock() override { }
   virtual bool batch_start(uint64_t batch_num_blocks=0, uint64_t batch_bytes=0) override { return true; }
   virtual void batch_stop() override {}
   virtual void batch_abort() override {}

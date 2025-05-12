@@ -34,6 +34,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <utility>
 #include <vector>
+#include "net/levin_base.h"
 #include "cryptonote_basic/blobdatatype.h"
 #include "net/enums.h"
 #include "net/net_utils_base.h"

@@ -32,6 +32,7 @@
 #pragma once
 
 #include <sstream>
+#include "serialization/serialization.h"
 #include "binary_archive.h"
 
 namespace serialization {

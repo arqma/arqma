@@ -59,10 +59,6 @@ namespace hw {
 
     #ifdef WITH_DEVICE_LEDGER
 
-    namespace {
-        bool apdu_verbose = true;
-    }
-
     void set_apdu_verbose(bool verbose);
 
     class ABPkeys {

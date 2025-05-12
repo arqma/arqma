@@ -31,11 +31,14 @@
 
 #pragma once
 
+#include <cstdint>
+#include <cstddef>
+
 #include "serialization/serialization.h"
 #include "serialization/binary_archive.h"
 #include "serialization/variant.h"
 #include "crypto/crypto.h"
-#include <boost/variant.hpp>
+#include <boost/variant/variant.hpp>
 
 #define TX_EXTRA_PADDING_MAX_COUNT               255
 #define TX_EXTRA_NONCE_MAX_COUNT                 255

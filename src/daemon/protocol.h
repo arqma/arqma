@@ -31,6 +31,10 @@
 
 #pragma once
 
+#include "cryptonote_protocol/cryptonote_protocol_handler.h"
+#include "daemon/core.h"
+#include "p2p/net_node.h"
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "daemon"
 

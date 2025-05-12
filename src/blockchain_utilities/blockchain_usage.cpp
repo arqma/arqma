@@ -154,9 +154,10 @@ int main(int argc, char* argv[])
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
   const std::string input = command_line::get_arg(vm, arg_input);
 
-  blockchain_objects_t blockchain_objects = {};
-  Blockchain *core_storage = &blockchain_objects.m_blockchain;
-  tx_memory_pool& m_mempool = blockchain_objects.m_mempool;
+  //blockchain_objects_t blockchain_objects = {};
+  //Blockchain *core_storage = &blockchain_objects.m_blockchain;
+  //tx_memory_pool& m_mempool = blockchain_objects.m_mempool;
+  std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
   BlockchainDB *db = new_db();
   if (db == NULL)
   {
@@ -170,14 +171,14 @@ int main(int argc, char* argv[])
 
   try
   {
-    db->open(filename, core_storage->nettype(), DBF_RDONLY);
+    db->open(filename, core_storage->blockchain.nettype(), DBF_RDONLY);
   }
   catch (const std::exception& e)
   {
     LOG_PRINT_L0("Error opening database: " << e.what());
     return 1;
   }
-  r = core_storage->init(db, net_type);
+  r = core_storage->blockchain.init(db, net_type);
 
   CHECK_AND_ASSERT_MES(r, 1, "Failed to initialize source blockchain storage");
   LOG_PRINT_L0("Source blockchain storage initialized OK");
@@ -189,10 +190,10 @@ int main(int argc, char* argv[])
   std::unordered_map<uint64_t,uint64_t> indices;
 
   LOG_PRINT_L0("Reading blockchain from " << input);
-  core_storage->for_all_transactions([&](const crypto::hash &hash, const cryptonote::transaction &tx)->bool
+  core_storage->blockchain.for_all_transactions([&](const crypto::hash &hash, const cryptonote::transaction &tx)->bool
   {
     const bool coinbase = tx.vin.size() == 1 && tx.vin[0].type() == typeid(txin_gen);
-    const uint64_t height = core_storage->get_db().get_tx_block_height(hash);
+    const uint64_t height = core_storage->blockchain.get_db().get_tx_block_height(hash);
 
     // create new outputs
     for (const auto &out: tx.vout)
