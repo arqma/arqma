@@ -46,7 +46,7 @@
 #define CTHR_THREAD_RTYPE	unsigned __stdcall
 #define CTHR_THREAD_RETURN _endthreadex(0); return 0;
 #define CTHR_THREAD_CREATE(thr, func, arg) ((thr = (HANDLE)_beginthreadex(0, 0, func, arg, 0, 0)) != 0L)
-#define CTHR_THREAD_JOIN(thr) do { WaitForSigleObject(thr, INFINITE); CloseHandle(thr); } while(0)
+#define CTHR_THREAD_JOIN(thr) do { WaitForSingleObject(thr, INFINITE); CloseHandle(thr); } while(0)
 #define CTHR_THREAD_CLOSE(thr) CloseHandle((HANDLE)thr);
 
 #else
