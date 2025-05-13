@@ -61,7 +61,7 @@ bool opt_stagenet = true;
 // number of blocks per batch transaction
 // adjustable through command-line argument according to available RAM
 #if ARCH_WIDTH != 32
-uint64_t db_batch_size = 20000;
+uint64_t db_batch_size = 2000;
 #else
 // set a lower default batch size, pending possible LMDB issue with large transaction size
 uint64_t db_batch_size = 100;
@@ -69,7 +69,7 @@ uint64_t db_batch_size = 100;
 
 // when verifying, use a smaller default batch size so progress is more
 // frequently saved
-uint64_t db_batch_size_verify = 5000;
+uint64_t db_batch_size_verify = 500;
 
 std::string refresh_string = "\r                                    \r";
 }

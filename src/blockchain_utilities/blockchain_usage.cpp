@@ -94,25 +94,21 @@ int main(int argc, char* argv[])
   po::options_description desc_cmd_sett("Command line options and settings options");
   const command_line::arg_descriptor<std::string> arg_log_level  = {"log-level",  "0-4 or categories", ""};
   const command_line::arg_descriptor<bool> arg_rct_only  = {"rct-only", "Only work on ringCT outputs", false};
-  const command_line::arg_descriptor<std::string> arg_input = {"input", ""};
 
+  command_line::add_arg(desc_cmd_sett, cryptonote::arg_data_dir);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_testnet_on);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_stagenet_on);
   command_line::add_arg(desc_cmd_sett, arg_log_level);
   command_line::add_arg(desc_cmd_sett, arg_rct_only);
-  command_line::add_arg(desc_cmd_sett, arg_input);
   command_line::add_arg(desc_cmd_only, command_line::arg_help);
 
   po::options_description desc_options("Allowed options");
   desc_options.add(desc_cmd_only).add(desc_cmd_sett);
 
-  po::positional_options_description positional_options;
-  positional_options.add(arg_input.name, -1);
-
   po::variables_map vm;
   bool r = command_line::handle_error_helper(desc_options, [&]()
   {
-    auto parser = po::command_line_parser(argc, argv).options(desc_options).positional(positional_options);
+    auto parser = po::command_line_parser(argc, argv).options(desc_options);
     po::store(parser.run(), vm);
     po::notify(vm);
     return true;
@@ -135,6 +131,7 @@ int main(int argc, char* argv[])
 
   LOG_PRINT_L0("Starting...");
 
+  std::string opt_data_dir = command_line::get_arg(vm, cryptonote::arg_data_dir);
   bool opt_testnet = command_line::get_arg(vm, cryptonote::arg_testnet_on);
   bool opt_stagenet = command_line::get_arg(vm, cryptonote::arg_stagenet_on);
   network_type net_type = opt_testnet ? TESTNET : opt_stagenet ? STAGENET : MAINNET;
@@ -152,8 +149,6 @@ int main(int argc, char* argv[])
   // because unlike blockchain_storage constructor, which takes a pointer to
   // tx_memory_pool, Blockchain's constructor takes tx_memory_pool object.
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  const std::string input = command_line::get_arg(vm, arg_input);
-
   //blockchain_objects_t blockchain_objects = {};
   //Blockchain *core_storage = &blockchain_objects.m_blockchain;
   //tx_memory_pool& m_mempool = blockchain_objects.m_mempool;
@@ -166,7 +161,7 @@ int main(int argc, char* argv[])
   }
   LOG_PRINT_L0("database: LMDB");
 
-  const std::string filename = input;
+  const std::string filename = (boost::filesystem::path(opt_data_dir) / db->get_db_name()).string();
   LOG_PRINT_L0("Loading blockchain from folder " << filename << " ...");
 
   try
@@ -189,7 +184,7 @@ int main(int argc, char* argv[])
   std::unordered_map<output_data, std::list<reference>> outputs;
   std::unordered_map<uint64_t,uint64_t> indices;
 
-  LOG_PRINT_L0("Reading blockchain from " << input);
+  LOG_PRINT_L0("Reading blockchain from " << filename);
   core_storage->blockchain.for_all_transactions([&](const crypto::hash &hash, const cryptonote::transaction &tx)->bool
   {
     const bool coinbase = tx.vin.size() == 1 && tx.vin[0].type() == typeid(txin_gen);

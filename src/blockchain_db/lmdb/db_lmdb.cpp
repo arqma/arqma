@@ -63,6 +63,7 @@
 
 using epee::string_tools::pod_to_hex;
 using namespace crypto;
+using namespace boost::endian;
 
 enum struct lmdb_version
 {
@@ -2415,14 +2416,14 @@ static_assert(sizeof(blob_header) == 8, "blob_header layout is unexpected, possi
 static blob_header write_little_endian_blob_header(blob_type type, uint32_t size)
 {
   blob_header result = {type, size};
-  boost::endian::native_to_little_inplace(result.size);
+  native_to_little_inplace(result.size);
   return result;
 }
 
 static blob_header native_endian_blob_header(const blob_header *header)
 {
   blob_header result = {header->type, header->size};
-  boost::endian::little_to_native_inplace(result.size);
+  little_to_native_inplace(result.size);
   return result;
 }
 
@@ -3396,26 +3397,28 @@ std::vector<transaction> BlockchainLMDB::get_tx_list(const std::vector<crypto::h
   return v;
 }
 
-uint64_t BlockchainLMDB::get_tx_block_height(const crypto::hash& h) const
+std::vector<uint64_t> BlockchainLMDB::get_tx_block_heights(const std::vector<crypto::hash>& hs) const
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
+  std::vector<uint64_t> result;
+  result.reserve(hs.size());
 
   TXN_PREFIX_RDONLY();
   RCURSOR(tx_indices);
 
-  MDB_val_set(v, h);
-  auto get_result = mdb_cursor_get(m_cur_tx_indices, (MDB_val *)&zerokval, &v, MDB_GET_BOTH);
-  if (get_result == MDB_NOTFOUND)
+  for (const auto &h : hs)
   {
-    throw1(TX_DNE(std::string("tx_data_t with hash ").append(epee::string_tools::pod_to_hex(h)).append(" not found in db").c_str()));
+    MDB_val_set(v, h);
+    auto get_result = mdb_cursor_get(m_cur_tx_indices, (MDB_val *)&zerokval, &v, MDB_GET_BOTH);
+    if (get_result == MDB_NOTFOUND)
+      result.push_back(std::numeric_limits<uint64_t>::max());
+    else if (get_result)
+      throw0(DB_ERROR(lmdb_error("DB error attempting to fetch tx height from hash", get_result)));
+    else
+      result.push_back(reinterpret_cast<txindex *>(v.mv_data)->data.block_id);
   }
-  else if (get_result)
-    throw0(DB_ERROR(lmdb_error("DB error attempting to fetch tx height from hash", get_result).c_str()));
-
-  txindex *tip = (txindex *)v.mv_data;
-  uint64_t ret = tip->data.block_id;
-  return ret;
+  return result;
 }
 
 uint64_t BlockchainLMDB::get_num_outputs(const uint64_t& amount) const
@@ -4088,15 +4091,15 @@ void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
   header.block_hash = checkpoint.block_hash;
   header.num_signatures = checkpoint.signatures.size();
 
-  boost::endian::native_to_little_inplace(header.height);
-  boost::endian::native_to_little_inplace(header.num_signatures);
+  native_to_little_inplace(header.height);
+  native_to_little_inplace(header.num_signatures);
 
   size_t const MAX_BYTES_REQUIRED = sizeof(header) + (sizeof(*checkpoint.signatures.data()) * service_nodes::CHECKPOINT_QUORUM_SIZE);
   uint8_t buffer[MAX_BYTES_REQUIRED];
 
-  size_t const bytes_for_signatures = sizeof(*checkpoint.signatures.data()) * header.num_signatures;
+  size_t const bytes_for_signatures = sizeof(*checkpoint.signatures.data()) * checkpoint.signatures.size();
   size_t const actual_bytes_used = sizeof(header) + bytes_for_signatures;
-  if(actual_bytes_used > MAX_BYTES_REQUIRED)
+  if (actual_bytes_used > MAX_BYTES_REQUIRED)
   {
     LOG_PRINT_L0("Unexpected pre-calculated maximum number of bytes. " << MAX_BYTES_REQUIRED << " is insufficient to store signatures. Requiring: " << actual_bytes_used << " bytes");
     assert(actual_bytes_used <= MAX_BYTES_REQUIRED);
@@ -4164,9 +4167,9 @@ static checkpoint_t convert_mdb_val_to_checkpoint(MDB_val const value)
   auto const *header  = static_cast<blk_checkpoint_header const *>(value.mv_data);
   auto const *signatures = reinterpret_cast<service_nodes::voter_to_signature *>(static_cast<uint8_t *>(value.mv_data) + sizeof(*header));
 
-  auto num_sigs = boost::endian::little_to_native(header->num_signatures);
+  auto num_sigs = little_to_native(header->num_signatures);
 
-  result.height     = boost::endian::little_to_native(header->height);
+  result.height     = little_to_native(header->height);
   result.type       = (num_sigs > 0) ? checkpoint_type::service_node : checkpoint_type::hardcoded;
   result.block_hash = header->block_hash;
   result.signatures.insert(result.signatures.end(), signatures, signatures + num_sigs);
@@ -6041,23 +6044,21 @@ struct service_node_proof_serialized
 {
   service_node_proof_serialized() = default;
   service_node_proof_serialized(const service_nodes::proof_info &info)
-    : timestamp{info.timestamp}, ip{info.public_ip}, storage_port{info.storage_port}, version{info.version[0], info.version[1], info.version[2]}, pubkey_ed25519{info.pubkey_ed25519}
+    : timestamp{native_to_little(info.timestamp)}
+    , ip{native_to_little(info.public_ip)}
+    , storage_port{native_to_little(info.storage_port)}
+    , version{native_to_little(info.version[0]), native_to_little(info.version[1]), native_to_little(info.version[2])}
+    , pubkey_ed25519{info.pubkey_ed25519}
   {
-    boost::endian::native_to_little_inplace(timestamp);
-    boost::endian::native_to_little_inplace(ip);
-    boost::endian::native_to_little_inplace(storage_port);
-    boost::endian::native_to_little_inplace(version[0]);
-    boost::endian::native_to_little_inplace(version[1]);
-    boost::endian::native_to_little_inplace(version[2]);
   }
   void update(service_nodes::proof_info &info) const
   {
-    info.timestamp = boost::endian::little_to_native(timestamp);
+    info.timestamp = little_to_native(timestamp);
     if (info.timestamp > info.effective_timestamp)
       info.effective_timestamp = info.timestamp;
-    info.public_ip = boost::endian::little_to_native(ip);
+    info.public_ip = little_to_native(ip);
     for (size_t i = 0; i < info.version.size(); i++)
-      info.version[i] = boost::endian::little_to_native(version[i]);
+      info.version[i] = little_to_native(version[i]);
     info.update_pubkey(pubkey_ed25519);
   }
   operator service_nodes::proof_info() const
@@ -6101,14 +6102,15 @@ void BlockchainLMDB::set_service_node_proof(const crypto::public_key &pubkey, co
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
 
-  mdb_txn_cursors *m_cursors = &m_wcursors;
-  CURSOR(service_node_proofs);
   service_node_proof_serialized data{proof};
 
+  TXN_BLOCK_PREFIX(0);
   MDB_val k{sizeof(pubkey), (void*) &pubkey}, v{sizeof(data), &data};
-  int result = mdb_cursor_put(m_cursors->service_node_proofs, &k, &v, 0);
+  int result = mdb_put(*txn_ptr, m_service_node_proofs, &k, &v, 0);
   if (result)
     throw0(DB_ERROR(lmdb_error("Failed to add service node latest proof data to db transaction: ", result)));
+
+  TXN_BLOCK_POSTFIX_SUCCESS();
 }
 
 std::unordered_map<crypto::public_key, service_nodes::proof_info> BlockchainLMDB::get_all_service_node_proofs() const

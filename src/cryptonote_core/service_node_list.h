@@ -213,21 +213,24 @@ namespace service_nodes
 
   struct key_image_blacklist_entry
   {
-    uint8_t version{1};
+    enum struct version_t : uint8_t { version_0, version_1, count, };
+    version_t version{version_t::version_1};
     crypto::key_image key_image;
-    uint64_t unlock_height;
+    uint64_t unlock_height = 0;
+    uint64_t amount = 0;
 
     key_image_blacklist_entry() = default;
-    key_image_blacklist_entry(uint8_t version, const crypto::key_image &key_image, uint64_t unlock_height)
-      : version{version}, key_image{key_image}, unlock_height{unlock_height} {}
+    key_image_blacklist_entry(version_t version, const crypto::key_image &key_image, uint64_t unlock_height, uint64_t amount)
+      : version{version}, key_image{key_image}, unlock_height{unlock_height}, amount(amount) {}
 
     bool operator==(const key_image_blacklist_entry &other) const { return key_image == other.key_image; }
     bool operator==(const crypto::key_image &image) const { return key_image == image; }
 
     BEGIN_SERIALIZE_OBJECT()
-      VARINT_FIELD(version)
+      ENUM_FIELD(version, version < version_t::count)
       FIELD(key_image)
       VARINT_FIELD(unlock_height)
+      VARINT_FIELD(amount)
     END_SERIALIZE()
   };
 

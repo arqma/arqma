@@ -335,7 +335,7 @@ static void rx_init_dataset(size_t max_threads) {
       local_abort("Couldn't start RandomARQ seed thread");
     }
   }
-  rx_seedthread(&si[n1]);
+  randomx_init_dataset(main_dataset, si[n1].si_cache, si[n1].si_start, si[n1].si_count);
   for (size_t i = 0; i < n1; ++i) CTHR_THREAD_JOIN(st[i]);
   CTHR_RWLOCK_UNLOCK_READ(main_cache_lock);
 
@@ -405,6 +405,7 @@ void rx_set_main_seedhash(const char *seedhash, size_t max_dataset_init_threads)
   if (!CTHR_THREAD_CREATE(t, rx_set_main_seedhash_thread, info)) {
     local_abort("Couldn't start RandomARQ seed thread");
   }
+  CTHR_THREAD_CLOSE(t);
 }
 
 void rx_slow_hash(const char *seedhash, const void *data, size_t length, char *result_hash) {
@@ -506,11 +507,11 @@ void rx_set_miner_thread(uint32_t value, size_t max_dataset_init_threads) {
   CTHR_RWLOCK_UNLOCK_WRITE(main_dataset_lock);
 }
 
-uint32_t rx_get_miner_thread() {
+uint32_t rx_get_miner_thread(void) {
   return miner_thread;
 }
 
-void rx_slow_hash_allocate_state() {}
+void rx_slow_hash_allocate_state(void) {}
 
 static void rx_destroy_vm(randomx_vm** vm) {
   if (*vm) {
@@ -519,7 +520,7 @@ static void rx_destroy_vm(randomx_vm** vm) {
   }
 }
 
-void rx_slow_hash_free_state() {
+void rx_slow_hash_free_state(void) {
   rx_destroy_vm(&main_vm_full);
   rx_destroy_vm(&main_vm_light);
   rx_destroy_vm(&secondary_vm_light);

@@ -1352,7 +1352,9 @@ public:
    *
    * @return the height of the transaction's block
    */
-  virtual uint64_t get_tx_block_height(const crypto::hash& h) const = 0;
+  uint64_t get_tx_block_height(const crypto::hash& h) const;
+
+  virtual std::vector<uint64_t> get_tx_block_heights(const std::vector<crypto::hash> &h) const = 0;
 
   // returns the total number of outputs of amount <amount>
   /**

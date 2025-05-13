@@ -2952,9 +2952,11 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     {
       std::string key_image;
       uint64_t unlock_height;
+      uint64_t amount;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(key_image)
         KV_SERIALIZE(unlock_height)
+        KV_SERIALIZE(amount)
       END_KV_SERIALIZE_MAP()
     };
 

@@ -542,6 +542,7 @@ namespace service_nodes
             key_image_blacklist_entry &entry = key_image_blacklist.back();
             entry.key_image = contribution.key_image;
             entry.unlock_height = block_height + staking_num_lock_blocks(nettype);
+            entry.amount = contribution.amount;
           }
         }
 
@@ -1762,7 +1763,6 @@ namespace service_nodes
   {
     std::unique_lock<cryptonote::Blockchain> lock{blockchain};
     auto &db = blockchain.get_db();
-    cryptonote::db_wtxn_guard guard{db};
     db.set_service_node_proof(pubkey, *this);
   }
 
