@@ -76,6 +76,7 @@
 #include "QrCode.hpp"
 #include "config/cli_wallet_helper.h"
 #include "int-util.h"
+#include "readline_suspend.h"
 #include "common/threadpool.h"
 #include "daemonizer/posix_fork.h"
 
@@ -83,10 +84,6 @@
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
 #include <fcntl.h>
-#endif
-
-#ifdef HAVE_READLINE
-#include "readline_buffer.h"
 #endif
 
 using namespace std;
@@ -163,9 +160,7 @@ namespace
 
   std::string input_line(const std::string& prompt, bool yesno = false)
   {
-#ifdef HAVE_READLINE
     rdln::suspend_readline pause_readline;
-#endif
     std::cout << prompt;
     if (yesno)
       std::cout << " (Y/Yes/N/No)";
@@ -183,9 +178,7 @@ namespace
 
   epee::wipeable_string input_secure_line(const char *prompt)
   {
-#ifdef HAVE_READLINE
     rdln::suspend_readline pause_readline;
-#endif
     auto pwd_container = tools::password_container::prompt(false, prompt, false);
     if (!pwd_container)
     {
@@ -201,9 +194,7 @@ namespace
 
   boost::optional<tools::password_container> password_prompter(const char *prompt, bool verify)
   {
-#ifdef HAVE_READLINE
     rdln::suspend_readline pause_readline;
-#endif
     auto pwd_container = tools::password_container::prompt(verify, prompt);
     if (!pwd_container)
     {
@@ -572,7 +563,7 @@ bool simple_wallet::viewkey(const std::vector<std::string> &args/* = std::vector
 {
   SCOPED_WALLET_UNLOCK();
   // don't log
-  PAUSE_READLINE();
+  rdln::suspend_readline pause_readline;
   if (m_wallet->key_on_device()) {
     std::cout << "secret: On device. Not available" << std::endl;
   } else {
@@ -594,7 +585,7 @@ bool simple_wallet::spendkey(const std::vector<std::string> &args/* = std::vecto
   }
   SCOPED_WALLET_UNLOCK();
   // don't log
-  PAUSE_READLINE();
+  rdln::suspend_readline pause_readline;
   if (m_wallet->key_on_device()) {
     std::cout << "secret: On device. Not available" << std::endl;
   } else {
@@ -3740,7 +3731,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     recovery_val = m_wallet->generate(m_wallet_file, std::move(rc.second).password(), recovery_key, recover, two_random, create_address_file);
     message_writer(console_color_white, true) << tr("Generated new wallet: ")
       << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
-    PAUSE_READLINE();
+    rdln::suspend_readline pause_readline;
     std::cout << tr("View key: ");
     print_secret_key(m_wallet->get_account().get_keys().m_view_secret_key);
     putchar('\n');
@@ -4334,9 +4325,7 @@ boost::optional<epee::wipeable_string> simple_wallet::on_get_password(const char
     return boost::none;
   }
 
-#ifdef HAVE_READLINE
   rdln::suspend_readline pause_readline;
-#endif
   std::string msg = tr("Enter password");
   if (reason && *reason)
     msg += std::string(" (") + reason + ")";
@@ -4367,10 +4356,7 @@ bool simple_wallet::refresh_main(uint64_t start_height, enum ResetType reset, bo
     m_wallet->rescan_blockchain(reset == ResetHard, false, reset == ResetSoftKeepKI);
   }
 
-#ifdef HAVE_READLINE
   rdln::suspend_readline pause_readline;
-#endif
-
   message_writer() << tr("Starting refresh...");
 
   uint64_t fetched_blocks = 0;
@@ -4552,7 +4538,7 @@ bool simple_wallet::show_incoming_transfers(const std::vector<std::string>& args
 
   const uint64_t blockchain_height = m_wallet->get_blockchain_current_height();
 
-  PAUSE_READLINE();
+  rdln::suspend_readline pause_readline;
 
   std::set<uint32_t> subaddr_indices;
   if (local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
@@ -4646,7 +4632,7 @@ bool simple_wallet::show_payments(const std::vector<std::string> &args)
 
   LOCK_IDLE_SCOPE();
 
-  PAUSE_READLINE();
+  rdln::suspend_readline pause_readline;
 
   message_writer() << boost::format("%68s%68s%12s%21s%16s%16s") %
     tr("payment") % tr("transaction") % tr("height") % tr("amount") % tr("unlock time") % tr("addr index");
@@ -4954,6 +4940,204 @@ static bool locked_blocks_arg_valid(const std::string& arg, uint64_t& duration)
   return true;
 }
 //----------------------------------------------------------------------------------------------------
+static bool parse_subaddr_indices_and_priority(tools::wallet2 &wallet, std::vector<std::string> &args, std::set<uint32_t> &subaddr_indices, uint32_t &priority)
+{
+  if (args.size() > 0 && args[0].substr(0, 6) == "index=")
+  {
+    std::string parse_subaddr_err;
+    if (!tools::parse_subaddress_indices(args[0], subaddr_indices, &parse_subaddr_err))
+    {
+      fail_msg_writer() << parse_subaddr_err;
+      return false;
+    }
+    args.erase(args.begin());
+  }
+
+  if (args.size() > 0 && tools::parse_priority(args[0], priority))
+    args.erase(args.begin());
+
+  priority = wallet.adjust_priority(priority);
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
+bool simple_wallet::confirm_and_send_tx(std::vector<cryptonote::address_parse_info> const &dests, std::vector<tools::wallet2::pending_tx> &ptx_vector, uint64_t lock_time_in_blocks, uint64_t unlock_block)
+{
+  if (ptx_vector.empty())
+    return false;
+
+  if (m_wallet->confirm_backlog())
+  {
+    std::stringstream prompt;
+    double worst_fee_per_byte = std::numeric_limits<double>::max();
+    for (size_t n = 0; n < ptx_vector.size(); ++n)
+    {
+      const uint64_t blob_size = cryptonote::tx_to_blob(ptx_vector[n].tx).size();
+      const double fee_per_byte = ptx_vector[n].fee / (double)blob_size;
+      if (fee_per_byte < worst_fee_per_byte)
+      {
+        worst_fee_per_byte = fee_per_byte;
+      }
+    }
+    try
+    {
+      std::vector<std::pair<uint64_t, uint64_t>> nblocks = m_wallet->estimate_backlog({std::make_pair(worst_fee_per_byte, worst_fee_per_byte)});
+      if (nblocks.size() != 1)
+      {
+        prompt << "Internal error checking for backlog. " << tr("Is this ok anyway?");
+      }
+      else
+      {
+        if (nblocks[0].first > m_wallet->get_confirm_backlog_threshold())
+          prompt << (boost::format(tr("There is currently a %u block backlog at that fee level. Is this okay?")) % nblocks[0].first).str();
+      }
+    }
+    catch (const std::exception &e)
+    {
+      prompt << tr("Failed to check for backlog: ") << e.what() << ENDL << tr("Is this okay anyway?");
+    }
+
+    std::string prompt_str = prompt.str();
+    if (!prompt_str.empty())
+    {
+      std::string accepted = input_line(prompt_str, true);
+      if (std::cin.eof())
+        return false;
+      if (!command_line::is_yes(accepted))
+      {
+        fail_msg_writer() << tr("transaction cancelled.");
+        return false;
+      }
+    }
+  }
+
+  if (!prompt_if_old(ptx_vector))
+  {
+    fail_msg_writer() << tr("transaction cancelled.");
+    return false;
+  }
+
+  if (m_wallet->always_confirm_transfers() || ptx_vector.size() > 1)
+  {
+    uint64_t total_sent = 0;
+    uint64_t total_fee = 0;
+    uint64_t dust_not_in_fee = 0;
+    uint64_t dust_in_fee = 0;
+    uint64_t change = 0;
+    for (size_t n = 0; n < ptx_vector.size(); ++n)
+    {
+      total_fee += ptx_vector[n].fee;
+      for (auto i : ptx_vector[n].selected_transfers)
+        total_sent += m_wallet->get_transfer_details(i).amount();
+      total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
+      change += ptx_vector[n].change_dts.amount;
+
+      if (ptx_vector[n].dust_added_to_fee)
+        dust_in_fee += ptx_vector[n].dust;
+      else
+        dust_not_in_fee += ptx_vector[n].dust;
+    }
+
+    std::stringstream prompt;
+    std::set<uint32_t> subaddr_indices;
+    for (size_t n = 0; n < ptx_vector.size(); ++n)
+    {
+      prompt << tr("\nTransaction ") << (n + 1) << "/" << ptx_vector.size() << ":\n";
+      subaddr_indices.clear();
+      for (uint32_t i : ptx_vector[n].construction_data.subaddr_indices)
+        subaddr_indices.insert(i);
+      for (uint32_t i : subaddr_indices)
+        prompt << boost::format(tr("Spending from address index %d\n")) % i;
+      if (subaddr_indices.size() > 1)
+        prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
+    }
+    prompt << boost::format(tr("Sending %s.  ")) % print_money(total_sent);
+    if (ptx_vector.size() > 1)
+    {
+      prompt << boost::format(tr("Your transaction needs to be split into %llu transactions.  "
+        "This will result in a transaction fee being applied to each transaction, for a total fee of %s"))
+        % ((unsigned long long)ptx_vector.size()) % print_money(total_fee);
+    }
+    else
+    {
+      prompt << boost::format(tr("The transaction fee is %s")) % print_money(total_fee);
+    }
+    if (dust_in_fee != 0) prompt << boost::format(tr(", of which %s is dust from change")) % print_money(dust_in_fee);
+    if (dust_not_in_fee != 0) prompt << tr(".") << ENDL << boost::format(tr("A total of %s from dust change will be sent to dust address")) % print_money(dust_not_in_fee);
+
+    if (lock_time_in_blocks > 0)
+    {
+      float days = lock_time_in_blocks / 720.0f;
+      prompt << boost::format(tr(".\nThis transaction (including %s change) woll unlock on block %llu, in approximately %s days (assuming 2 minutes per block)")) % cryptonote::print_money(change) % ((unsigned long long)unlock_block) % days;
+    }
+
+    if (m_wallet->print_ring_members())
+    {
+      if (!print_ring_members(ptx_vector, prompt))
+        return false;
+    }
+    bool default_ring_size = true;
+    for (const auto &ptx : ptx_vector)
+    {
+      for (const auto &vin : ptx.tx.vin)
+      {
+        if (vin.type() == typeid(txin_to_key))
+        {
+          const txin_to_key& in_to_key = boost::get<txin_to_key>(vin);
+          if (in_to_key.key_offsets.size() != config::tx_settings::tx_mixin + 1)
+            default_ring_size = false;
+        }
+      }
+    }
+    if (m_wallet->confirm_non_default_ring_size() && !default_ring_size)
+    {
+      prompt << tr("WARNING: this is non default ring size, which may harm your privacy. Default is recommended.");
+    }
+    prompt << ENDL << tr("Is this okay?");
+
+    std::string accepted = input_line(prompt.str(), true);
+    if (std::cin.eof())
+      return false;
+    if (!command_line::is_yes(accepted))
+    {
+      fail_msg_writer() << tr("transaction cancelled.");
+      return false;
+    }
+  }
+
+  if (m_wallet->multisig())
+  {
+    bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_arqma_tx");
+    if (!r)
+    {
+      fail_msg_writer() << tr("Failed to write transaction(s) to file");
+      return false;
+    }
+    else
+    {
+      success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_arqma_tx";
+    }
+  }
+  else if (m_wallet->watch_only())
+  {
+    bool r = m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx");
+    if (!r)
+    {
+      fail_msg_writer() << tr("Failed to write transaction(s) to file");
+      return false;
+    }
+    else
+    {
+      success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "unsigned_arqma_tx";
+    }
+  }
+  else
+  {
+    commit_or_save(ptx_vector, m_do_not_relay);
+  }
+
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
 bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::string> &args_)
 {
 //  "transfer [index=<N1>[,<N2>,...]] [<priority>] <address> <amount> [<payment_id>]"
@@ -4961,25 +5145,10 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     return true;
 
   std::vector<std::string> local_args = args_;
-
-  std::set<uint32_t> subaddr_indices;
-  if (local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
-  {
-    std::string parse_subaddr_err;
-    if(!tools::parse_subaddress_indices(local_args[0], subaddr_indices, &parse_subaddr_err))
-    {
-      fail_msg_writer() << parse_subaddr_err;
-      return true;
-    }
-    local_args.erase(local_args.begin());
-  }
-
   uint32_t priority = 0;
-  if (local_args.size() > 0 && tools::parse_priority(local_args[0], priority))
-    local_args.erase(local_args.begin());
-
-  priority = m_wallet->adjust_priority(priority);
-  size_t fake_outs_count = config::tx_settings::tx_mixin;
+  std::set<uint32_t> subaddr_indices = {};
+  if(!parse_subaddr_indices_and_priority(*m_wallet, local_args, subaddr_indices, priority))
+    return false;
 
   const size_t min_args = (transfer_type == TransferLocked) ? 2 : 1;
   if(local_args.size() < min_args)
@@ -5166,7 +5335,15 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
       unlock_block = bc_height + locked_blocks;
     }
 
-    ptx_vector = m_wallet->create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices);
+    boost::optional<uint8_t> hard_fork_version = m_wallet->get_hard_fork_version();
+    if (!hard_fork_version)
+    {
+      fail_msg_writer() << tools::ERR_MSG_NETWORK_VERSION_QUERY_FAILED;
+      return false;
+    }
+
+    arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::standard);
+    ptx_vector = m_wallet->create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, tx_params);
 
     if (ptx_vector.empty())
     {
@@ -5174,176 +5351,8 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
       return true;
     }
 
-    // if we need to check for backlog, check the worst case tx
-    if (m_wallet->confirm_backlog())
-    {
-      std::stringstream prompt;
-      double worst_fee_per_byte = std::numeric_limits<double>::max();
-      for (size_t n = 0; n < ptx_vector.size(); ++n)
-      {
-        const uint64_t blob_size = cryptonote::tx_to_blob(ptx_vector[n].tx).size();
-        const double fee_per_byte = ptx_vector[n].fee / (double)blob_size;
-        if (fee_per_byte < worst_fee_per_byte)
-        {
-          worst_fee_per_byte = fee_per_byte;
-        }
-      }
-      try
-      {
-        std::vector<std::pair<uint64_t, uint64_t>> nblocks = m_wallet->estimate_backlog({std::make_pair(worst_fee_per_byte, worst_fee_per_byte)});
-        if (nblocks.size() != 1)
-        {
-          prompt << "Internal error checking for backlog. " << tr("Is this okay anyway?");
-        }
-        else
-        {
-          if (nblocks[0].first > m_wallet->get_confirm_backlog_threshold())
-            prompt << (boost::format(tr("There is currently a %u block backlog at that fee level. Is this okay?")) % nblocks[0].first).str();
-        }
-      }
-      catch (const std::exception& e)
-      {
-        prompt << tr("Failed to check for backlog: ") << e.what() << ENDL << tr("Is this okay anyway?");
-      }
-
-      std::string prompt_str = prompt.str();
-      if (!prompt_str.empty())
-      {
-        std::string accepted = input_line(prompt_str, true);
-        if (std::cin.eof())
-          return true;
-        if (!command_line::is_yes(accepted))
-        {
-          fail_msg_writer() << tr("transaction cancelled.");
-
-          return true;
-        }
-      }
-    }
-
-    if (!prompt_if_old(ptx_vector))
-    {
-      fail_msg_writer() << tr("transaction cancelled.");
+    if (!confirm_and_send_tx(dsts_info, ptx_vector, locked_blocks, unlock_block))
       return false;
-    }
-
-    // if more than one tx necessary, prompt user to confirm
-    if (m_wallet->always_confirm_transfers() || ptx_vector.size() > 1)
-    {
-        uint64_t total_sent = 0;
-        uint64_t total_fee = 0;
-        uint64_t dust_not_in_fee = 0;
-        uint64_t dust_in_fee = 0;
-        uint64_t change = 0;
-        for (size_t n = 0; n < ptx_vector.size(); ++n)
-        {
-          total_fee += ptx_vector[n].fee;
-          for (auto i: ptx_vector[n].selected_transfers)
-            total_sent += m_wallet->get_transfer_details(i).amount();
-          total_sent -= ptx_vector[n].change_dts.amount + ptx_vector[n].fee;
-          change += ptx_vector[n].change_dts.amount;
-
-          if (ptx_vector[n].dust_added_to_fee)
-            dust_in_fee += ptx_vector[n].dust;
-          else
-            dust_not_in_fee += ptx_vector[n].dust;
-        }
-
-        std::stringstream prompt;
-        for (size_t n = 0; n < ptx_vector.size(); ++n)
-        {
-          prompt << tr("\nTransaction ") << (n + 1) << "/" << ptx_vector.size() << ":\n";
-          subaddr_indices.clear();
-          for (uint32_t i : ptx_vector[n].construction_data.subaddr_indices)
-            subaddr_indices.insert(i);
-          for (uint32_t i : subaddr_indices)
-            prompt << boost::format(tr("Spending from address index %d\n")) % i;
-          if (subaddr_indices.size() > 1)
-            prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
-        }
-        prompt << boost::format(tr("Sending %s.  ")) % print_money(total_sent);
-        if (ptx_vector.size() > 1)
-        {
-          prompt << boost::format(tr("Your transaction needs to be split into %llu transactions.  "
-            "This will result in a transaction fee being applied to each transaction, for a total fee of %s")) %
-            ((unsigned long long)ptx_vector.size()) % print_money(total_fee);
-        }
-        else
-        {
-          prompt << boost::format(tr("The transaction fee is %s")) %
-            print_money(total_fee);
-        }
-        if (dust_in_fee != 0) prompt << boost::format(tr(", of which %s is dust from change")) % print_money(dust_in_fee);
-        if (dust_not_in_fee != 0)  prompt << tr(".") << ENDL << boost::format(tr("A total of %s from dust change will be sent to dust address")) % print_money(dust_not_in_fee);
-        if (transfer_type == TransferLocked)
-        {
-          float days = locked_blocks / 720.0f;
-          prompt << boost::format(tr(".\nThis transaction (including %s change) will unlock on block %llu, in approximately %s days (assuming 2 minutes per block)")) % cryptonote::print_money(change) % ((unsigned long long)unlock_block) % days;
-        }
-        if (m_wallet->print_ring_members())
-        {
-          if (!print_ring_members(ptx_vector, prompt))
-            return true;
-        }
-        bool default_ring_size = true;
-        for (const auto &ptx: ptx_vector)
-        {
-          for (const auto &vin: ptx.tx.vin)
-          {
-            if (vin.type() == typeid(txin_to_key))
-            {
-              const txin_to_key& in_to_key = boost::get<txin_to_key>(vin);
-              if (in_to_key.key_offsets.size() != config::tx_settings::tx_mixin + 1)
-                default_ring_size = false;
-            }
-          }
-        }
-        if (m_wallet->confirm_non_default_ring_size() && !default_ring_size)
-        {
-          prompt << tr("WARNING: this is a non default ring size, which may harm your privacy. Default is recommended.");
-        }
-        prompt << ENDL << tr("Is this okay?");
-
-        std::string accepted = input_line(prompt.str(), true);
-        if (std::cin.eof())
-          return true;
-        if (!command_line::is_yes(accepted))
-        {
-          fail_msg_writer() << tr("transaction cancelled.");
-
-          return true;
-        }
-    }
-
-    // actually commit the transactions
-    if (m_wallet->multisig())
-    {
-      bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_arqma_tx");
-      if (!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_arqma_tx";
-      }
-    }
-    else if (m_wallet->watch_only())
-    {
-      bool r = m_wallet->save_tx(ptx_vector, "unsigned_arqma_tx");
-      if (!r)
-      {
-        fail_msg_writer() << tr("Failed to write transaction(s) to file");
-      }
-      else
-      {
-        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "unsigned_arqma_tx";
-      }
-    }
-    else
-    {
-      commit_or_save(ptx_vector, m_do_not_relay);
-    }
   }
   catch (const std::exception& e)
   {
@@ -5431,20 +5440,10 @@ bool simple_wallet::stake(const std::vector<std::string> &args_)
   double amount_fraction = 0;
   {
     std::vector<std::string> local_args = args_;
-    if(local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
-    {
-      std::string parse_subaddr_err;
-      if(!tools::parse_subaddress_indices(local_args[0], subaddr_indices, &parse_subaddr_err))
-      {
-        fail_msg_writer() << parse_subaddr_err;
-        return true;
-      }
-      local_args.erase(local_args.begin());
-    }
-
-    if(local_args.size() > 0 && tools::parse_priority(local_args[0], priority))
-      local_args.erase(local_args.begin());
-    priority = m_wallet->adjust_priority(priority);
+    uint32_t priority = 0;
+    std::set<uint32_t> subaddr_indices = {};
+    if (!parse_subaddr_indices_and_priority(*m_wallet, local_args, subaddr_indices, priority))
+      return false;
 
     if(local_args.size() < 2)
     {
@@ -6003,49 +6002,31 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
       PRINT_USAGE(command_helper::USAGE_SWEEP_ALL);
     }
   };
-  if (args_.size() == 0)
-  {
-    fail_msg_writer() << tr("No address given");
-    print_usage();
-    return true;
-  }
 
   if (!try_connect_to_daemon())
     return true;
 
   std::vector<std::string> local_args = args_;
-
-  std::set<uint32_t> subaddr_indices;
-  if (local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
-  {
-    std::string parse_subaddr_err;
-    if(!tools::parse_subaddress_indices(local_args[0], subaddr_indices, &parse_subaddr_err))
-    {
-      fail_msg_writer() << parse_subaddr_err;
-      print_usage();
-      return true;
-    }
-    local_args.erase(local_args.begin());
-  }
-
   uint32_t priority = 0;
-  if (local_args.size() > 0 && tools::parse_priority(local_args[0], priority))
-    local_args.erase(local_args.begin());
-
-  priority = m_wallet->adjust_priority(priority);
+  std::set<uint32_t> subaddr_indices = {};
+  if (!parse_subaddr_indices_and_priority(*m_wallet, local_args, subaddr_indices, priority))
+    return false;
 
   uint64_t unlock_block = 0;
   if (locked) {
     uint64_t locked_blocks = 0;
 
-    if (local_args.size() < 2) {
+    if (local_args.size() < 1) {
       fail_msg_writer() << tr("missing lockedblocks parameter");
       return true;
     }
 
     try
     {
-      locked_blocks = boost::lexical_cast<uint64_t>(local_args[1]);
+      if (local_args.size() == 1)
+        locked_blocks = boost::lexical_cast<uint64_t>(local_args[0]);
+      else
+        locked_blocks = boost::lexical_cast<uint64_t>(local_args[1]);
     }
     catch (const std::exception& e)
     {
@@ -6127,7 +6108,13 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
   }
 
   cryptonote::address_parse_info info;
-  if (!cryptonote::get_account_address_from_str_or_url(info, m_wallet->nettype(), local_args[0], oa_prompter))
+  std::string addr;
+  if (local_args.size() > 0)
+    addr = local_args[0];
+  else
+    addr = m_wallet->get_subaddress_as_str({m_current_subaddress_account, 0});
+
+  if (!cryptonote::get_account_address_from_str_or_url(info, m_wallet->nettype(), addr, oa_prompter))
   {
     fail_msg_writer() << tr("failed to parse address");
     print_usage();
@@ -6306,7 +6293,6 @@ bool simple_wallet::sweep_single(const std::vector<std::string> &args_)
 
   try
   {
-    // figure out what tx will be necessary
     auto ptx_vector = m_wallet->create_transactions_single(ki, info.address, info.is_subaddress, outputs, config::tx_settings::tx_mixin, 0 /* unlock_time */, priority, extra);
     sweep_main_internal(sweep_type_t::single, ptx_vector, info);
   }
@@ -7462,7 +7448,7 @@ bool simple_wallet::show_transfers(const std::vector<std::string> &args_)
   if(!get_transfers(local_args, all_transfers))
     return true;
 
-  PAUSE_READLINE();
+  rdln::suspend_readline pause_readline;
 
   for (const auto& transfer : all_transfers)
   {

@@ -305,9 +305,7 @@ int main(int argc, char const * argv[])
         {
           login = tools::login::parse(
             has_rpc_arg ? command_line::get_arg(vm, arg.rpc_login) : std::string(env_rpc_login), false, [](bool verify) {
-#ifdef HAVE_READLINE
-        rdln::suspend_readline pause_readline;
-#endif
+              rdln::suspend_readline pause_readline;
               return tools::password_container::prompt(verify, "Daemon client password");
             }
           );
@@ -329,9 +327,7 @@ int main(int argc, char const * argv[])
         }
         else
         {
-#ifdef HAVE_READLINE
           rdln::suspend_readline pause_readline;
-#endif
           std::cerr << "Unknown command: " << command.front() << std::endl;
           return 1;
         }

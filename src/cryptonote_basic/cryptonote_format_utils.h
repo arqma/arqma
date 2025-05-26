@@ -66,11 +66,13 @@ namespace cryptonote
   template<typename T>
   bool find_tx_extra_field_by_type(const std::vector<tx_extra_field>& tx_extra_fields, T& field, size_t skip_fields = 0)
   {
-    if (skip_fields >= tx_extra_fields.size()) return false;
+    if (skip_fields >= tx_extra_fields.size())
+      return false;
 
     for (tx_extra_field const &check_field : tx_extra_fields)
     {
-      if (typeid(T) != check_field.type()) continue;
+      if (typeid(T) != check_field.type())
+        continue;
 
       if (skip_fields == 0)
       {
@@ -184,7 +186,7 @@ namespace cryptonote
 
   inline std::ostream &operator<<(std::ostream &stream, transaction const &tx)
   {
-    stream << "tx={version=" << tx.version << ", type=" << tx.type << ", hash=" << get_transaction_hash(tx) << "}";
+    stream << "tx={version=" << tx.version << ", tx_type=" << tx.tx_type << ", hash=" << get_transaction_hash(tx) << "}";
     return stream;
   }
   //---------------------------------------------------------------

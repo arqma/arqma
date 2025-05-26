@@ -152,7 +152,7 @@ namespace boost
   {
     uint16_t v = static_cast<uint16_t>(x);
     a & v;
-    if(v >= tools::enum_count<cryptonote::txversion>)
+    if (v >= static_cast<uint16_t>(cryptonote::txversion::_count))
       throw boost::archive::archive_exception(boost::archive::archive_exception::other_exception, "Unsupported tx version");
     x = static_cast<cryptonote::txversion>(v);
   }
@@ -162,7 +162,7 @@ namespace boost
   {
     uint16_t txtype = static_cast<uint16_t>(x);
     a & txtype;
-    if(txtype >= tools::enum_count<cryptonote::txtype>)
+    if (txtype >= static_cast<uint16_t>(cryptonote::txtype::_count))
       throw boost::archive::archive_exception(boost::archive::archive_exception::other_exception, "Unsupported tx type");
     x = static_cast<cryptonote::txtype>(txtype);
   }
@@ -171,18 +171,16 @@ namespace boost
   {
     a & x.version;
     if(x.version >= cryptonote::txversion::v3)
-    {
       a & x.output_unlock_times;
-      bool is_deregister = x.type == cryptonote::txtype::state_change;
-      a & is_deregister;
-      x.type = is_deregister ? cryptonote::txtype::state_change : cryptonote::txtype::standard;
-    }
     a & x.unlock_time;
     a & x.vin;
     a & x.vout;
     a & x.extra;
     if(x.version >= cryptonote::txversion::v3)
-      a & x.type;
+    {
+      a & x.tx_type;
+      a & x.hard_fork_version;
+    }
   }
 
   template <class Archive>

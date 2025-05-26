@@ -550,7 +550,7 @@ namespace service_nodes
 
     for (const auto& tx : txs)
     {
-      if (tx.type != cryptonote::txtype::state_change)
+      if (tx.tx_type != cryptonote::txtype::state_change)
         continue;
 
       cryptonote::tx_extra_service_node_state_change state_change;

@@ -30,27 +30,23 @@
 #include "misc_log_ex.h"
 #include "common/threadpool.h"
 
-#include <cassert>
-#include <limits>
-#include <stdexcept>
-
 #include "cryptonote_config.h"
 #include "common/util.h"
 
-static __thread int depth = 0;
-static __thread bool is_leaf = false;
+static thread_local int depth = 0;
+static thread_local bool is_leaf = false;
 
 namespace tools
 {
-threadpool::threadpool() {
-  start();
+threadpool::threadpool(unsigned int max_threads) : running(true), active(0) {
+  create(max_threads);
 }
 
 threadpool::~threadpool() {
-  stop();
+  destroy();
 }
 
-void threadpool::stop() {
+void threadpool::destroy() {
   try
   {
     const boost::unique_lock<boost::mutex> lock(mutex);
@@ -73,22 +69,29 @@ void threadpool::stop() {
     catch (...) { /* ignore */ }
   }
   threads.clear();
-  queue.clear();
 }
 
-void threadpool::start() {
-  running = true;
-  active = 0;
+void threadpool::recycle()
+{
+  destroy();
+  create(max);
+}
+
+void threadpool::create(unsigned int max_threads)
+{
+  const boost::unique_lock<boost::mutex> lock(mutex);
   boost::thread::attributes attrs;
   attrs.set_stack_size(THREAD_STACK_SIZE);
-  max = tools::get_max_concurrency();
-  size_t i = max;
+  max = max_threads ? max_threads : tools::get_max_concurrency();
+  size_t i = max ? max - 1 : 0;
+  running = true;
   while(i--) {
     threads.push_back(boost::thread(attrs, boost::bind(&threadpool::run, this, false)));
   }
 }
 
-void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
+void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf)
+{
   CHECK_AND_ASSERT_THROW_MES(!is_leaf, "A leaf routine is using a thread pool");
   boost::unique_lock<boost::mutex> lock(mutex);
   if(!leaf && ((active == max && !queue.empty()) || depth > 0)) {
@@ -111,7 +114,7 @@ void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
   }
 }
 
-int threadpool::get_max_concurrency()
+unsigned int threadpool::get_max_concurrency() const
 {
   return max;
 }
@@ -127,7 +130,7 @@ threadpool::waiter::~waiter()
   catch (...) { /* ignore */ }
   try
   {
-    wait(NULL);
+    wait();
   }
   catch (const std::exception& e)
   {
@@ -135,13 +138,13 @@ threadpool::waiter::~waiter()
   }
 }
 
-void threadpool::waiter::wait(threadpool *tpool)
+bool threadpool::waiter::wait()
 {
-  if (tpool)
-    tpool->run(true);
+  pool.run(true);
   boost::unique_lock<boost::mutex> lock(mt);
   while(num)
     cv.wait(lock);
+  return !error();
 }
 
 void threadpool::waiter::inc()
@@ -172,12 +175,13 @@ void threadpool::run(bool flush)
     if (!running) break;
 
     active++;
-    e = queue.front();
+    e = std::move(queue.front());
     queue.pop_front();
     lock.unlock();
     ++depth;
     is_leaf = e.leaf;
-    e.f();
+    try { e.f(); }
+    catch (const std::exception &ex) { e.wo->set_error(); try { MERROR("Exception in threadpool job: " << ex.what()); } catch (...) {} }
     --depth;
     is_leaf = false;
 

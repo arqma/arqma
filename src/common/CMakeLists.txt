@@ -47,6 +47,7 @@ set(common_sources
   rules.cpp
   pruning.cpp
   spawn.cpp
+  scoped_message_writer.cpp
   threadpool.cpp
   updates.cpp
   aligned.c

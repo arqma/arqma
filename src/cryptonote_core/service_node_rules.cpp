@@ -19,7 +19,7 @@ namespace service_nodes
     if(m_nettype != cryptonote::MAINNET)
       return 1000 * arqma_bc::ARQMA;
 
-    uint64_t hardfork_height = 1200000;
+    uint64_t hardfork_height = 1850000;
     if (height < hardfork_height)
       height = hardfork_height;
 
@@ -170,7 +170,7 @@ namespace service_nodes
 
   bool validate_unstake_tx(uint64_t blockchain_height, cryptonote::transaction const &tx, cryptonote::tx_extra_field &extra, std::string *reason)
   {
-    if(check_condition(tx.type != cryptonote::txtype::key_image_unlock, reason, tx, ", uses wrong transaction type, expected: ", cryptonote::txtype::key_image_unlock))
+    if(check_condition(tx.tx_type != cryptonote::txtype::key_image_unlock, reason, tx, ", uses wrong transaction type, expected: ", cryptonote::txtype::key_image_unlock))
       return false;
 
     return true;

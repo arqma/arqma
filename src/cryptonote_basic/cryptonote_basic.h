@@ -50,6 +50,7 @@
 #include "misc_language.h"
 #include "ringct/rctTypes.h"
 #include "device/device.hpp"
+#include "txtypes.h"
 
 namespace cryptonote
 {
@@ -76,7 +77,7 @@ namespace cryptonote
 
   struct txout_to_key
   {
-    txout_to_key() { }
+    txout_to_key() = default;
     txout_to_key(const crypto::public_key &_key) : key(_key) { }
     crypto::public_key key;
   };
@@ -157,38 +158,23 @@ namespace cryptonote
   template<> inline unsigned int getpos(binary_archive<true> &ar) { return ar.stream().tellp(); }
   template<> inline unsigned int getpos(binary_archive<false> &ar) { return ar.stream().tellg(); }
 
-  enum class txversion : uint16_t {
-    v0 = 0,
-    v1,
-    v2,
-    v3,
-    _count,
-  };
-  enum class txtype : uint16_t {
-    standard,
-    state_change,
-    key_image_unlock,
-    stake,
-    _count
-  };
-
-
   class transaction_prefix
   {
 
   public:
-    static char const *version_to_string(txversion v);
-    static char const *type_to_string(txtype type);
+    static char const* version_to_string(txversion v);
+    static char const* type_to_string(txtype tx_type);
 
-    static txversion get_min_version_for_hf(uint8_t hard_fork_version);
-    static txversion get_max_version_for_hf(uint8_t hard_fork_version);
-    static txtype get_max_type_for_hf(uint8_t hard_fork_version);
+    static constexpr txversion get_min_version_for_hf(uint8_t hard_fork_version);
+    static constexpr txversion get_max_version_for_hf(uint8_t hard_fork_version);
+    static constexpr txtype get_max_type_for_hf(uint8_t hard_fork_version);
 
     // tx information
     txversion version;
-    txtype type;
+    txtype tx_type;
+    uint8_t hard_fork_version;
 
-    bool is_transfer() const { return type == txtype::standard || type == txtype::stake || type == txtype::key_image_unlock; }
+    bool is_transfer() const { return (tx_type == txtype::standard || tx_type == txtype::stake); }
 
     uint64_t unlock_time;  // number of block (or time), used as a limitation like: spend this tx not early then block/time
 
@@ -202,12 +188,7 @@ namespace cryptonote
     BEGIN_SERIALIZE()
       ENUM_FIELD(version, version >= txversion::v1 && version < txversion::_count);
       if(version >= txversion::v3)
-      {
         FIELD(output_unlock_times)
-        bool is_state_change = type == txtype::state_change;
-        FIELD(is_state_change)
-        type = is_state_change ? txtype::state_change : txtype::standard;
-      }
       VARINT_FIELD(unlock_time)
       FIELD(vin)
       FIELD(vout)
@@ -215,20 +196,16 @@ namespace cryptonote
         return false;
       FIELD(extra)
       if(version >= txversion::v3)
-        ENUM_FIELD_N("type", type, type < txtype::_count);
+      {
+        ENUM_FIELD_N("tx_type", tx_type, tx_type < txtype::_count);
+        //FIELD(hard_fork_version)
+        //if (hard_fork_version > cryptonote::network_version_count - 1)
+        //  return false;
+      }
     END_SERIALIZE()
 
-    transaction_prefix(){ set_null(); }
-    void set_null()
-    {
-      version = txversion::v1;
-      unlock_time = 0;
-      vin.clear();
-      vout.clear();
-      extra.clear();
-      output_unlock_times.clear();
-      type = txtype::standard;
-    }
+    transaction_prefix() { set_null(); }
+    void set_null();
 
     uint64_t get_unlock_time(size_t out_index) const
     {
@@ -243,9 +220,10 @@ namespace cryptonote
       }
       return unlock_time;
     }
+
   };
 
-  class transaction: public transaction_prefix
+  class transaction final : public transaction_prefix
   {
   private:
     // hash cash
@@ -253,7 +231,7 @@ namespace cryptonote
     mutable std::atomic<bool> blob_size_valid;
 
   public:
-    std::vector<std::vector<crypto::signature> > signatures; //count signatures  always the same as inputs count
+    std::vector<std::vector<crypto::signature>> signatures; //count signatures  always the same as inputs count
     rct::rctSig rct_signatures;
 
     // hash cash
@@ -265,10 +243,9 @@ namespace cryptonote
     std::atomic<unsigned int> unprunable_size;
     std::atomic<unsigned int> prefix_size;
 
-    transaction();
-    transaction(const transaction &t): transaction_prefix(t), hash_valid(false), blob_size_valid(false), signatures(t.signatures), rct_signatures(t.rct_signatures), pruned(t.pruned), unprunable_size(t.unprunable_size.load()), prefix_size(t.prefix_size.load()) { if (t.is_hash_valid()) { hash = t.hash; set_hash_valid(true); } if (t.is_blob_size_valid()) { blob_size = t.blob_size; set_blob_size_valid(true); } }
-    transaction &operator=(const transaction &t) { transaction_prefix::operator=(t); set_hash_valid(false); set_blob_size_valid(false); signatures = t.signatures; rct_signatures = t.rct_signatures; if (t.is_hash_valid()) { hash = t.hash; set_hash_valid(true); } if (t.is_blob_size_valid()) { blob_size = t.blob_size; set_blob_size_valid(true); } pruned = t.pruned; unprunable_size = t.unprunable_size.load(); prefix_size = t.prefix_size.load(); return *this; }
-    virtual ~transaction();
+    transaction() { set_null(); }
+    transaction(const transaction &t);
+    transaction& operator=(const transaction& t);
     void set_null();
     void invalidate_hashes();
     bool is_hash_valid() const { return hash_valid.load(std::memory_order_acquire); }
@@ -382,61 +359,13 @@ namespace cryptonote
     static size_t get_signature_size(const txin_v& tx_in);
   };
 
-  inline
-  transaction::transaction()
-  {
-    set_null();
-  }
-
-  inline
-  transaction::~transaction()
-  {
-  }
-
-  inline
-  void transaction::set_null()
-  {
-    transaction_prefix::set_null();
-    signatures.clear();
-    rct_signatures = {};
-    rct_signatures.type = rct::RCTTypeNull;
-    set_hash_valid(false);
-    set_blob_size_valid(false);
-    pruned = false;
-    unprunable_size = 0;
-    prefix_size = 0;
-  }
-
-  inline
-  void transaction::invalidate_hashes()
-  {
-    set_hash_valid(false);
-    set_blob_size_valid(false);
-  }
-
-  inline
-  size_t transaction::get_signature_size(const txin_v& tx_in)
-  {
-    struct txin_signature_size_visitor : public boost::static_visitor<size_t>
-    {
-      size_t operator()(const txin_gen& txin) const{return 0;}
-      size_t operator()(const txin_to_script& txin) const{return 0;}
-      size_t operator()(const txin_to_scripthash& txin) const{return 0;}
-      size_t operator()(const txin_to_key& txin) const {return txin.key_offsets.size();}
-    };
-
-    return boost::apply_visitor(txin_signature_size_visitor(), tx_in);
-  }
-
-
-
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
   struct block_header
   {
-    uint8_t major_version;
-    uint8_t minor_version;  // now used as a voting mechanism, rather than how this particular block is built
+    uint8_t major_version = {};
+    uint8_t minor_version = {};  // now used as a voting mechanism, rather than how this particular block is built
     uint64_t timestamp;
     crypto::hash prev_id;
     uint32_t nonce;
@@ -459,13 +388,13 @@ namespace cryptonote
 
   public:
     block() = default;
-    block(const block &b): block_header(b), miner_tx{b.miner_tx}, tx_hashes{b.tx_hashes} { copy_hash(b); }
-    block &operator=(const block &b) { block_header::operator=(b); miner_tx = b.miner_tx; tx_hashes = b.tx_hashes; copy_hash(b); return *this; }
-    block(block &&b) : block_header(std::move(b)), miner_tx{std::move(b.miner_tx)}, tx_hashes{std::move(b.tx_hashes)} { copy_hash(b); }
-    block &operator=(block &&b) { block_header::operator=(std::move(b)); miner_tx = std::move(b.miner_tx); tx_hashes = std::move(b.tx_hashes); copy_hash(b); return *this; }
+    block(const block& b);
+    block(block&& b);
+    block& operator=(const block& b);
+    block& operator=(block&& b);
     void invalidate_hashes() { set_hash_valid(false); }
-    bool is_hash_valid() const { return hash_valid.load(std::memory_order_acquire); }
-    void set_hash_valid(bool v) const { hash_valid.store(v,std::memory_order_release); }
+    bool is_hash_valid() const;
+    void set_hash_valid(bool v) const;
 
     transaction miner_tx;
     std::vector<crypto::hash> tx_hashes;
@@ -529,69 +458,60 @@ namespace cryptonote
     }
   };
 
-  inline txversion transaction_prefix::get_min_version_for_hf(uint8_t hard_fork_version)
+  constexpr txversion transaction_prefix::get_min_version_for_hf(uint8_t hard_fork_version)
   {
-    if(hard_fork_version >= cryptonote::network_version_7 && hard_fork_version <= cryptonote::network_version_13)
+    if (hard_fork_version < 14)
       return txversion::v1;
-    if(hard_fork_version >= cryptonote::network_version_14 && hard_fork_version <= cryptonote::network_version_15)
+    if (hard_fork_version < 16)
       return txversion::v2;
+
     return txversion::v3;
   }
 
-  inline txversion transaction_prefix::get_max_version_for_hf(uint8_t hard_fork_version)
+  constexpr txversion transaction_prefix::get_max_version_for_hf(uint8_t hard_fork_version)
   {
-    if(hard_fork_version >= cryptonote::network_version_7 && hard_fork_version <= cryptonote::network_version_15)
+    if (hard_fork_version < 16)
       return txversion::v2;
+
     return txversion::v3;
   }
 
-  inline txtype transaction_prefix::get_max_type_for_hf(uint8_t hard_fork_version)
+  constexpr txtype transaction_prefix::get_max_type_for_hf(uint8_t hard_fork_version)
   {
-    txtype result = txtype::standard;
-    if(hard_fork_version >= cryptonote::network_version_16)
-      result = txtype::stake;
-    return result;
+    if (hard_fork_version < 16)
+      return txtype::standard;
+
+    return txtype::stake;
   }
 
-  inline char const *transaction_prefix::version_to_string(txversion v)
+  inline const char* transaction_prefix::version_to_string(txversion v)
   {
     switch(v)
     {
-      case txversion::v1:
-        return "1";
-      case txversion::v2:
-        return "2";
-      case txversion::v3:
-        return "3";
-      default: assert(false);
-        return "unhandled_version";
+      case txversion::v1: return "1";
+      case txversion::v2: return "2";
+      case txversion::v3: return "3";
+      default: assert(false); return "unhandled_version";
     }
   }
 
-  inline char const *transaction_prefix::type_to_string(txtype type)
+  inline const char* transaction_prefix::type_to_string(txtype tx_type)
   {
-    switch(type)
+    switch(tx_type)
     {
-      case txtype::standard:
-        return "standard";
-      case txtype::state_change:
-        return "state_change";
-      case txtype::key_image_unlock:
-        return "key_image_unlock";
-      case txtype::stake:
-        return "stake";
-      default: assert(false);
-        return "unhandled_type";
+      case txtype::standard: return "standard";
+      case txtype::state_change: return "state_change";
+      case txtype::key_image_unlock: return "key_image_unlock";
+      case txtype::stake: return "stake";
+      default: assert(false); return "unhandled_type";
     }
   }
 
-  inline std::ostream &operator<<(std::ostream &os, txtype t)
-  {
-    return os << transaction::type_to_string(t);
+  inline std::ostream &operator<<(std::ostream &os, txtype tx_type) {
+    return os << transaction::type_to_string(tx_type);
   }
 
-  inline std::ostream &operator<<(std::ostream &os, txversion v)
-  {
+  inline std::ostream &operator<<(std::ostream &os, txversion v) {
     return os << transaction::version_to_string(v);
   }
 }

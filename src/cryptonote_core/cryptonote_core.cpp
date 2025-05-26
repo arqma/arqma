@@ -1091,8 +1091,8 @@ namespace cryptonote
     std::vector<txpool_event> results(tx_blobs.size());
 
     tvc.resize(tx_blobs.size());
-    tools::threadpool& tpool = tools::threadpool::getInstance();
-    tools::threadpool::waiter waiter;
+    tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+    tools::threadpool::waiter waiter(tpool);
     std::vector<blobdata>::const_iterator it = tx_blobs.begin();
     for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
       tpool.submit(&waiter, [&, i, it] {
@@ -1108,7 +1108,8 @@ namespace cryptonote
         }
       });
     }
-    waiter.wait(&tpool);
+    if (!waiter.wait())
+      return false;
     it = tx_blobs.begin();
     std::vector<bool> already_have(tx_blobs.size(), false);
     for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
@@ -1140,7 +1141,8 @@ namespace cryptonote
         });
       }
     }
-    waiter.wait(&tpool);
+    if (!waiter.wait())
+      return false;
 
     std::vector<tx_verification_batch_info> tx_info;
     tx_info.reserve(tx_blobs.size());
@@ -1217,7 +1219,7 @@ namespace cryptonote
     {
       if(tx.vin.size() != 0)
       {
-        MERROR_VER("Transaction type: " << tx.type << " must have 0 inputs, received: " << tx.vin.size() << ", rejected for tx id = " << get_transaction_hash(tx));
+        MERROR_VER("Transaction type: " << tx.tx_type << " must have 0 inputs, received: " << tx.vin.size() << ", rejected for tx id = " << get_transaction_hash(tx));
         return false;
       }
     }
@@ -1818,11 +1820,6 @@ namespace cryptonote
   bool core::get_block_by_hash(const crypto::hash &h, block &blk, bool *orphan) const
   {
     return m_blockchain_storage.get_block_by_hash(h, blk, orphan);
-  }
-  //-----------------------------------------------------------------------------------------------
-  std::string core::print_pool(bool short_format) const
-  {
-    return m_mempool.print_pool(short_format);
   }
   //-----------------------------------------------------------------------------------------------
   static bool check_storage_server_ping(time_t last_time_storage_server_pinged)

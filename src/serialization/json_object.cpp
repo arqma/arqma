@@ -245,7 +245,8 @@ void toJsonValue(rapidjson::Writer<epee::byte_stream>& dest, const cryptonote::t
   INSERT_INTO_JSON_OBJECT(dest, version, static_cast<uint16_t>(tx.version));
   INSERT_INTO_JSON_OBJECT(dest, unlock_time, tx.unlock_time);
   INSERT_INTO_JSON_OBJECT(dest, output_unlock_times, tx.output_unlock_times);
-  INSERT_INTO_JSON_OBJECT(dest, type, static_cast<uint16_t>(tx.type));
+  INSERT_INTO_JSON_OBJECT(dest, tx_type, static_cast<uint16_t>(tx.tx_type));
+  //INSERT_INTO_JSON_OBJECT(dest, hard_fork_version, tx.hard_fork_version)
   INSERT_INTO_JSON_OBJECT(dest, inputs, tx.vin);
   INSERT_INTO_JSON_OBJECT(dest, outputs, tx.vout);
   INSERT_INTO_JSON_OBJECT(dest, extra, tx.extra);
@@ -262,12 +263,13 @@ void fromJsonValue(const rapidjson::Value& val, cryptonote::transaction& tx)
     throw WRONG_TYPE("json object");
   }
 
-  uint16_t tx_ver, tx_type;
+  uint16_t tx_ver, t_type;
 
   GET_FROM_JSON_OBJECT(val, tx_ver, version);
   GET_FROM_JSON_OBJECT(val, tx.unlock_time, unlock_time);
   GET_FROM_JSON_OBJECT(val, tx.output_unlock_times, output_unlock_times);
-  GET_FROM_JSON_OBJECT(val, tx_type, type);
+  GET_FROM_JSON_OBJECT(val, t_type, tx_type);
+  //GET_FROM_JSON_OBJECT(val, tx.hard_fork_version, hard_fork_version);
   GET_FROM_JSON_OBJECT(val, tx.vin, inputs);
   GET_FROM_JSON_OBJECT(val, tx.vout, outputs);
   GET_FROM_JSON_OBJECT(val, tx.extra, extra);
@@ -275,10 +277,10 @@ void fromJsonValue(const rapidjson::Value& val, cryptonote::transaction& tx)
   GET_FROM_JSON_OBJECT(val, tx.rct_signatures, ringct);
 
   tx.version = static_cast<txversion>(tx_ver);
-  tx.type = static_cast<txtype>(tx_type);
+  tx.tx_type = static_cast<txtype>(t_type);
   if(tx.version == txversion::v0 || tx.version >= txversion::_count)
     throw BAD_INPUT();
-  if(tx.type >= txtype::_count)
+  if(tx.tx_type >= txtype::_count)
     throw BAD_INPUT();
 }
 

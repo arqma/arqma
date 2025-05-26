@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BLOCKCHAIN_OBJECTS_H
+#define BLOCKCHAIN_OBJECTS_H
 
 #include "cryptonote_core/blockchain.h"
 #include "cryptonote_core/tx_pool.h"
@@ -15,3 +16,5 @@ struct BlockchainAndSNlistAndPool
     sn_list(blockchain),
     tx_pool(blockchain) { }
 };
+
+#endif

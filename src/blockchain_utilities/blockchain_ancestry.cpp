@@ -327,9 +327,9 @@ int main(int argc, char* argv[])
   // because unlike blockchain_storage constructor, which takes a pointer to
   // tx_memory_pool, Blockchain's constructor takes tx_memory_pool object.
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  //blockchain_objects_t blockchain_objects = {};
-  //Blockchain *core_storage = &blockchain_objects.blockchain;
-  std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
+  BlockchainAndSNlistAndPool blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.blockchain;
+  //std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
   BlockchainDB *db = new_db();
   if (db == NULL)
   {
@@ -343,14 +343,14 @@ int main(int argc, char* argv[])
 
   try
   {
-    db->open(filename, core_storage->blockchain.nettype(), DBF_RDONLY);
+    db->open(filename, core_storage->nettype(), DBF_RDONLY);
   }
   catch (const std::exception& e)
   {
     LOG_PRINT_L0("Error opening database: " << e.what());
     return 1;
   }
-  r = core_storage->blockchain.init(db, net_type);
+  r = core_storage->init(db, net_type);
 
   CHECK_AND_ASSERT_MES(r, 1, "Failed to initialize source blockchain storage");
   LOG_PRINT_L0("Source blockchain storage initialized OK");
@@ -750,7 +750,7 @@ int main(int argc, char* argv[])
   }
 
 done:
-  core_storage->blockchain.deinit();
+  core_storage->deinit();
   return 0;
 
   CATCH_ENTRY("Depth query error", 1);

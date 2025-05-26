@@ -1352,6 +1352,16 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
 
         //std::vector<tools::wallet2::pending_tx> ptx_vector;
 
+        boost::optional<uint8_t> hard_fork_version = m_wallet->get_hard_fork_version();
+        if(!hard_fork_version)
+        {
+          er.code = WALLET_RPC_ERROR_CODE_HF_QUERY_FAILED;
+          er.message = tools::ERR_MSG_NETWORK_VERSION_QUERY_FAILED;
+          return false;
+        }
+
+        auto tx_params = tools::wallet2::construct_params(*hard_fork_version, cryptonote::txtype tx_type);
+
         try {
             if (amount) {
                 vector<cryptonote::tx_destination_entry> dsts;
@@ -1364,7 +1374,7 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
                 dsts.push_back(de);
                 transaction->m_pending_tx = m_wallet->create_transactions_2(dsts, fake_outs_count, 0 /* unlock_time */,
                                                                           adjusted_priority,
-                                                                          extra, subaddr_account, subaddr_indices);
+                                                                          extra, subaddr_account, subaddr_indices, tx_params);
             } else {
                 // for the GUI, sweep_all (i.e. amount set as "(all)") will always sweep all the funds in all the addresses
                 if (subaddr_indices.empty())
@@ -1374,7 +1384,7 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
                 }
                 transaction->m_pending_tx = m_wallet->create_transactions_all(0, info.address, info.is_subaddress, 1, fake_outs_count, 0 /* unlock_time */,
                                                                           adjusted_priority,
-                                                                          extra, subaddr_account, subaddr_indices);
+                                                                          extra, subaddr_account, subaddr_indices, tx_params);
             }
 
             if (multisig().isMultisig) {

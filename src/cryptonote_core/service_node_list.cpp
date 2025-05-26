@@ -88,7 +88,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   void service_node_list::rescan_starting_from_curr_state(bool store_to_disk)
   {
-    if (m_blockchain.get_current_hard_fork_version() < cryptonote::network_version_16)
+    if (m_blockchain.get_current_hard_fork_version() < 16)
     {
       return;
     }
@@ -461,7 +461,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::state_t::process_state_change_tx(state_set const &state_history, state_set const &state_archive, std::unordered_map<crypto::hash, state_t> const &alt_states, cryptonote::network_type nettype, const cryptonote::block &block, const cryptonote::transaction &tx, const service_node_keys *my_keys)
   {
-    if(tx.type != cryptonote::txtype::state_change)
+    if(tx.tx_type != cryptonote::txtype::state_change)
       return false;
 
     uint8_t const hard_fork_version = block.major_version;
@@ -550,7 +550,7 @@ namespace service_nodes
         return true;
 
       case new_state::decommission:
-        if (hard_fork_version < cryptonote::network_version_16)
+        if (hard_fork_version < 16)
         {
           MERROR("Invalid deommission transaction seen before network v16");
           return false;
@@ -580,7 +580,7 @@ namespace service_nodes
         return true;
 
       case new_state::recommission:
-        if (hard_fork_version < cryptonote::network_version_16) {
+        if (hard_fork_version < 16) {
           MERROR("Invalid recommission transaction seen before network v16");
           return false;
         }
@@ -608,7 +608,7 @@ namespace service_nodes
         return true;
 
       case new_state::ip_change_penalty:
-        if (hard_fork_version < cryptonote::network_version_16) {
+        if (hard_fork_version < 16) {
           MERROR("Invalid ip_change_penalty transaction seen before network v16");
           return false;
         }
@@ -637,9 +637,6 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::state_t::process_key_image_unlock_tx(cryptonote::network_type nettype, uint64_t block_height, const cryptonote::transaction &tx)
   {
-    if(tx.type != cryptonote::txtype::key_image_unlock)
-      return false;
-
     crypto::public_key snode_key;
     if(!cryptonote::get_service_node_pubkey_from_tx_extra(tx.extra, snode_key))
       return false;
@@ -1034,7 +1031,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const *checkpoint)
   {
-    if (block.major_version < cryptonote::network_version_16)
+    if (block.major_version < 16)
       return true;
 
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
@@ -1123,7 +1120,7 @@ namespace service_nodes
 
     auto active_snode_list = state.active_service_nodes_infos();
     decltype(active_snode_list) decomm_snode_list;
-    if (hf_ver >= cryptonote::network_version_16)
+    if (hf_ver >= 16)
       decomm_snode_list = state.decommissioned_service_nodes_infos();
 
     quorum_type const max_quorum_type = max_quorum_type_for_hf(hf_ver);
@@ -1236,16 +1233,16 @@ namespace service_nodes
     for (uint32_t index = 0; index < txs.size(); ++index)
     {
       const cryptonote::transaction& tx = txs[index];
-      if ((tx.type == cryptonote::txtype::standard) || (tx.type == cryptonote::txtype::stake))
+      if (tx.tx_type == cryptonote::txtype::stake)
       {
         process_registration_tx(nettype, block, tx, index, my_keys);
         need_swarm_update += process_contribution_tx(nettype, block, tx, index);
       }
-      else if (tx.type == cryptonote::txtype::state_change)
+      else if (tx.tx_type == cryptonote::txtype::state_change)
       {
         need_swarm_update += process_state_change_tx(state_history, state_archive, alt_states, nettype, block, tx, my_keys);
       }
-      else if (tx.type == cryptonote::txtype::key_image_unlock)
+      else if (tx.tx_type == cryptonote::txtype::key_image_unlock)
       {
         process_key_image_unlock_tx(nettype, block_height, tx);
       }
@@ -1286,7 +1283,7 @@ namespace service_nodes
     uint64_t block_height = cryptonote::get_block_height(block);
     uint8_t hard_fork_version = m_blockchain.get_hard_fork_version(block_height);
 
-    if(hard_fork_version < cryptonote::network_version_16)
+    if(hard_fork_version < 16)
       return;
 
     // Cull old history
@@ -1322,7 +1319,7 @@ namespace service_nodes
     }
 
     // Cull alt state history
-    if (hard_fork_version >= cryptonote::network_version_16 && m_transient.alt_state.size())
+    if (hard_fork_version >= 16 && m_transient.alt_state.size())
     {
       cryptonote::checkpoint_t immutable_checkpoint;
       if (m_blockchain.get_db().get_immutable_checkpoint(&immutable_checkpoint, block_height))
@@ -1461,7 +1458,7 @@ namespace service_nodes
   bool service_node_list::validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &reward_parts) const
   {
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
-    if(hard_fork_version < cryptonote::network_version_16)
+    if(hard_fork_version < 16)
       return true;
 
     uint64_t base_reward = reward_parts.original_base_reward;
@@ -1521,7 +1518,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::alt_block_added(cryptonote::block const &block, std::vector<cryptonote::transaction> const &txs, cryptonote::checkpoint_t const *checkpoint)
   {
-    if (block.major_version < cryptonote::network_version_16)
+    if (block.major_version < 16)
       return true;
 
     uint64_t block_height = cryptonote::get_block_height(block);
@@ -1631,7 +1628,7 @@ namespace service_nodes
       return false;
 
     uint8_t hard_fork_version = m_blockchain.get_current_hard_fork_version();
-    if(hard_fork_version < cryptonote::network_version_16)
+    if(hard_fork_version < 16)
       return true;
 
     data_for_serialization *data[] = {&m_transient.cache_long_term_data, &m_transient.cache_short_term_data};
@@ -1745,7 +1742,7 @@ namespace service_nodes
   };
 
   static constexpr proof_version hf_min_arqma_version[] = {
-    {cryptonote::network_version_16, {7,0,0}},
+    {16, {7,0,0}},
   };
 
   template <typename T>

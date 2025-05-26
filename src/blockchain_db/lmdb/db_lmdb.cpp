@@ -5866,7 +5866,7 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
           }
         }
 
-        if (tx.type != txtype::standard || tx.vout.size() == 0)
+        if (tx.tx_type != txtype::standard || tx.vout.size() == 0)
           continue;
 
         crypto::secret_key secret_tx_key;

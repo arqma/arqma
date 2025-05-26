@@ -73,8 +73,9 @@ namespace cryptonote
     const account_public_address &miner_address,
     transaction& tx,
     const blobdata& extra_nonce = blobdata(),
-    uint8_t hard_fork_version = 1,
-    const arqma_miner_tx_context &miner_context = {});
+    uint8_t hard_fork_version = {},
+    const arqma_miner_tx_context &miner_context = {}
+  );
 
   struct block_reward_parts
   {
@@ -181,7 +182,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   struct arqma_construct_tx_params
   {
-    uint8_t hard_fork_version = cryptonote::network_version_1;
+    uint8_t hard_fork_version = {};
     txtype tx_type = txtype::standard;
   };
   //---------------------------------------------------------------

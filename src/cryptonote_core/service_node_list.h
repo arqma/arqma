@@ -213,7 +213,7 @@ namespace service_nodes
 
   struct key_image_blacklist_entry
   {
-    enum struct version_t : uint8_t { version_0, version_1, count, };
+    enum struct version_t : uint8_t { version_0, version_1, _count };
     version_t version{version_t::version_1};
     crypto::key_image key_image;
     uint64_t unlock_height = 0;
@@ -227,7 +227,7 @@ namespace service_nodes
     bool operator==(const crypto::key_image &image) const { return key_image == image; }
 
     BEGIN_SERIALIZE_OBJECT()
-      ENUM_FIELD(version, version < version_t::count)
+      ENUM_FIELD(version, version < version_t::_count)
       FIELD(key_image)
       VARINT_FIELD(unlock_height)
       VARINT_FIELD(amount)
@@ -349,7 +349,7 @@ namespace service_nodes
       enum struct version_t : uint8_t
       {
         version_0,
-        count,
+        _count
       };
       static version_t get_version(uint8_t) { return version_t::version_0; }
 
@@ -362,7 +362,7 @@ namespace service_nodes
       crypto::hash block_hash;
 
       BEGIN_SERIALIZE()
-        ENUM_FIELD(version, version < version_t::count)
+        ENUM_FIELD(version, version < version_t::_count)
         VARINT_FIELD(height)
         FIELD(infos)
         FIELD(key_image_blacklist)
@@ -377,7 +377,7 @@ namespace service_nodes
       enum struct version_t : uint8_t
       {
         version_0,
-        count,
+        _count
       };
       static version_t get_version(uint8_t) { return version_t::version_0; }
 
@@ -386,7 +386,7 @@ namespace service_nodes
       std::vector<state_serialized> states;
       void clear() { quorum_states.clear(); states.clear(); version = {}; }
       BEGIN_SERIALIZE()
-        ENUM_FIELD(version, version < version_t::count)
+        ENUM_FIELD(version, version < version_t::_count)
         FIELD(quorum_states)
         FIELD(states)
       END_SERIALIZE()

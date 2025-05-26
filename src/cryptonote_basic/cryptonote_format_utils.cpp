@@ -33,6 +33,7 @@
 #include <boost/algorithm/string.hpp>
 #include "wipeable_string.h"
 #include "common/i18n.h"
+#include "common/osrb.h"
 #include "string_tools.h"
 #include "string_tools_lexical.h"
 #include "serialization/string.h"
@@ -133,22 +134,6 @@ namespace cryptonote
 
 namespace cryptonote
 {
-  //---------------------------------------------------------------
-  void get_transaction_prefix_hash(const transaction_prefix& tx, crypto::hash& h)
-  {
-    std::ostringstream s;
-    binary_archive<true> a(s);
-    ::serialization::serialize(a, const_cast<transaction_prefix&>(tx));
-    crypto::cn_fast_hash(s.str().data(), s.str().size(), h);
-  }
-  //---------------------------------------------------------------
-  crypto::hash get_transaction_prefix_hash(const transaction_prefix& tx)
-  {
-    crypto::hash h = null_hash;
-    get_transaction_prefix_hash(tx, h);
-    return h;
-  }
-  //---------------------------------------------------------------
   bool expand_transaction_1(transaction &tx, bool base_only)
   {
     if (tx.version >= txversion::v2 && !is_coinbase(tx))
@@ -221,12 +206,31 @@ namespace cryptonote
     }
     return true;
   }
+
+#if 0
+  explicit binary_archive(stream_type &s) : base_type(s) {
+    stream_type::pos_type pos = stream_.tellg();
+    stream_.seekg(0, std::ios_base::end);
+    eof_pos_ = stream_.tellg();
+    stream_.seekg(pos);
+  }
+#endif
+
+#if defined(_LIBCPP_VERSION)
+  #define BINARY_ARCHIVE_STREAM(stream_name, blob) \
+    std::stringstream stream_name; \
+    stream_name.write(reinterpret_cast<const char *>(blob.data()), blob.size())
+#else
+  #define BINARY_ARCHIVE_STREAM(stream_name, blob) \
+    auto buf = tools::one_shot_read_buffer{reinterpret_cast<const char *>(blob.data()), blob.size()}; \
+    std::istream stream_name{&buf}
+#endif
+
   //---------------------------------------------------------------
   bool parse_and_validate_tx_from_blob(const blobdata& tx_blob, transaction& tx)
   {
-    std::stringstream ss;
-    ss << tx_blob;
-    binary_archive<false> ba(ss);
+    BINARY_ARCHIVE_STREAM(is, tx_blob);
+    binary_archive<false> ba(is);
     bool r = ::serialization::serialize(ba, tx);
     CHECK_AND_ASSERT_MES(r, false, "Failed to parse transaction from blob");
     CHECK_AND_ASSERT_MES(expand_transaction_1(tx, false), false, "Failed to expand transaction data");
@@ -237,9 +241,8 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool parse_and_validate_tx_base_from_blob(const blobdata& tx_blob, transaction& tx)
   {
-    std::stringstream ss;
-    ss << tx_blob;
-    binary_archive<false> ba(ss);
+    BINARY_ARCHIVE_STREAM(is, tx_blob);
+    binary_archive<false> ba(is);
     bool r = tx.serialize_base(ba);
     CHECK_AND_ASSERT_MES(r, false, "Failed to parse transaction from blob");
     CHECK_AND_ASSERT_MES(expand_transaction_1(tx, true), false, "Failed to expand transaction data");
@@ -249,9 +252,8 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool parse_and_validate_tx_prefix_from_blob(const blobdata& tx_blob, transaction_prefix& tx)
   {
-    std::stringstream ss;
-    ss << tx_blob;
-    binary_archive<false> ba(ss);
+    BINARY_ARCHIVE_STREAM(is, tx_blob);
+    binary_archive<false> ba(is);
     bool r = ::serialization::serialize_noeof(ba, tx);
     CHECK_AND_ASSERT_MES(r, false, "Failed to parse transaction prefix from blob");
     return true;
@@ -259,17 +261,15 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool parse_and_validate_tx_from_blob(const blobdata& tx_blob, transaction& tx, crypto::hash& tx_hash)
   {
-    std::stringstream ss;
-    ss << tx_blob;
-    binary_archive<false> ba(ss);
+    BINARY_ARCHIVE_STREAM(is, tx_blob);
+    binary_archive<false> ba(is);
     bool r = ::serialization::serialize(ba, tx);
     CHECK_AND_ASSERT_MES(r, false, "Failed to parse transaction from blob");
     CHECK_AND_ASSERT_MES(expand_transaction_1(tx, false), false, "Failed to expand transaction data");
     tx.invalidate_hashes();
     //TODO: validate tx
 
-    get_transaction_hash(tx, tx_hash);
-    return true;
+    return get_transaction_hash(tx, tx_hash);
   }
   //-----------------------------------------------------------------------------
   bool parse_and_validate_tx_from_blob(const blobdata& tx_blob, transaction& tx, crypto::hash& tx_hash, crypto::hash& tx_prefix_hash)
@@ -537,8 +537,7 @@ namespace cryptonote
     if(tx_extra.empty())
       return true;
 
-    std::string extra_str(reinterpret_cast<const char*>(tx_extra.data()), tx_extra.size());
-    std::istringstream iss(extra_str);
+    BINARY_ARCHIVE_STREAM(iss, tx_extra);
     binary_archive<false> ar(iss);
 
     bool eof = false;
@@ -582,8 +581,7 @@ namespace cryptonote
       return true;
     }
 
-    std::string extra_str(reinterpret_cast<const char*>(tx_extra.data()), tx_extra.size());
-    std::istringstream iss(extra_str);
+    BINARY_ARCHIVE_STREAM(iss, tx_extra);
     binary_archive<false> ar(iss);
 
     bool eof = false;
@@ -888,8 +886,10 @@ namespace cryptonote
   {
     std::vector<tx_extra_field> tx_extra_fields;
     parse_tx_extra(tx_extra, tx_extra_fields);
-    bool result = find_tx_extra_field_by_type(tx_extra_fields, state_change);
-    return result;
+    if (find_tx_extra_field_by_type(tx_extra_fields, state_change))
+      return true;
+
+    return false;
   }
   //---------------------------------------------------------------
   crypto::public_key get_service_node_winner_from_tx_extra(const std::vector<uint8_t>& tx_extra)
@@ -906,8 +906,7 @@ namespace cryptonote
   {
     if (tx_extra.empty())
       return true;
-    std::string extra_str(reinterpret_cast<const char*>(tx_extra.data()), tx_extra.size());
-    std::istringstream iss(extra_str);
+    BINARY_ARCHIVE_STREAM(iss, tx_extra);
     binary_archive<false> ar(iss);
     std::ostringstream oss;
     binary_archive<true> newar(oss);
@@ -1001,17 +1000,17 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool check_outs_valid(const transaction& tx)
   {
-    if(!tx.is_transfer())
+    if (!tx.is_transfer())
     {
-      CHECK_AND_NO_ASSERT_MES(tx.vout.size() == 0, false, "tx type: " << tx.type << " MUST have 0 outputs, received: " << tx.vout.size() << ", id: " << get_transaction_hash(tx));
+      CHECK_AND_NO_ASSERT_MES(tx.vout.size() == 0, false, "tx type: " << tx.tx_type << " MUST have 0 outputs, received: " << tx.vout.size() << ", id: " << get_transaction_hash(tx));
     }
 
-    if(tx.version >= txversion::v3)
+    if (tx.version >= txversion::v3)
     {
       CHECK_AND_NO_ASSERT_MES(tx.vout.size() == tx.output_unlock_times.size(), false, "tx version: " << tx.version << " must have equal number of output unlock times and outputs");
     }
 
-    for(const tx_out& out: tx.vout)
+    for (const tx_out& out: tx.vout)
     {
       CHECK_AND_ASSERT_MES(out.target.type() == typeid(txout_to_key), false, "wrong variant type: " << out.target.type().name() << ", expected: " << typeid(txout_to_key).name() << ", in transaction id: " << get_transaction_hash(tx));
 
@@ -1020,7 +1019,7 @@ namespace cryptonote
         CHECK_AND_NO_ASSERT_MES(0 < out.amount, false, "zero amount output in transaction id: " << get_transaction_hash(tx));
       }
 
-      if(!check_key(boost::get<txout_to_key>(out.target).key))
+      if (!check_key(boost::get<txout_to_key>(out.target).key))
         return false;
     }
     return true;
@@ -1150,33 +1149,33 @@ namespace cryptonote
     char *bufPtr = buf;
     char *bufEnd = buf + sizeof(buf);
 
-    if(tvc.m_verification_failed)       bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Verification failed, connection should be dropped, "); // bad tx, should drop connection
-    if(tvc.m_verification_impossible)   bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Verification impossible, related to alt chain, "); // the transaction is related with an alternative blockchain
-    if(tvc.m_should_be_relayed)         bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction should be relayed, ");
-    if(tvc.m_added_to_pool)             bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction added to pool, ");
-    if(tvc.m_low_mixin)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Insufficient mixin, ");
-    if(tvc.m_double_spend)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction already been spent., ");
-    if(tvc.m_invalid_input)             bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid inputs, ");
-    if(tvc.m_invalid_output)            bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid outputs, ");
-    if(tvc.m_too_big)                   bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction too big, ");
-    if(tvc.m_overspend)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Overspend, ");
-    if(tvc.m_fee_too_low)               bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Fee too low, ");
-    if(tvc.m_too_few_outputs)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction has not enough outputs required. ");
-    if(tvc.m_invalid_version)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction has invalid version, ");
-    if(tvc.m_invalid_type)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction has invalid type, ");
-    if(tvc.m_key_image_locked_by_snode) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Key image is locked by Service Node, ");
-    if(tvc.m_key_image_blacklisted)     bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Key image is blacklisted on the Service Node Network, ");
+    if (tvc.m_verification_failed)       bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Verification failed, connection should be dropped, "); // bad tx, should drop connection
+    if (tvc.m_verification_impossible)   bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Verification impossible, related to alt chain, "); // the transaction is related with an alternative blockchain
+    if (tvc.m_should_be_relayed)         bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction should be relayed, ");
+    if (tvc.m_added_to_pool)             bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction added to pool, ");
+    if (tvc.m_low_mixin)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Insufficient mixin, ");
+    if (tvc.m_double_spend)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction already been spent., ");
+    if (tvc.m_invalid_input)             bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid inputs, ");
+    if (tvc.m_invalid_output)            bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid outputs, ");
+    if (tvc.m_too_big)                   bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction too big, ");
+    if (tvc.m_overspend)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Overspend, ");
+    if (tvc.m_fee_too_low)               bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Fee too low, ");
+    if (tvc.m_too_few_outputs)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction has not enough outputs required. ");
+    if (tvc.m_invalid_version)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction has invalid version, ");
+    if (tvc.m_invalid_type)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction has invalid type, ");
+    if (tvc.m_key_image_locked_by_snode) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Key image is locked by Service Node, ");
+    if (tvc.m_key_image_blacklisted)     bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Key image is blacklisted on the Service Node Network, ");
 
-    if(tx)
+    if (tx)
     {
       bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Transaction Version: %s", transaction::version_to_string(tx->version));
-      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, ", Type: %s", transaction::type_to_string(tx->type));
+      bufPtr += snprintf(bufPtr, bufEnd - bufPtr, ", Type: %s", transaction::type_to_string(tx->tx_type));
     }
 
-    if(bufPtr != buf)
+    if (bufPtr != buf)
     {
       char *last_comma = bufPtr - 2;
-      if(last_comma[0] == ',')
+      if (last_comma[0] == ',')
         last_comma[0] = 0;
     }
 
@@ -1190,17 +1189,17 @@ namespace cryptonote
 
     char *bufPtr = buf;
     char *bufEnd = buf + sizeof(buf);
-    if(vvc.m_invalid_block_height)          bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid block height: %s, ",          vote ? std::to_string(vote->block_height).c_str() : "??");
-    if(vvc.m_duplicate_voters)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Index in group was duplicated: %s, ", vote ? std::to_string(vote->index_in_group).c_str() : "??");
-    if(vvc.m_validator_index_out_of_bounds) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Validatorindex out of bounds");
-    if(vvc.m_worker_index_out_of_bounds)    bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Worker index out of bounds: %s, ",    vote ? std::to_string(vote->state_change.worker_index).c_str() : "??");
-    if(vvc.m_signature_not_valid)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Signature not valid, ");
-    if(vvc.m_added_to_pool)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Added to pool, ");
-    if(vvc.m_not_enough_votes)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Not enough votes, ");
-    if(vvc.m_incorrect_voting_group)
+    if (vvc.m_invalid_block_height)          bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Invalid block height: %s, ",          vote ? std::to_string(vote->block_height).c_str() : "??");
+    if (vvc.m_duplicate_voters)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Index in group was duplicated: %s, ", vote ? std::to_string(vote->index_in_group).c_str() : "??");
+    if (vvc.m_validator_index_out_of_bounds) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Validatorindex out of bounds");
+    if (vvc.m_worker_index_out_of_bounds)    bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Worker index out of bounds: %s, ",    vote ? std::to_string(vote->state_change.worker_index).c_str() : "??");
+    if (vvc.m_signature_not_valid)           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Signature not valid, ");
+    if (vvc.m_added_to_pool)                 bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Added to pool, ");
+    if (vvc.m_not_enough_votes)              bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Not enough votes, ");
+    if (vvc.m_incorrect_voting_group)
     {
       bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Incorrect voting group specified");
-      if(vote)
+      if (vote)
       {
         if (vote->group == service_nodes::quorum_group::validator)
           bufPtr += snprintf(bufPtr, bufEnd - bufPtr, ": %s", "validator");
@@ -1214,10 +1213,10 @@ namespace cryptonote
     if (vvc.m_invalid_vote_type) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Vote type has invalid value: %s, ", vote ? std::to_string((uint8_t)vote->type).c_str() : "??");
     if (vvc.m_votes_not_sorted) bufPtr += snprintf(bufPtr, bufEnd - bufPtr, "Votes are not sorted in ascending order");
 
-    if(bufPtr != buf)
+    if (bufPtr != buf)
     {
       char *last_comma = bufPtr - 2;
-      if(last_comma[0] == ',')
+      if (last_comma[0] == ',')
         last_comma[0] = 0;
     }
 
@@ -1400,7 +1399,7 @@ namespace cryptonote
     const blobdata blob = tx_to_blob(t);
 
     // base rct
-    if(t.is_transfer())
+    if (t.is_transfer())
     {
       const unsigned int unprunable_size = t.unprunable_size;
       const unsigned int prefix_size = t.prefix_size;
@@ -1432,9 +1431,9 @@ namespace cryptonote
     res = cn_fast_hash(hashes, sizeof(hashes));
 
     // we still need the size
-    if(blob_size)
+    if (blob_size)
     {
-      if(!t.is_blob_size_valid())
+      if (!t.is_blob_size_valid())
       {
         t.blob_size = blob.size();
         t.set_blob_size_valid(true);

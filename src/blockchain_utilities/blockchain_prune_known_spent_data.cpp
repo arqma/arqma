@@ -161,9 +161,9 @@ int main(int argc, char* argv[])
   const std::string input = command_line::get_arg(vm, arg_input);
 
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  //blockchain_objects_t blockchain_objects = {};
-  //Blockchain *core_storage = &blockchain_objects.m_blockchain;
-  std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
+  BlockchainAndSNlistAndPool blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.blockchain;
+  //std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
   BlockchainDB *db = new_db();
   if (db == NULL)
   {
@@ -176,14 +176,14 @@ int main(int argc, char* argv[])
 
   try
   {
-    db->open(filename, core_storage->blockchain.nettype(), 0);
+    db->open(filename, core_storage->nettype(), 0);
   }
   catch (const std::exception& e)
   {
     LOG_PRINT_L0("Error opening database: " << e.what());
     return 1;
   }
-  r = core_storage->blockchain.init(db, net_type);
+  r = core_storage->init(db, net_type);
 
   CHECK_AND_ASSERT_MES(r, 1, "Failed to initialize source blockchain storage");
   LOG_PRINT_L0("Source blockchain storage initialized OK");
@@ -281,7 +281,7 @@ int main(int argc, char* argv[])
   MINFO("Prunable outputs: " << num_prunable_outputs);
 
   LOG_PRINT_L0("Blockchain known spent data pruned OK");
-  core_storage->blockchain.deinit();
+  core_storage->deinit();
   return 0;
 
   CATCH_ENTRY("Error", 1);

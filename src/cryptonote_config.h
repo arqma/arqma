@@ -144,11 +144,11 @@
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT_OUT               8
 #define P2P_DEFAULT_CONNECTIONS_COUNT_IN                32
-#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_OUT          8
-#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_IN           8
+#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_OUT          2
+#define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_IN           6
 
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
-#define P2P_DEFAULT_PACKET_MAX_SIZE                     52428800   // 50MB maximum packet size
+#define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
 #define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               60         // seconds
@@ -160,8 +160,8 @@
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST       1
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 
-#define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // kbps
-#define P2P_DEFAULT_LIMIT_RATE_DOWN                     16384      // kbps
+#define P2P_DEFAULT_LIMIT_RATE_UP                       8192       // kbps
+#define P2P_DEFAULT_LIMIT_RATE_DOWN                     32768      // kbps
 
 #define P2P_FAILED_ADDR_FORGET_SECONDS                  (24*60*60)    // 1 day
 #define P2P_IP_BLOCKTIME                                (2*60*60*24) // 2 days
@@ -179,11 +179,6 @@
 #define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
 #define THREAD_STACK_SIZE                               10 * 1024 * 1024
-
-#define HF_VERSION_DYNAMIC_FEE                          4
-#define HF_VERSION_MIN_MIXIN_4                          6
-#define HF_VERSION_MIN_MIXIN_6                          7
-#define HF_VERSION_ENFORCE_RCT                          6
 
 #define HF_VERSION_MIN_MIXIN_10                         13
 
@@ -243,10 +238,6 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 
 namespace config
 {
-  const uint64_t DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder! Change me!
-  const uint64_t DEFAULT_DUST_THRESHOLD = ((uint64_t)20000); // Deprecated
-  const uint64_t BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)100000);
-
   const uint64_t CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
   const uint64_t CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
   const uint64_t CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
@@ -276,61 +267,61 @@ namespace config
     std::string const DEV_WALLET_ADDRESS = "atywfJChhS1XLjfY2pDGUHNo5BcWMM5ZJeFs4pWGs9p7gCbxSguxoyBWLDYasHuY7yHppCWYRbPPMHNVf2EXuzpq2xMZLhQZMW";
   }
 
-   namespace stagenet
-   {
-     const uint64_t CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x39ca; // Wallet prefix: as... // decimal prefix: 14794
-     const uint64_t CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1742ca; // Wallet prefix: asi... // decimal prefix: 1524426
-     const uint64_t CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1d84ca; // Wallet prefix: ass... // decimal prefix: 1934538
-     const uint16_t P2P_DEFAULT_PORT = 39993;
-     const uint16_t RPC_DEFAULT_PORT = 39994;
-     const uint16_t ZMQ_DEFAULT_PORT = 39995;
-     boost::uuids::uuid const NETWORK_ID = { {
-         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
-       } }; // Bender's daydream
-     std::string const GOVERNANCE_WALLET_ADDRESS = "as3DH2He8go7QzsiWc2PK4by2XdQZmUTF8Bv2bKY3egmRH9zPAF3iwWFteTPYaob4m5GuCNTLHFgtVdA6nbuP3Gp1x4Fvjv5G";
-     std::string const DEV_WALLET_ADDRESS = "as1gAmaQQZMDy8SQzeqQSxGJJJpinLxSpgALxxZEDyNL6QB6hREvXzoVDi9LrFGJVu1x33toQVe9hWeXdhsjnkg7199GtodQy";
-   }
+  namespace stagenet
+  {
+    const uint64_t CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x39ca; // Wallet prefix: as... // decimal prefix: 14794
+    const uint64_t CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x1742ca; // Wallet prefix: asi... // decimal prefix: 1524426
+    const uint64_t CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x1d84ca; // Wallet prefix: ass... // decimal prefix: 1934538
+    const uint16_t P2P_DEFAULT_PORT = 39993;
+    const uint16_t RPC_DEFAULT_PORT = 39994;
+    const uint16_t ZMQ_DEFAULT_PORT = 39995;
+    boost::uuids::uuid const NETWORK_ID = { {
+        0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
+      } }; // Bender's daydream
+    std::string const GOVERNANCE_WALLET_ADDRESS = "as3DH2He8go7QzsiWc2PK4by2XdQZmUTF8Bv2bKY3egmRH9zPAF3iwWFteTPYaob4m5GuCNTLHFgtVdA6nbuP3Gp1x4Fvjv5G";
+    std::string const DEV_WALLET_ADDRESS = "as1gAmaQQZMDy8SQzeqQSxGJJJpinLxSpgALxxZEDyNL6QB6hREvXzoVDi9LrFGJVu1x33toQVe9hWeXdhsjnkg7199GtodQy";
+  }
 
-   namespace blockchain_settings
-   {
-     static constexpr uint64_t ARQMA = 1000000000; // Atomic representation of a value 1 ARQMA
-     static const uint8_t ARQMA_DECIMALS = 9;
-     const uint64_t PREMINE = 7500000000000000; // Premine Reward (already burned).
-     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
-     const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2097152; // It is set to 2048kB (2MB)
-     const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1048576; // It is set to 1024kB (1MB)
-     static const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
-     static const uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
-     static const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
-     static const uint8_t min_output_age = 20;
-     static const uint64_t HF16_BL_REWARD = 20 * ARQMA;
-   }
+  namespace blockchain_settings
+  {
+    static constexpr uint64_t ARQMA = 1000000000; // Atomic representation of a value 1 ARQMA
+    static const uint8_t ARQMA_DECIMALS = 9;
+    const uint64_t PREMINE = 7500000000000000; // Premine Reward (already burned).
+    const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+    const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2097152; // It is set to 2048kB (2MB)
+    const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1048576; // It is set to 1024kB (1MB)
+    static const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
+    static const uint8_t ARQMA_GENESIS_BLOCK_MINOR_VERSION = 1;
+    static const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
+    static const uint8_t min_output_age = 20;
+    static const uint64_t HF16_BL_REWARD = 20 * ARQMA;
+  }
 
-   namespace tx_settings
-   {
-     static const size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
-     const uint64_t ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
-     const uint64_t TRANSACTION_SIZE_LIMIT = 49152; // I did set it to 48kB for now but it need to be verified.
-     const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
+  namespace tx_settings
+  {
+    static const size_t ARQMA_TX_CONFIRMATIONS_REQUIRED = 4; // How many blocks are needed to confirm transaction sent.
+    const uint64_t ARQMA_TX_LOCK_SECONDS = 360;  // Transaction lock stated in seconds related to time-based per_output_unlock.
+    const uint64_t TRANSACTION_SIZE_LIMIT = 49152; // I did set it to 48kB for now but it need to be verified.
+    const uint64_t MAX_TRANSACTIONS_IN_BLOCK = 1024; // Maximum allowed transactions in One Block
 
-     static const uint64_t min_tx_amount = 10000;
-     static const uint64_t min_amount_blockage_fee = (MONEY_SUPPLY - 1);
-     static constexpr uint64_t tx_mixin = 10;
-     static constexpr uint64_t tx_ring_size = tx_mixin + 1;
-   }
+    static const uint64_t min_tx_amount = 10000;
+    static const uint64_t min_amount_blockage_fee = (MONEY_SUPPLY - 1);
+    static constexpr uint64_t tx_mixin = 10;
+    static constexpr uint64_t tx_ring_size = tx_mixin + 1;
+  }
 
-   namespace sync
-   {
-     static constexpr size_t NORMAL_SYNC = 20;
-     static constexpr size_t FAST_SYNC = 100;
-     static constexpr size_t MAX_SYNC = 2048;
-   }
+  namespace sync
+  {
+    static constexpr size_t NORMAL_SYNC = 20;
+    static constexpr size_t FAST_SYNC = 100;
+    static constexpr size_t MAX_SYNC = 2048;
+  }
 
-   namespace governance
-   {
-     static const uint64_t gr = 15;
-     static const uint64_t sn = 2;
-   }
+  namespace governance
+  {
+    static const uint64_t gr = 15;
+    static const uint64_t sn = 2;
+  }
 }
 
 namespace arqma

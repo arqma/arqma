@@ -69,11 +69,14 @@ target_link_libraries(wallet_api
     cryptonote_core
     mnemonics
     lmdb
+    ${Boost_LOCALE_LIBRARY}
+    ${ICU_LIBRARIES}
     ${Boost_CHRONO_LIBRARY}
     ${Boost_SERIALIZATION_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_REGEX_LIBRARY}
   PRIVATE
     ${EXTRA_LIBRARIES})

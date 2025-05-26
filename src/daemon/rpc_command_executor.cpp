@@ -62,9 +62,7 @@ namespace {
     std::cout << prompt << std::flush;
     std::string result;
 
-  #ifdef HAVE_READLINE
     rdln::suspend_readline pause_readline;
-  #endif
     std::cin >> result;
     return result;
   }
@@ -72,7 +70,7 @@ namespace {
   input_line_result input_line_yes_no_back_cancel(char const *msg)
   {
     std::string prompt = std::string(msg);
-    prompt += " (Y/Yes/N/No/B/Back/C/Cancel): ";
+    prompt += " (Y/Yes/N/No/B/Back/C/Cancel):\n";
     std::string input = input_line(prompt);
 
     if(command_line::is_yes(input))
@@ -87,7 +85,7 @@ namespace {
   input_line_result input_line_yes_no_cancel(char const *msg)
   {
     std::string prompt = msg;
-    prompt += " (Y/Yes/N/No/C/Cancel): ";
+    prompt += " (Y/Yes/N/No/C/Cancel):\n";
     std::string input = input_line(prompt);
 
     if(command_line::is_yes(input))
@@ -100,7 +98,7 @@ namespace {
   input_line_result input_line_back_cancel_get_input(char const *msg, std::string &input)
   {
     std::string prompt = msg;
-    prompt += " (B/Back/C/Cancel): ";
+    prompt += " (B/Back/C/Cancel):\n";
     input = input_line(prompt);
 
     if(command_line::is_back(input))
@@ -2469,7 +2467,7 @@ static std::string to_string_rounded(double d, int precision) {
   return ss.str();
 }
 
-static void append_printable_service_node_list_entry(cryptonote::network_type nettype, bool detailed_view, uint64_t curr_height, uint64_t entry_index, cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry const &entry, std::string &buffer)
+static void append_printable_service_node_list_entry(cryptonote::network_type nettype, bool detailed_view, uint64_t blockchain_height, uint64_t entry_index, cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry const &entry, std::string &buffer)
 {
   const char indent1[] = "    ";
   const char indent2[] = "        ";
@@ -2496,6 +2494,8 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
   {
     uint64_t expiry_height = 0;
 
+    expiry_height = entry.requested_unlock_height;
+
     stream << indent2 << "Registration Height: " << entry.registration_height << "; Expiry: ";
     if(expiry_height == service_nodes::KEY_IMAGE_AWAITING_UNLOCK_HEIGHT)
     {
@@ -2503,9 +2503,7 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
     }
     else
     {
-      expiry_height = entry.requested_unlock_height;
-
-      uint64_t delta_height = expiry_height - curr_height;
+      uint64_t delta_height = (blockchain_height >= expiry_height) ? 0 : expiry_height - blockchain_height;
       uint64_t expiry_epoch_time = now + (delta_height * DIFFICULTY_TARGET_V16);
 
       stream << expiry_height << " (in " << delta_height << ") blocks\n";
@@ -2561,9 +2559,11 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
     stream << ")\n";
 
     stream << indent2 << "Checkpoint Participation [Height: Voted]: ";
+    auto it = std::min_element(entry.votes.begin(), entry.votes.end(), [](const auto &a, const auto &b) { return a.height < b.height; });
+    size_t offset = std::distance(entry.votes.begin(), it);
     for (size_t i = 0; i < entry.votes.size(); i++)
     {
-      service_nodes::checkpoint_vote_record const &record = entry.votes[i];
+      service_nodes::checkpoint_vote_record const &record = entry.votes[(offset + i) % entry.votes.size()];
       if (record.height == service_nodes::INVALID_HEIGHT)
       {
         stream << "[N/A: N/A]";
@@ -2695,12 +2695,10 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
     return b_remaining < a_remaining;
   });
 
-  std::stable_sort(registered.begin(), registered.end(), [](const cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *a, const cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *b)
+  std::sort(registered.begin(), registered.end(), [](const cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *a, const cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry *b)
   {
-    if(a->last_reward_block_height == b->last_reward_block_height)
-      return a->last_reward_transaction_index < b->last_reward_transaction_index;
-
-    return a->last_reward_block_height < b->last_reward_block_height;
+    return std::make_tuple(a->last_reward_block_height, a->last_reward_transaction_index, a->service_node_pubkey)
+           < std::make_tuple(b->last_reward_block_height, b->last_reward_transaction_index, b->service_node_pubkey);
   });
 
   if(req.include_json)
@@ -2714,15 +2712,15 @@ bool t_rpc_command_executor::print_sn(const std::vector<std::string> &args)
     if(req.service_node_pubkeys.size() > 0)
     {
       int str_size = 0;
-      for(const std::string &arg : args)
+      for(const std::string &arg : req.service_node_pubkeys)
         str_size += (arg.size() + 2);
 
       std::string buffer;
       buffer.reserve(str_size);
-      for(size_t i = 0; i < args.size(); ++i)
+      for(size_t i = 0; i < req.service_node_pubkeys.size(); ++i)
       {
-        buffer.append(args[i]);
-        if(i < args[i].size() - 1)
+        buffer.append(req.service_node_pubkeys[i]);
+        if(i < req.service_node_pubkeys.size() - 1)
           buffer.append(", ");
       }
 
@@ -2859,7 +2857,8 @@ bool t_rpc_command_executor::print_sn_key()
     }
   }
 
-  tools::success_msg_writer() << "Service_node Public Key: " << res.service_node_pubkey;
+  std::string const msg_buf = "Service_node Public Key: " + res.service_node_pubkey;
+  tools::success_msg_writer() << msg_buf;
   return true;
 }
 
@@ -2957,7 +2956,7 @@ bool t_rpc_command_executor::prepare_registration()
       nettype = m_rpc_server->nettype();
     }
 
-    uint8_t hard_fork_version = hf_res.version;
+    hard_fork_version = hf_res.version;
     block_height = std::max(res.height, res.target_height);
   }
 

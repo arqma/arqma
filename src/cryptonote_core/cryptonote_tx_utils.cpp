@@ -211,7 +211,7 @@ namespace cryptonote
     tx.vout.clear();
     tx.extra.clear();
     tx.output_unlock_times.clear();
-    tx.type = txtype::standard;
+    tx.tx_type = txtype::standard;
     tx.version = transaction::get_max_version_for_hf(hard_fork_version);
 
     const crypto::public_key &service_node_key = miner_tx_context.snode_winner_key;
@@ -285,8 +285,8 @@ namespace cryptonote
         crypto::public_key out_eph_public_key{};
         bool r = crypto::generate_key_derivation(service_node_info[i].first.m_view_public_key, gov_key.sec, derivation);
         CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << service_node_info[i].first.m_view_public_key << ", " << crypto::secret_key_explicit_print_ref{gov_key.sec} << ")");
-        r = crypto::derive_public_key(derivation, 1+i, service_node_info[i].first.m_spend_public_key, out_eph_public_key);
-        CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", " << (1+i) << ", "<< service_node_info[i].first.m_spend_public_key << ")");
+        r = crypto::derive_public_key(derivation, 1 + i, service_node_info[i].first.m_spend_public_key, out_eph_public_key);
+        CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << ", " << (1 + i) << ", "<< service_node_info[i].first.m_spend_public_key << ")");
 
         txout_to_key tk;
         tk.key = out_eph_public_key;
@@ -441,7 +441,8 @@ namespace cryptonote
     }
 
     tx.version = transaction::get_max_version_for_hf(tx_params.hard_fork_version);
-    tx.type = tx_params.tx_type;
+    tx.tx_type = tx_params.tx_type;
+    tx.hard_fork_version = tx_params.hard_fork_version;
 
     if(tx.version <= txversion::v2)
       tx.unlock_time = unlock_time; //height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
@@ -449,7 +450,7 @@ namespace cryptonote
     tx.extra = extra;
     crypto::public_key txkey_pub;
 
-    if(tx.type == txtype::stake)
+    if(tx.tx_type == txtype::stake)
       add_tx_secret_key_to_tx_extra(tx.extra, tx_key);
 
     // if we have a stealth payment id, find it and encrypt it with the tx key now
@@ -659,7 +660,7 @@ namespace cryptonote
         }
       }
 
-      if(tx.type == txtype::stake)
+      if(tx.tx_type == txtype::stake)
       {
         CHECK_AND_ASSERT_MES(dst_entr.addr == sender_account_keys.m_account_address, false, "A staking contribution must return back to the original sendee otherwise the pre-calculated key image is incorrect");
         CHECK_AND_ASSERT_MES(dst_entr.is_subaddress == false, false, "Staking back to a subaddress is not allowed");
@@ -693,7 +694,7 @@ namespace cryptonote
     }
     CHECK_AND_ASSERT_MES(additional_tx_public_keys.size() == additional_tx_keys.size(), false, "Internal error creating additional public keys");
 
-    if(tx.type == txtype::stake)
+    if(tx.tx_type == txtype::stake)
     {
       CHECK_AND_ASSERT_MES(key_image_proofs.proofs.size() >= 1, false, "No key image proofs were generated for staking tx");
       add_tx_key_image_proofs_to_tx_extra(tx.extra, key_image_proofs);
@@ -917,8 +918,8 @@ namespace cryptonote
      std::vector<tx_destination_entry> destinations_copy = destinations;
 
      rct::RCTConfig rct_config = {};
-     rct_config.range_proof_type = tx_params.hard_fork_version < 8 ? rct::RangeProofBorromean : tx_params.hard_fork_version < 13 ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofPaddedBulletproof;
-     rct_config.bp_version = tx_params.hard_fork_version >= 16 ? 2 : tx_params.hard_fork_version >= 13 ? 1 : 0;
+     rct_config.range_proof_type = (tx_params.hard_fork_version < 8) ? rct::RangeProofBorromean : (tx_params.hard_fork_version < 13) ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofPaddedBulletproof;
+     rct_config.bp_version = (tx_params.hard_fork_version >= 16) ? 2 : (tx_params.hard_fork_version >= 13) ? 1 : 0;
 
      return construct_tx_and_get_tx_key(sender_account_keys, subaddresses, sources, destinations_copy, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, rct_config, NULL, tx_params);
   }

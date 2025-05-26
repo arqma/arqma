@@ -67,11 +67,11 @@ namespace service_nodes
 {
   enum class new_state : uint16_t
   {
-    deregister,
+    deregister = 0,
     decommission,
     recommission,
     ip_change_penalty,
-    _count,
+    _count
   };
 };
 

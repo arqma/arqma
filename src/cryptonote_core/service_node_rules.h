@@ -73,11 +73,9 @@ namespace service_nodes
   using swarm_id_t = uint64_t;
   constexpr swarm_id_t UNASSIGNED_SWARM_ID                          = UINT64_MAX;
 
-  inline quorum_type max_quorum_type_for_hf(uint8_t hard_fork_version)
+  constexpr quorum_type max_quorum_type_for_hf(uint8_t hard_fork_version)
   {
-    quorum_type result = quorum_type::checkpointing;
-    assert(result != quorum_type::_count);
-    return result;
+    return quorum_type::checkpointing;
   }
 
   inline uint64_t staking_num_lock_blocks(cryptonote::network_type nettype)

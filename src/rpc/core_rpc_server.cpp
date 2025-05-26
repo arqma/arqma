@@ -3242,7 +3242,7 @@ namespace cryptonote
           MERROR("tx could not be validated from blob, possibly corrupt blockchain");
           continue;
         }
-        if (tx.type == cryptonote::txtype::state_change)
+        if (tx.tx_type == cryptonote::txtype::state_change)
         {
           cryptonote::tx_extra_service_node_state_change state_change;
           if (!cryptonote::get_service_node_state_change_from_tx_extra(tx.extra, state_change))
@@ -3261,7 +3261,7 @@ namespace cryptonote
           }
         }
 
-        if (tx.type == cryptonote::txtype::key_image_unlock)
+        if (tx.tx_type == cryptonote::txtype::key_image_unlock)
         {
           res.total_unlock++;
         }

@@ -66,6 +66,7 @@ target_link_libraries(device
   PUBLIC
     ${HIDAPI_LIBRARIES}
     cncrypto
+    cryptonote_format_utils_basic
     ringct_basic
     ${OPENSSL_CRYPTO_LIBRARIES}
     ${Boost_SERIALIZATION_LIBRARY}
