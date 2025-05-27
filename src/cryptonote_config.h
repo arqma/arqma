@@ -250,7 +250,7 @@ namespace config
   std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
   uint32_t const GENESIS_NONCE = 19993;
   std::string const GOVERNANCE_WALLET_ADDRESS = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
-  std::string const DEV_WALLET_ADDRESS = "";
+  std::string const DEV_WALLET_ADDRESS = "ar2qmaDevL5BaCgfNFz872NZmR6bDq1fKc1Qz2AiLU633yNs3vXi1JWh5q7vXq4dmY6E6PwRohqEdWtQPFEdZXjB38DtYQCXt";
 
   namespace testnet
   {
@@ -329,14 +329,15 @@ namespace arqma
   static constexpr size_t seed_nodes_qty = 12;
   const char *const mainnet_core_nodes[] =
   {
-    "161.97.102.172", //Malbit
-    "207.244.249.105", //Malbit US
-    "it-support.mal-bit.com",
+    "node5.arqma.com", //Malbit
     "node1.arqma.com", //ArqTras
+    "node6.arqma.com", //Malbit US
     "node2.arqma.com", //ArqTras
+    "node7.arqma.com", //Malbit Contabo
     "node3.arqma.com", //ArqTras
     "node4.arqma.com", //ArqTras
-    "194.233.64.43" //Malbit Asia
+    "node8.arqma.com", //Malbit Asia
+    "it-support.mal-bit.com"
   };
 
   const char *const testnet_core_nodes[] =
@@ -348,14 +349,15 @@ namespace arqma
 
   const char *const stagenet_core_nodes[] =
   {
-    "161.97.102.172", //Malbit
-    "207.244.249.105", //Malbit US
-    "it-support.mal-bit.com",
+    "node5.arqma.com", //Malbit
     "node1.arqma.com", //ArqTras
+    "node6.arqma.com", //Malbit US
     "node2.arqma.com", //ArqTras
+    "node7.arqma.com", //Malbit Contabo
     "node3.arqma.com", //ArqTras
     "node4.arqma.com", //ArqTras
-    "194.233.64.43" //Malbit Asia
+    "node8.arqma.com", //Malbit Asia
+    "it-support.mal-bit.com"
   };
 }
 

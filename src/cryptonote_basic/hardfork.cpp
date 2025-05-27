@@ -58,16 +58,17 @@ static uint8_t get_block_version(const cryptonote::block &b)
 
 static constexpr HardFork::Params mainnet_hard_forks[] =
 {
-  { network_version_1,       0, 0, 1341378000 },
-  { network_version_7,       1, 0, 1528750800 },
-  { network_version_8,     100, 0, 1528751200 },
-  { network_version_9,    7000, 0, 1530320400 },
-  { network_version_10,  61250, 0, 1543615200 },
-  { network_version_11, 131650, 0, 1552424400 },
-  { network_version_12, 183700, 0, 1558656000 },
-  { network_version_13, 248200, 0, 1566511680 },
-  { network_version_14, 248920, 0, 1566598080 },
-  { network_version_15, 303666, 0, 1573257000 },
+  { network_version_1,        0, 0, 1341378000 },
+  { network_version_7,        1, 0, 1528750800 },
+  { network_version_8,      100, 0, 1528751200 },
+  { network_version_9,     7000, 0, 1530320400 },
+  { network_version_10,   61250, 0, 1543615200 },
+  { network_version_11,  131650, 0, 1552424400 },
+  { network_version_12,  183700, 0, 1558656000 },
+  { network_version_13,  248200, 0, 1566511680 },
+  { network_version_14,  248920, 0, 1566598080 },
+  { network_version_15,  303666, 0, 1573257000 },
+  { network_version_16, 1730030, 0, 1749148200 },
 };
 
 static constexpr HardFork::Params testnet_hard_forks[] =
