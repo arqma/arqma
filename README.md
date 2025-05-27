@@ -1,6 +1,6 @@
 ## Arqma Network
 
-Copyright (c) 2018-2022, The Arqma Network    
+Copyright (c) 2018-2025, The Arqma Network    
 Copyright (c) 2014-2018, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
@@ -15,17 +15,10 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Other Arqma related websites
 
-- Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
 - Arqma Blockchain Explorer: [explorer.arqma.com](https://explorer.arqma.com)
-- Arqma Blockchain Raw File updated every 24hrs: [https://raw.arqma.com](https://raw.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
 - Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
-- Arqma Payment Gateway: [https://pg.arqma.com](https://pg.arqma.com)
-- Arqma WooCommerce Payment Plugin: [https://github.com/arqma/arqma-payments-woocommerce-gateway](https://github.com/arqma/arqma-payments-woocommerce-gateway)
 - Arqma Off-line Wallet Address Generator: [https://generate.arqma.com](https://generate.arqma.com)
-- myArqma - Arqma Web-Wallet Interface: [https://myarqma.com](https://myarqma.com)
-- arqmaDroid - Arqma Android Wallet: [https://play.google.com/store/apps/details?id=com.arqma.Droid](https://play.google.com/store/apps/details?id=com.arqma.Droid)
-- Arqma GUI electron wallet: [https://github.com/arqma/arqma-electron-wallet](https://github.com/arqma/arqma-electron-wallet)
 
 ## Arqma Social-Media Websites
 
@@ -37,7 +30,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 ## Arqma Exchange Websites
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
-- Crex24: [https://crex24.com/exchange/ARQ-BTC](https://crex24.com/exchange/ARQ-BTC)
+- Nonkyc: [https://nonkyc.io/market/ARQ_USDT](https://nonkyc.io/market/ARQ_USDT)
 
 ## Introduction
 
@@ -90,7 +83,6 @@ If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidel
 
 That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
 
-[![TravisCI master branch](https://img.shields.io/travis/arqma/arqma/master?label=master%20branch&style=for-the-badge)](https://travis-ci.org/arqma/arqma)
 ![Monitored by DiscordHooks](https://img.shields.io/static/v1?label=Monitored%20by&message=DiscordHooks&color=brightgreen&style=for-the-badge)
 
 ### Dependencies
@@ -147,7 +139,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.6.1`
+`$ cd arqma && git checkout release-v0.7.0`
 `$ git submodule init && git submodule update`
 
 ### Build instructions
