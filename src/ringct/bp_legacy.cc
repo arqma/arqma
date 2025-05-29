@@ -35,6 +35,7 @@
 #include <boost/thread/lock_guard.hpp>
 #include "misc_log_ex.h"
 #include "common/perf_timer.h"
+#include "cryptonote_config.h"
 extern "C"
 {
 #include "crypto/crypto-ops.h"
@@ -108,8 +109,8 @@ static void addKeys_acc_p3(ge_p3 *acc_p3, const rct::key &a, const rct::key &poi
 
 static rct::key get_exponent(const rct::key &base, size_t idx)
 {
-  static const std::string salt("bulletproof");
-  std::string hashed = std::string((const char*)base.bytes, sizeof(base)) + salt + tools::get_varint_data(idx);
+  static const std::string domain_separator(config::HASH_KEY_BULLETPROOF_EXPONENT);
+  std::string hashed = std::string((const char*)base.bytes, sizeof(base)) + domain_separator + tools::get_varint_data(idx);
   rct::key e;
 
   ge_p3 e_p3;

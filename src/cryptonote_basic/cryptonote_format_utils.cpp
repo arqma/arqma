@@ -51,8 +51,6 @@ namespace arqma_bc = config::blockchain_settings;
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
 
-#define ENCRYPTED_PAYMENT_ID_TAIL 0x8d
-
 //#define ENABLE_HASH_CASH_INTEGRITY_CHECK
 
 using namespace crypto;
@@ -113,7 +111,6 @@ namespace cryptonote
 
   uint64_t get_transaction_weight_clawback(const transaction &tx, size_t n_padded_outputs)
   {
-    const rct::rctSig &rv = tx.rct_signatures;
     const uint64_t bp_base = 368;
     const size_t n_outputs = tx.vout.size();
     if (n_padded_outputs <= 2)

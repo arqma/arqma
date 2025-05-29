@@ -101,10 +101,6 @@ using namespace cryptonote;
 // used to target a given block weight (additional outputs may be added on top to build fee)
 #define TX_WEIGHT_TARGET(bytes) (bytes*2/3)
 
-// arbitrary, used to generate different hashes from the same input
-#define CHACHA8_KEY_TAIL 0x8c
-#define CACHE_KEY_TAIL 0x8d
-
 #define UNSIGNED_TX_PREFIX "ArQmA unsigned tx set\004"
 #define SIGNED_TX_PREFIX "ArQmA signed tx set\004"
 #define MULTISIG_UNSIGNED_TX_PREFIX "ArQmA multisig unsigned tx set\001"
@@ -311,7 +307,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
 
   // user specified CA file or fingeprints implies enabled SSL by default
   epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_enabled;
-  if (command_line::get_arg(vm, opts.daemon_ssl_allow_any_cert))
+  if (daemon_ssl_allow_any_cert)
     ssl_options.verification = epee::net_utils::ssl_verification_t::none;
   else if (!daemon_ssl_ca_file.empty() || !daemon_ssl_allowed_fingerprints.empty())
   {
@@ -903,9 +899,6 @@ bool get_pruned_tx(const cryptonote::COMMAND_RPC_GET_TRANSACTIONS::entry &entry,
 
 namespace tools
 {
-// for now, limit to 30 attempts.  TODO: discuss a good number to limit to.
-const size_t MAX_SPLIT_ATTEMPTS = 30;
-
 constexpr const std::chrono::seconds wallet2::rpc_timeout;
 const char* wallet2::tr(const char* str) { return i18n_translate(str, "tools::wallet2"); }
 
@@ -3139,32 +3132,7 @@ bool wallet2::refresh(bool trusted_daemon, uint64_t & blocks_fetched, bool& rece
 //----------------------------------------------------------------------------------------------------
 bool wallet2::get_rct_distribution(uint64_t &start_height, std::vector<uint64_t> &distribution)
 {
-  uint32_t rpc_version;
-  boost::optional<std::string> result = m_node_rpc_proxy.get_rpc_version(rpc_version);
-  // no error
-  if (!!result)
-  {
-    // empty string -> not connection
-    THROW_WALLET_EXCEPTION_IF(result->empty(), tools::error::no_connection_to_daemon, "getversion");
-    THROW_WALLET_EXCEPTION_IF(*result == CORE_RPC_STATUS_BUSY, tools::error::daemon_busy, "getversion");
-    if (*result != CORE_RPC_STATUS_OK)
-    {
-      MDEBUG("Cannot determine daemon RPC version, not requesting rct distribution");
-      return false;
-    }
-  }
-  else
-  {
-    if (rpc_version >= MAKE_CORE_RPC_VERSION(1, 19))
-    {
-      MDEBUG("Daemon is recent enough, requesting rct distribution");
-    }
-    else
-    {
-      MDEBUG("Daemon is too old, not requesting rct distribution");
-      return false;
-    }
-  }
+  MDEBUG("Requesting rct distribution");
 
   cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request req{};
   cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response res{};
@@ -3582,7 +3550,7 @@ void wallet2::setup_keys(const epee::wipeable_string &password)
   static_assert(HASH_SIZE == sizeof(crypto::chacha_key), "Mismatched sizes of hash and chacha key");
   epee::mlocked<tools::scrubbed_arr<char, HASH_SIZE+1>> cache_key_data;
   memcpy(cache_key_data.data(), &key, HASH_SIZE);
-  cache_key_data[HASH_SIZE] = CACHE_KEY_TAIL;
+  cache_key_data[HASH_SIZE] = config::HASH_KEY_WALLET_CACHE;
   cn_fast_hash(cache_key_data.data(), HASH_SIZE+1, (crypto::hash&)m_cache_key);
   get_ringdb_key();
 }
@@ -6914,6 +6882,14 @@ bool wallet2::get_ring(const crypto::chacha_key &key, const crypto::key_image &k
   catch (const std::exception& e) { return false; }
 }
 
+bool wallet2::get_rings(const crypto::chacha_key &key, const std::vector<crypto::key_image> &key_images, std::vector<std::vector<uint64_t>> &outs)
+{
+  if (!m_ringdb)
+    return false;
+  try { return m_ringdb->get_rings(key, key_images, outs); }
+  catch (const std::exception &e) { return false; }
+}
+
 bool wallet2::get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> &outs)
 {
   for (auto i: m_confirmed_txs)
@@ -6950,6 +6926,52 @@ bool wallet2::set_ring(const crypto::key_image &key_image, const std::vector<uin
 
   try { return m_ringdb->set_ring(get_ringdb_key(), key_image, outs, relative); }
   catch (const std::exception& e) { return false; }
+}
+
+bool wallet2::set_rings(const std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> &rings, bool relative)
+{
+  if (!m_ringdb)
+    return false;
+
+  try { return m_ringdb->set_rings(get_ringdb_key(), rings, relative); }
+  catch (const std::exception &e) { return false; }
+}
+
+bool wallet2::unset_ring(const std::vector<crypto::key_image> &key_images)
+{
+  if (!m_ringdb)
+    return false;
+
+  try { return m_ringdb->remove_rings(get_ringdb_key(), key_images); }
+  catch (const std::exception &e) { return false; }
+}
+
+bool wallet2::unset_ring(const crypto::hash &txid)
+{
+  if (!m_ringdb)
+    return false;
+
+  COMMAND_RPC_GET_TRANSACTIONS::request req;
+  COMMAND_RPC_GET_TRANSACTIONS::response res;
+  req.txs_hashes.push_back(epee::string_tools::pod_to_hex(txid));
+  req.decode_as_json = false;
+  req.prune = true;
+  m_daemon_rpc_mutex.lock();
+  bool ok = epee::net_utils::invoke_http_json("/gettransactions", req, res, *m_http_client);
+  m_daemon_rpc_mutex.unlock();
+  THROW_WALLET_EXCEPTION_IF(!ok, error::wallet_internal_error, "Failed to get transaction from daemon");
+  if (res.txs.empty())
+    return false;
+  THROW_WALLET_EXCEPTION_IF(res.txs.size(), error::wallet_internal_error, "Failed to get transaction from daemon");
+
+  cryptonote::transaction tx;
+  crypto::hash tx_hash;
+  if (!get_pruned_tx(res.txs.front(), tx, tx_hash))
+    return false;
+  THROW_WALLET_EXCEPTION_IF(tx_hash != txid, error::wallet_internal_error, "Failed to get the right transaction from daemon");
+
+  try { return m_ringdb->remove_rings(get_ringdb_key(), tx); }
+  catch (const std::exception &e) { return false; }
 }
 
 bool wallet2::find_and_save_rings(bool force)
@@ -7710,13 +7732,17 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     // if we have at least one rct out, get the distribution, or fall back to the previous system
     uint64_t rct_start_height;
     std::vector<uint64_t> rct_offsets;
-    const bool has_rct_distribution = has_rct && get_rct_distribution(rct_start_height, rct_offsets);
+    if (has_rct && rct_offsets.empty())
+    {
+      THROW_WALLET_EXCEPTION_IF(!get_rct_distribution(rct_start_height, rct_offsets), error::get_output_distribution, "Could not obtain output distribution.");
+    }
 
     // get histogram for the amounts we need
     cryptonote::COMMAND_RPC_GET_OUTPUT_HISTOGRAM::request req_t{};
     cryptonote::COMMAND_RPC_GET_OUTPUT_HISTOGRAM::response resp_t{};
     {
       uint64_t max_rct_index = 0;
+      req_t.amounts.reserve(selected_transfers.size());
       for (size_t idx: selected_transfers)
       {
         if (m_transfers[idx].is_rct())
@@ -7725,13 +7751,13 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
         }
 
         // request histogram for all outputs, except 0 if we have the rct distribution
-        if (!m_transfers[idx].is_rct() || !has_rct_distribution)
+        if (!m_transfers[idx].is_rct())
         {
-          req_t.amounts.push_back(m_transfers[idx].is_rct() ? 0 : m_transfers[idx].amount());
+          req_t.amounts.push_back(m_transfers[idx].amount());
         }
       }
 
-      if (has_rct_distribution)
+      if (has_rct)
       {
         // check we're clear enough of rct start, to avoid corner cases below
         THROW_WALLET_EXCEPTION_IF(rct_offsets.size() <= config::tx_settings::ARQMA_TX_CONFIRMATIONS_REQUIRED,
@@ -7770,6 +7796,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     {
       cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request req_t{};
       cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response resp_t{};
+      req_t.amounts.reserve(req_t.amounts.size() + selected_transfers.size());
       for(size_t idx: selected_transfers)
         req_t.amounts.push_back(m_transfers[idx].is_rct() ? 0 : m_transfers[idx].amount());
       std::sort(req_t.amounts.begin(), req_t.amounts.end());
@@ -7811,6 +7838,25 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       }
     }
 
+    std::vector<crypto::key_image> ring_key_images;
+    ring_key_images.reserve(selected_transfers.size());
+    std::unordered_map<crypto::key_image, std::vector<uint64_t>> existing_rings;
+    for (size_t idx : selected_transfers)
+    {
+      const transfer_details &td = m_transfers[idx];
+      if (td.m_key_image_known && !td.m_key_image_partial)
+        ring_key_images.push_back(td.m_key_image);
+    }
+    if (!ring_key_images.empty())
+    {
+      std::vector<std::vector<uint64_t>> all_outs;
+      if (get_rings(get_ringdb_key(), ring_key_images, all_outs))
+      {
+        for (size_t i = 0; i < ring_key_images.size(); ++i)
+          existing_rings[ring_key_images[i]] = std::move(all_outs[i]);
+      }
+    }
+
     // we ask for more, to have spares if some outputs are still locked
     size_t base_requested_outputs_count = (size_t)((fake_outputs_count + 1) * 1.5 + 1);
     LOG_PRINT_L2("base_requested_outputs_count: " << base_requested_outputs_count);
@@ -7820,10 +7866,12 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     COMMAND_RPC_GET_OUTPUTS_BIN::response daemon_resp{};
 
     std::unique_ptr<gamma_picker> gamma;
-    if (has_rct_distribution)
+    if (has_rct)
       gamma.reset(new gamma_picker(rct_offsets));
 
     size_t num_selected_transfers = 0;
+    req.outputs.reserve(selected_transfers.size() * (base_requested_outputs_count + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS));
+    daemon_resp.outs.reserve(selected_transfers.size() * (base_requested_outputs_count + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS));
     for(size_t idx: selected_transfers)
     {
       ++num_selected_transfers;
@@ -7833,7 +7881,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       // request more for rct in base recent (locked) coinbases are picked, since they're locked for longer
       size_t requested_outputs_count = base_requested_outputs_count + (td.is_rct() ? config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS - config::tx_settings::ARQMA_TX_CONFIRMATIONS_REQUIRED : 0);
       size_t start = req.outputs.size();
-      bool use_histogram = amount != 0 || !has_rct_distribution;
+      bool use_histogram = amount != 0;
 
       const bool output_is_pre_fork = td.m_block_height < segregation_fork_height;
       uint64_t num_outs = 0, num_recent_outs = 0;
@@ -7933,9 +7981,11 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       // if we have a known ring, use it
       if (td.m_key_image_known && !td.m_key_image_partial)
       {
-        std::vector<uint64_t> ring;
-        if (get_ring(get_ringdb_key(), td.m_key_image, ring))
+        const auto it = existing_rings.find(td.m_key_image);
+        const bool has_ring = it != existing_rings.end();
+        if (has_ring)
         {
+          const std::vector<uint64_t> &ring = it->second;
           MINFO("This output has a known ring, reusing (size " << ring.size() << ")");
           THROW_WALLET_EXCEPTION_IF(ring.size() > fake_outputs_count + 1, error::wallet_internal_error,
               "An output in this transaction was previously spent on another chain with ring size " +
@@ -8016,7 +8066,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
 
           uint64_t i;
           const char *type = "";
-          if (amount == 0 && has_rct_distribution)
+          if (amount == 0)
           {
             THROW_WALLET_EXCEPTION_IF(!gamma, error::wallet_internal_error, "No gamma picker");
             // gamma distribution
@@ -8161,7 +8211,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
           break;
         }
       }
-      bool use_histogram = amount != 0 || !has_rct_distribution;
+      bool use_histogram = amount != 0;
       if (!use_histogram)
         num_outs = rct_offsets[rct_offsets.size() - config::tx_settings::ARQMA_TX_CONFIRMATIONS_REQUIRED];
 
@@ -8192,9 +8242,10 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       // then pick outs from an existing ring, if any
       if (td.m_key_image_known && !td.m_key_image_partial)
       {
-        std::vector<uint64_t> ring;
-        if (get_ring(get_ringdb_key(), td.m_key_image, ring))
+        const auto it = existing_rings.find(td.m_key_image);
+        if (it != existing_rings.end())
         {
+          const std::vector<uint64_t> &ring = it->second;
           for (uint64_t out: ring)
           {
             if (out < num_outs)
@@ -8261,6 +8312,8 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
   }
 
   // save those outs in the ringdb for reuse
+  std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> rings;
+  rings.reserve(selected_transfers.size());
   for (size_t i = 0; i < selected_transfers.size(); ++i)
   {
     const size_t idx = selected_transfers[i];
@@ -8270,9 +8323,10 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     ring.reserve(outs[i].size());
     for (const auto &e: outs[i])
       ring.push_back(std::get<0>(e));
-    if (!set_ring(td.m_key_image, ring, false))
-      MERROR("Failed to set ring for " << td.m_key_image);
+    rings.push_back(std::make_pair(td.m_key_image, std::move(ring)));
   }
+  if (!set_rings(rings, false))
+    MERROR("Failed to set rings");
 }
 
 void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry> dsts,
@@ -9331,8 +9385,6 @@ bool wallet2::sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, s
 {
   MDEBUG("sanity_check: " << ptx_vector.size() << " txes, " << dsts.size() << " destinations");
 
-  hw::device &hwdev = m_account.get_device();
-
   THROW_WALLET_EXCEPTION_IF(ptx_vector.empty(), error::wallet_internal_error, "No transactions");
 
   // check every party in there does receive at least the required amount
@@ -9369,7 +9421,6 @@ bool wallet2::sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, s
   for (const auto &r: required)
   {
     const account_public_address &address = r.first;
-    const crypto::public_key &view_pkey = address.m_view_public_key;
 
     uint64_t total_received = 0;
     for (const auto &ptx: ptx_vector)
@@ -11788,7 +11839,6 @@ rct::multisig_kLRki wallet2::get_multisig_composite_kLRki(size_t n, const std::u
 {
   CHECK_AND_ASSERT_THROW_MES(n < m_transfers.size(), "Bad transfer index");
 
-  const transfer_details &td = m_transfers[n];
   rct::multisig_kLRki kLRki = get_multisig_kLRki(n, rct::skGen());
 
   // pick a L/R pair from every other participant but one

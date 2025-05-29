@@ -238,6 +238,15 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 
 namespace config
 {
+  const char HASH_KEY_BULLETPROOF_EXPONENT[] = "bulletproof";
+  const char HASH_KEY_RINGDB[] = "ringdsb";
+  const char HASH_KEY_SUBADDRESS[] = "SubAddr";
+  const unsigned char HASH_KEY_ENCRYPTED_PAYMENT_ID = 0x8d;
+  const unsigned char HASH_KEY_WALLET = 0x8c;
+  const unsigned char HASH_KEY_WALLET_CACHE = 0x8d;
+  const unsigned char HASH_KEY_MEMORY = 'k';
+  const unsigned char HASH_KEY_MULTISIG[] = {'M', 'u', 'l', 't', 'i', 's', 'i', 'g', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
   const uint64_t CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
   const uint64_t CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
   const uint64_t CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0x6847; // Wallet prefix: aRS... // decimal prefix: 26695
@@ -249,7 +258,7 @@ namespace config
     } }; // Bender's nightmare
   std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
   uint32_t const GENESIS_NONCE = 19993;
-  std::string const GOVERNANCE_WALLET_ADDRESS = "ar2govGzKKncQTPTNEre3BGVGF4faUgNh5EiycjidUXMfwoMeHZSXvTay2AwURXzQDNvh3Hd2Vyn2iXctEZE5CncCdJpphqB";
+  std::string const GOVERNANCE_WALLET_ADDRESS = "ar2dJ21SCuNiJndoQBf5ojhbdA7K8B3sREpnWSg4pHedXcwMbvUkYREAapZJMn3cVRj6VqDqDkj9bFoXLJViCmFs2qWkdufHt";
   std::string const DEV_WALLET_ADDRESS = "ar2qmaDevL5BaCgfNFz872NZmR6bDq1fKc1Qz2AiLU633yNs3vXi1JWh5q7vXq4dmY6E6PwRohqEdWtQPFEdZXjB38DtYQCXt";
 
   namespace testnet

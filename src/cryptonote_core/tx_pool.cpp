@@ -435,7 +435,6 @@ namespace cryptonote
   bool tx_memory_pool::add_tx(transaction &tx, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay, uint8_t version)
   {
     crypto::hash h = null_hash;
-    size_t blob_size = 0;
     cryptonote::blobdata bl;
     t_serializable_object_to_blob(tx, bl);
     if(bl.size() == 0 || !get_transaction_hash(tx, h))

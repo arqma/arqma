@@ -104,6 +104,7 @@ namespace command_helper
   const char* USAGE_EXPORT_RAW_MULTISIG_TX("export_raw_multisig_tx <filename>");
   const char* USAGE_PRINT_RING("print_ring <key_image> | <txid>");
   const char* USAGE_SET_RING("set_ring <key_image> absolute|relative <index> [<index>...] )");
+  const char* USAGE_UNSET_RING("unset_ring <txid> | ( <key_image> [<key_image>...] )");
   const char* USAGE_SAVE_KNOWN_RINGS("save_known_rings");
   const char* USAGE_MARK_OUTPUT_SPENT("mark_output_spent <amount>/<offset> | <filename> [add]");
   const char* USAGE_MARK_OUTPUT_UNSPENT("mark_output_unspent <amount>/<offset>");
@@ -254,6 +255,7 @@ namespace command_helper
                          "Output format:\n"
                          "Key Image, \"absolute\", list of rings");
   const char* SET_RING("Set the ring used for a given key image, so it can be reused in a fork");
+  const char* UNSET_RING("Unsets the ring used for a given key image or transaction");
   const char* SAVE_KNOWN_RINGS("Save known rings to the shared rings database");
   const char* MARK_OUTPUT_SPENT("Mark output(s) as spent so they never get selected as fake outputs in a ring");
   const char* MARK_OUTPUT_UNSPENT("Mark an output as unspent so it may get selected as a fake output in a ring");

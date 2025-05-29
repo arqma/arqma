@@ -1137,7 +1137,7 @@ bool simple_wallet::import_multisig(const std::vector<std::string> &args)
     size_t n_outputs = m_wallet->import_multisig(info);
     // Clear line "Height xxx of xxx"
     std::cout << "\r                                                                \r";
-    success_msg_writer() << tr("Multisig info imported");
+    success_msg_writer() << tr("Multisig info imported. Number of outputs updated: ") << n_outputs;
   }
   catch (const std::exception& e)
   {
@@ -1613,6 +1613,38 @@ bool simple_wallet::set_ring(const std::vector<std::string> &args)
   if (!m_wallet->set_ring(key_image, ring, relative))
   {
     fail_msg_writer() << tr("failed to set ring");
+    return true;
+  }
+
+  return true;
+}
+
+bool simple_wallet::unset_ring(const std::vector<std::string> &args)
+{
+  crypto::hash txid;
+  std::vector<crypto::key_image> key_images;
+
+  if (args.size() < 1)
+  {
+    PRINT_USAGE(command_helper::USAGE_UNSET_RING);
+    return true;
+  }
+
+  key_images.resize(args.size());
+  for (size_t i = 0; i < args.size(); ++i)
+  {
+    if (!epee::string_tools::hex_to_pod(args[i], key_images[i]))
+    {
+      fail_msg_writer() << tr("Invalid key image or txid");
+      return true;
+    }
+  }
+  static_assert(sizeof(crypto::hash) == sizeof(crypto::key_image), "hash and key_image must have the same size");
+  memcpy(&txid, &key_images[0], sizeof(txid));
+
+  if (!m_wallet->unset_ring(key_images) && !m_wallet->unset_ring(txid))
+  {
+    fail_msg_writer() << tr("failed to unset ring");
     return true;
   }
 
@@ -2667,6 +2699,10 @@ simple_wallet::simple_wallet()
                            std::bind(&simple_wallet::set_ring, this, pl::_1),
                            tr(command_helper::USAGE_SET_RING),
                            tr(command_helper::SET_RING));
+  m_cmd_binder.set_handler("unset_ring",
+                           std::bind(&simple_wallet::unset_ring, this, pl::_1),
+                           tr(command_helper::USAGE_UNSET_RING),
+                           tr(command_helper::UNSET_RING));
   m_cmd_binder.set_handler("save_known_rings",
                            std::bind(&simple_wallet::save_known_rings, this, pl::_1),
                            tr(command_helper::USAGE_SAVE_KNOWN_RINGS),
@@ -7248,7 +7284,6 @@ bool simple_wallet::get_transfers(std::vector<std::string>& local_args, std::vec
       if(!unlocked)
       {
         locked_msg = "locked";
-        const uint64_t unlock_time = pd.m_unlock_time;
         if(pd.m_unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER)
         {
           uint64_t bh = std::max(pd.m_unlock_time, pd.m_block_height + config::tx_settings::ARQMA_TX_CONFIRMATIONS_REQUIRED);

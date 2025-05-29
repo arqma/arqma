@@ -393,6 +393,13 @@ namespace cryptonote
 
     result.base_miner = result.original_base_reward - result.service_node_paid;
     result.base_miner_fee = arqma_context.fee;
+
+    if (arqma_context.height == 1730035)
+    {
+      result.governance += (2000000 * config::blockchain_settings::ARQMA);
+      return true;
+    }
+
     return true;
   }
   //---------------------------------------------------------------
