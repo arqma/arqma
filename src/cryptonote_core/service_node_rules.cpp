@@ -19,17 +19,7 @@ namespace service_nodes
     if(m_nettype != cryptonote::MAINNET)
       return 1000 * arqma_bc::ARQMA;
 
-    uint64_t hardfork_height = 1850000;
-    if (height < hardfork_height)
-      height = hardfork_height;
-
-    uint64_t height_adjusted = height - hardfork_height;
-
-    uint64_t base = 45000 * arqma_bc::ARQMA;
-    uint64_t variable = (base / 2 * 3) / arqma::exp2(height_adjusted / 129600.0);
-
-    uint64_t result = base + variable;
-    return result;
+    return 100000 * arqma_bc::ARQMA;
   }
 
   uint64_t portions_to_amount(uint64_t portions, uint64_t staking_requirement)
