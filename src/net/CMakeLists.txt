@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Project
+# Copyright (c) 2018-2022, The Arqma Project
 # Copyright (c) 2018-2020, The Monero Project
 #
 # All rights reserved.
@@ -28,26 +28,24 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 set(net_sources
+  dandelionpp.cpp
   error.cpp
   i2p_address.cpp
   parse.cpp
   socks.cpp
   socks_connect.cpp
-  tor_address.cpp)
+  tor_address.cpp
+  zmq.cpp)
 
-set(net_headers
-  error.h
-  i2p_address.h
-  parse.h
-  socks.h
-  socks_connect.h
-  tor_address.h)
+arqma_find_all_headers(net_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_add_library(net
   ${net_sources}
   ${net_headers})
 
 target_link_libraries(net
-  common
-  epee
-  ${Boost_ASIO_LIBRARY})
+  PUBLIC
+    common
+    epee
+    libzmq
+    ${Boost_ASIO_LIBRARY})

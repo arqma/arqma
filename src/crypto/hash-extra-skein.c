@@ -34,7 +34,8 @@
 #include "hash-ops.h"
 #include "skein.h"
 
+#define SKEIN_HASH_BITLEN HASH_SIZE * 8
+
 void hash_extra_skein(const void *data, size_t length, char *hash) {
-  int r = skein_hash(8 * HASH_SIZE, data, 8 * length, (uint8_t*)hash);
-  assert(SKEIN_SUCCESS == r);
+  skein_hash(SKEIN_HASH_BITLEN, (const BitSequence *)data, 8 * length, (uint8_t*)hash);
 }

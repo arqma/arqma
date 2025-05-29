@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -97,8 +97,14 @@
  *   KEY_IMAGE_EXISTS
  */
 
+namespace service_nodes
+{
+struct proof_info;
+}
+
 namespace cryptonote
 {
+struct checkpoint_t;
 
 /** a pair of <transaction hash, output index>, typedef for convenience */
 typedef std::pair<crypto::hash, uint64_t> tx_out_index;
@@ -129,12 +135,21 @@ struct tx_data_t
 };
 #pragma pack(pop)
 
+struct alt_block_data_1_t
+{
+  uint64_t height;
+  uint64_t cumulative_weight;
+  uint64_t cumulative_difficulty;
+  uint64_t already_generated_coins;
+};
+
 struct alt_block_data_t
 {
   uint64_t height;
   uint64_t cumulative_weight;
   uint64_t cumulative_difficulty;
   uint64_t already_generated_coins;
+  uint8_t checkpointed;
 };
 
 /**
@@ -155,8 +170,7 @@ struct txpool_tx_meta_t
   uint8_t relayed;
   uint8_t do_not_relay;
   uint8_t double_spend_seen: 1;
-  uint8_t pruned: 1;
-  uint8_t bf_padding: 6;
+  uint8_t bf_padding: 7;
 
   uint8_t padding[76]; // till 192 bytes
 };
@@ -174,21 +188,10 @@ struct txpool_tx_meta_t
 /**
  * @brief A base class for BlockchainDB exceptions
  */
-class DB_EXCEPTION : public std::exception
+class DB_EXCEPTION : public std::runtime_error
 {
-  private:
-    std::string m;
-
-  protected:
-    DB_EXCEPTION(const char *s) : m(s) { }
-
   public:
-    virtual ~DB_EXCEPTION() { }
-
-    const char* what() const throw()
-    {
-      return m.c_str();
-    }
+    using std::runtime_error::runtime_error;
 };
 
 /**
@@ -197,8 +200,8 @@ class DB_EXCEPTION : public std::exception
 class DB_ERROR : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     DB_ERROR() : DB_EXCEPTION("Generic DB Error") { }
-    DB_ERROR(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -207,8 +210,8 @@ class DB_ERROR : public DB_EXCEPTION
 class DB_ERROR_TXN_START : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     DB_ERROR_TXN_START() : DB_EXCEPTION("DB Error in starting txn") { }
-    DB_ERROR_TXN_START(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -217,8 +220,8 @@ class DB_ERROR_TXN_START : public DB_EXCEPTION
 class DB_OPEN_FAILURE : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     DB_OPEN_FAILURE() : DB_EXCEPTION("Failed to open the db") { }
-    DB_OPEN_FAILURE(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -227,8 +230,8 @@ class DB_OPEN_FAILURE : public DB_EXCEPTION
 class DB_CREATE_FAILURE : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     DB_CREATE_FAILURE() : DB_EXCEPTION("Failed to create the db") { }
-    DB_CREATE_FAILURE(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -237,8 +240,8 @@ class DB_CREATE_FAILURE : public DB_EXCEPTION
 class DB_SYNC_FAILURE : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     DB_SYNC_FAILURE() : DB_EXCEPTION("Failed to sync the db") { }
-    DB_SYNC_FAILURE(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -247,8 +250,8 @@ class DB_SYNC_FAILURE : public DB_EXCEPTION
 class BLOCK_DNE : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     BLOCK_DNE() : DB_EXCEPTION("The block requested does not exist") { }
-    BLOCK_DNE(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -257,8 +260,8 @@ class BLOCK_DNE : public DB_EXCEPTION
 class BLOCK_PARENT_DNE : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     BLOCK_PARENT_DNE() : DB_EXCEPTION("The parent of the block does not exist") { }
-    BLOCK_PARENT_DNE(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -267,8 +270,8 @@ class BLOCK_PARENT_DNE : public DB_EXCEPTION
 class BLOCK_EXISTS : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     BLOCK_EXISTS() : DB_EXCEPTION("The block to be added already exists!") { }
-    BLOCK_EXISTS(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -277,8 +280,8 @@ class BLOCK_EXISTS : public DB_EXCEPTION
 class BLOCK_INVALID : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     BLOCK_INVALID() : DB_EXCEPTION("The block to be added did not pass validation!") { }
-    BLOCK_INVALID(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -287,8 +290,8 @@ class BLOCK_INVALID : public DB_EXCEPTION
 class TX_DNE : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     TX_DNE() : DB_EXCEPTION("The transaction requested does not exist") { }
-    TX_DNE(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -297,8 +300,8 @@ class TX_DNE : public DB_EXCEPTION
 class TX_EXISTS : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     TX_EXISTS() : DB_EXCEPTION("The transaction to be added already exists!") { }
-    TX_EXISTS(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -307,8 +310,8 @@ class TX_EXISTS : public DB_EXCEPTION
 class OUTPUT_DNE : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     OUTPUT_DNE() : DB_EXCEPTION("The output requested does not exist!") { }
-    OUTPUT_DNE(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -317,8 +320,8 @@ class OUTPUT_DNE : public DB_EXCEPTION
 class OUTPUT_EXISTS : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     OUTPUT_EXISTS() : DB_EXCEPTION("The output to be added already exists!") { }
-    OUTPUT_EXISTS(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /**
@@ -327,8 +330,8 @@ class OUTPUT_EXISTS : public DB_EXCEPTION
 class KEY_IMAGE_EXISTS : public DB_EXCEPTION
 {
   public:
+    using DB_EXCEPTION::DB_EXCEPTION;
     KEY_IMAGE_EXISTS() : DB_EXCEPTION("The spent key image to be added already exists!") { }
-    KEY_IMAGE_EXISTS(const char* s) : DB_EXCEPTION(s) { }
 };
 
 /***********************************
@@ -559,7 +562,7 @@ public:
   /**
    * @brief An empty destructor.
    */
-  virtual ~BlockchainDB() { };
+  virtual ~BlockchainDB() = default;
 
   /**
    * @brief init command line options
@@ -602,7 +605,7 @@ public:
    * @param filename a string referring to the BlockchainDB to open
    * @param db_flags flags relevant to how to open/use the BlockchainDB
    */
-  virtual void open(const std::string& filename, const int db_flags = 0) = 0;
+  virtual void open(const std::string& filename, cryptonote::network_type nettype, const int db_flags = 0) = 0;
 
   /**
    * @brief Gets the current open/ready state of the BlockchainDB
@@ -690,41 +693,6 @@ public:
    * @return the name of the folder with the BlockchainDB's files, if any.
    */
   virtual std::string get_db_name() const = 0;
-
-
-  // FIXME: these are just for functionality mocking, need to implement
-  // RAII-friendly and multi-read one-write friendly locking mechanism
-  //
-  // acquire db lock
-  /**
-   * @brief acquires the BlockchainDB lock
-   *
-   * This function is a stub until such a time as locking is implemented at
-   * this level.
-   *
-   * The subclass implementation should return true unless implementing a
-   * locking scheme of some sort, in which case it should return true upon
-   * acquisition of the lock and block until then.
-   *
-   * If any of this cannot be done, the subclass should throw the corresponding
-   * subclass of DB_EXCEPTION
-   *
-   * @return true, unless at a future time false makes sense (timeout, etc)
-   */
-  virtual bool lock() = 0;
-
-  // release db lock
-  /**
-   * @brief This function releases the BlockchainDB lock
-   *
-   * The subclass, should it have implemented lock(), will release any lock
-   * held by the calling thread.  In the case of recursive locking, it should
-   * release one instance of a lock.
-   *
-   * If any of this cannot be done, the subclass should throw the corresponding
-   * subclass of DB_EXCEPTION
-   */
-  virtual void unlock() = 0;
 
   /**
    * @brief tells the BlockchainDB to start a new "batch" of blocks
@@ -832,6 +800,16 @@ public:
                             , const uint64_t& coins_generated
                             , const std::vector<std::pair<transaction, blobdata>>& txs
                             );
+
+  virtual void update_block_checkpoint(checkpoint_t const &checkpoint) = 0;
+  virtual void remove_block_checkpoint(uint64_t height) = 0;
+  virtual bool get_block_checkpoint(uint64_t height, checkpoint_t &checkpoint) const = 0;
+  virtual bool get_top_checkpoint(checkpoint_t &checkpoint) const = 0;
+
+  // num_desired_checkpoints: set to 0 to collect as many as it possible
+  static constexpr size_t GET_ALL_CHECKPOINTS = 0;
+  virtual std::vector<checkpoint_t> get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints = GET_ALL_CHECKPOINTS) const = 0;
+  virtual bool get_immutable_checkpoint(checkpoint_t *immutable_checkpoint, uint64_t block_height) const;
 
   /**
    * @brief checks if a block exists
@@ -1178,6 +1156,22 @@ public:
    */
   virtual uint64_t get_tx_unlock_time(const crypto::hash& h) const = 0;
 
+  // return unlock time of output with the given amount and output amount index
+  /**
+   * @brief fetch an output's unlock time/height
+   *
+   * The subclass should return the stored unlock time for the output
+   * with the given amount and output amount index.
+   *
+   * If no such output exists, the subclass should throw OUTPUT_DNE.
+   *
+   * @param amount the amount of the requested output
+   * @param amount_index the amount index of the requested output
+   *
+   * @return the unlock time/height
+   */
+  uint64_t get_output_unlock_time(const uint64_t amount, const uint64_t global_index) const;
+
   // return tx with hash <h>
   // throw if no such tx exists
   /**
@@ -1275,17 +1269,20 @@ public:
    * height. The number of blocks returned is variable, based on the max_size passed.
    *
    * @param start_height the height of the first block
-   * @param min_count the minimum number of blocks to return, if they exist
-   * @param max_count the maximum number of blocks to return
+   * @param min_block_count the minimum number of blocks to return, if they exist
+   * @param max_block_count the maximum number of blocks to return
+   * @param max_tx_count the maximum number of txes to return
    * @param max_size the maximum size of block/transaction data to return (will be exceeded by one blocks's worth at most, if min_count is met)
    * @param blocks the returned block/transaction data
    * @param pruned whether to return full or pruned tx data
    * @param skip_coinbase whether to return or skip coinbase transactions (they're in blocks regardless)
    * @param get_miner_tx_hash whether to calculate and return the miner (coinbase) tx hash
    *
+   * The call will return at least min_block_count if possible, even if this contravenes max_tx_count
+   *
    * @return true iff the blocks and transactions were found
    */
-  virtual bool get_blocks_from(uint64_t start_height, size_t min_count, size_t max_count, size_t max_size, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>>& blocks, bool pruned, bool skip_coinbase, bool get_miner_tx_hash) const = 0;
+  virtual bool get_blocks_from(uint64_t start_height, size_t min_block_count, size_t max_block_count, size_t max_tx_count, size_t max_size, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>>& blocks, bool pruned, bool skip_coinbase, bool get_miner_tx_hash) const = 0;
 
   /**
    * @brief fetches the prunable transaction blob with the given hash
@@ -1355,7 +1352,9 @@ public:
    *
    * @return the height of the transaction's block
    */
-  virtual uint64_t get_tx_block_height(const crypto::hash& h) const = 0;
+  uint64_t get_tx_block_height(const crypto::hash& h) const;
+
+  virtual std::vector<uint64_t> get_tx_block_heights(const std::vector<crypto::hash> &h) const = 0;
 
   // returns the total number of outputs of amount <amount>
   /**
@@ -1602,7 +1601,7 @@ public:
    * @param: data: the metadata for the block
    * @param: blob: the block's blob
    */
-  virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob) = 0;
+  virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob, const cryptonote::blobdata *checkpoint) = 0;
 
   /**
    * @brief get an alternative block by hash
@@ -1613,7 +1612,7 @@ public:
    *
    * @return true if the block was found in the alternative blocks list, false otherwise
    */
-  virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob) = 0;
+  virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob, cryptonote::blobdata *checkpoint) = 0;
 
   /**
    * @brief remove an alternative block
@@ -1737,7 +1736,7 @@ public:
    *
    * @return false if the function returns false for any output, otherwise true
    */
-  virtual bool for_all_alt_blocks(std::function<bool(const crypto::hash &blkid, const alt_block_data_t &data, const cryptonote::blobdata *blob)> f, bool include_blob = false) const = 0;
+  virtual bool for_all_alt_blocks(std::function<bool(const crypto::hash &blkid, const alt_block_data_t &data, const cryptonote::blobdata *block_blob, const cryptonote::blobdata *checkpoint_blob)> f, bool include_blob = false) const = 0;
 
 
   //
@@ -1785,6 +1784,9 @@ public:
 
   virtual bool get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, std::vector<uint64_t> &distribution, uint64_t &base) const = 0;
 
+  virtual bool get_output_blacklist(std::vector<uint64_t> &blacklist) const = 0;
+  virtual void add_output_blacklist(std::vector<uint64_t> const &blacklist) = 0;
+
   /**
    * @brief is BlockchainDB in read-only mode?
    *
@@ -1806,6 +1808,15 @@ public:
    */
   virtual void fixup();
 
+  virtual void set_service_node_data(const std::string &data, bool long_term) = 0;
+  virtual bool get_service_node_data(std::string &data, bool long_term) const = 0;
+  virtual void clear_service_node_data() = 0;
+
+  virtual bool get_service_node_proof(const crypto::public_key &pubkey, service_nodes::proof_info &proof) const = 0;
+  virtual std::unordered_map<crypto::public_key, service_nodes::proof_info> get_all_service_node_proofs() const = 0;
+  virtual void set_service_node_proof(const crypto::public_key &pubkey, const service_nodes::proof_info &proof) = 0;
+  virtual bool remove_service_node_proof(const crypto::public_key &pubkey) = 0;
+
   /**
    * @brief set whether or not to automatically remove logs
    *
@@ -1824,18 +1835,19 @@ public:
 class db_txn_guard
 {
 public:
-  db_txn_guard(BlockchainDB *db, bool readonly): db(db), readonly(readonly), active(false)
+  db_txn_guard(BlockchainDB& db, bool readonly): db(db), readonly(readonly), active(false)
   {
     if(readonly)
     {
-	  active = db->block_rtxn_start();
+	  active = db.block_rtxn_start();
     }
     else
     {
-      db->block_wtxn_start();
+      db.block_wtxn_start();
       active = true;
     }
   }
+  db_txn_guard(BlockchainDB* db, bool readonly) : db_txn_guard(*db, readonly) {}
   virtual ~db_txn_guard()
   {
     if(active)
@@ -1844,28 +1856,38 @@ public:
   void stop()
   {
     if(readonly)
-      db->block_rtxn_stop();
+      db.block_rtxn_stop();
     else
-      db->block_wtxn_stop();
+      db.block_wtxn_stop();
     active = false;
   }
   void abort()
   {
     if(readonly)
-      db->block_rtxn_abort();
+      db.block_rtxn_abort();
     else
-      db->block_wtxn_abort();
+      db.block_wtxn_abort();
     active = false;
   }
 
 private:
-  BlockchainDB *db;
+  BlockchainDB &db;
   bool readonly;
   bool active;
 };
 
-  class db_rtxn_guard: public db_txn_guard { public: db_rtxn_guard(BlockchainDB *db): db_txn_guard(db, true) {} };
-  class db_wtxn_guard: public db_txn_guard { public: db_wtxn_guard(BlockchainDB *db): db_txn_guard(db, false) {} };
+class db_rtxn_guard: public db_txn_guard
+{
+public:
+  explicit db_rtxn_guard(BlockchainDB& db) : db_txn_guard{db, true} {}
+  explicit db_rtxn_guard(BlockchainDB* db) : db_rtxn_guard{*db} {}
+};
+class db_wtxn_guard: public db_txn_guard
+{
+public:
+  explicit db_wtxn_guard(BlockchainDB& db) : db_txn_guard{db, false} {}
+  explicit db_wtxn_guard(BlockchainDB* db) : db_wtxn_guard{*db} {}
+};
 
 BlockchainDB *new_db();
 

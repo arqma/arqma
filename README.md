@@ -1,7 +1,7 @@
 ## Arqma Network
 
-Copyright (c) 2018-2021, The Arqma Network    
-Copyright (c) 2014-2021, The Monero Project  
+Copyright (c) 2018-2025, The Arqma Network    
+Copyright (c) 2014-2018, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Development resources
@@ -15,14 +15,10 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Other Arqma related websites
 
-- Arqma Information Centre: [https://arqma.github.io](https://arqma.github.io)
 - Arqma Blockchain Explorer: [explorer.arqma.com](https://explorer.arqma.com)
 - Arqma BitcoinTalk Thread: [https://bitcointalk.org/index.php?topic=4474605.0](https://bitcointalk.org/index.php?topic=4474605.0)
 - Arqma Mining Pools Stream: [https://miningpoolstats.stream/arqma](https://miningpoolstats.stream/arqma)
-- Arqma WooCommerce Payment Plugin: [https://github.com/arqma/arqma-payments-woocommerce-gateway](https://github.com/arqma/arqma-payments-woocommerce-gateway)
 - Arqma Off-line Wallet Address Generator: [https://generate.arqma.com](https://generate.arqma.com)
-- arqmaDroid - Arqma Android Wallet: [https://play.google.com/store/apps/details?id=com.arqma.Droid](https://play.google.com/store/apps/details?id=com.arqma.Droid)
-- Arqma GUI electron wallet: [https://github.com/arqma/arqma-electron-wallet](https://github.com/arqma/arqma-electron-wallet)
 
 ## Arqma Social-Media Websites
 
@@ -34,6 +30,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 ## Arqma Exchange Websites
 
 - TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
+- Nonkyc: [https://nonkyc.io/market/ARQ_USDT](https://nonkyc.io/market/ARQ_USDT)
 
 ## Introduction
 
@@ -86,18 +83,9 @@ If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidel
 
 That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
 
-[![TravisCI master branch](https://img.shields.io/travis/arqma/arqma/master?label=master%20branch&style=for-the-badge)](https://travis-ci.org/arqma/arqma)
 ![Monitored by DiscordHooks](https://img.shields.io/static/v1?label=Monitored%20by&message=DiscordHooks&color=brightgreen&style=for-the-badge)
 
 ### Dependencies
-
-#### We are strongly suggest to update cmake and boost to the latest available release.
-
-##### [Cmake v3.17.3](https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz)
-
-##### [Boost](https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz)
-
-##### Arqma build been tested on Ubuntu Server 20.04 Focal Fosa with above releases as long with [gcc9.3](https://gcc.gnu.org/gcc-9/)
 
 The following table summarizes the tools and libraries required to build. A
 few of the libraries are also included in this repository (marked as
@@ -111,22 +99,22 @@ library archives (`.a`).
 | Dep          | Min. version  | Vendored | Debian/Ubuntu pkg  | Arch pkg     | Fedora            | Optional | Purpose        |
 | ------------ | ------------- | -------- | ------------------ | ------------ | ----------------- | -------- | -------------- |
 | GCC          | 7.3.0         | NO       | `build-essential`  | `base-devel` | `gcc`             | NO       |                |
-| CMake        | 3.12.0        | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
+| CMake        | 3.18          | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
 | pkg-config   | any           | NO       | `pkg-config`       | `base-devel` | `pkgconf`         | NO       |                |
-| Boost        | 1.62          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
+| Boost        | 1.66          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | 1.1.1         | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
-| libsodium    | 1.0.16        | NO       | `libsodium-dev`    | ?            | `libsodium-devel` | NO       | Cryptography   |
+| libsodium    | 1.0.18        | NO       | `libsodium-dev`    | ?            | `libsodium-devel` | NO       | Cryptography   |
 | libunwind    | any           | NO       | `libunwind8-dev`   | `libunwind`  | `libunwind-devel` | YES      | Stack traces   |
 | liblzma      | any           | NO       | `liblzma-dev`      | `xz`         | `xz-devel`        | YES      | For libunwind  |
-| libreadline  | 6.3.0         | NO       | `libreadline6-dev` | `readline`   | `readline-devel`  | YES      | Input editing  |
+| libreadline  | 8.0           | NO       | `libreadline-dev`  | `readline`   | `readline-devel`  | YES      | Input editing  |
 | ldns         | 1.6.17        | NO       | `libldns-dev`      | `ldns`       | `ldns-devel`      | YES      | SSL toolkit    |
 | expat        | 1.1           | NO       | `libexpat1-dev`    | `expat`      | `expat-devel`     | YES      | XML parsing    |
 | GTest        | 1.5           | YES      | `libgtest-dev`[1]  | `gtest`      | `gtest-devel`     | YES      | Test suite     |
 | Doxygen      | any           | NO       | `doxygen`          | `doxygen`    | `doxygen`         | YES      | Documentation  |
 | Graphviz     | any           | NO       | `graphviz`         | `graphviz`   | `graphviz`        | YES      | Documentation  |
-| HIDAPI       | ?             | NO       | `libhidapi-dev`    | ``           | ``                | NO       | for Device     |
-| libusb-1.0   | 1.0           | NO       | `libusb-1.0-0-dev` | ``           | ``                | NO       |                |
-| libudev      | ?             | NO       | `libudev-dev`      | ``           | ``                | NO       |                |
+| libhidapi    | 0.9.0         | NO       | `libhidapi-dev`    | `hidapi`     | `hidapi-devel`    | NO       | for Device     |
+| libusb-1.0   | 1.0           | NO       | `libusb-1.0-0-dev` | `libusb`     | `libusbx-devel`   | NO       |                |
+| libudev      | ?             | NO       | `libudev-dev`      | `systemd`    | `systemd-devel`   | NO       |                |
 -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -151,7 +139,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.6.1`
+`$ cd arqma && git checkout release-v0.7.0`
 `$ git submodule init && git submodule update`
 
 ### Build instructions
@@ -217,7 +205,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Build:
 
-	`$ make release`
+	`$ make release-rpi`
 
 * Wait 4-6 hours
 
@@ -360,11 +348,11 @@ Note: do not use the boost package provided by OpenBSD, as we are installing boo
 `$ cd ~/boost`
 
 ### Fetch boost source
-`$ ftp -o boost_1_64_0.tar.bz2 https://netcologne.dl.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2`
+`$ ftp -o boost_1_77_0.tar.bz2 https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.bz2`
 
-### MUST output: (SHA256) boost_1_64_0.tar.bz2: OK
-`$ echo "7bcc5caace97baa948931d712ea5f37038dbb1c5d89b43ad4def4ed7cb683332 boost_1_64_0.tar.bz2" | sha256 -c`
-`$ tar xfj boost_1_64_0.tar.bz2`
+### MUST output: (SHA256) boost_1_77_0.tar.bz2: OK
+`$ echo "fc9f85fc030e233142908241af7a846e60630aa7388de9a5fafb1f3a26840854 boost_1_77_0.tar.bz2" | sha256 -c`
+`$ tar xfj boost_1_77_0.tar.bz2`
 
 ### Fetch and apply boost patches, required for OpenBSD
 `$ ftp -o boost_test_impl_execution_monitor_ipp.patch https://raw.githubusercontent.com/openbsd/ports/bee9e6df517077a7269ff0dfd57995f5c6a10379/devel/boost/patches/patch-boost_test_impl_execution_monitor_ipp`
@@ -375,7 +363,7 @@ Note: do not use the boost package provided by OpenBSD, as we are installing boo
 ### MUST output: (SHA256) boost_test_impl_execution_monitor_ipp.patch: OK
 `$ echo "30cec182a1437d40c3e0bd9a866ab5ddc1400a56185b7e671bb3782634ed0206 boost_test_impl_execution_monitor_ipp.patch" | sha256 -c`
 
-`$ cd boost_1_64_0`
+`$ cd boost_1_77_0`
 `$ patch -p0 < ../boost_test_impl_execution_monitor_ipp.patch`
 `$ patch -p0 < ../boost_config_platform_bsd_hpp.patch`
 
@@ -418,23 +406,15 @@ By default, in either dynamically or statically linked builds, binaries target t
 ### Cross Compiling
 
 You can also cross-compile Arqma static binaries on Linux for Windows and macOS with the `depends` system.
-
 * `make depends target=x86_64-linux-gnu` for 64-bit linux binaries.
 * `make depends target=x86_64-w64-mingw32` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
-* `make depends target=x86_64-apple-darwin19.2.0` for macOS binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools curl bsdmainutils python3-setuptools
+* `make depends target=x86_64-apple-darwin` for macOS-x64 binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools
+* `make depends target=aarch64-apple-darwin` for macOS-arm64 Apple Silicon. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools
 * `make depends target=arm-linux-gnueabihf` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * `make depends target=aarch64-linux-gnu` for armv8 binaries. Requires: g++-aarch64-linux-gnu
-
-*** For `x86_64-apple-darwin19.2.0` you need to download SDK first ***        
-
-The required packages are the names for each toolchain on apt. Depending on your OS Distribution, they may have different names.
+* `make depends-noaes target=aarch64-linux-gnu` for Raspberry Pi systems. Requires: g++-aarch64-linux-gnu
 
 Using `depends` might also be easier to compile Arqma on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
-
-### Compability with older Linux Versions < GLIBC_2.25
-
-* `make depends-compat target=x86_64-linux-gnu` for 64-bit linux binaries.
-
 
 ## Running arqmad
 

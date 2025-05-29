@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2016-2018, The Monero Project
 //
 // All rights reserved.
@@ -29,14 +29,16 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace cryptonote
 {
 
 namespace rpc
 {
 
-static const uint32_t DAEMON_RPC_VERSION_ZMQ_MINOR = 1;
-static const uint32_t DAEMON_RPC_VERSION_ZMQ_MAJOR = 1;
+static const uint32_t DAEMON_RPC_VERSION_ZMQ_MINOR = 2;
+static const uint32_t DAEMON_RPC_VERSION_ZMQ_MAJOR = 2;
 
 static const uint32_t DAEMON_RPC_VERSION_ZMQ = DAEMON_RPC_VERSION_ZMQ_MINOR + (DAEMON_RPC_VERSION_ZMQ_MAJOR << 16);
 

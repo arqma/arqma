@@ -1,19 +1,25 @@
-OSX_MIN_VERSION=10.14
-OSX_SDK_VERSION=10.15.1
-LD64_VERSION=530
+OSX_MIN_VERSION=10.15
+LD64_VERSION=609
+ifeq (aarch64, $(host_arch))
+CC_target=arm64-apple-$(host_os)
+else
+CC_target=$(host)
+endif
 
-OSX_SDK=$(SDK_PATH)/MacOSX$(OSX_SDK_VERSION).sdk
-darwin_CC=clang -target $(host) -mmacosx-version-min=$(OSX_MIN_VERSION) --sysroot $(OSX_SDK) -mlinker-version=$(LD64_VERSION)
-darwin_CXX=clang++ -target $(host) -mmacosx-version-min=$(OSX_MIN_VERSION) --sysroot $(OSX_SDK) -stdlib=libc++ -mlinker-version=$(LD64_VERSION)
+darwin_CC=clang -target $(CC_target) -mmacosx-version-min=$(OSX_MIN_VERSION) --sysroot $(host_prefix)/native/SDK/ -iwithsysroot/usr/include -iframeworkwithsysroot/System/Library/Frameworks -mlinker-version=$(LD64_VERSION) -B$(host_prefix)/native/bin/$(host)-
+
+darwin_CXX=clang++ -target $(CC_target) -mmacosx-version-min=$(OSX_MIN_VERSION) --sysroot $(host_prefix)/native/SDK/ -iwithsysroot/usr/include/c++/v1 -iwithsysroot/usr/include -iframeworkwithsysroot/System/Library/Frameworks -mlinker-version=$(LD64_VERSION) -stdlib=libc++ -B$(host_prefix)/native/bin/$(host)-
 
 darwin_CFLAGS=-pipe
-darwin_CXXFLAGS=$(darwin_CFLAGS)
+darwin_CXXFLAGS=$(darwin_CFLAGS) -fvisibility-inlines-hidden
 darwin_ARFLAGS=cr
 
-darwin_release_CFLAGS=-O2
-darwin_release_CXXFLAGS=$(darwin_release_CFLAGS)
+darwin_release_CFLAGS=-O1
+darwin_release_CXXFLAGS=$(darwin_release_CFLAGS) -fvisibility-inlines-hidden
 
 darwin_debug_CFLAGS=-O1
-darwin_debug_CXXFLAGS=$(darwin_debug_CFLAGS)
+darwin_debug_CXXFLAGS=$(darwin_debug_CFLAGS) -fvisibility-inlines-hidden
 
-darwin_native_toolchain=native_cctools
+darwin_native_toolchain=native_cctools darwin_sdk
+
+darwin_cmake_system=Darwin

@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -27,12 +27,15 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
-project(easylogging CXX)
+project(easylogging)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-SET(flags "-fPIC")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(flags "-fPIC")
 
 find_package(Threads)
 find_package(Backtrace)

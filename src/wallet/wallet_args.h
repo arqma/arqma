@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -37,7 +37,6 @@ namespace wallet_args
 {
   command_line::arg_descriptor<std::string> arg_generate_from_json();
   command_line::arg_descriptor<std::string> arg_wallet_file();
-  command_line::arg_descriptor<std::string> arg_rpc_client_secret_key();
 
   const char* tr(const char* str);
 

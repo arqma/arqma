@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -27,50 +27,55 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-include_directories(SYSTEM ${ZMQ_INCLUDE_PATH})
+include_directories(${ZMQ_INCLUDE_DIRS})
 
 set(rpc_base_sources
-  rpc_args.cpp
-  rpc_handler.cpp)
+  rpc_args.cpp)
 
 set(rpc_sources
   core_rpc_server.cpp
-  rpc_payment.cpp
-  instanciations.cpp)
+  rpc_handler.cpp)
 
 set(daemon_messages_sources
   message.cpp
   daemon_messages.cpp)
 
-set(daemon_rpc_server_sources
-  daemon_handler.cpp)
+set(rpc_pub_sources
+  zmq_pub.cpp)
 
+set(daemon_rpc_server_sources
+  daemon_handler.cpp
+  zmq_pub.cpp
+  zmq_server.cpp)
 
 set(rpc_base_headers
-  rpc_args.h
-  rpc_handler.h)
+  rpc_args.h)
 
 set(rpc_headers
   rpc_handler.h)
 
+set(rpc_pub_headers
+  zmq_pub.h)
+
 set(daemon_rpc_server_headers)
 
-
-set(rpc_daemon_private_headers
+set(rpc_private_headers
   core_rpc_server.h
-  rpc_payment.h
   core_rpc_server_commands_defs.h
   core_rpc_server_error_codes.h)
 
 set(daemon_messages_private_headers
+  message_data_structs.h
   message.h
   daemon_messages.h)
 
 set(daemon_rpc_server_private_headers
   message.h
   daemon_messages.h
-  daemon_handler.h)
+  daemon_handler.h
+  zmq_server.h)
 
+set(rpc_pub_private_headers)
 
 arqma_private_headers(rpc
   ${rpc_private_headers})
@@ -89,6 +94,11 @@ arqma_add_library(rpc
   ${rpc_headers}
   ${rpc_private_headers})
 
+arqma_add_library(rpc_pub
+  ${rpc_pub_sources}
+  ${rpc_pub_headers}
+  ${rpc_pub_private_headers})
+
 arqma_add_library(daemon_messages
   ${daemon_messages_sources}
   ${daemon_messages_headers}
@@ -102,7 +112,6 @@ arqma_add_library(daemon_rpc_server
 
 target_link_libraries(rpc_base
   PUBLIC
-    rpc_sig
     common
     epee
     ${Boost_REGEX_LIBRARY}
@@ -113,9 +122,7 @@ target_link_libraries(rpc_base
 
 target_link_libraries(rpc
   PUBLIC
-    arqma_mq
     rpc_base
-    rpc_sig
     common
     cryptonote_core
     cryptonote_protocol
@@ -126,9 +133,16 @@ target_link_libraries(rpc
   PRIVATE
     ${EXTRA_LIBRARIES})
 
+target_link_libraries(rpc_pub
+  PUBLIC
+    epee
+    net
+    cryptonote_basic
+    serialization
+    ${Boost_THREAD_LIBRARY})
+
 target_link_libraries(daemon_messages
   PRIVATE
-    arqma_mq
     cryptonote_core
     cryptonote_protocol
     version
@@ -139,6 +153,7 @@ target_link_libraries(daemon_rpc_server
   PRIVATE
     libzmq
     rpc
+    rpc_pub
     cryptonote_core
     cryptonote_protocol
     version

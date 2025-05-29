@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -35,7 +35,10 @@
 #include <vector>
 #include <map>
 
+#include <cryptonote_basic/cryptonote_format_utils.h>
+
 #include "blockchain_db.h"
+#include "cryptonote_core/service_node_list.h"
 
 namespace cryptonote
 {
@@ -43,7 +46,7 @@ namespace cryptonote
 class BaseTestDB: public cryptonote::BlockchainDB {
 public:
   BaseTestDB() {}
-  virtual void open(const std::string& filename, const int db_flags = 0) override { }
+  virtual void open(const std::string& filename, network_type nettype = FAKECHAIN, const int db_flags = 0) override { }
   virtual void close() override {}
   virtual void sync() override {}
   virtual void safesyncmode(const bool onoff) override {}
@@ -51,8 +54,6 @@ public:
   virtual std::vector<std::string> get_filenames() const override { return std::vector<std::string>(); }
   virtual bool remove_data_file(const std::string& folder) const override { return true; }
   virtual std::string get_db_name() const override { return std::string(); }
-  virtual bool lock() override { return true; }
-  virtual void unlock() override { }
   virtual bool batch_start(uint64_t batch_num_blocks=0, uint64_t batch_bytes=0) override { return true; }
   virtual void batch_stop() override {}
   virtual void batch_abort() override {}
@@ -71,7 +72,7 @@ public:
   virtual bool get_tx_blob(const crypto::hash& h, cryptonote::blobdata &tx) const override { return false; }
   virtual bool get_pruned_tx_blob(const crypto::hash& h, cryptonote::blobdata &tx) const override { return false; }
   virtual bool get_pruned_tx_blobs_from(const crypto::hash& h, size_t count, std::vector<cryptonote::blobdata> &bd) const override { return false; }
-  virtual bool get_blocks_from(uint64_t start_height, size_t min_count, size_t max_count, size_t max_size, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>>& blocks, bool pruned, bool skip_coinbase, bool get_miner_tx_hash) const override { return false; }
+  virtual bool get_blocks_from(uint64_t start_height, size_t min_block_count, size_t max_block_count, size_t max_tx_count, size_t max_size, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>>& blocks, bool pruned, bool skip_coinbase, bool get_miner_tx_hash) const override { return false; }
   virtual bool get_prunable_tx_blob(const crypto::hash& h, cryptonote::blobdata &tx) const override { return false; }
   virtual bool get_prunable_tx_hash(const crypto::hash& tx_hash, crypto::hash &prunable_hash) const override { return false; }
   virtual uint64_t get_block_height(const crypto::hash& h) const override { return 0; }
@@ -160,12 +161,29 @@ public:
   virtual uint64_t get_max_block_size() override { return 100000000; }
   virtual void add_max_block_size(uint64_t sz) override { }
 
-  virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob) override {}
-  virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob) override { return false; }
+  virtual void update_block_checkpoint(struct checkpoint_t const &checkpoint) override {}
+  virtual bool get_block_checkpoint(uint64_t height, struct checkpoint_t &checkpoint) const override { return false; }
+  virtual bool get_top_checkpoint(struct checkpoint_t &checkpoint) const override { return false; }
+  virtual void remove_block_checkpoint(uint64_t height) override { }
+  std::vector<cryptonote::checkpoint_t> get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints = BlockchainDB::GET_ALL_CHECKPOINTS) const override { return {}; }
+
+  virtual bool get_output_blacklist(std::vector<uint64_t> &blacklist) const override { return false; }
+  virtual void add_output_blacklist(std::vector<uint64_t> const &blacklist) override { }
+  virtual void set_service_node_data(const std::string& data, bool long_term) override { }
+  virtual bool get_service_node_data(std::string& data, bool long_term) const override { return false; }
+  virtual void clear_service_node_data() override { }
+
+  bool get_service_node_proof(const crypto::public_key &pubkey, service_nodes::proof_info &proof) const override { return false; }
+  std::unordered_map<crypto::public_key, service_nodes::proof_info> get_all_service_node_proofs() const override { return {}; }
+  void set_service_node_proof(const crypto::public_key &pubkey, const service_nodes::proof_info &proof) override { }
+  bool remove_service_node_proof(const crypto::public_key &pubkey) override { return false; }
+
+  virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob, const cryptonote::blobdata *checkpoint) override {}
+  virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob, cryptonote::blobdata *checkpoint) override { return false; }
   virtual void remove_alt_block(const crypto::hash &blkid) override {}
   virtual uint64_t get_alt_block_count() override { return 0; }
   virtual void drop_alt_blocks() override {}
-  virtual bool for_all_alt_blocks(std::function<bool(const crypto::hash &blkid, const alt_block_data_t &data, const cryptonote::blobdata *blob)> f, bool include_blob = false) const override { return true; }
+  virtual bool for_all_alt_blocks(std::function<bool(const crypto::hash &blkid, const alt_block_data_t &data, const cryptonote::blobdata *block_blob, const cryptonote::blobdata *checkpoint_blob)> f, bool include_blob = false) const override { return true; }
 };
 
 }

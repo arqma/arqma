@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -58,4 +58,5 @@ namespace cryptonote
     difficulty_type next_difficulty_lwma(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, const uint8_t version);
     difficulty_type next_difficulty_lwma_3(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties);
     difficulty_type next_difficulty_lwma_4(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties);
+    difficulty_type next_difficulty_v16(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties);
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -29,18 +29,93 @@
 
 #include "daemon_handler.h"
 
+#include <algorithm>
+#include <cstring>
+#include <stdexcept>
+
+#include <boost/utility/string_ref.hpp>
 // likely included by daemon_handler.h's includes,
 // but including here for clarity
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "cryptonote_basic/blobdatatype.h"
 #include "ringct/rctSigs.h"
+#include "version.h"
 
 namespace cryptonote
 {
-
 namespace rpc
 {
+  namespace
+  {
+    using handler_function = epee::byte_slice(DaemonHandler& handler, const rapidjson::Value& id, const rapidjson::Value& msg);
+    struct handler_map
+    {
+      const char* method_name;
+      handler_function* call;
+    };
+
+    bool operator<(const handler_map& lhs, const handler_map& rhs) noexcept
+    {
+      return std::strcmp(lhs.method_name, rhs.method_name) < 0;
+    }
+
+    bool operator<(const handler_map& lhs, const std::string& rhs) noexcept
+    {
+      return std::strcmp(lhs.method_name, rhs.c_str()) < 0;
+    }
+
+    template<typename Message>
+    epee::byte_slice handle_message(DaemonHandler& handler, const rapidjson::Value& id, const rapidjson::Value& parameters)
+    {
+      typename Message::Request request{};
+      request.fromJson(parameters);
+
+      typename Message::Response response{};
+      handler.handle(request, response);
+      return FullMessage::getResponse(response, id);
+    }
+
+    constexpr const handler_map handlers[] =
+    {
+      {u8"get_block_hash", handle_message<GetBlockHash>},
+      {u8"get_block_header_by_hash", handle_message<GetBlockHeaderByHash>},
+      {u8"get_block_header_by_height", handle_message<GetBlockHeaderByHeight>},
+      {u8"get_block_headers_by_height", handle_message<GetBlockHeadersByHeight>},
+      {u8"get_block_template", handle_message<GetBlockTemplate>},
+      {u8"get_blocks_fast", handle_message<GetBlocksFast>},
+      {u8"get_dynamic_fee_estimate", handle_message<GetFeeEstimate>},
+      {u8"get_hashes_fast", handle_message<GetHashesFast>},
+      {u8"get_height", handle_message<GetHeight>},
+      {u8"get_info", handle_message<GetInfo>},
+      {u8"get_last_block_header", handle_message<GetLastBlockHeader>},
+      {u8"get_output_distribution", handle_message<GetOutputDistribution>},
+      {u8"get_output_histogram", handle_message<GetOutputHistogram>},
+      {u8"get_output_keys", handle_message<GetOutputKeys>},
+      {u8"get_peer_list", handle_message<GetPeerList>},
+      {u8"get_rpc_version", handle_message<GetRPCVersion>},
+      {u8"get_transaction_pool", handle_message<GetTransactionPool>},
+      {u8"get_transactions", handle_message<GetTransactions>},
+      {u8"get_tx_global_output_indices", handle_message<GetTxGlobalOutputIndices>},
+      {u8"hard_fork_info", handle_message<HardForkInfo>},
+      {u8"key_images_spent", handle_message<KeyImagesSpent>},
+      {u8"mining_status", handle_message<MiningStatus>},
+      {u8"save_bc", handle_message<SaveBC>},
+      {u8"send_raw_tx", handle_message<SendRawTx>},
+      {u8"send_raw_tx_hex", handle_message<SendRawTxHex>},
+      {u8"set_log_level", handle_message<SetLogLevel>},
+      {u8"start_mining", handle_message<StartMining>},
+      {u8"stop_mining", handle_message<StopMining>}
+    };
+  } // anonymous
+
+  DaemonHandler::DaemonHandler(cryptonote::core& c, t_p2p& p2p)
+    : m_core(c), m_p2p(p2p)
+  {
+    const auto last_sorted = std::is_sorted_until(std::begin(handlers), std::end(handlers));
+    if (last_sorted != std::end(handlers))
+      throw std::logic_error{std::string{"ZMQ JSON-RPC handlers map is not properly sorted, see "} + last_sorted->method_name};
+  }
 
   void DaemonHandler::handle(const GetHeight::Request& req, GetHeight::Response& res)
   {
@@ -53,7 +128,7 @@ namespace rpc
   {
     std::vector<std::pair<std::pair<blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, blobdata>>>> blocks;
 
-    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT))
+    if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, blocks, res.current_height, res.start_height, req.prune, true, COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT, COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT))
     {
       res.status = Message::STATUS_FAILED;
       res.error_details = "core::find_blockchain_supplement() returned false";
@@ -141,7 +216,7 @@ namespace rpc
 
     auto& chain = m_core.get_blockchain_storage();
 
-    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, NULL, res.start_height, res.current_height, false))
+    if (!chain.find_blockchain_supplement(req.known_hashes, res.hashes, res.start_height, res.current_height, false))
     {
       res.status = Message::STATUS_FAILED;
       res.error_details = "Blockchain::find_blockchain_supplement() returned false";
@@ -202,7 +277,7 @@ namespace rpc
       }
     }
 
-    for (size_t i=0; i < found_hashes.size(); i++)
+    for(size_t i = 0; i < found_hashes.size(); i++)
     {
       cryptonote::rpc::transaction_info info;
       info.height = heights[i];
@@ -266,34 +341,34 @@ namespace rpc
     handleTxBlob(cryptonote::tx_to_blob(req.tx), req.relay, res);
   }
 
-	void DaemonHandler::handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res)
-	{
-	  std::string tx_blob;
-	  if(!epee::string_tools::parse_hexstr_to_binbuff(req.tx_as_hex, tx_blob))
-	  {
-	    MERROR("[SendRawTxHex]: Failed to parse tx from hexbuff: " << req.tx_as_hex);
-	    res.status = Message::STATUS_FAILED;
-	    res.error_details = "Invalid hex";
-	    return;
-	  }
-	  handleTxBlob(tx_blob, req.relay, res);
-	}
-
-	void DaemonHandler::handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res)
-	{
-	  if (!m_p2p.get_payload_object().is_synchronized())
-	  {
-	    res.status = Message::STATUS_FAILED;
-	    res.error_details = "Not ready to accept transactions; try again later";
-	    return;
-	  }
-
-    cryptonote_connection_context fake_context = AUTO_VAL_INIT(fake_context);
-    tx_verification_context tvc = AUTO_VAL_INIT(tvc);
-
-    if(!m_core.handle_incoming_tx({tx_blob, crypto::null_hash}, tvc, false, false, !relay) || tvc.m_verifivation_failed)
+  void DaemonHandler::handle(const SendRawTxHex::Request& req, SendRawTxHex::Response& res)
+  {
+    std::string tx_blob;
+    if(!epee::string_tools::parse_hexstr_to_binbuff(req.tx_as_hex, tx_blob))
     {
-      if (tvc.m_verifivation_failed)
+      MERROR("[SendRawTxHex]: Failed to parse tx from hexbuff: " << req.tx_as_hex);
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Invalid hex";
+      return;
+    }
+    handleTxBlob(tx_blob, req.relay, res);
+  }
+
+  void DaemonHandler::handleTxBlob(const std::string& tx_blob, bool relay, SendRawTx::Response& res)
+  {
+    if(!m_p2p.get_payload_object().is_synchronized())
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Not ready to accept transactions; try again later";
+      return;
+    }
+
+    cryptonote_connection_context fake_context{};
+    tx_verification_context tvc{};
+
+    if(!m_core.handle_incoming_tx(tx_blob, tvc, false, false, !relay) || tvc.m_verification_failed)
+    {
+      if (tvc.m_verification_failed)
       {
         MERROR("[SendRawTx]: tx verification failed");
       }
@@ -304,41 +379,67 @@ namespace rpc
       res.status = Message::STATUS_FAILED;
       res.error_details = "";
 
-      if (tvc.m_low_mixin)
+      if(tvc.m_low_mixin)
       {
         res.error_details = "mixin too low";
       }
-      if (tvc.m_double_spend)
+      if(tvc.m_double_spend)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "double spend";
       }
-      if (tvc.m_invalid_input)
+      if(tvc.m_invalid_input)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "invalid input";
       }
-      if (tvc.m_invalid_output)
+      if(tvc.m_invalid_output)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "invalid output";
       }
-      if (tvc.m_too_big)
+      if(tvc.m_too_big)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "too big";
       }
-      if (tvc.m_overspend)
+      if(tvc.m_overspend)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "overspend";
       }
-      if (tvc.m_fee_too_low)
+      if(tvc.m_fee_too_low)
       {
-        if (!res.error_details.empty()) res.error_details += " and ";
+        if(!res.error_details.empty()) res.error_details += " and ";
         res.error_details = "fee too low";
       }
-      if (res.error_details.empty())
+      if(tvc.m_too_few_outputs)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "too_few_outputs";
+      }
+      if(tvc.m_invalid_version)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx version below 2 is invalid and forbidden";
+      }
+      if(tvc.m_invalid_type)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx has an invalid type";
+      }
+      if(tvc.m_key_image_locked_by_snode)
+      {
+        if (!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx uses outputs that are locked by the service node network";
+      }
+      if(tvc.m_key_image_blacklisted)
+      {
+        if(!res.error_details.empty()) res.error_details += " and ";
+        res.error_details = "tx uses a key image that has been temporarily blacklisted by the service node network";
+      }
+
+      if(res.error_details.empty())
       {
         res.error_details = "an unknown issue was found with the transaction";
       }
@@ -456,6 +557,8 @@ namespace rpc
     res.info.block_size_limit = res.info.block_weight_limit = m_core.get_blockchain_storage().get_current_cumulative_block_weight_limit();
     res.info.block_size_median = res.info.block_weight_median = m_core.get_blockchain_storage().get_current_cumulative_block_weight_median();
     res.info.start_time = (uint64_t)m_core.get_start_time();
+    res.info.version = ARQMA_VERSION_STR;
+    res.info.syncing = m_p2p.get_payload_object().currently_busy_syncing();
 
     res.status = Message::STATUS_OK;
     res.error_details = "";
@@ -546,7 +649,6 @@ namespace rpc
 
   void DaemonHandler::handle(const GetBlockTemplate::Request& req, GetBlockTemplate::Response& res)
   {
-
     if(!check_core_ready())
     {
       res.status  = Message::STATUS_FAILED;
@@ -556,8 +658,22 @@ namespace rpc
 
     if(req.reserve_size > 255)
     {
-      res.status  = Message::STATUS_FAILED;
-      res.error_details  = "Too big reserved size, maximum 255";
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Too big reserved size, maximum 255";
+      return;
+    }
+
+    if(req.reserve_size && !req.extra_nonce.empty())
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Can Not specify both reserve_size and extra_nonce";
+      return;
+    }
+
+    if(req.extra_nonce.size() > 510)
+    {
+      res.status = Message::STATUS_FAILED;
+      res.error_details = "Too big extra_nonce. Allowed max 510 hex chars";
       return;
     }
 
@@ -565,41 +681,67 @@ namespace rpc
 
     if(!req.wallet_address.size() || !cryptonote::get_account_address_from_str(info, nettype(), req.wallet_address))
     {
-      res.status  = Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Failed to parse wallet address";
       return;
     }
+
     if (info.is_subaddress)
     {
-      res.status  = Message::STATUS_FAILED;
+      res.status = Message::STATUS_FAILED;
       res.error_details = "Mining to subaddress is not supported yet";
       return;
     }
 
     block b;
     cryptonote::blobdata blob_reserve;
-    blob_reserve.resize(req.reserve_size, 0);
+    if(!req.extra_nonce.empty())
+    {
+      if(!string_tools::parse_hexstr_to_binbuff(req.extra_nonce, blob_reserve))
+      {
+        res.status = Message::STATUS_FAILED;
+        res.error_details = "Parameter extra_nonce should be a hex string";
+        return;
+      }
+    }
+    else
+      blob_reserve.resize(req.reserve_size, 0);
+    crypto::hash prev_block;
+    if(!req.prev_block.empty())
+    {
+      if(!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
+      {
+        res.status = Message::STATUS_FAILED;
+        res.error_details = "Invalid prev_block";
+        return;
+      }
+    }
+    uint64_t seed_height;
     size_t reserved_offset;
     crypto::hash seed_hash, next_seed_hash;
-    if(!get_block_template(info.address, NULL, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, seed_hash, next_seed_hash, res))
+    if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))
       return;
+    if(b.major_version >= RX_BLOCK_VERSION)
+    {
+      res.seed_hash = string_tools::pod_to_hex(seed_hash);
+      if(seed_hash != next_seed_hash)
+        res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
+    }
+
     res.reserved_offset = reserved_offset;
     blobdata block_blob = t_serializable_object_to_blob(b);
     blobdata hashing_blob = get_block_hashing_blob(b);
     res.prev_hash = string_tools::pod_to_hex(b.prev_id);
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
     res.blockhashing_blob =  string_tools::buff_to_hex_nodelimer(hashing_blob);
-    res.seed_hash = string_tools::pod_to_hex(seed_hash);
-    if(next_seed_hash != crypto::null_hash)
-      res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
     res.status = Message::STATUS_OK;
     return;
   }
 
-  bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
+  bool DaemonHandler::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res)
   {
-    b = boost::value_initialized<cryptonote::block>();
-    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce))
+    b = {};
+    if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
     {
       res.status = Message::STATUS_FAILED;
       res.error_details = "Internal error: failed to create block template";
@@ -616,19 +758,7 @@ namespace rpc
       return false;
     }
 
-    seed_hash = next_seed_hash = crypto::null_hash;
-    if(b.major_version >= RX_BLOCK_VERSION)
-    {
-      uint64_t seed_height, next_height;
-      crypto::rx_seedheights(height, &seed_height, &next_height);
-      seed_hash = m_core.get_block_id_by_height(seed_height);
-      if(next_height != seed_height)
-      {
-        next_seed_hash = m_core.get_block_id_by_height(next_height);
-      }
-    }
-
-    if (extra_nonce.empty())
+    if(extra_nonce.empty())
     {
       reserved_offset = 0;
       return true;
@@ -818,7 +948,7 @@ namespace rpc
 
   void DaemonHandler::handle(const GetOutputHistogram::Request& req, GetOutputHistogram::Response& res)
   {
-    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t> > histogram;
+    std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> histogram;
     try
     {
       histogram = m_core.get_blockchain_storage().get_output_histogram(req.amounts, req.unlocked, req.recent_cutoff);
@@ -946,79 +1076,43 @@ namespace rpc
     {
       header.reward += out.amount;
     }
+    if(b.major_version >= 16)
+    {
+      header.miner_reward = b.miner_tx.vout[0].amount;
+      header.miner_reward_unlock_block = b.miner_tx.output_unlock_times[0];
+    } else {
+      header.miner_reward = header.reward;
+      header.miner_reward_unlock_block = b.miner_tx.unlock_time;
+    }
 
     header.difficulty = m_core.get_blockchain_storage().block_difficulty(header.height);
 
     return true;
   }
 
-  std::string DaemonHandler::handle(const std::string& request)
+  epee::byte_slice DaemonHandler::handle(std::string&& request)
   {
     MDEBUG("Handling RPC request: " << request);
 
-    Message* resp_message = NULL;
-
     try
     {
-      FullMessage req_full(request, true);
-
-      rapidjson::Value& req_json = req_full.getMessage();
+      FullMessage req_full(std::move(request), true);
 
       const std::string request_type = req_full.getRequestType();
 
-      // create correct Message subclass and call handle() on it
-      REQ_RESP_TYPES_MACRO(request_type, GetHeight, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetBlocksFast, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetHashesFast, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetTransactions, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, KeyImagesSpent, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetTxGlobalOutputIndices, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, SendRawTx, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, SendRawTxHex, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetInfo, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, StartMining, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, StopMining, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, MiningStatus, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, SaveBC, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetBlockHash, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetBlockTemplate, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetLastBlockHeader, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetBlockHeaderByHash, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetBlockHeaderByHeight, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetBlockHeadersByHeight, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetPeerList, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, SetLogLevel, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetTransactionPool, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, HardForkInfo, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetOutputHistogram, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetOutputKeys, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetRPCVersion, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetFeeEstimate, req_json, resp_message, handle);
-      REQ_RESP_TYPES_MACRO(request_type, GetOutputDistribution, req_json, resp_message, handle);
-
-      // if none of the request types matches
-      if (resp_message == NULL)
-      {
+      const auto matched_handler = std::lower_bound(std::begin(handlers), std::end(handlers), request_type);
+      if (matched_handler == std::end(handlers) || matched_handler->method_name != request_type)
         return BAD_REQUEST(request_type, req_full.getID());
-      }
 
-      FullMessage resp_full = FullMessage::responseMessage(resp_message, req_full.getID());
+      epee::byte_slice response = matched_handler->call(*this, req_full.getID(), req_full.getMessage());
 
-      const std::string response = resp_full.getJson();
-      delete resp_message;
-      resp_message = NULL;
-
-      MDEBUG("Returning RPC response: " << response);
+      const boost::string_ref response_view{reinterpret_cast<const char*>(response.data()), response.size()};
+      MDEBUG("Returning RPC response: " << response_view);
 
       return response;
     }
     catch (const std::exception& e)
     {
-      if (resp_message)
-      {
-        delete resp_message;
-      }
-
       return BAD_JSON(e.what());
     }
   }

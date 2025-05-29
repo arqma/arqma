@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include "byte_slice.h"
 #include "daemon_messages.h"
 #include "daemon_rpc_version.h"
 #include "rpc_handler.h"
@@ -42,7 +43,7 @@ using namespace epee;
 
 namespace
 {
-  typedef nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core> > t_p2p;
+  typedef nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>> t_p2p;
 }  // anonymous namespace
 
 namespace cryptonote
@@ -55,7 +56,7 @@ class DaemonHandler : public RpcHandler
 {
   public:
 
-    DaemonHandler(cryptonote::core& c, t_p2p& p2p) : m_core(c), m_p2p(p2p) { }
+    DaemonHandler(cryptonote::core& c, t_p2p& p2p);
 
     ~DaemonHandler() { }
 
@@ -137,7 +138,7 @@ class DaemonHandler : public RpcHandler
 
     void handle(const GetOutputDistribution::Request& req, GetOutputDistribution::Response& res);
 
-    std::string handle(const std::string& request);
+    epee::byte_slice handle(std::string&& request) override final;
 
   private:
 
@@ -147,9 +148,9 @@ class DaemonHandler : public RpcHandler
 
     network_type nettype() const { return m_core.get_nettype(); }
 
-    bool get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res);
+    bool get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, GetBlockTemplate::Response& res);
 
-	bool check_core_ready();
+    bool check_core_ready();
 
     cryptonote::core& m_core;
     t_p2p& m_p2p;

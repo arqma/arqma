@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -29,11 +29,13 @@
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem/path.hpp>
 #include "common/command_line.h"
 #include "common/varint.h"
 #include "cryptonote_core/tx_pool.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/blockchain.h"
+#include "blockchain_objects.h"
 #include "blockchain_db/blockchain_db.h"
 #include "version.h"
 
@@ -52,7 +54,7 @@ struct output_data
   mutable uint64_t height;
   output_data(uint64_t a, uint64_t i, bool cb, uint64_t h): amount(a), index(i), coinbase(cb), height(h) {}
   bool operator==(const output_data &other) const { return other.amount == amount && other.index == index; }
-  void info(bool c, uint64_t h) const { coinbase = c; height =h; }
+  void info(bool c, uint64_t h) const { coinbase = c; height = h; }
 };
 namespace std
 {
@@ -92,25 +94,21 @@ int main(int argc, char* argv[])
   po::options_description desc_cmd_sett("Command line options and settings options");
   const command_line::arg_descriptor<std::string> arg_log_level  = {"log-level",  "0-4 or categories", ""};
   const command_line::arg_descriptor<bool> arg_rct_only  = {"rct-only", "Only work on ringCT outputs", false};
-  const command_line::arg_descriptor<std::string> arg_input = {"input", ""};
 
+  command_line::add_arg(desc_cmd_sett, cryptonote::arg_data_dir);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_testnet_on);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_stagenet_on);
   command_line::add_arg(desc_cmd_sett, arg_log_level);
   command_line::add_arg(desc_cmd_sett, arg_rct_only);
-  command_line::add_arg(desc_cmd_sett, arg_input);
   command_line::add_arg(desc_cmd_only, command_line::arg_help);
 
   po::options_description desc_options("Allowed options");
   desc_options.add(desc_cmd_only).add(desc_cmd_sett);
 
-  po::positional_options_description positional_options;
-  positional_options.add(arg_input.name, -1);
-
   po::variables_map vm;
   bool r = command_line::handle_error_helper(desc_options, [&]()
   {
-    auto parser = po::command_line_parser(argc, argv).options(desc_options).positional(positional_options);
+    auto parser = po::command_line_parser(argc, argv).options(desc_options);
     po::store(parser.run(), vm);
     po::notify(vm);
     return true;
@@ -133,6 +131,7 @@ int main(int argc, char* argv[])
 
   LOG_PRINT_L0("Starting...");
 
+  std::string opt_data_dir = command_line::get_arg(vm, cryptonote::arg_data_dir);
   bool opt_testnet = command_line::get_arg(vm, cryptonote::arg_testnet_on);
   bool opt_stagenet = command_line::get_arg(vm, cryptonote::arg_stagenet_on);
   network_type net_type = opt_testnet ? TESTNET : opt_stagenet ? STAGENET : MAINNET;
@@ -150,11 +149,11 @@ int main(int argc, char* argv[])
   // because unlike blockchain_storage constructor, which takes a pointer to
   // tx_memory_pool, Blockchain's constructor takes tx_memory_pool object.
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  const std::string input = command_line::get_arg(vm, arg_input);
-  std::unique_ptr<Blockchain> core_storage;
-  tx_memory_pool m_mempool(*core_storage);
-  core_storage.reset(new Blockchain(m_mempool));
-  BlockchainDB* db = new_db();
+  BlockchainAndSNlistAndPool blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.blockchain;
+  tx_memory_pool& tx_pool = blockchain_objects.tx_pool;
+  //std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
+  BlockchainDB *db = new_db();
   if (db == NULL)
   {
     LOG_ERROR("Failed to initialize a database");
@@ -162,12 +161,12 @@ int main(int argc, char* argv[])
   }
   LOG_PRINT_L0("database: LMDB");
 
-  const std::string filename = input;
+  const std::string filename = (boost::filesystem::path(opt_data_dir) / db->get_db_name()).string();
   LOG_PRINT_L0("Loading blockchain from folder " << filename << " ...");
 
   try
   {
-    db->open(filename, DBF_RDONLY);
+    db->open(filename, core_storage->nettype(), DBF_RDONLY);
   }
   catch (const std::exception& e)
   {
@@ -181,11 +180,10 @@ int main(int argc, char* argv[])
 
   LOG_PRINT_L0("Building usage patterns...");
 
-  size_t done = 0;
   std::unordered_map<output_data, std::list<reference>> outputs;
   std::unordered_map<uint64_t,uint64_t> indices;
 
-  LOG_PRINT_L0("Reading blockchain from " << input);
+  LOG_PRINT_L0("Reading blockchain from " << filename);
   core_storage->for_all_transactions([&](const crypto::hash &hash, const cryptonote::transaction &tx)->bool
   {
     const bool coinbase = tx.vin.size() == 1 && tx.vin[0].type() == typeid(txin_gen);
@@ -196,7 +194,7 @@ int main(int argc, char* argv[])
     {
       if (opt_rct_only && out.amount)
         continue;
-      uint64_t index = indices[out.amount]++;
+      indices[out.amount]++;
       output_data od(out.amount, indices[out.amount], coinbase, height);
       auto itb = outputs.emplace(od, std::list<reference>());
       itb.first->first.info(coinbase, height);

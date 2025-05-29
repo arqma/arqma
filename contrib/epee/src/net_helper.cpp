@@ -4,31 +4,62 @@ namespace epee
 {
 namespace net_utils
 {
+  namespace
+  {
+    struct new_connection
+    {
+      boost::promise<boost::asio::ip::tcp::socket> result_;
+      boost::asio::ip::tcp::socket socket_;
+
+      template<typename T>
+      explicit new_connection(T&& executor)
+        : result_(), socket_(std::forward<T>(executor))
+      {}
+    };
+  }
+
 	boost::unique_future<boost::asio::ip::tcp::socket>
 	direct_connect::operator()(const std::string& addr, const std::string& port, boost::asio::steady_timer& timeout) const
 	{
 		// Get a list of endpoints corresponding to the server name.
 		//////////////////////////////////////////////////////////////////////////
-		boost::asio::ip::tcp::resolver resolver(GET_IO_SERVICE(timeout));
-		boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), addr, port, boost::asio::ip::tcp::resolver::query::canonical_name);
-		boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);
-		boost::asio::ip::tcp::resolver::iterator end;
-		if(iterator == end) // Documentation states that successful call is guaranteed to be non-empty
-			throw boost::system::system_error{boost::asio::error::fault, "Failed to resolve " + addr};
+		boost::asio::ip::tcp::resolver resolver(ARQMA_GET_EXECUTOR(timeout));
 
-		//////////////////////////////////////////////////////////////////////////
+		bool try_ipv6 = false;
+		boost::asio::ip::tcp::resolver::results_type results{};
+		boost::system::error_code resolve_error;
 
-		struct new_connection
+		try
 		{
-			boost::promise<boost::asio::ip::tcp::socket> result_;
-			boost::asio::ip::tcp::socket socket_;
+		  results = resolver.resolve(
+		    boost::asio::ip::tcp::v4(), addr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error
+		  );
 
-			explicit new_connection(boost::asio::io_service& io_service)
-			  : result_(), socket_(io_service)
-			{}
-		};
+		  if (results.empty())
+		  {
+		    try_ipv6 = true;
+		  }
+		}
+		catch (const boost::system::system_error& e)
+		{
+		  if (resolve_error != boost::asio::error::host_not_found &&
+		      resolve_error != boost::asio::error::host_not_found_try_again)
+		  {
+		    throw;
+		  }
+		  try_ipv6 = true;
+		}
 
-		const auto shared = std::make_shared<new_connection>(GET_IO_SERVICE(timeout));
+		if (try_ipv6)
+		{
+		  results = resolver.resolve(
+		    boost::asio::ip::tcp::v6(), addr, port, boost::asio::ip::tcp::resolver::canonical_name
+		  );
+		  if (results.empty())
+		    throw boost::system::system_error{boost::asio::error::fault, "Failed to resolve " + addr};
+		}
+
+		const auto shared = std::make_shared<new_connection>(ARQMA_GET_EXECUTOR(timeout));
 		timeout.async_wait([shared] (boost::system::error_code error)
 		{
 			if (error != boost::system::errc::operation_canceled && shared && shared->socket_.is_open())
@@ -37,7 +68,7 @@ namespace net_utils
 				shared->socket_.close();
 			}
 		});
-		shared->socket_.async_connect(*iterator, [shared] (boost::system::error_code error)
+		shared->socket_.async_connect(*results.begin(), [shared] (boost::system::error_code error)
 		{
 			if (shared)
 			{

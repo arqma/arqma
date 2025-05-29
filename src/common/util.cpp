@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -60,7 +60,7 @@
 #include "include_base_utils.h"
 #include "file_io_utils.h"
 #include "wipeable_string.h"
-#include "misc_os_dependent.h"
+#include "time_helper.h"
 using namespace epee;
 
 #include "crypto/crypto.h"
@@ -86,7 +86,8 @@ using namespace epee;
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
+#include "i18n.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "util"
@@ -116,6 +117,22 @@ static int flock_exnb(int fd)
 
 namespace tools
 {
+  void copy_file(const std::string& from, const std::string& to)
+  {
+    using boost::filesystem::path;
+  #if BOOST_VERSION < 107400
+    boost::filesystem::copy_file(
+      path(from),
+      path(to),
+      boost::filesystem::copy_option::overwrite_if_exists);
+  #else
+    boost::filesystem::copy_file(
+      path(from),
+      path(to),
+      boost::filesystem::copy_options::overwrite_existing);
+  #endif
+  }
+
   std::function<void(int)> signal_handler::m_handler;
 
   private_file::private_file() noexcept : m_handle(), m_filename() {}
@@ -875,13 +892,6 @@ if(not f.is_open())
 
   bool is_local_address(const std::string &address)
   {
-    // always assume Tor/I2P addresses to be untrusted by default
-    if (boost::ends_with(address, ".onion") || boost::ends_with(address, ".i2p"))
-    {
-      MDEBUG("Address '" << address << "' is Tor/I2P, non local");
-      return false;
-    }
-
     // extract host
     epee::net_utils::http::url_content u_c;
     if (!epee::net_utils::parse_url(address, u_c))
@@ -895,20 +905,24 @@ if(not f.is_open())
       return false;
     }
 
-    // resolve to IP
-    boost::asio::io_service io_service;
-    boost::asio::ip::tcp::resolver resolver(io_service);
-    boost::asio::ip::tcp::resolver::query query(u_c.host, "");
-    boost::asio::ip::tcp::resolver::iterator i = resolver.resolve(query);
-    while (i != boost::asio::ip::tcp::resolver::iterator())
+    if (u_c.host == "localhost" || boost::ends_with(u_c.host, ".localhost"))
     {
-      const boost::asio::ip::tcp::endpoint &ep = *i;
-      if (ep.address().is_loopback())
-      {
-        MDEBUG("Address '" << address << "' is local");
-        return true;
-      }
-      ++i;
+      MDEBUG("Address '" << address << "' is local");
+      return true;
+    }
+
+    boost::system::error_code ec;
+    const auto parsed_ip = boost::asio::ip::make_address(u_c.host, ec);
+    if (ec)
+    {
+      MDEBUG("Failed to parse '" << address << "' as IP address: " << ec.message() << ". Considering it not local");
+      return false;
+    }
+
+    if (parsed_ip.is_loopback())
+    {
+      MDEBUG("Address '" << address << "' is local");
+      return true;
     }
 
     MDEBUG("Address '" << address << "' is not local");
@@ -934,14 +948,7 @@ if(not f.is_open())
 
   bool sha256sum(const uint8_t *data, size_t len, crypto::hash &hash)
   {
-    SHA256_CTX ctx;
-    if (!SHA256_Init(&ctx))
-      return false;
-    if (!SHA256_Update(&ctx, data, len))
-      return false;
-    if (!SHA256_Final((unsigned char*)hash.data, &ctx))
-      return false;
-    return true;
+    return EVP_Digest(data, len, (unsigned char*) hash.data, NULL, EVP_sha256(), NULL) != 0;
   }
 
   bool sha256sum(const std::string &filename, crypto::hash &hash)
@@ -954,8 +961,8 @@ if(not f.is_open())
     if (!f)
       return false;
     std::ifstream::pos_type file_size = f.tellg();
-    SHA256_CTX ctx;
-    if (!SHA256_Init(&ctx))
+    std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> ctx(EVP_MD_CTX_new(), &EVP_MD_CTX_free);
+    if (!EVP_DigestInit_ex(ctx.get(), EVP_sha256(), nullptr))
       return false;
     size_t size_left = file_size;
     f.seekg(0, std::ios::beg);
@@ -966,12 +973,12 @@ if(not f.is_open())
       f.read(buf, read_size);
       if (!f || !f.good())
         return false;
-      if (!SHA256_Update(&ctx, buf, read_size))
+      if (!EVP_DigestUpdate(ctx.get(), buf, read_size))
         return false;
       size_left -= read_size;
     }
     f.close();
-    if (!SHA256_Final((unsigned char*)hash.data, &ctx))
+    if (!EVP_DigestFinal_ex(ctx.get(), (unsigned char*)hash.data, nullptr))
       return false;
     return true;
   }
@@ -1067,42 +1074,24 @@ void closefrom(int fd)
     time_t tt = ts;
     struct tm tm;
     misc_utils::get_gmt_time(tt, tm);
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S UTC", &tm);
     return std::string(buffer);
   }
 
-  std::string get_human_readable_timespan(uint64_t seconds)
+  std::string get_human_readable_timespan(std::chrono::seconds seconds)
   {
-    if (seconds < 60)
-      return std::to_string(seconds) + " seconds";
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(1);
-    if (seconds < 3600)
-    {
-      ss << seconds / 60.f;
-      return ss.str() + " minutes";
-    }
-    if (seconds < 3600 * 24)
-    {
-      ss << seconds / 3600.f;
-      return ss.str() + " hours";
-    }
-    if (seconds < 3600 * 24 * 30.5f)
-    {
-      ss << seconds / (3600 * 24.f);
-      return ss.str() + " days";
-    }
-    if (seconds < 3600 * 24 * 365.25f)
-    {
-      ss << seconds / (3600 * 24 * 30.5f);
-      return ss.str() + " months";
-    }
-    if (seconds < 3600 * 24 * 365.25f * 100)
-    {
-      ss << seconds / (3600 * 24 * 365.25f);
-      return ss.str() + " years";
-    }
-    return "a long time";
+    uint64_t ts = seconds.count();
+    if (ts < 60)
+      return std::to_string(ts) + tr(" seconds");
+    if (ts < 3600)
+      return std::to_string((uint64_t)(ts / 60)) + tr(" minutes");
+    if (ts < 3600 * 24)
+      return std::to_string((uint64_t)(ts / 3600)) + tr(" hours");
+    if (ts < 3600 * 24 * 30.5)
+      return std::to_string((uint64_t)(ts / (3600 * 24))) + tr(" days");
+    if (ts < 3600 * 24 * 365.25)
+      return std::to_string((uint64_t)(ts / (3600 * 24 * 30.5))) + tr(" months");
+    return tr("a long time");
   }
 
   std::string get_human_readable_bytes(uint64_t bytes)
@@ -1143,7 +1132,7 @@ void closefrom(int fd)
   // calculating sync time estimates
   uint64_t cumulative_block_sync_weight(cryptonote::network_type nettype, uint64_t start_block, uint64_t num_blocks)
   {
-    if (nettype != cryptonote::MAINNET)
+    if(nettype != cryptonote::MAINNET)
     {
       // No detailed data available except for Mainnet: Give back the number of blocks
       // as a very simple and non-varying block sync weight for ranges of Testnet and

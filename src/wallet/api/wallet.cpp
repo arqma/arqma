@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -40,16 +40,17 @@
 #include "common_defines.h"
 #include "common/util.h"
 
+#include "cryptonote_config.h"
+#include "cryptonote_core/service_node_rules.h"
+
 #include "mnemonics/electrum-words.h"
 #include "mnemonics/english.h"
 #include <boost/format.hpp>
 #include <sstream>
 #include <unordered_map>
 
-#ifdef WIN32
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
-#endif
 
 using namespace std;
 using namespace cryptonote;
@@ -61,7 +62,6 @@ namespace Monero {
 
 namespace {
     // copy-pasted from simplewallet
-    static const size_t DEFAULT_MIXIN = 10;
     static const int    DEFAULT_REFRESH_INTERVAL_MILLIS = 1000 * 10;
     // limit maximum refresh interval as one minute
     static const int    MAX_REFRESH_INTERVAL_MILLIS = 1000 * 60 * 1;
@@ -211,38 +211,6 @@ struct Wallet2CallbackImpl : public tools::i_wallet2_callback
         // TODO;
     }
 
-    // Light wallet callbacks
-    virtual void on_lw_new_block(uint64_t height)
-    {
-      if (m_listener) {
-        m_listener->newBlock(height);
-      }
-    }
-
-    virtual void on_lw_money_received(uint64_t height, const crypto::hash &txid, uint64_t amount)
-    {
-      if (m_listener) {
-        std::string tx_hash =  epee::string_tools::pod_to_hex(txid);
-        m_listener->moneyReceived(tx_hash, amount);
-      }
-    }
-
-    virtual void on_lw_unconfirmed_money_received(uint64_t height, const crypto::hash &txid, uint64_t amount)
-    {
-      if (m_listener) {
-        std::string tx_hash =  epee::string_tools::pod_to_hex(txid);
-        m_listener->unconfirmedMoneyReceived(tx_hash, amount);
-      }
-    }
-
-    virtual void on_lw_money_spent(uint64_t height, const crypto::hash &txid, uint64_t amount)
-    {
-      if (m_listener) {
-        std::string tx_hash =  epee::string_tools::pod_to_hex(txid);
-        m_listener->moneySpent(tx_hash, amount);
-      }
-    }
-
     WalletListener * m_listener;
     WalletImpl     * m_wallet;
 };
@@ -287,6 +255,12 @@ bool Wallet::paymentIdValid(const string &paiment_id)
     if (tools::wallet2::parse_long_payment_id(paiment_id, pid))
         return true;
     return false;
+}
+
+bool Wallet::serviceNodePubkeyValid(const std::string &str)
+{
+  crypto::public_key sn_key;
+  return epee::string_tools::hex_to_pod(str, sn_key);
 }
 
 bool Wallet::addressValid(const std::string &str, NetworkType nettype)
@@ -563,51 +537,72 @@ bool WalletImpl::recoverFromKeysWithPassword(const std::string &path,
     }
 
     // parse view secret key
-    if (viewkey_string.empty()) {
+    bool has_viewkey = true;
+    crypto::secret_key viewkey;
+    if(viewkey_string.empty())
+    {
+      if(has_spendkey)
+      {
+        has_viewkey = false;
+      }
+      else
+      {
         setStatusError(tr("No view key supplied, cancelled"));
         return false;
+      }
     }
-    cryptonote::blobdata viewkey_data;
-    if(!epee::string_tools::parse_hexstr_to_binbuff(viewkey_string, viewkey_data) || viewkey_data.size() != sizeof(crypto::secret_key))
+    if(has_viewkey)
     {
+      cryptonote::blobdata viewkey_data;
+      if(!epee::string_tools::parse_hexstr_to_binbuff(viewkey_string, viewkey_data) || viewkey_data.size() != sizeof(crypto::secret_key))
+      {
         setStatusError(tr("failed to parse secret view key"));
         return false;
+      }
+      viewkey = *reinterpret_cast<const crypto::secret_key*>(viewkey_data.data());
     }
-    crypto::secret_key viewkey = *reinterpret_cast<const crypto::secret_key*>(viewkey_data.data());
-
     // check the spend and view keys match the given address
     crypto::public_key pkey;
     if(has_spendkey) {
-        if (!crypto::secret_key_to_public_key(spendkey, pkey)) {
+        if(!crypto::secret_key_to_public_key(spendkey, pkey)) {
             setStatusError(tr("failed to verify secret spend key"));
             return false;
         }
-        if (info.address.m_spend_public_key != pkey) {
+        if(info.address.m_spend_public_key != pkey) {
             setStatusError(tr("spend key does not match address"));
             return false;
         }
     }
-    if (!crypto::secret_key_to_public_key(viewkey, pkey)) {
+    if(has_viewkey)
+    {
+      if(!crypto::secret_key_to_public_key(viewkey, pkey)) {
         setStatusError(tr("failed to verify secret view key"));
         return false;
-    }
-    if (info.address.m_view_public_key != pkey) {
+      }
+      if(info.address.m_view_public_key != pkey) {
         setStatusError(tr("view key does not match address"));
         return false;
+      }
     }
 
     try
     {
-        if (has_spendkey) {
-            m_wallet->generate(path, password, info.address, spendkey, viewkey);
-            setSeedLanguage(language);
-            LOG_PRINT_L1("Generated new wallet from keys with seed language: " + language);
-        }
-        else {
-            m_wallet->generate(path, password, info.address, viewkey);
-            LOG_PRINT_L1("Generated new view only wallet from keys");
-        }
-
+      if(has_spendkey && has_viewkey)
+      {
+        m_wallet->generate(path, password, info.address, spendkey, viewkey);
+        LOG_PRINT_L1("Generated new wallet from keys with seed language: ");
+      }
+      if(!has_spendkey && has_viewkey
+      {
+        m_wallet->generate(path, password, info.address, viewkey);
+        LOG_PRINT_L1("Generated new view only wallet from keys");
+      }
+      if(has_spendkey && !has_viewkey)
+      {
+        m_wallet->generate(path, password, spendkey, true, false, false);
+        setSeedLanguage(language);
+        LOG_PRINT_L1("Generated deterministic wallet from spendkey with seed language: " + language);
+      }
     }
     catch (const std::exception& e) {
         setStatusError(string(tr("failed to generate new wallet: ")) + e.what());
@@ -794,7 +789,7 @@ std::string WalletImpl::integratedAddress(const std::string &payment_id) const
 
 std::string WalletImpl::secretViewKey() const
 {
-    return epee::string_tools::pod_to_hex(m_wallet->get_account().get_keys().m_view_secret_key);
+    return epee::string_tools::pod_to_hex(unwrap(unwrap(m_wallet->get_account().get_keys().m_view_secret_key)));
 }
 
 std::string WalletImpl::publicViewKey() const
@@ -804,7 +799,7 @@ std::string WalletImpl::publicViewKey() const
 
 std::string WalletImpl::secretSpendKey() const
 {
-    return epee::string_tools::pod_to_hex(m_wallet->get_account().get_keys().m_spend_secret_key);
+    return epee::string_tools::pod_to_hex(unwrap(unwrap(m_wallet->get_account().get_keys().m_spend_secret_key)));
 }
 
 std::string WalletImpl::publicSpendKey() const
@@ -858,40 +853,9 @@ string WalletImpl::keysFilename() const
 bool WalletImpl::init(const std::string &daemon_address, uint64_t upper_transaction_size_limit, const std::string &daemon_username, const std::string &daemon_password, bool use_ssl, bool lightWallet)
 {
     clearStatus();
-    m_wallet->set_light_wallet(lightWallet);
     if(daemon_username != "")
         m_daemon_login.emplace(daemon_username, daemon_password);
     return doInit(daemon_address, upper_transaction_size_limit, use_ssl);
-}
-
-bool WalletImpl::lightWalletLogin(bool &isNewWallet) const
-{
-  return m_wallet->light_wallet_login(isNewWallet);
-}
-
-bool WalletImpl::lightWalletImportWalletRequest(std::string &payment_id, uint64_t &fee, bool &new_request, bool &request_fulfilled, std::string &payment_address, std::string &status)
-{
-  try
-  {
-    tools::COMMAND_RPC_IMPORT_WALLET_REQUEST::response response;
-    if(!m_wallet->light_wallet_import_wallet_request(response)){
-      setStatusError(tr("Failed to send import wallet request"));
-      return false;
-    }
-    fee = response.import_fee;
-    payment_id = response.payment_id;
-    new_request = response.new_request;
-    request_fulfilled = response.request_fulfilled;
-    payment_address = response.payment_address;
-    status = response.status;
-  }
-  catch (const std::exception& e)
-  {
-    LOG_ERROR("Error sending import wallet request: " << e.what());
-    setStatusError(e.what());
-    return false;
-  }
-  return true;
 }
 
 void WalletImpl::setRefreshFromBlockHeight(uint64_t refresh_from_block_height)
@@ -926,9 +890,6 @@ uint64_t WalletImpl::unlockedBalance(uint32_t accountIndex) const
 
 uint64_t WalletImpl::blockChainHeight() const
 {
-    if(m_wallet->light_wallet()) {
-        return m_wallet->get_light_wallet_scanned_block_height();
-    }
     return m_wallet->get_blockchain_current_height();
 }
 
@@ -944,9 +905,6 @@ uint64_t WalletImpl::estimateBlockChainHeight() const
 
 uint64_t WalletImpl::daemonBlockChainHeight() const
 {
-    if(m_wallet->light_wallet()) {
-        return m_wallet->get_light_wallet_scanned_block_height();
-    }
     if (!m_is_connected)
         return 0;
     std::string err;
@@ -963,9 +921,6 @@ uint64_t WalletImpl::daemonBlockChainHeight() const
 
 uint64_t WalletImpl::daemonBlockChainTargetHeight() const
 {
-    if(m_wallet->light_wallet()) {
-        return m_wallet->get_light_wallet_blockchain_height();
-    }
     if (!m_is_connected)
         return 0;
     std::string err;
@@ -1346,7 +1301,7 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
     // TODO:  (https://bitcointalk.org/index.php?topic=753252.msg9985441#msg9985441)
     size_t fake_outs_count = mixin_count > 0 ? mixin_count : m_wallet->default_mixin();
     if (fake_outs_count == 0)
-        fake_outs_count = DEFAULT_MIXIN;
+        fake_outs_count = config::tx_settings::tx_mixin;;
 
     uint32_t adjusted_priority = m_wallet->adjust_priority(static_cast<uint32_t>(priority));
 
@@ -1397,6 +1352,16 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
 
         //std::vector<tools::wallet2::pending_tx> ptx_vector;
 
+        boost::optional<uint8_t> hard_fork_version = m_wallet->get_hard_fork_version();
+        if(!hard_fork_version)
+        {
+          er.code = WALLET_RPC_ERROR_CODE_HF_QUERY_FAILED;
+          er.message = tools::ERR_MSG_NETWORK_VERSION_QUERY_FAILED;
+          return false;
+        }
+
+        auto tx_params = tools::wallet2::construct_params(*hard_fork_version, cryptonote::txtype tx_type);
+
         try {
             if (amount) {
                 vector<cryptonote::tx_destination_entry> dsts;
@@ -1409,7 +1374,7 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
                 dsts.push_back(de);
                 transaction->m_pending_tx = m_wallet->create_transactions_2(dsts, fake_outs_count, 0 /* unlock_time */,
                                                                           adjusted_priority,
-                                                                          extra, subaddr_account, subaddr_indices);
+                                                                          extra, subaddr_account, subaddr_indices, tx_params);
             } else {
                 // for the GUI, sweep_all (i.e. amount set as "(all)") will always sweep all the funds in all the addresses
                 if (subaddr_indices.empty())
@@ -1419,7 +1384,7 @@ PendingTransaction *WalletImpl::createTransaction(const string &dst_addr, const 
                 }
                 transaction->m_pending_tx = m_wallet->create_transactions_all(0, info.address, info.is_subaddress, 1, fake_outs_count, 0 /* unlock_time */,
                                                                           adjusted_priority,
-                                                                          extra, subaddr_account, subaddr_indices);
+                                                                          extra, subaddr_account, subaddr_indices, tx_params);
             }
 
             if (multisig().isMultisig) {
@@ -1654,9 +1619,9 @@ std::string WalletImpl::getTxKey(const std::string &txid_str) const
     {
         clearStatus();
         std::ostringstream oss;
-        oss << epee::string_tools::pod_to_hex(tx_key);
+        oss << epee::string_tools::pod_to_hex(unwrap(unwrap(tx_key)));
         for (size_t i = 0; i < additional_tx_keys.size(); ++i)
-            oss << epee::string_tools::pod_to_hex(additional_tx_keys[i]);
+            oss << epee::string_tools::pod_to_hex(unwrap(unwrap(additional_tx_keys[i])));
         return oss.str();
     }
     else
@@ -1935,8 +1900,7 @@ Wallet::ConnectionStatus WalletImpl::connected() const
     m_is_connected = m_wallet->check_connection(&version, NULL, DEFAULT_CONNECTION_TIMEOUT_MILLIS);
     if (!m_is_connected)
         return Wallet::ConnectionStatus_Disconnected;
-    // Version check is not implemented in light wallets nodes/wallets
-    if (!m_wallet->light_wallet() && (version >> 16) != CORE_RPC_VERSION_MAJOR)
+    if ((version >> 16) != CORE_RPC_VERSION_MAJOR)
         return Wallet::ConnectionStatus_WrongVersion;
     return Wallet::ConnectionStatus_Connected;
 }
@@ -2018,7 +1982,7 @@ void WalletImpl::doRefresh()
     boost::lock_guard<boost::mutex> guarg(m_refreshMutex2);
     do try {
         LOG_PRINT_L3(__FUNCTION__ << ": doRefresh, rescan = "<<rescan);
-        if (m_wallet->light_wallet() || daemonSynced()) {
+        if (daemonSynced()) {
             if(rescan)
                 m_wallet->rescan_blockchain(false);
             m_wallet->refresh(trustedDaemon());
@@ -2094,7 +2058,6 @@ bool WalletImpl::doInit(const string &daemon_address, uint64_t upper_transaction
 
     // in case new wallet, this will force fast-refresh (pulling hashes instead of blocks)
     // If daemon isn't synced a calculated block height will be used instead
-    //TODO: Handle light wallet scenario where block height = 0.
     if (isNewWallet() && daemonSynced()) {
         LOG_PRINT_L2(__FUNCTION__ << ":New Wallet - fast refresh until " << daemonBlockChainHeight());
         m_wallet->set_refresh_from_block_height(daemonBlockChainHeight());
@@ -2318,6 +2281,39 @@ bool WalletImpl::isKeysFileLocked()
 {
     return m_wallet->is_keys_file_locked();
 }
+
+PendingTransaction* WalletImpl::stakePending(const std::string& sn_key_str, const std::string& amount_str, std::string& error_msg)
+{
+  crypto::public_key sn_key;
+  if(!epee::string_tools::hex_to_pod(sn_key_str, sn_key))
+  {
+    error_msg = "failed to parse service node pubkey";
+    LOG_ERROR(error_msg);
+    return nullptr;
+  }
+
+  uint64_t amount;
+  if(!cryptonote::parse_amount(amount, amount_str))
+  {
+    stringstream str;
+    str << boost::format("Incorrect amount: %1%, expected a number from %2% to %3%") % amount_str % print_money(1) % print_money(std::numeric_limits<uint64_t>::max());
+    error_msg = str.str();
+    LOG_ERROR(error_msg);
+    return nullptr;
+  }
+
+  PendingTransactionImpl * transaction = new PendingTransactionImpl(*this);
+
+  wallet2::stake_result stake_result = m_wallet->create_stake_tx(transaction->m_pending_tx, sn_key, amount);
+  if(stake_result != wallet2::stake_result::success))
+  {
+    error_msg = "Failed to create a stake transaction: " + stake_result.msg;
+    return nullptr;
+  }
+
+  return transaction;
+}
+
 } // namespace
 
 namespace Bitmonero = Monero;

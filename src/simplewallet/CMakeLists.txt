@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -32,8 +32,7 @@ set(simplewallet_sources
 
 set(simplewallet_headers)
 
-set(simplewallet_private_headers
-  simplewallet.h)
+arqma_find_all_headers(simplewallet_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(simplewallet
   ${simplewallet_private_headers})
@@ -45,12 +44,11 @@ target_link_libraries(simplewallet
   PRIVATE
     wallet
     rpc_base
-    rpc_sig
     cryptonote_core
     cncrypto
     common
     mnemonics
-    ${EPEE_READLINE}
+    epee
     qrcodegen
     version
     ${Boost_CHRONO_LIBRARY}

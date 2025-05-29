@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -137,6 +137,8 @@ public:
     std::string getSubaddressLabel(uint32_t accountIndex, uint32_t addressIndex) const override;
     void setSubaddressLabel(uint32_t accountIndex, uint32_t addressIndex, const std::string &label) override;
 
+    PendingTransaction* stakePending(const std::string& service_node_key, const std::string& amount, std::string& error_msg) override;
+
     MultisigState multisig() const override;
     std::string getMultisigInfo() const override;
     std::string makeMultisig(const std::vector<std::string>& info, uint32_t threshold) override;
@@ -184,8 +186,6 @@ public:
     virtual void pauseRefresh() override;
     virtual bool parse_uri(const std::string &uri, std::string &address, std::string &payment_id, uint64_t &amount, std::string &tx_description, std::string &recipient_name, std::vector<std::string> &unknown_parameters, std::string &error) override;
     virtual std::string getDefaultDataDir() const override;
-    virtual bool lightWalletLogin(bool &isNewWallet) const override;
-    virtual bool lightWalletImportWalletRequest(std::string &payment_id, uint64_t &fee, bool &new_request, bool &request_fulfilled, std::string &payment_address, std::string &status) override;
     virtual bool blackballOutputs(const std::vector<std::string> &outputs, bool add) override;
     virtual bool blackballOutput(const std::string &amount, const std::string &offset) override;
     virtual bool unblackballOutput(const std::string &amount, const std::string &offset) override;

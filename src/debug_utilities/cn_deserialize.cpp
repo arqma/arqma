@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -174,6 +174,18 @@ int main(int argc, char* argv[])
   {
     std::cout << "Parsed block:" << std::endl;
     std::cout << cryptonote::obj_to_json_str(block) << std::endl;
+    bool parsed = cryptonote::parse_tx_extra(block.miner_tx.extra, fields);
+    if (!parsed)
+      std::cout << "Failed to parse tx_extra" << std::endl;
+
+    if (!fields.empty())
+    {
+      print_extra_fields(fields);
+    }
+    else
+    {
+      std::cout << "No fields were found in tx_extra" << std::endl;
+    }
   }
   else if (cryptonote::parse_and_validate_tx_from_blob(blob, tx) || cryptonote::parse_and_validate_tx_base_from_blob(blob, tx))
   {

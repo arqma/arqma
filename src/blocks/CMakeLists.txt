@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -27,23 +27,13 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(GENERATED_SOURCES "")
-
-foreach(BLOB_NAME checkpoints)
-  set(OUTPUT_C_SOURCE "generated_${BLOB_NAME}.c")
-  list(APPEND GENERATED_SOURCES ${OUTPUT_C_SOURCE})
-  set(INPUT_DAT_FILE "${BLOB_NAME}.dat")
-  add_custom_command(
-    OUTPUT ${OUTPUT_C_SOURCE}
-    MAIN_DEPENDENCY ${INPUT_DAT_FILE}
+add_custom_command(OUTPUT checkpoints.c MAIN_DEPENDENCY checkpoints.dat
     COMMAND
       cd ${CMAKE_CURRENT_BINARY_DIR} &&
-      echo "'#include\t<stddef.h>'" > ${OUTPUT_C_SOURCE} &&
-      echo "'const\tunsigned\tchar\t${BLOB_NAME}[]={'" >> ${OUTPUT_C_SOURCE} &&
-      od -v -An -tx1 ${CMAKE_CURRENT_SOURCE_DIR}/${INPUT_DAT_FILE} | sed -e "'s/[0-9a-fA-F]\\{1,\\}/0x&,/g'" -e "'$$s/.$$//'" >> ${OUTPUT_C_SOURCE} &&
-      echo "'};'" >> ${OUTPUT_C_SOURCE} &&
-      echo "'const\tsize_t\t${BLOB_NAME}_len\t=\tsizeof(${BLOB_NAME});'" >> ${OUTPUT_C_SOURCE}
-  )
-endforeach()
+      echo "'#include\t<stddef.h>'" > checkpoints.c &&
+      echo "'const\tunsigned\tchar\tcheckpoints[]={'" >> checkpoints.c &&
+      od -v -An -tx1 ${CMAKE_CURRENT_SOURCE_DIR}/checkpoints.dat | sed -e "'s/[0-9a-fA-F]\\{1,\\}/0x&,/g'" -e "'$$s/.$$//'" >> checkpoints.c &&
+      echo "'};'" >> checkpoints.c &&
+      echo "'const\tsize_t\tcheckpoints_len\t=\tsizeof(checkpoints);'" >> checkpoints.c)
 
-add_library(blocks STATIC blocks.cpp ${GENERATED_SOURCES})
+arqma_add_library(blocks blocks.cpp checkpoints.c)

@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -29,68 +29,72 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-
-# This is broken up into two parts: first we check for miniupnp, compile it if we can't
-# find it, and thereafter we check for libunbound, and compile it if we can't find it.
-# We always compile if we are building statically to reduce static dependency issues...
-# ...except for FreeBSD, because FreeBSD is a special case that doesn't play well with
-# others.
-
-find_package(PkgConfig REQUIRED)
-
-if(NOT STATIC)
-   pkg_check_modules(MINIUPNPC miniupnpc>=2.1)
-   pkg_check_modules(UNBOUND libunbound)
-endif()
-
-if(MINIUPNPC_FOUND)
-  message(STATUS "Found miniupnpc")
-  link_dep_libs(miniupnpc INTERFACE "${MINIUPNPC_LIBRARY_DIRS}" ${MINIUPNPC_LIBRARIES})
-  target_include_directories(miniupnpc INTERFACE ${MINIUPNPC_INCLUDE_DIRS})
+if(DEPENDS)
+  add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
+  set_target_properties(libzmq_vendor PROPERTIES IMPORTED_LOCATION ${ZMQ_LIBRARIES})
+  target_include_directories(libzmq_vendor INTERFACE ${ZMQ_INCLUDE_DIRS})
+  statusinfo("${ZMQ_INCLUDE_DIRS} ${ZMQ_LIBRARIES}")
+elseif(APPLE)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(ZMQ libzmq>=4.3.2 REQUIRED IMPORTED_TARGET)
+  add_library(libzmq_vendor INTERFACE)
+  target_link_libraries(libzmq_vendor INTERFACE PkgConfig::ZMQ)
+  set_target_properties(libzmq_vendor PROPERTIES IMPORTED_TARGET_LOCATION ${ZMQ_LIBRARIES})
+  target_include_directories(libzmq_vendor INTERFACE ${ZMQ_INCLUDE_DIRS})
 else()
-  message(STATUS "Using in-tree miniupnpc")
-  add_subdirectory(miniupnp/miniupnpc)
-  set_property(TARGET libminiupnpc-static PROPERTY FOLDER "external")
-  if(MSVC)
-    set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -wd4244 -wd4267")
-  elseif(NOT MSVC)
-    set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-undef -Wno-unused-result -Wno-unused-value")
-  endif()
-  if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-    set_property(TARGET libminiupnpc-static APPEND_STRING PROPERTY COMPILE_FLAGS " -D_NETBSD_SOURCE")
-  endif()
+  include(ExternalProject)
+  include(ProcessorCount)
 
-  set(MINIUPNPC_LIB "libminiupnpc-static" PARENT_SCOPE)
+  set(zmq_prefix ${CMAKE_BINARY_DIR}/external/libzmq)
+  set(zmq_patch git stash && patch -p1 < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
+  set(zmq_autogen ./autogen.sh)
+  set(zmq_configure ./configure --prefix=${zmq_prefix})
 
+  set(zmq_configure ${zmq_configure} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
+
+  ExternalProject_add(libzmq_external
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libzmq
+    PREFIX ${zmq_prefix}
+    PATCH_COMMAND ${zmq_patch}
+    CONFIGURE_COMMAND ${zmq_autogen} && ${zmq_configure}
+    BUILD_COMMAND make -j${PROCESSOR_COUNT}
+    INSTALL_COMMAND ${MAKE}
+    BUILD_IN_SOURCE ON
+    BUILD_BY_PRODUCTS ${zmq_prefix}/lib/libzmq.a ${zmq_prefix}/include
+  )
+  add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
+  add_dependencies(libzmq_vendor libzmq_external)
+  set_property(TARGET libzmq_vendor PROPERTY IMPORTED_LOCATION ${zmq_prefix}/lib/libzmq.a)
+  target_include_directories(libzmq_vendor INTERFACE ${zmq_prefix}/include)
+
+  set(ZMQ_INCLUDE_DIRS ${zmq_prefix}/include CACHE STRING "ZMQ Include path")
 endif()
 
-if(NOT UNBOUND_FOUND)
+statusinfo("Using in-tree miniupnpc")
+add_subdirectory(miniupnp/miniupnpc)
+if(MSVC)
+  target_compile_options(libminiupnpc-static PRIVATE -wd4244 -wd4267)
+else()
+  target_compile_options(libminiupnpc-static PRIVATE -Wno-undef -Wno-unused-result -Wno-unused-value)
+endif()
+if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+  target_compile_definitions(libminiupnpc-static PRIVATE _NETBSD_SOURCE)
+endif()
+
+target_link_libraries(miniupnpc INTERFACE libminiupnpc-static)
+
   # NOTE: If STATIC is true, CMAKE_FIND_LIBRARY_SUFFIXES has been reordered.
   # unbound has config tests which used OpenSSL libraries, so -ldl may need to
   # be set in this case.
   # The unbound CMakeLists.txt can set it, since it's also needed for the
   # static OpenSSL libraries set up there after with target_link_libraries.
-  message(STATUS "Using in-tree unbound")
-  add_subdirectory(unbound)
 
-  set(UNBOUND_STATIC true PARENT_SCOPE)
-  set(UNBOUND_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/unbound/libunbound" PARENT_SCOPE)
-  set(UNBOUND_LIBRARY "unbound" PARENT_SCOPE)
-  set(UNBOUND_LIBRARY_DIRS "${LIBEVENT2_LIBDIR}" PARENT_SCOPE)
-else()
-  message(STATUS "Found libunbound include (unbound.h) in ${UNBOUND_INCLUDE_DIR}")
-  if(UNBOUND_LIBRARIES)
-    message(STATUS "Found libunbound shared library")
-    set(UNBOUND_STATIC false PARENT_SCOPE)
-    set(UNBOUND_INCLUDE ${UNBOUND_INCLUDE_DIR} PARENT_SCOPE)
-    set(UNBOUND_LIBRARY ${UNBOUND_LIBRARIES} PARENT_SCOPE)
-    set(UNBOUND_LIBRARY_DIRS "" PARENT_SCOPE)
-  else()
-    message(FATAL_ERROR "Found libunbound includes, but could not find libunbound library. Please make sure you have installed libunbound or libunbound-dev or the equivalent")
-  endif()
-endif()
+statusinfo("Using in-tree unbound")
+add_subdirectory(unbound)
+target_link_libraries(libunbound INTERFACE unbound)
+target_include_directories(libunbound INTERFACE unbound/libunbound)
+set(UNBOUND_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/unbound/libunbound" PARENT_SCOPE)
 
-add_subdirectory(liblmdb)
 add_subdirectory(easylogging++)
 add_subdirectory(qrcodegen)
 add_subdirectory(randomarq EXCLUDE_FROM_ALL)

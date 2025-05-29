@@ -27,14 +27,29 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string.h>
+#include <thread>
+#include <boost/asio/post.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/cerrno.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/lambda/lambda.hpp>
+#include <boost/asio/strand.hpp>
+#include <condition_variable>
 #include <openssl/ssl.h>
 #include <openssl/pem.h>
 #include "misc_log_ex.h"
+#include "net/net_utils_base.h"
 #include "net/net_ssl.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.ssl"
+
+#if BOOST_VERSION >= 107300
+  #define ARQMA_HOSTNAME_VERIFY boost::asio::ssl::host_name_verification
+#else
+  #define ARQMA_HOSTNAME_VERIFY boost::asio::ssl::rfc2818_verification
+#endif
 
 // openssl genrsa -out /tmp/KEY 4096
 // openssl req -new -key /tmp/KEY -out /tmp/REQ
@@ -455,7 +470,7 @@ bool ssl_options_t::has_fingerprint(boost::asio::ssl::verify_context &ctx) const
   return false;
 }
 
-bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, const std::string& host) const
+void ssl_options_t::configure(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, const std::string& host) const
 {
   socket.next_layer().set_option(boost::asio::ip::tcp::no_delay(true));
 
@@ -477,7 +492,7 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
     {
       // preverified means it passed system or user CA check. System CA is never loaded
       // when fingerprints are whitelisted.
-      const bool verified = preverified && (verification != ssl_verification_t::system_ca || host.empty() || boost::asio::ssl::rfc2818_verification(host)(preverified, ctx));
+      const bool verified = preverified && (verification != ssl_verification_t::system_ca || host.empty() || ARQMA_HOSTNAME_VERIFY(host)(preverified, ctx));
 
       if (!verified && !has_fingerprint(ctx))
       {
@@ -492,9 +507,96 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
       return true;
     });
   }
+}
 
-  boost::system::error_code ec;
-  socket.handshake(type, ec);
+bool ssl_options_t::handshake(boost::asio::io_context& io_context, boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, boost::asio::const_buffer buffer, const std::string& host, std::chrono::milliseconds timeout) const
+{
+  configure(socket, type, host);
+
+  auto start_handshake = [&]{
+    using ec_t = boost::system::error_code;
+    using timer_t = boost::asio::steady_timer;
+    using strand_t = boost::asio::io_context::strand;
+    using socket_t = boost::asio::ip::tcp::socket;
+
+    if (io_context.stopped())
+      io_context.restart();
+    strand_t strand(io_context);
+    timer_t deadline(io_context, timeout);
+
+    struct state_t {
+      std::mutex lock;
+      std::condition_variable_any condition;
+      ec_t result;
+      bool wait_timer;
+      bool wait_handshake;
+      bool cancel_timer;
+      bool cancel_handshake;
+    };
+    state_t state{};
+
+    state.wait_timer = true;
+    auto on_timer = [&](const ec_t &ec){
+      std::lock_guard<std::mutex> guard(state.lock);
+      state.wait_timer = false;
+      state.condition.notify_all();
+      if (!state.cancel_timer)
+      {
+        state.cancel_handshake = true;
+        ec_t ec;
+        socket.next_layer().cancel(ec);
+      }
+    };
+
+    state.wait_handshake = true;
+    auto on_handshake = [&](const ec_t &ec, size_t bytes_transferred){
+      std::lock_guard<std::mutex> guard(state.lock);
+      state.wait_handshake = false;
+      state.condition.notify_all();
+      state.result = ec;
+      if (!state.cancel_handshake)
+      {
+        state.cancel_timer = true;
+        deadline.cancel();
+      }
+    };
+
+    deadline.async_wait(on_timer);
+    boost::asio::post(
+      strand,
+      [&]{
+        socket.async_handshake(
+          type,
+          boost::asio::buffer(buffer),
+          strand.wrap(on_handshake)
+        );
+      }
+    );
+
+    while (!io_context.stopped())
+    {
+      io_context.poll_one();
+      std::lock_guard<std::mutex> guard(state.lock);
+      state.condition.wait_for(
+        state.lock,
+        std::chrono::milliseconds(30),
+        [&]{
+          return !state.wait_timer && !state.wait_handshake;
+        }
+      );
+      if (!state.wait_timer && !state.wait_handshake)
+        break;
+    }
+    if (state.result.value())
+    {
+      ec_t ec;
+      socket.next_layer().shutdown(socket_t::shutdown_both, ec);
+      socket.next_layer().close(ec);
+    }
+    return state.result;
+  };
+  const auto ec = start_handshake();
+
   if (ec)
   {
     MERROR("SSL handshake failed, connection dropped: " << ec.message());
@@ -515,6 +617,49 @@ bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s)
   else
     return false;
   return true;
+}
+
+boost::system::error_code store_ssl_keys(boost::asio::ssl::context& ssl, const boost::filesystem::path& base)
+{
+  EVP_PKEY* ssl_key = nullptr;
+  X509* ssl_cert = nullptr;
+  const auto ctx = ssl.native_handle();
+  CHECK_AND_ASSERT_MES(ctx, boost::system::error_code(EINVAL, boost::system::system_category()), "Context is null");
+  CHECK_AND_ASSERT_MES(base.has_filename(), boost::system::error_code(EINVAL, boost::system::system_category()), "Need filename");
+  if (!(ssl_key = SSL_CTX_get0_privatekey(ctx)) || !(ssl_cert = SSL_CTX_get0_certificate(ctx)))
+    return {EINVAL, boost::system::system_category()};
+
+  using file_closer = int(std::FILE*);
+  boost::system::error_code error{};
+  std::unique_ptr<std::FILE, file_closer*> file{nullptr, std::fclose};
+
+  {
+    const boost::filesystem::path key_file{base.string() + ".key"};
+    file.reset(std::fopen(key_file.string().c_str(), "wb"));
+    if (!file)
+      return {errno, boost::system::system_category()};
+    boost::filesystem::permissions(key_file, boost::filesystem::owner_read, error);
+    if (error)
+      return error;
+    if (!PEM_write_PrivateKey(file.get(), ssl_key, nullptr, nullptr, 0, nullptr, nullptr))
+      return boost::asio::error::ssl_errors(ERR_get_error());
+    if (std::fclose(file.release()) != 0)
+      return {errno, boost::system::system_category()};
+  }
+
+  const boost::filesystem::path cert_file{base.string() + ".crt"};
+  file.reset(std::fopen(cert_file.string().c_str(), "wb"));
+  if (!file)
+    return {errno, boost::system::system_category()};
+  const auto cert_perms = (boost::filesystem::owner_read | boost::filesystem::group_read | boost::filesystem::others_read);
+  boost::filesystem::permissions(cert_file, cert_perms, error);
+  if (error)
+    return error;
+  if (!PEM_write_X509(file.get(), ssl_cert))
+    return boost::asio::error::ssl_errors(ERR_get_error());
+  if (std::fclose(file.release()) != 0)
+    return {errno, boost::system::system_category()};
+  return error;
 }
 
 } // namespace

@@ -40,7 +40,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include "string_tools.h"
-#include "misc_os_dependent.h"
+#include "time_helper.h"
 #include "misc_log_ex.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -100,10 +100,10 @@ static const char *get_default_categories(int level)
   switch (level)
   {
     case 0:
-      categories = "*:WARNING,net:FATAL,net.http:FATAL,net.ssl:FATAL,net.p2p:FATAL,net.cn:FATAL,global:INFO,verify:FATAL,serialization:FATAL,daemon.rpc.payment:ERROR,stacktrace:INFO,logging:INFO,msgwriter:INFO";
+      categories = "*:WARNING,net:FATAL,net.http:FATAL,net.ssl:FATAL,net.p2p:FATAL,net.cn:FATAL,global:INFO,verify:FATAL,serialization:FATAL,daemon.zmq:INFO,logging:INFO,msgwriter:INFO";
       break;
     case 1:
-      categories = "*:INFO,global:INFO,stacktrace:INFO,logging:INFO,msgwriter:INFO";
+      categories = "*:INFO,global:INFO,stacktrace:INFO,logging:INFO,msgwriter:INFO,daemon.zmq:ERROR,daemon.zmq:WARNING";
       break;
     case 2:
       categories = "*:DEBUG";

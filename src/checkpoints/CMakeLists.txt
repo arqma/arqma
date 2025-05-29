@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -42,8 +42,7 @@ set(checkpoints_sources
 
 set(checkpoints_headers)
 
-set(checkpoints_private_headers
-  checkpoints.h)
+arqma_find_all_headers(checkpoints_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(checkpoints
   ${checkpoints_private_headers})

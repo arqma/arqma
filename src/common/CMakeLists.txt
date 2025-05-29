@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -27,6 +27,8 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+## exp2 + round <-- if somebody would like to do some precise equations near future :)
+
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
 set(common_sources
@@ -36,13 +38,16 @@ set(common_sources
   download.cpp
   error.cpp
   expect.cpp
+  arqma.cpp
   util.cpp
   i18n.cpp
   notify.cpp
   password.cpp
   perf_timer.cpp
+  rules.cpp
   pruning.cpp
   spawn.cpp
+  scoped_message_writer.cpp
   threadpool.cpp
   updates.cpp
   aligned.c
@@ -58,34 +63,7 @@ endif()
 
 set(common_headers)
 
-set(common_private_headers
-  apply_permutation.h
-  base58.h
-  boost_serialization_helper.h
-  command_line.h
-  common_fwd.h
-  dns_utils.h
-  download.h
-  error.h
-  expect.h
-  http_connection.h
-  notify.h
-  pod-class.h
-  pruning.h
-  rpc_client.h
-  scoped_message_writer.h
-  unordered_containers_boost_serialization.h
-  util.h
-  varint.h
-  i18n.h
-  password.h
-  perf_timer.h
-  spawn.h
-  stack_trace.h
-  threadpool.h
-  updates.h
-  aligned.h
-  combinator.h)
+arqma_find_all_headers(common_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(common
   ${common_private_headers})
@@ -97,9 +75,8 @@ arqma_add_library(common
 target_link_libraries(common
   PUBLIC
     cncrypto
-    ${UNBOUND_LIBRARY}
+    libunbound
     ${LIBUNWIND_LIBRARIES}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
@@ -107,5 +84,6 @@ target_link_libraries(common
     ${Boost_REGEX_LIBRARY}
     ${Boost_CHRONO_LIBRARY}
   PRIVATE
+    epee
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})

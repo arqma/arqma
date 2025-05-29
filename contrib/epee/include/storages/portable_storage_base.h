@@ -29,10 +29,11 @@
 #pragma once
 
 #include <boost/variant.hpp>
-#include <boost/any.hpp>
 #include <string>
 #include <vector>
 #include <deque>
+#include <map>
+#include "misc_log_ex.h"
 
 #define PORTABLE_STORAGE_SIGNATUREA 0x01011101
 #define PORTABLE_STORAGE_SIGNATUREB 0x01020101 // bender's nightmare
@@ -134,7 +135,6 @@ namespace epee
 
 
     typedef  boost::make_recursive_variant<
-      array_entry_t<section>,
       array_entry_t<uint64_t>,
       array_entry_t<uint32_t>,
       array_entry_t<uint16_t>,

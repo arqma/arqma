@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -29,8 +29,10 @@
 
 #pragma once
 
+#include "daemonizer/daemonizer.h"
 #include "common/scoped_message_writer.h"
 #include "common/util.h"
+#include "common/command_line.h"
 #include "daemonizer/posix_fork.h"
 
 #include <boost/filesystem/operations.hpp>

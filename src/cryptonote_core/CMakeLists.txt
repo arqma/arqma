@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -30,19 +30,19 @@
 set(cryptonote_core_sources
   blockchain.cpp
   cryptonote_core.cpp
+  service_node_rules.cpp
+  service_node_list.cpp
+  service_node_voting.cpp
+  service_node_quorum_cop.cpp
+  service_node_swarm.cpp
   tx_pool.cpp
   tx_sanity_check.cpp
+  miner.cpp
   cryptonote_tx_utils.cpp)
 
 set(cryptonote_core_headers)
 
-set(cryptonote_core_private_headers
-  blockchain_storage_boost_serialization.h
-  blockchain.h
-  cryptonote_core.h
-  tx_pool.h
-  tx_sanity_check.h
-  cryptonote_tx_utils.h)
+arqma_find_all_headers(cryptonote_core_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(cryptonote_core
   ${cryptonote_core_private_headers})
@@ -59,7 +59,6 @@ target_link_libraries(cryptonote_core
     multisig
     ringct
     device
-    arqma_mq
     daemonizer
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}

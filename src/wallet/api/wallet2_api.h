@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -180,6 +180,8 @@ struct TransactionInfo
     };
 
     virtual ~TransactionInfo() = 0;
+    virtual bool isServiceNodeReward() const = 0;
+    virtual bool isMinerReward() const = 0;
     virtual int  direction() const = 0;
     virtual bool isPending() const = 0;
     virtual bool isFailed() const = 0;
@@ -484,7 +486,7 @@ struct Wallet
      * \param upper_transaction_size_limit
      * \param daemon_username
      * \param daemon_password
-     * \param lightWallet - start wallet in light mode, connect to a openmonero compatible server.
+     * \param lightWallet - deprecated
      * \return  - true on success
      */
     virtual bool init(const std::string &daemon_address, uint64_t upper_transaction_size_limit = 0, const std::string &daemon_username = "", const std::string &daemon_password = "", bool use_ssl = false, bool lightWallet = false) = 0;
@@ -574,17 +576,17 @@ struct Wallet
     virtual uint64_t blockChainHeight() const = 0;
 
     /**
-    * @brief approximateBlockChainHeight - returns approximate blockchain height calculated from date/time
-    * @return
-    */
+     * @brief approximateBlockChainHeight - returns approximate blockchain height calculated from date/time
+     * @return
+     */
     virtual uint64_t approximateBlockChainHeight() const = 0;
 
     /**
-	* @brief estimateBlockChainHeight - returns estimate blockchain height. More accurate than approximateBlockChainHeight,
-	*                                   uses daemon height and falls back to calculation from date/time
-	* @return
-	**/
-	virtual uint64_t estimateBlockChainHeight() const = 0;
+     * @brief estimateBlockChainHeight - returns estimate blockchain height. More accurate than approximateBlockChainHeight,
+     *                                   uses daemon height and falls back to calculation from date/time
+     * @return
+     */
+    virtual uint64_t estimateBlockChainHeight() const = 0;
 
     /**
      * @brief daemonBlockChainHeight - returns daemon blockchain height
@@ -611,6 +613,7 @@ struct Wallet
     static uint64_t amountFromDouble(double amount);
     static std::string genPaymentId();
     static bool paymentIdValid(const std::string &paiment_id);
+    static bool serviceNodePubkeyValid(const std::string &str);
     static bool addressValid(const std::string &str, NetworkType nettype);
     static bool addressValid(const std::string &str, bool testnet)          // deprecated
     {
@@ -782,7 +785,7 @@ struct Wallet
                                                    optional<uint64_t> amount, uint32_t mixin_count,
                                                    PendingTransaction::Priority = PendingTransaction::Priority_Low,
                                                    uint32_t subaddr_account = 0,
-                                                   std::set<uint32_t> subaddr_indices = {}) = 0;
+                                                   std::set<uint32_t> subaddr_indices = {}, cryptonote::arqma_construct_tx_params arqma_tx_params) = 0;
 
     /*!
      * \brief createSweepUnmixableTransaction creates transaction with unmixable outputs.
@@ -936,12 +939,6 @@ struct Wallet
     //! secondary key reuse mitigation
     virtual void keyReuseMitigation2(bool mitigation) = 0;
 
-    //! Light wallet authenticate and login
-    virtual bool lightWalletLogin(bool &isNewWallet) const = 0;
-
-    //! Initiates a light wallet import wallet request
-    virtual bool lightWalletImportWalletRequest(std::string &payment_id, uint64_t &fee, bool &new_request, bool &request_fulfilled, std::string &payment_address, std::string &status) = 0;
-
     //! locks/unlocks the keys file; returns true on success
     virtual bool lockKeysFile() = 0;
     virtual bool unlockKeysFile() = 0;
@@ -953,12 +950,14 @@ struct Wallet
      * \return Device they are on
      */
     virtual Device getDeviceType() const = 0;
+
+    virtual PendingTransaction* stakePending(const std::string& service_node_key, const std::string& amount, std::string& error_msg) = 0;
 };
 
 /**
  * @brief WalletManager - provides functions to manage wallets
  */
-struct WalletManager
+struct WalletManagerBase
 {
 
     /*!
@@ -1212,7 +1211,7 @@ struct WalletManagerFactory
         LogLevel_Max = LogLevel_4
     };
 
-    static WalletManager * getWalletManager();
+    static WalletManagerBase * getWalletManager();
     static void setLogLevel(int level);
     static void setLogCategories(const std::string &categories);
 };

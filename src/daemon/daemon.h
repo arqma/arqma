@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -44,12 +44,7 @@ private:
   void stop_p2p();
 private:
   std::unique_ptr<t_internals> mp_internals;
-  boost::program_options::variables_map m_vm;
   uint16_t public_rpc_port;
-  std::string zmq_bind_address;
-  std::string zmq_bind_port;
-  bool zmq_enabled;
-  uint16_t zmq_max_clients;
 public:
   t_daemon(
       boost::program_options::variables_map const & vm, uint16_t public_rpc_port = 0

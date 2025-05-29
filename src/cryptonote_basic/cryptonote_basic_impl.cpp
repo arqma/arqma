@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -47,6 +47,9 @@ using namespace epee;
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn"
 
+namespace arqma_tx = config::tx_settings;
+namespace arqma_bc = config::blockchain_settings;
+
 namespace cryptonote {
 
   struct integrated_address {
@@ -68,30 +71,33 @@ namespace cryptonote {
   /* Cryptonote helper functions                                          */
   /************************************************************************/
   //-----------------------------------------------------------------------------------------------
-  size_t get_min_block_weight(uint8_t version)
+  size_t get_min_block_weight(uint8_t hard_fork_version)
   {
-    if(version < 2)
-      return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1;
-    else if(version < 5)
-      return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2;
-    else if(version < 13)
+    if(hard_fork_version < 13)
       return CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5;
-    return config::blockchain_settings::MINIMUM_BLOCK_SIZE_LIMIT;
+    return arqma_bc::MINIMUM_BLOCK_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
   size_t get_max_tx_size()
   {
-    return config::tx_settings::TRANSACTION_SIZE_LIMIT;
+    return arqma_tx::TRANSACTION_SIZE_LIMIT;
   }
   //-----------------------------------------------------------------------------------------------
-  bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t version) {
+  bool get_base_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t hard_fork_version, uint64_t height)
+  {
     static_assert(DIFFICULTY_TARGET_V2 % 60 == 0,"difficulty targets must be a multiple of 60");
     const int target_minutes = DIFFICULTY_TARGET_V2 / 60;
-    const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes-3);
+    const int emission_speed_factor = EMISSION_SPEED_FACTOR_PER_MINUTE - (target_minutes - 3);
 
-    if(version > 12)
+    if(height == 1)
     {
-      already_generated_coins -= config::blockchain_settings::PREMINE_BURN;
+      reward = arqma_bc::PREMINE;
+      return true;
+    }
+
+    if(hard_fork_version > 12)
+    {
+      already_generated_coins -= arqma_bc::PREMINE_BURN;
     }
 
     uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
@@ -100,29 +106,32 @@ namespace cryptonote {
       base_reward = FINAL_SUBSIDY_PER_MINUTE*target_minutes;
     }
 
-    uint64_t full_reward_zone = get_min_block_weight(version);
+    uint64_t full_reward_zone = get_min_block_weight(hard_fork_version);
 
-    //make it soft
-    if (median_weight < full_reward_zone) {
+    if(median_weight < full_reward_zone)
       median_weight = full_reward_zone;
-    }
 
-    if (current_block_weight <= median_weight) {
+    if(current_block_weight <= median_weight)
+    {
       reward = base_reward;
       return true;
     }
 
-    if(current_block_weight > 2 * median_weight) {
-      MERROR("Block cumulative weight is too big: " << current_block_weight << ", expected less than " << 2 * median_weight);
+    if(current_block_weight > 2 * median_weight)
+    {
+      MERROR("Block cumulative weight too big: " << current_block_weight << ", expected less than: " << 2 * median_weight);
       return false;
+    }
+    if (hard_fork_version >= 16)
+    {
+      reward = arqma_bc::HF16_BL_REWARD;
+      return true;
     }
 
     assert(median_weight < std::numeric_limits<uint32_t>::max());
     assert(current_block_weight < std::numeric_limits<uint32_t>::max());
 
     uint64_t product_hi;
-    // BUGFIX: 32-bit saturation bug (e.g. ARM7), the result was being
-    // treated as 32-bit by default.
     uint64_t multiplicand = 2 * median_weight - current_block_weight;
     multiplicand *= current_block_weight;
     uint64_t product_lo = mul128(base_reward, multiplicand, &product_hi);
@@ -135,6 +144,7 @@ namespace cryptonote {
     assert(reward_lo < base_reward);
 
     reward = reward_lo;
+
     return true;
   }
   //------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2018, The Monero Project
 // All rights reserved.
 //
@@ -31,7 +31,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
-#include <lmdb.h>
+#include "lmdb/liblmdb/lmdb.h"
 #include <utility>
 
 #include "span.h"

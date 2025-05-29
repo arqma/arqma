@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -32,8 +32,10 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <cstddef>
+#include <deque>
 #include <functional>
 #include <utility>
+#include <deque>
 #include <vector>
 #include <stdexcept>
 
@@ -42,10 +44,15 @@ namespace tools
 //! A global thread pool
 class threadpool
 {
- public:
-  static threadpool& getInstance()
+public:
+  static threadpool& getInstanceForCompute()
   {
     static threadpool instance;
+    return instance;
+  }
+  static threadpool& getInstanceForIO()
+  {
+    static threadpool instance(8);
     return instance;
   }
   static threadpool *getNewForUnitTests(unsigned max_threads = 0)
@@ -59,12 +66,16 @@ class threadpool
   {
     boost::mutex mt;
     boost::condition_variable cv;
+    threadpool &pool;
     int num;
+    bool error_flag;
     public:
     void inc();
     void dec();
-    void wait(threadpool *tpool);  //! Wait for a set of tasks to finish.
-    waiter() : num(0){}
+    bool wait();
+    void set_error() noexcept { error_flag = true; }
+    bool error() const noexcept { return error_flag; }
+    waiter(threadpool &pool) : pool(pool), num(0), error_flag(false) {}
     ~waiter();
   };
 
@@ -73,12 +84,16 @@ class threadpool
   // task to finish.
   void submit(waiter *waiter, std::function<void()> f, bool leaf = false);
 
+  void recycle();
+
   unsigned int get_max_concurrency() const;
 
   ~threadpool();
 
   private:
     threadpool(unsigned int max_threads = 0);
+    void destroy();
+    void create(unsigned int max_threads);
     typedef struct entry
     {
       waiter *wo;

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Project
+// Copyright (c) 2018-2022, The Arqma Project
 // Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
@@ -30,7 +30,9 @@
 #include "socks.h"
 
 #include <algorithm>
+#include <boost/asio/bind_executor.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/dispatch.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/endian/arithmetic.hpp>
@@ -49,7 +51,6 @@ namespace socks
 {
     namespace
     {
-        constexpr const unsigned v4_reply_size = 8;
         constexpr const std::uint8_t v4_connect_command = 1;
         constexpr const std::uint8_t v4tor_resolve_command = 0xf0;
         constexpr const std::uint8_t v4_request_granted = 90;
@@ -178,7 +179,7 @@ namespace socks
     {
         std::shared_ptr<client> self_;
 
-        static boost::asio::mutable_buffers_1 get_buffer(client& self) noexcept
+        static boost::asio::mutable_buffer get_buffer(client& self) noexcept
         {
             static_assert(sizeof(v4_header) <= sizeof(self.buffer_), "buffer too small for v4 response");
             return boost::asio::buffer(self.buffer_, sizeof(v4_header));
@@ -194,7 +195,7 @@ namespace socks
                 else if (bytes < self.buffer().size())
                     self.done(socks::error::bad_write, std::move(self_));
                 else
-                    boost::asio::async_read(self.proxy_, get_buffer(self), self.strand_.wrap(completed{std::move(self_)}));
+                    boost::asio::async_read(self.proxy_, get_buffer(self), boost::asio::bind_executor(self.strand_, completed{std::move(self_)}));
             }
         }
     };
@@ -203,7 +204,7 @@ namespace socks
     {
         std::shared_ptr<client> self_;
 
-        static boost::asio::const_buffers_1 get_buffer(client const& self) noexcept
+        static boost::asio::const_buffer get_buffer(client const& self) noexcept
         {
             return boost::asio::buffer(self.buffer_, self.buffer_size_);
         }
@@ -216,13 +217,13 @@ namespace socks
                 if (error)
                     self.done(error, std::move(self_));
                 else
-                    boost::asio::async_write(self.proxy_, get_buffer(self), self.strand_.wrap(read{std::move(self_)}));
+                    boost::asio::async_write(self.proxy_, get_buffer(self), boost::asio::bind_executor(self.strand_, read{std::move(self_)}));
             }
         }
     };
 
     client::client(stream_type::socket&& proxy, socks::version ver)
-      : proxy_(std::move(proxy)), strand_(GET_IO_SERVICE(proxy_)), buffer_size_(0), buffer_(), ver_(ver)
+      : proxy_(std::move(proxy)), strand_(proxy_.get_executor()), buffer_size_(0), buffer_(), ver_(ver)
     {}
 
     client::~client() {}
@@ -297,7 +298,7 @@ namespace socks
         if (self && !self->buffer().empty())
         {
             client& alias = *self;
-            alias.proxy_.async_connect(proxy_address, alias.strand_.wrap(write{std::move(self)}));
+            alias.proxy_.async_connect(proxy_address, boost::asio::bind_executor(alias.strand_, write{std::move(self)}));
             return true;
         }
         return false;
@@ -308,7 +309,7 @@ namespace socks
         if (self && !self->buffer().empty())
         {
             client& alias = *self;
-            boost::asio::async_write(alias.proxy_, write::get_buffer(alias), alias.strand_.wrap(read{std::move(self)}));
+            boost::asio::async_write(alias.proxy_, write::get_buffer(alias), boost::asio::bind_executor(alias.strand_, read{std::move(self)}));
             return true;
         }
         return false;
@@ -319,7 +320,7 @@ namespace socks
         if (self_ && error != boost::system::errc::operation_canceled)
         {
             const std::shared_ptr<client> self = std::move(self_);
-            self->strand_.dispatch([self] ()
+            boost::asio::dispatch(self->strand_, [self] ()
             {
                 if (self && self->proxy_.is_open())
                 {

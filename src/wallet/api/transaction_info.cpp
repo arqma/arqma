@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -46,6 +46,7 @@ TransactionInfoImpl::TransactionInfoImpl()
     : m_direction(Direction_Out)
       , m_pending(false)
       , m_failed(false)
+      , m_reward_type(reward_type::unspecified)
       , m_amount(0)
       , m_fee(0)
       , m_blockheight(0)
@@ -67,6 +68,15 @@ int TransactionInfoImpl::direction() const
     return m_direction;
 }
 
+bool TransactionInfoImpl::isServiceNodeReward() const
+{
+    return m_reward_type == reward_type::service_node;
+}
+
+bool TransactionInfoImpl::isMinerReward() const
+{
+    return m_reward_type == reward_type::miner;
+}
 
 bool TransactionInfoImpl::isPending() const
 {

@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -55,7 +55,7 @@ else()
         # Check if we're building that tagged commit or a different one
         if(COMMIT STREQUAL TAGGEDCOMMIT)
             message(STATUS "You are building a tagged release")
-            set(VERSIONTAG "release")
+            set(VERSIONTAG "${COMMIT}_Release")
             set(VERSION_IS_RELEASE "true")
         else()
             message(STATUS "You are ahead of or behind a tagged release")

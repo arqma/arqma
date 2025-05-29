@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 // All rights reserved.
 //
@@ -28,7 +28,7 @@
 
 #include "error.h"
 
-#include <lmdb.h>
+#include "lmdb/liblmdb/lmdb.h"
 #include <string>
 
 namespace {

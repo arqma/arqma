@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cstdio>
 
+#include "common/arqma.h"
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "blockchain_db/blockchain_db.h"
 #include "hardfork.h"
@@ -55,13 +56,80 @@ static uint8_t get_block_version(const cryptonote::block &b)
   return b.major_version;
 }
 
-HardFork::HardFork(cryptonote::BlockchainDB &db, uint8_t original_version, uint64_t original_version_till_height, time_t forked_time, uint64_t window_size, uint8_t default_threshold_percent):
+static constexpr HardFork::Params mainnet_hard_forks[] =
+{
+  { network_version_1,        0, 0, 1341378000 },
+  { network_version_7,        1, 0, 1528750800 },
+  { network_version_8,      100, 0, 1528751200 },
+  { network_version_9,     7000, 0, 1530320400 },
+  { network_version_10,   61250, 0, 1543615200 },
+  { network_version_11,  131650, 0, 1552424400 },
+  { network_version_12,  183700, 0, 1558656000 },
+  { network_version_13,  248200, 0, 1566511680 },
+  { network_version_14,  248920, 0, 1566598080 },
+  { network_version_15,  303666, 0, 1573257000 },
+  { network_version_16, 1730030, 0, 1749148200 },
+};
+
+static constexpr HardFork::Params testnet_hard_forks[] =
+{
+  { network_version_1,       0, 0, 1341378000 },
+  { network_version_7,       1, 0, 1528750800 },
+  { network_version_8,     100, 0, 1528751200 },
+  { network_version_9,     200, 0, 1530248400 },
+  { network_version_10,    300, 0, 1538352000 },
+  { network_version_11,    400, 0, 1552424400 },
+  { network_version_12,    500, 0, 1552824400 },
+  { network_version_13,    600, 0, 1566511680 },
+  { network_version_14,    700, 0, 1566598080 },
+  { network_version_15,    800, 0, 1566598080 },
+  { network_version_16,    900, 0, 1566598280 },
+};
+
+static constexpr HardFork::Params stagenet_hard_forks[] =
+{
+  { network_version_1,       0, 0, 1341378000 },
+  { network_version_7,       1, 0, 1528750800 },
+  { network_version_8,      10, 0, 1528751200 },
+  { network_version_9,      20, 0, 1530248400 },
+  { network_version_10,     40, 0, 1538352000 },
+  { network_version_11,     60, 0, 1552424400 },
+  { network_version_12,     80, 0, 1554336000 },
+  { network_version_13,    100, 0, 1560348000 },
+  { network_version_14,    120, 0, 1560351600 },
+  { network_version_15,    140, 0, 1570414500 },
+  { network_version_16,    160, 0, 1570414510 },
+};
+
+uint64_t HardFork::get_hardcoded_hard_fork_height(network_type nettype, cryptonote::network_version version)
+{
+  uint64_t result = INVALID_HF_VERSION_HEIGHT;
+  for (const auto &record : cryptonote::HardFork::get_hardcoded_hard_forks(nettype))
+  {
+    if (record.version >= version)
+    {
+      result = record.height;
+      break;
+    }
+  }
+
+  return result;
+}
+
+HardFork::ParamsIterator HardFork::get_hardcoded_hard_forks(network_type nettype)
+{
+  if (nettype == MAINNET) return {mainnet_hard_forks, std::end(mainnet_hard_forks)};
+  else if (nettype == TESTNET) return {testnet_hard_forks, std::end(testnet_hard_forks)};
+  else if (nettype == STAGENET) return {stagenet_hard_forks, std::end(stagenet_hard_forks)};
+  return {nullptr, nullptr};
+}
+
+HardFork::HardFork(cryptonote::BlockchainDB &db, uint8_t original_version, time_t forked_time, uint64_t window_size, uint8_t default_threshold_percent):
   db(db),
   forked_time(forked_time),
   window_size(window_size),
   default_threshold_percent(default_threshold_percent),
   original_version(original_version),
-  original_version_till_height(original_version_till_height),
   current_fork_index(0)
 {
   if (window_size == 0)
@@ -87,7 +155,7 @@ bool HardFork::add_fork(uint8_t version, uint64_t height, uint8_t threshold, tim
   }
   if (threshold > 100)
     return false;
-  heights.push_back(Params(version, height, threshold, time));
+  heights.push_back({version, height, threshold, time});
   return true;
 }
 
@@ -171,7 +239,7 @@ void HardFork::init()
 
   // add a placeholder for the default version, to avoid special cases
   if (heights.empty())
-    heights.push_back(Params(original_version, 0, 0, 0));
+    heights.push_back({original_version, 0, 0, 0});
 
   versions.clear();
   for (size_t n = 0; n < 256; ++n)
@@ -191,9 +259,6 @@ void HardFork::init()
 
 uint8_t HardFork::get_block_version(uint64_t height) const
 {
-  if(height <= original_version_till_height)
-    return original_version;
-
   const cryptonote::block &block = db.get_block_from_height(height);
   return ::get_block_version(block);
 }
@@ -330,10 +395,6 @@ HardFork::State HardFork::get_state(time_t t) const
   // no hard forks setup yet
   if (heights.size() <= 1)
     return Ready;
-
-  time_t t_last_fork = heights.back().time;
-  if (t >= t_last_fork + forked_time)
-    return LikelyForked;
   return Ready;
 }
 
@@ -347,7 +408,7 @@ uint8_t HardFork::get(uint64_t height) const
   CRITICAL_REGION_LOCAL(lock);
   if (height > db.height()) {
     assert(false);
-    return 255;
+    return INVALID_HARD_FORK_VERSION_FOR_HEIGHT;
   }
   if (height == db.height()) {
     return get_current_version();

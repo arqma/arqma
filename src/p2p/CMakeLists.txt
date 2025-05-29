@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -27,6 +27,9 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+cmake_minimum_required(VERSION 3.10)
+project(arqma)
+
 set(p2p_sources
   net_node.cpp
   net_node.inl
@@ -34,13 +37,7 @@ set(p2p_sources
 
 set(p2p_headers)
 
-set(p2p_private_headers
-  net_node.h
-  net_node_common.h
-  net_peerlist.h
-  net_peerlist_boost_serialization.h
-  p2p_protocol_defs.h
-  stdafx.h)
+arqma_find_all_headers(p2p_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(p2p
   ${p2p_private_headers})
@@ -52,10 +49,10 @@ arqma_add_library(p2p
 
 target_link_libraries(p2p
   PUBLIC
-    cryptonote_core
     version
+    cryptonote_core
     net
-    ${MINIUPNPC_LIB}
+    miniupnpc
     ${Boost_CHRONO_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}

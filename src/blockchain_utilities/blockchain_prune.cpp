@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -28,20 +28,23 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
-#include <lmdb.h>
+#include "lmdb/liblmdb/lmdb.h"
 #include <boost/algorithm/string.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/filesystem.hpp>
 #include "common/command_line.h"
 #include "common/pruning.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/blockchain.h"
 #include "blockchain_db/blockchain_db.h"
 #include "blockchain_db/lmdb/db_lmdb.h"
+#include "blockchain_objects.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "bcutil"
 
-#define MDB_val_set(var, val)   MDB_val var = {sizeof(val), (void *)&val}
+#define MDB_val_set(var, val) MDB_val var = {sizeof(val), (void *)&val}
 
 namespace po = boost::program_options;
 using namespace epee;
@@ -95,8 +98,7 @@ static void add_size(MDB_env *env, uint64_t bytes)
     boost::filesystem::space_info si = boost::filesystem::space(path);
     if(si.available < bytes)
     {
-      MERROR("!! WARNING: Insufficient free space to extend database !!: " <<
-          (si.available >> 20L) << " MB available, " << (bytes >> 20L) << " MB needed");
+      MERROR("!! WARNING: Insufficient free space to extend database !!: " << (si.available >> 20L) << " MB available, " << (bytes >> 20L) << " MB needed");
       return;
     }
   }
@@ -455,7 +457,7 @@ int main(int argc, char* argv[])
   , "Specify sync option, using format [safe|fast|fastest]:[nrecords_per_sync]."
   , "fast:1000"
   };
-  const command_line::arg_descriptor<bool> arg_copy_pruned_database  = {"copy-pruned-database",  "Copy database anyway if already pruned"};
+  const command_line::arg_descriptor<bool> arg_copy_pruned_database = {"copy-pruned-database",  "Copy database anyway if already pruned"};
 
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_data_dir);
   command_line::add_arg(desc_cmd_sett, cryptonote::arg_testnet_on);
@@ -522,15 +524,17 @@ int main(int argc, char* argv[])
   // because unlike blockchain_storage constructor, which takes a pointer to
   // tx_memory_pool, Blockchain's constructor takes tx_memory_pool object.
   MINFO("Initializing source blockchain (BlockchainDB)");
-  std::array<std::unique_ptr<Blockchain>, 2> core_storage;
-  Blockchain *blockchain = NULL;
-  tx_memory_pool m_mempool(*blockchain);
+  std::array<Blockchain *, 2> core_storage;
+  //std::array<std::unique_ptr<BlockchainAndSNlistAndPool>, 2> core_storage{
+  //  std::make_unique<BlockchainAndSNlistAndPool>(),
+  //  std::make_unique<BlockchainAndSNlistAndPool>()};
+
   boost::filesystem::path paths[2];
   bool already_pruned = false;
   for (size_t n = 0; n < core_storage.size(); ++n)
   {
-    core_storage[n].reset(new Blockchain(m_mempool));
-
+    BlockchainAndSNlistAndPool blockchain_objects = {};
+    core_storage[n] = &(blockchain_objects.blockchain);
     BlockchainDB* db = new_db();
     if (db == NULL)
     {
@@ -568,7 +572,7 @@ int main(int argc, char* argv[])
 
     try
     {
-      db->open(paths[n].string(), n == 0 ? DBF_RDONLY : 0);
+      db->open(paths[n].string(), core_storage[n]->nettype(), n == 0 ? DBF_RDONLY : 0);
     }
     catch (const std::exception& e)
     {
@@ -591,9 +595,9 @@ int main(int argc, char* argv[])
     }
   }
   core_storage[0]->deinit();
-  core_storage[0].reset(NULL);
+  delete core_storage[0];
   core_storage[1]->deinit();
-  core_storage[1].reset(NULL);
+  delete core_storage[1];
 
   MINFO("Pruning...");
   MDB_env *env0 = NULL, *env1 = NULL;

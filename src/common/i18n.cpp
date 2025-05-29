@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -36,8 +36,14 @@
 #include "common/i18n.h"
 #include "translation_files.h"
 
+#include <boost/system/error_code.hpp>
+#include <boost/filesystem.hpp>
+#include <algorithm>
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "i18n"
+
+#define MAX_LANGUAGE_SIZE 16
 
 static const unsigned char qm_magic[16] = {0x3c, 0xb8, 0x64, 0x18, 0xca, 0xef, 0x9c, 0x95, 0xcd, 0x21, 0x1c, 0xbf, 0x60, 0xa1, 0xbd, 0xdd};
 
@@ -62,8 +68,18 @@ std::string i18n_get_language()
     e = "en";
 
   std::string language = e;
-  language = language.substr(0, language.find("."));
+  language = language.substr(0, language.find("@"));
+
+  for(char c : language)
+    if(!strchr("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-.@", c))
+      return "en";
+
   std::transform(language.begin(), language.end(), language.begin(), tolower);
+  if(language.size() > MAX_LANGUAGE_SIZE)
+  {
+    i18n_log("Language from LANG/LC_ALL suspiciously long, switching to default (en)");
+    return "en";
+  }
   return language;
 }
 

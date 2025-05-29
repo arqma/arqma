@@ -24,17 +24,20 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-
-
 #ifndef _LEVIN_BASE_H_
 #define _LEVIN_BASE_H_
 
+#include <cstdint>
+
+#include "byte_stream.h"
 #include "net_utils_base.h"
+#include "span.h"
 
 #define LEVIN_SIGNATURE  0x0101010101012101LL  //Bender's nightmare
 
 namespace epee
 {
+class byte_slice;
 namespace levin
 {
 #pragma pack(push)
@@ -67,20 +70,22 @@ namespace levin
 #pragma pack(pop)
 
 
-#define LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED 0
-#define LEVIN_DEFAULT_MAX_PACKET_SIZE 100000000      //100MB by default
+#define LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED            0
+#define LEVIN_INITIAL_MAX_PACKET_SIZE           256*1024
+#define LEVIN_DEFAULT_MAX_PACKET_SIZE          100000000      //100MB by default
 
-#define LEVIN_PACKET_REQUEST			0x00000001
-#define LEVIN_PACKET_RESPONSE		0x00000002
+#define LEVIN_PACKET_REQUEST			            0x00000001
+#define LEVIN_PACKET_RESPONSE		              0x00000002
+#define LEVIN_PACKET_BEGIN                    0x00000004
+#define LEVIN_PACKET_END                      0x00000008
 
-
-#define LEVIN_PROTOCOL_VER_0         0
-#define LEVIN_PROTOCOL_VER_1         1
+#define LEVIN_PROTOCOL_VER_0                  0
+#define LEVIN_PROTOCOL_VER_1                  1
 
   template<class t_connection_context = net_utils::connection_context_base>
   struct levin_commands_handler
   {
-    virtual int invoke(int command, const epee::span<const uint8_t> in_buff, std::string& buff_out, t_connection_context& context)=0;
+    virtual int invoke(int command, const epee::span<const uint8_t> in_buff, byte_stream& buff_out, t_connection_context& context)=0;
     virtual int notify(int command, const epee::span<const uint8_t> in_buff, t_connection_context& context)=0;
     virtual void callback(t_connection_context& context){};
 
@@ -118,9 +123,41 @@ namespace levin
     }
   }
 
+  class message_writer
+  {
+    byte_slice finalize(uint32_t command, uint32_t flags, uint32_t return_code, bool expect_response);
+  public:
+    using header = bucket_head2;
+
+    explicit message_writer(std::size_t reserve = 8192);
+
+    message_writer(const message_writer&) = delete;
+    message_writer(message_writer&&) = default;
+    ~message_writer() = default;
+    message_writer& operator=(const message_writer&) = delete;
+    message_writer& operator=(message_writer&&) = default;
+
+    std::size_t payload_size() const noexcept
+    {
+      return buffer.size() < sizeof(header) ? 0 : buffer.size() - sizeof(header);
+    }
+
+    byte_slice finalize_invoke(uint32_t command) { return finalize(command, LEVIN_PACKET_REQUEST, 0, true); }
+    byte_slice finalize_notify(uint32_t command) { return finalize(command, LEVIN_PACKET_REQUEST, 0, false); }
+    byte_slice finalize_response(uint32_t command, uint32_t return_code)
+    {
+      return finalize(command, LEVIN_PACKET_RESPONSE, return_code, false);
+    }
+
+    byte_stream buffer;
+  };
+
+  bucket_head2 make_header(uint32_t command, uint64_t msg_size, uint32_t flags, bool expect_response) noexcept;
+
+  byte_slice make_noise_notify(std::size_t noise_bytes);
+  byte_slice make_fragmented_notify(const std::size_t noise_size, int command, message_writer message);
 
 }
 }
-
 
 #endif //_LEVIN_BASE_H_

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -37,19 +37,39 @@
 
 
 namespace cryptonote {
+  class BlockAddedHook
+  {
+  public:
+    virtual bool block_added(const block& block, const std::vector<transaction>& txs, struct checkpoint_t const *checkpoint) = 0;
+  };
+
+  class BlockchainDetachedHook
+  {
+  public:
+    virtual void blockchain_detached(uint64_t height) = 0;
+  };
+
+  class InitHook
+  {
+  public:
+    virtual void init() = 0;
+  };
+
+  class ValidateMinerTxHook
+  {
+  public:
+    virtual bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, struct block_reward_parts const &reward_parts) const = 0;
+  };
+
+  class AltBlockAddedHook
+  {
+  public:
+    virtual bool alt_block_added(const block &block, const std::vector<transaction>& txs, struct checkpoint_t const *checkpoint) = 0;
+  };
+
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
-  template<class t_array>
-  struct array_hasher: std::unary_function<t_array&, std::size_t>
-  {
-    std::size_t operator()(const t_array& val) const
-    {
-      return boost::hash_range(&val.data[0], &val.data[sizeof(val.data)]);
-    }
-  };
-
-
 #pragma pack(push, 1)
   struct public_address_outer_blob
   {
@@ -87,10 +107,10 @@ namespace cryptonote {
   /************************************************************************/
   /* Cryptonote helper functions                                          */
   /************************************************************************/
-  size_t get_min_block_weight(uint8_t version);
+  size_t get_min_block_weight(uint8_t hard_fork_version);
   size_t get_max_block_weight();
   size_t get_max_tx_size();
-  bool get_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t version);
+  bool get_base_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t hard_fork_version, uint64_t height);
   uint8_t get_account_address_checksum(const public_address_outer_blob& bl);
   uint8_t get_account_integrated_address_checksum(const public_integrated_address_outer_blob& bl);
 

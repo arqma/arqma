@@ -24,15 +24,12 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-
-
-
 #pragma once
-
 
 #include <boost/thread.hpp>
 #include <boost/bind/bind.hpp>
 
+#include "cryptonote_config.h"
 #include "net/abstract_tcp_server2.h"
 #include "http_protocol_handler.h"
 #include "net/http_server_handlers_map2.h"
@@ -40,13 +37,11 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.http"
 
-using namespace boost::placeholders;
-
 namespace epee
 {
 
   template<class t_child_class, class t_connection_context = epee::net_utils::connection_context_base>
-  class http_server_impl_base: public net_utils::http::i_http_server_handler<t_connection_context>
+  class http_server_impl_base: public net_utils::http::i_http_server_handler<t_connection_context>, net_utils::i_connection_limit
   {
 
   public:
@@ -54,15 +49,24 @@ namespace epee
         : m_net_server(epee::net_utils::e_connection_type_RPC)
     {}
 
-    explicit http_server_impl_base(boost::asio::io_service& external_io_service)
+    explicit http_server_impl_base(boost::asio::io_context& external_io_service)
         : m_net_server(external_io_service)
     {}
 
     bool init(std::function<void(size_t, uint8_t*)> rng, const std::string& bind_port = "0", const std::string& bind_ip = "0.0.0.0",
+      const std::string& bind_ipv6_address = "::", bool use_ipv6 = false, bool require_ipv4 = true,
       std::vector<std::string> access_control_origins = std::vector<std::string>(),
       boost::optional<net_utils::http::login> user = boost::none,
-      net_utils::ssl_options_t ssl_options = net_utils::ssl_support_t::e_ssl_support_autodetect)
+      net_utils::ssl_options_t ssl_options = net_utils::ssl_support_t::e_ssl_support_autodetect,
+      const std::size_t max_public_ip_connections = DEFAULT_RPC_MAX_CONNECTIONS_PER_PUBLIC_IP,
+      const std::size_t max_private_ip_connections = DEFAULT_RPC_MAX_CONNECTIONS_PER_PRIVATE_IP,
+      const std::size_t max_connections = DEFAULT_RPC_MAX_CONNECTIONS,
+      const std::size_t response_soft_limit = DEFAULT_RPC_SOFT_LIMIT_SIZE)
     {
+      if (max_connections < max_public_ip_connections)
+        throw std::invalid_argument{"Max public IP connections cannot be more than max connections"};
+      if (max_connections < max_private_ip_connections)
+        throw std::invalid_argument{"Max private IP connections cannot be more than max connections"};
 
       //set self as callback handler
       m_net_server.get_config_object().m_phandler = static_cast<t_child_class*>(this);
@@ -76,9 +80,18 @@ namespace epee
       m_net_server.get_config_object().m_access_control_origins = std::move(access_control_origins);
 
       m_net_server.get_config_object().m_user = std::move(user);
+      m_net_server.get_config_object().m_max_public_ip_connections = max_public_ip_connections;
+      m_net_server.get_config_object().m_max_private_ip_connections = max_private_ip_connections;
+      m_net_server.get_config_object().m_max_connections = max_connections;
+      m_net_server.set_response_soft_limit(response_soft_limit);
+      m_net_server.set_connection_limit(this);
 
-      MGINFO("Binding on " << bind_ip << ":" << bind_port);
-      bool res = m_net_server.init_server(bind_port, bind_ip, std::move(ssl_options));
+      MGINFO("Binding on " << bind_ip << " (IPv4):" << bind_port);
+      if (use_ipv6)
+      {
+        MGINFO("Binding on " << bind_ipv6_address << " (IPv6):" << bind_port);
+      }
+      bool res = m_net_server.init_server(bind_port, bind_ip, bind_port, bind_ipv6_address, use_ipv6, require_ipv4, std::move(ssl_options));
       if(!res)
       {
         LOG_ERROR("Failed to bind server");
@@ -128,6 +141,25 @@ namespace epee
     }
 
   protected:
+    virtual bool is_host_limit(const net_utils::network_address& na) override final
+    {
+      auto& config = m_net_server.get_config_object();
+      CRITICAL_REGION_LOCAL(config.m_lock);
+      if (config.m_max_connections <= config.m_connection_count)
+        return true;
+
+      const bool is_private = na.is_loopback() || na.is_local();
+      const auto elem = config.m_connections.find(na.host_str());
+      if (elem != config.m_connections.end())
+      {
+        if (is_private)
+          return config.m_max_private_ip_connections <= elem->second;
+        else
+          return config.m_max_public_ip_connections <= elem->second;
+      }
+      return false;
+    }
+
     net_utils::boosted_tcp_server<net_utils::http::http_custom_handler<t_connection_context> > m_net_server;
   };
 }

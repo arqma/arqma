@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -26,6 +26,20 @@
 # INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+add_library(arqma_bc_utils_std_libs INTERFACE)
+target_link_libraries(arqma_bc_utils_std_libs INTERFACE
+  cryptonote_core
+  lmdb
+  blockchain_db
+  version
+  epee
+  ${Boost_FILESYSTEM_LIBRARY}
+  ${Boost_SYSTEM_LIBRARY}
+  ${Boost_THREAD_LIBRARY}
+  ${CMAKE_THREAD_LIBS_INIT}
+  ${EXTRA_LIBRARIES})
+
 
 set(blockchain_import_sources
   blockchain_import.cpp
@@ -106,6 +120,13 @@ set(blockchain_depth_private_headers)
 arqma_private_headers(blockchain_depth
   ${blockchain_depth_private_headers})
 
+set(blockchain_stats_sources
+  blockchain_stats.cpp)
+
+set(blockchain_stats_private_headers)
+
+arqma_private_headers(blockchain_stats
+  ${blockchain_stats_private_headers})
 
 arqma_add_executable(blockchain_import
   ${blockchain_import_sources}
@@ -113,25 +134,15 @@ arqma_add_executable(blockchain_import
 
 target_link_libraries(blockchain_import
   PRIVATE
-    cryptonote_core
-    blockchain_db
-    version
-    epee
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES}
-    ${Blocks})
+    arqma_bc_utils_std_libs
+    blocks)
 
 if(ARCH_WIDTH)
   target_compile_definitions(blockchain_import
     PUBLIC -DARCH_WIDTH=${ARCH_WIDTH})
 endif()
 
-set_property(TARGET blockchain_import
-	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-import")
+set_property(TARGET blockchain_import PROPERTY OUTPUT_NAME "arqma-blockchain-import")
 install(TARGETS blockchain_import DESTINATION bin)
 
 arqma_add_executable(blockchain_export
@@ -140,19 +151,9 @@ arqma_add_executable(blockchain_export
 
 target_link_libraries(blockchain_export
   PRIVATE
-    cryptonote_core
-    blockchain_db
-    version
-    epee
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
+    arqma_bc_utils_std_libs)
 
-set_property(TARGET blockchain_export
-	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-export")
+set_property(TARGET blockchain_export PROPERTY OUTPUT_NAME "arqma-blockchain-export")
 install(TARGETS blockchain_export DESTINATION bin)
 
 arqma_add_executable(blockchain_blackball
@@ -162,21 +163,10 @@ arqma_add_executable(blockchain_blackball
 target_link_libraries(blockchain_blackball
   PRIVATE
     wallet
-    cryptonote_core
-    blockchain_db
-    version
-    epee
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
+    arqma_bc_utils_std_libs)
 
-set_property(TARGET blockchain_blackball
-	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-mark-spent-outputs")
+set_property(TARGET blockchain_blackball PROPERTY OUTPUT_NAME "arqma-blockchain-mark-spent-outputs")
 install(TARGETS blockchain_blackball DESTINATION bin)
-
 
 arqma_add_executable(blockchain_usage
   ${blockchain_usage_sources}
@@ -184,19 +174,9 @@ arqma_add_executable(blockchain_usage
 
 target_link_libraries(blockchain_usage
   PRIVATE
-    cryptonote_core
-    blockchain_db
-    version
-    epee
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
+    arqma_bc_utils_std_libs)
 
-set_property(TARGET blockchain_usage
-	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-usage")
+set_property(TARGET blockchain_usage PROPERTY OUTPUT_NAME "arqma-blockchain-usage")
 install(TARGETS blockchain_usage DESTINATION bin)
 
 arqma_add_executable(blockchain_ancestry
@@ -205,19 +185,9 @@ arqma_add_executable(blockchain_ancestry
 
 target_link_libraries(blockchain_ancestry
   PRIVATE
-    cryptonote_core
-    blockchain_db
-    version
-    epee
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
+    arqma_bc_utils_std_libs)
 
-set_property(TARGET blockchain_ancestry
-	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-ancestry")
+set_property(TARGET blockchain_ancestry PROPERTY OUTPUT_NAME "arqma-blockchain-ancestry")
 install(TARGETS blockchain_ancestry DESTINATION bin)
 
 arqma_add_executable(blockchain_depth
@@ -226,19 +196,9 @@ arqma_add_executable(blockchain_depth
 
 target_link_libraries(blockchain_depth
   PRIVATE
-    cryptonote_core
-    blockchain_db
-    version
-    epee
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
+    arqma_bc_utils_std_libs)
 
-set_property(TARGET blockchain_depth
-	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-depth")
+set_property(TARGET blockchain_depth PROPERTY OUTPUT_NAME "arqma-blockchain-depth")
 install(TARGETS blockchain_depth DESTINATION bin)
 
 arqma_add_executable(blockchain_prune_known_spent_data
@@ -247,40 +207,31 @@ arqma_add_executable(blockchain_prune_known_spent_data
 
 target_link_libraries(blockchain_prune_known_spent_data
   PRIVATE
-    cryptonote_core
-    blockchain_db
     p2p
-    version
-    epee
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
+    arqma_bc_utils_std_libs)
 
-set_property(TARGET blockchain_prune_known_spent_data
-	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-prune-known-spent-data")
+set_property(TARGET blockchain_prune_known_spent_data PROPERTY OUTPUT_NAME "arqma-blockchain-prune-known-spent-data")
 install(TARGETS blockchain_prune_known_spent_data DESTINATION bin)
 
 arqma_add_executable(blockchain_prune
   ${blockchain_prune_sources}
   ${blockchain_prune_private_headers})
 
-set_property(TARGET blockchain_prune
-	PROPERTY
-	OUTPUT_NAME "arqma-blockchain-prune")
+set_property(TARGET blockchain_prune PROPERTY OUTPUT_NAME "arqma-blockchain-prune")
 install(TARGETS blockchain_prune DESTINATION bin)
 
 target_link_libraries(blockchain_prune
   PRIVATE
-    cryptonote_core
-    blockchain_db
     p2p
-    version
-    epee
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
+    arqma_bc_utils_std_libs)
+
+arqma_add_executable(blockchain_stats
+  ${blockchain_stats_sources}
+  ${blockchain_stats_private_headers})
+
+set_property(TARGET blockchain_stats PROPERTY OUTPUT_NAME "arqma-blockchain-stats")
+install(TARGETS blockchain_stats DESTINATION bin)
+
+target_link_libraries(blockchain_stats
+  PRIVATE
+    arqma_bc_utils_std_libs)

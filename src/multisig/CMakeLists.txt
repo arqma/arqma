@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2017-2020, The Monero Project
 #
 # All rights reserved.
@@ -32,8 +32,7 @@ set(multisig_sources
 
 set(multisig_headers)
 
-set(multisig_private_headers
-  multisig.h)
+arqma_find_all_headers(multisig_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(multisig
   ${multisig_private_headers})

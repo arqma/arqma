@@ -34,6 +34,7 @@
 #include <string>
 #include "memwipe.h"
 #include "fnv1.h"
+#include <cstddef>
 
 namespace epee
 {

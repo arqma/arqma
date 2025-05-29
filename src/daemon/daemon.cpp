@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -35,9 +35,12 @@
 #include "misc_log_ex.h"
 #include "daemon/daemon.h"
 #include "rpc/daemon_handler.h"
+#include "rpc/zmq_pub.h"
+#include "rpc/zmq_server.h"
 
 #include "common/password.h"
 #include "common/util.h"
+#include "cryptonote_basic/events.h"
 #include "daemon/core.h"
 #include "daemon/p2p.h"
 #include "daemon/protocol.h"
@@ -46,8 +49,6 @@
 #include "daemon/command_line_args.h"
 #include "net/net_ssl.h"
 #include "version.h"
-
-#include "arqma_mq/arqmaMQ.h"
 
 using namespace epee;
 
@@ -58,6 +59,17 @@ using namespace epee;
 
 namespace daemonize {
 
+struct zmq_internals
+{
+  explicit zmq_internals(t_core& core, t_p2p& p2p)
+    : rpc_handler{core.get(), p2p.get()}
+    , server{rpc_handler}
+  {}
+
+  cryptonote::rpc::DaemonHandler rpc_handler;
+  cryptonote::rpc::ZmqServer server;
+};
+
 struct t_internals {
 private:
   t_protocol protocol;
@@ -65,6 +77,7 @@ public:
   t_core core;
   t_p2p p2p;
   std::vector<std::unique_ptr<t_rpc>> rpcs;
+  std::unique_ptr<zmq_internals> zmq;
 
   t_internals(
       boost::program_options::variables_map const & vm
@@ -72,6 +85,7 @@ public:
     : core{vm}
     , protocol{vm, core, command_line::get_arg(vm, cryptonote::arg_offline)}
     , p2p{vm, protocol}
+    , zmq{nullptr}
   {
     // Handle circular dependencies
     protocol.set_p2p_endpoint(p2p.get());
@@ -87,6 +101,28 @@ public:
       auto restricted_rpc_port = command_line::get_arg(vm, restricted_rpc_port_arg);
       rpcs.emplace_back(new t_rpc{vm, core, p2p, true, restricted_rpc_port, "restricted"});
     }
+
+    if (!command_line::get_arg(vm, daemon_args::arg_zmq_rpc_disabled))
+    {
+      zmq.reset(new zmq_internals{core, p2p});
+
+      const std::string zmq_port = command_line::get_arg(vm, daemon_args::arg_zmq_rpc_bind_port);
+      const std::string zmq_address = command_line::get_arg(vm, daemon_args::arg_zmq_rpc_bind_ip);
+
+      if (!zmq->server.init_rpc(zmq_address, zmq_port))
+        throw std::runtime_error{"Failed to add TCP socket(" + zmq_address + ":" + zmq_port + ") to Arqma ZMQ RPC Server"};
+
+      std::shared_ptr<cryptonote::listener::zmq_pub> shared;
+      const std::vector<std::string> zmq_pub = command_line::get_arg(vm, daemon_args::arg_zmq_pub);
+      if (!zmq_pub.empty() && !(shared = zmq->server.init_pub(epee::to_span(zmq_pub))))
+        throw std::runtime_error{"Failed to initialize zmq_pub"};
+
+      if (shared)
+      {
+        core.get().get_blockchain_storage().add_block_notify(cryptonote::listener::zmq_pub::chain_main{shared});
+        core.get().set_txpool_listener(cryptonote::listener::zmq_pub::txpool_add{shared});
+      }
+    }
   }
 };
 
@@ -100,9 +136,8 @@ void t_daemon::init_options(boost::program_options::options_description & option
 t_daemon::t_daemon(
     boost::program_options::variables_map const & vm, uint16_t public_rpc_port
   )
-  : mp_internals{new t_internals{vm}}, public_rpc_port(public_rpc_port), m_vm(vm)
+  : mp_internals{new t_internals{vm}}, public_rpc_port(public_rpc_port)
 {
-  zmq_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_enabled);
 }
 
 t_daemon::~t_daemon() = default;
@@ -166,39 +201,8 @@ bool t_daemon::run(bool interactive)
       rpc_commands->start_handling(std::bind(&daemonize::t_daemon::stop_p2p, this));
     }
 
-    arqmaMQ::ZmqHandler zmq_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
-    arqmaMQ::ArqmaNotifier arqmaNotifier{zmq_daemon_handler};
-
-    if(zmq_enabled)
-    {
-      auto zmq_ip_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_ip);
-      auto zmq_port_str = command_line::get_arg(m_vm, daemon_args::arg_zmq_bind_port);
-      uint32_t zmq_ip;
-      uint16_t zmq_port;
-      uint16_t zmq_max_clients = command_line::get_arg(m_vm, daemon_args::arg_zmq_max_clients);
-      if(!epee::string_tools::get_ip_int32_from_string(zmq_ip, zmq_ip_str))
-      {
-        std::cerr << "Invalid ZMQ IP Address given: " << zmq_ip_str << std::endl;
-        return false;
-      }
-      if(!epee::string_tools::get_xtype_from_string(zmq_port, zmq_port_str))
-      {
-        std::cerr << "Invalid ZMQ Port given: " << zmq_port_str << std::endl;
-        return false;
-      }
-
-      MINFO("Starting Arqma ZMQ server...");
-
-      if(!arqmaNotifier.addTCPSocket(zmq_ip_str, zmq_port_str, zmq_max_clients))
-      {
-        LOG_ERROR(std::string("Failed to add TCP Socket (") << zmq_ip_str + ":" << zmq_port_str + ") to Arqma ZMQ Server");
-        return false;
-      }
-
-      arqmaNotifier.run();
-
-      MGINFO_GREEN(std::string("Arqma ZMQ server started at ") << zmq_ip_str + ":" << zmq_port_str << " with Maximum Allowed Clients Connections: " << zmq_max_clients << ".");
-    }
+    if (mp_internals->zmq)
+      mp_internals->zmq->server.run();
     else
       MGINFO_GREEN(std::string("Arqma ZMQ Server Disabled"));
 
@@ -213,11 +217,8 @@ bool t_daemon::run(bool interactive)
     if(rpc_commands)
       rpc_commands->stop_handling();
 
-    if(zmq_enabled)
-    {
-      MGINFO_GREEN(std::string("Stopping Arqma ZMQ Server."));
-      arqmaNotifier.stop();
-    }
+    if(mp_internals->zmq)
+      mp_internals->zmq->server.stop();
 
 
     for(auto& rpc : mp_internals->rpcs)

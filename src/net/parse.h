@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Project
+// Copyright (c) 2018-2022, The Arqma Project
 // Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
@@ -37,6 +37,8 @@
 
 namespace net
 {
+  void get_network_address_host_and_port(const std::string& address, std::string& host, std::string& port);
+
     /*!
       Identifies onion, i2p and IPv4 addresses and returns them as a generic
       `network_address`. If the type is unsupported, it might be a hostname,

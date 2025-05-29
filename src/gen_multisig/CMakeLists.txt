@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2017-2020, The Monero Project
 #
 # All rights reserved.
@@ -39,7 +39,6 @@ target_link_libraries(gen_multisig
     cncrypto
     common
     epee
-    ${EPEE_READLINE}
     ${Boost_CHRONO_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}

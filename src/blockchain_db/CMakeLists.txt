@@ -1,5 +1,5 @@
-# Copyright (c) 2018-2020, The Arqma Network
-# Copyright (c) 2014-2020, The Monero Project
+# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
 #
@@ -33,9 +33,7 @@ set(blockchain_db_sources
 
 set(blockchain_db_headers)
 
-set(blockchain_db_private_headers
-  blockchain_db.h
-  lmdb/db_lmdb.h)
+arqma_find_all_headers(blockchain_db_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(blockchain_db
   ${crypto_private_headers})

@@ -191,10 +191,6 @@ namespace net_utils
 
 			return true;
 		}
-
-
-
-
 		//--------------------------------------------------------------------------------------------
 		template<class t_connection_context>
 		simple_http_connection_handler<t_connection_context>::simple_http_connection_handler(i_service_endpoint* psnd_hndlr, config_type& config, t_connection_context& conn_context):
@@ -207,9 +203,44 @@ namespace net_utils
 		m_want_close(false),
 		m_newlines(0),
 		m_psnd_hndlr(psnd_hndlr),
-		m_conn_context(conn_context)
+		m_conn_context(conn_context),
+		m_initialized(false)
 	{
 
+	}
+	//--------------------------------------------------------------------------------------------
+	template<class t_connection_context>
+	simple_http_connection_handler<t_connection_context>::~simple_http_connection_handler()
+	{
+	  try
+	  {
+	    if (m_initialized)
+	    {
+	      CRITICAL_REGION_LOCAL(m_config.m_lock);
+	      if (m_config.m_connection_count)
+	        --m_config.m_connection_count;
+	      auto elem = m_config.m_connections.find(m_conn_context.m_remote_address.host_str());
+	      if (elem != m_config.m_connections.end())
+	      {
+	        if (elem->second == 1 || elem->second == 0)
+	          m_config.m_connections.erase(elem);
+	        else
+	          --(elem->second);
+	      }
+	    }
+	  }
+	  catch (...)
+	  {}
+	}
+	//--------------------------------------------------------------------------------------------
+	template<class t_connection_context>
+	bool simple_http_connection_handler<t_connection_context>::after_init_connection()
+	{
+	  CRITICAL_REGION_LOCAL(m_config.m_lock);
+	  ++m_config.m_connections[m_conn_context.m_remote_address.host_str()];
+	  ++m_config.m_connection_count;
+	  m_initialized = true;
+	  return true;
 	}
 	//--------------------------------------------------------------------------------------------
 	template<class t_connection_context>
@@ -589,9 +620,10 @@ namespace net_utils
 
     LOG_PRINT_L3("HTTP_RESPONSE_HEAD: << \r\n" << response_data);
 
-		m_psnd_hndlr->do_send((void*)response_data.data(), response_data.size());
 		if ((response.m_body.size() && (query_info.m_http_method != http::http_method_head)) || (query_info.m_http_method == http::http_method_options))
-			m_psnd_hndlr->do_send((void*)response.m_body.data(), response.m_body.size());
+		  response_data += response.m_body;
+
+		m_psnd_hndlr->do_send(byte_slice{std::move(response_data)});
 		m_psnd_hndlr->send_done();
 		return res;
 	}
@@ -614,14 +646,14 @@ namespace net_utils
 			response.m_body = get_not_found_response_body(query_info.m_URI);
 			response.m_response_code = 404;
 			response.m_response_comment = "Not found";
-			response.m_mime_tipe = "text/html";
+			response.m_mime_type = "text/html";
 			return true;
 		}
 
 		MDEBUG(" -->> " << query_info.m_full_request_str << "\r\n<<--OK");
 		response.m_response_code = 200;
 		response.m_response_comment = "OK";
-		response.m_mime_tipe = get_file_mime_tipe(uri_to_path);
+		response.m_mime_type = get_file_mime_type(uri_to_path);
 
 		return true;
 	}
@@ -635,10 +667,10 @@ namespace net_utils
 			"Content-Length: ";
 		buf += boost::lexical_cast<std::string>(response.m_body.size()) + "\r\n";
 
-		if(!response.m_mime_tipe.empty())
+		if(!response.m_mime_type.empty())
 		{
 			buf += "Content-Type: ";
-			buf += response.m_mime_tipe + "\r\n";
+			buf += response.m_mime_type + "\r\n";
 		}
 
 		buf += "Last-Modified: ";
@@ -685,7 +717,7 @@ namespace net_utils
 	}
 	//-----------------------------------------------------------------------------------
 	template<class t_connection_context>
-  std::string simple_http_connection_handler<t_connection_context>::get_file_mime_tipe(const std::string& path)
+  std::string simple_http_connection_handler<t_connection_context>::get_file_mime_type(const std::string& path)
 	{
 		std::string result;
 		std::string ext = string_tools::get_extension(path);

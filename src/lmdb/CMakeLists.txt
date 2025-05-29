@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -33,14 +33,7 @@ set(lmdb_sources
   table.cpp
   value_stream.cpp)
 
-set(lmdb_headers
-  database.h
-  error.h
-  key_stream.h
-  table.h
-  transaction.h
-  util.h
-  value_stream.h)
+arqma_find_all_headers(lmdb_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_add_library(lmdb_lib
   ${lmdb_sources}
@@ -49,3 +42,7 @@ arqma_add_library(lmdb_lib
 target_link_libraries(lmdb_lib
   common
   lmdb)
+
+message(STATUS "Using ${ARCH_WIDTH}-bit LMDB from source tree")
+add_subdirectory(liblmdb)
+set(LMDB_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/liblmdb" CACHE STRING "LMDB Include path")

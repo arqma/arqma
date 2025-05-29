@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2019, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -28,6 +28,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include "common/command_line.h"
 #include "common/varint.h"
 #include "cryptonote_basic/cryptonote_boost_serialization.h"
@@ -35,6 +36,8 @@
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/blockchain.h"
 #include "blockchain_db/blockchain_db.h"
+#include "blockchain_objects.h"
+#include "time_helper.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -123,9 +126,9 @@ int main(int argc, char* argv[])
   bool do_hours = command_line::get_arg(vm, arg_hours);
 
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  std::unique_ptr<Blockchain> core_storage;
-  tx_memory_pool m_mempool(*core_storage);
-  core_storage.reset(new Blockchain(m_mempool));
+  BlockchainAndSNlistAndPool blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.blockchain;
+  //std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
   BlockchainDB *db = new_db();
   if (db == NULL)
   {
@@ -138,7 +141,7 @@ int main(int argc, char* argv[])
 
   try
   {
-    db->open(filename, DBF_RDONLY);
+    db->open(filename, core_storage->nettype(), DBF_RDONLY);
   }
   catch (const std::exception& e)
   {
@@ -162,10 +165,10 @@ int main(int argc, char* argv[])
 /*
  * The default output can be plotted with GnuPlot using these commands:
 set key autotitle columnhead
-set title "Monero Blockchain Growth"
+set title "Arqma Blockchain Growth"
 set timefmt "%Y-%m-%d"
 set xdata time
-set xrange ["2014-04-17":*]
+set xrange ["2018-06-14":*]
 set format x "%Y-%m-%d"
 set yrange [0:*]
 set y2range [0:*]
@@ -177,18 +180,18 @@ plot 'stats.csv' index "DATA" using (timecolumn(1,"%Y-%m-%d")):4 with lines, '' 
 
   // spit out a comment that GnuPlot can use as an index
   std::cout << ENDL << "# DATA" << ENDL;
-  std::cout << "Date\tBlocks/day\tBlocks\tTxs/Day\tTxs\tBytes/Day\tBytes";
+  std::cout << "Date\t\tBlocks/day\t\tBlocks\t\tTxs/Day\t\tTxs\t\tBytes/Day\t\tBytes";
   if (do_inputs)
-    std::cout << "\tInMin\tInMax\tInAvg";
+    std::cout << "\t\tInMin\t\tInMax\t\tInAvg";
   if (do_outputs)
-    std::cout << "\tOutMin\tOutMax\tOutAvg";
+    std::cout << "\t\tOutMin\t\tOutMax\t\tOutAvg";
   if (do_ringsize)
-    std::cout << "\tRingMin\tRingMax\tRingAvg";
+    std::cout << "\t\tRingMin\t\tRingMax\t\tRingAvg";
   if (do_hours) {
     char buf[8];
     unsigned int i;
-    for (i=0; i<24; i++) {
-      sprintf(buf, "\t%02u:00", i);
+    for (i = 0; i < 24; i++) {
+      sprintf(buf, "\t\t%02u:00", i);
       std::cout << buf;
     }
   }
@@ -228,7 +231,7 @@ plot 'stats.csv' index "DATA" using (timecolumn(1,"%Y-%m-%d")):4 with lines, '' 
         goto skip;
       strftime(timebuf, sizeof(timebuf), "%Y-%m-%d", &prevtm);
       prevtm = currtm;
-      std::cout << timebuf << "\t" << currblks << "\t" << h << "\t" << currtxs << "\t" << prevtxs + currtxs << "\t" << currsz << "\t" << prevsz + currsz;
+      std::cout << timebuf << "\t\t" << currblks << "\t\t" << h << "\t\t" << currtxs << "\t\t" << prevtxs + currtxs << "\t\t" << currsz << "\t\t" << prevsz + currsz;
       prevsz += currsz;
       currsz = 0;
       currblks = 0;
@@ -237,21 +240,21 @@ plot 'stats.csv' index "DATA" using (timecolumn(1,"%Y-%m-%d")):4 with lines, '' 
       if (!tottxs)
         tottxs = 1;
       if (do_inputs) {
-        std::cout << "\t" << (maxins ? minins : 0) << "\t" << maxins << "\t" << totins / tottxs;
+        std::cout << "\t\t" << (maxins ? minins : 0) << "\t\t" << maxins << "\t\t" << totins / tottxs;
         minins = 10; maxins = 0; totins = 0;
       }
       if (do_outputs) {
-        std::cout << "\t" << (maxouts ? minouts : 0) << "\t" << maxouts << "\t" << totouts / tottxs;
+        std::cout << "\t\t" << (maxouts ? minouts : 0) << "\t\t" << maxouts << "\t\t" << totouts / tottxs;
         minouts = 10; maxouts = 0; totouts = 0;
       }
       if (do_ringsize) {
-        std::cout << "\t" << (maxrings ? minrings : 0) << "\t" << maxrings << "\t" << totrings / tottxs;
+        std::cout << "\t\t" << (maxrings ? minrings : 0) << "\t\t" << maxrings << "\t\t" << totrings / tottxs;
         minrings = 50; maxrings = 0; totrings = 0;
       }
       tottxs = 0;
       if (do_hours) {
-        for (i=0; i<24; i++) {
-          std::cout << "\t" << txhr[i];
+        for (i = 0; i < 24; i++) {
+          std::cout << "\t\t" << txhr[i];
           txhr[i] = 0;
         }
       }
@@ -288,8 +291,7 @@ skip:
         totins += io;
       }
       if (do_ringsize) {
-        const cryptonote::txin_to_key& tx_in_to_key
-                       = boost::get<cryptonote::txin_to_key>(tx.vin[0]);
+        const cryptonote::txin_to_key& tx_in_to_key = boost::get<cryptonote::txin_to_key>(tx.vin[0]);
         io = tx_in_to_key.key_offsets.size();
         if (io < minrings)
           minrings = io;

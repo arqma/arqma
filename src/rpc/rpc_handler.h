@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2016-2018, The Monero Project
 //
 // All rights reserved.
@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include "byte_slice.h"
 
 namespace cryptonote
 {
@@ -54,7 +55,7 @@ class RpcHandler
     RpcHandler() { }
     virtual ~RpcHandler() { }
 
-    virtual std::string handle(const std::string& request) = 0;
+    virtual epee::byte_slice handle(std::string&& request) = 0;
 
     static boost::optional<output_distribution_data>
       get_output_distribution(const std::function<bool(uint64_t, uint64_t, uint64_t, uint64_t&, std::vector<uint64_t>&, uint64_t&)> &f, uint64_t amount, uint64_t from_height, uint64_t to_height, bool cumulative);

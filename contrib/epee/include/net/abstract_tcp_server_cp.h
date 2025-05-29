@@ -40,7 +40,6 @@
 #define ENABLE_PROFILING
 #include "profile_tools.h"
 #include "net_utils_base.h"
-#include "pragma_comp_defs.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"

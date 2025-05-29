@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -33,6 +33,7 @@
 #include "common/command_line.h"
 #include "cryptonote_config.h"
 #include "daemonizer/daemonizer.h"
+#include "cryptonote_core/cryptonote_core.h"
 
 namespace daemon_args
 {
@@ -96,33 +97,30 @@ namespace daemon_args
   , "Max number of threads to use for a parallel job"
   , 0
   };
-  
+
   const command_line::arg_descriptor<bool> arg_public_node = {
     "public-node"
   , "Allow Arq-Net Users to use this Arqma Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
   , false
   };
-
-  const command_line::arg_descriptor<bool> arg_zmq_enabled = {
-    "zmq-enabled"
-  , "Enable Arqma ZMQ server"
-  , false
+  const command_line::arg_descriptor<std::vector<std::string>> arg_zmq_pub = {
+    "zmq-pub"
+  , "Address for ZMQ pub - tcp://ip:port or ipc://path"
   };
 
-  const command_line::arg_descriptor<uint16_t> arg_zmq_max_clients = {
-    "zmq-max_clients"
-  , "Maximum ZMQ Client Connections Allowed"
-  , 2
+  const command_line::arg_descriptor<bool> arg_zmq_rpc_disabled = {
+    "no-zmq"
+  , "Disable Arqma ZMQ server"
   };
 
-  const command_line::arg_descriptor<std::string> arg_zmq_bind_ip = {
-    "zmq-bind-ip"
+  const command_line::arg_descriptor<std::string> arg_zmq_rpc_bind_ip = {
+    "zmq-rpc-bind-ip"
   , "IP Address for Arqma ZMQ server to bind on"
   , "127.0.0.1"
   };
 
-  const command_line::arg_descriptor<std::string, false, true, 2> arg_zmq_bind_port = {
-    "zmq-bind-port"
+  const command_line::arg_descriptor<std::string, false, true, 2> arg_zmq_rpc_bind_port = {
+    "zmq-rpc-bind-port"
   , "Port for ZMQ server to listen on"
   , std::to_string(config::ZMQ_DEFAULT_PORT)
   , {{ &cryptonote::arg_testnet_on, &cryptonote::arg_stagenet_on }}

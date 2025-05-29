@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -53,24 +53,7 @@ include_directories(${RANDOMARQ_INCLUDE})
 
 set(crypto_headers)
 
-set(crypto_private_headers
-  blake256.h
-  chacha.h
-  crypto-ops.h
-  crypto.h
-  generic-ops.h
-  groestl.h
-  groestl_tables.h
-  hash-ops.h
-  hash.h
-  initializer.h
-  jh.h
-  keccak.h
-  oaes_config.h
-  oaes_lib.h
-  random.h
-  skein.h
-  skein_port.h)
+arqma_find_all_headers(crypto_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(cncrypto
   ${crypto_private_headers})
@@ -86,16 +69,6 @@ target_link_libraries(cncrypto
     sodium
   PRIVATE
     ${EXTRA_LIBRARIES})
-
-if (ARM)
-  option(NO_OPTIMIZED_MULTIPLY_ON_ARM
-	   "Compute multiply using generic C implementation instead of ARM ASM" OFF)
-  if(NO_OPTIMIZED_MULTIPLY_ON_ARM)
-    message(STATUS "Using generic C implementation for multiply")
-    set_property(SOURCE slow-hash.c
-      PROPERTY COMPILE_DEFINITIONS "NO_OPTIMIZED_MULTIPLY_ON_ARM")
-  endif()
-endif()
 
 # Because of the way Qt works on android with JNI, the code does not live in the main android thread
 # So this code runs with a 1 MB default stack size.

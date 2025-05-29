@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020, The Arqma Network
+# Copyright (c) 2018-2022, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -27,25 +27,14 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 set(wallet_sources
   wallet2.cpp
   wallet_args.cpp
   ringdb.cpp
-  node_rpc_proxy.cpp
-  wallet_rpc_payments.cpp)
+  node_rpc_proxy.cpp)
 
-set(wallet_private_headers
-  wallet2.h
-  wallet_args.h
-  wallet_errors.h
-  wallet_rpc_server.h
-  wallet_rpc_server_commands_defs.h
-  wallet_rpc_server_error_codes.h
-  ringdb.h
-  node_rpc_proxy.h
-  wallet_rpc_helpers.h)
+arqma_find_all_headers(wallet_private_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 
 arqma_private_headers(wallet
   ${wallet_private_headers})
@@ -55,7 +44,6 @@ arqma_add_library(wallet
 target_link_libraries(wallet
   PUBLIC
     rpc_base
-    rpc_sig
     multisig
     common
     cryptonote_core
@@ -91,13 +79,12 @@ if(NOT IOS)
     PRIVATE
       wallet
       rpc_base
-      rpc_sig
       cryptonote_core
       cncrypto
       common
       version
       daemonizer
-      ${EPEE_READLINE}
+      epee
       ${Boost_CHRONO_LIBRARY}
       ${Boost_PROGRAM_OPTIONS_LIBRARY}
       ${Boost_FILESYSTEM_LIBRARY}
@@ -117,8 +104,6 @@ if(BUILD_GUI_DEPS)
     set(libs_to_merge
             wallet_api
             wallet
-            rpc_base
-            rpc_sig
             multisig
             blockchain_db
             cryptonote_core
@@ -136,7 +121,6 @@ if(BUILD_GUI_DEPS)
     set(libs_to_merge
             wallet_api
             wallet
-            rpc_sig
             multisig
             blockchain_db
             cryptonote_core

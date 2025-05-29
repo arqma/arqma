@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -35,6 +35,7 @@
 #include <boost/thread/lock_guard.hpp>
 #include "misc_log_ex.h"
 #include "common/perf_timer.h"
+#include "cryptonote_config.h"
 extern "C"
 {
 #include "crypto/crypto-ops.h"
@@ -108,9 +109,15 @@ static void addKeys_acc_p3(ge_p3 *acc_p3, const rct::key &a, const rct::key &poi
 
 static rct::key get_exponent(const rct::key &base, size_t idx)
 {
-  static const std::string salt("bulletproof");
-  std::string hashed = std::string((const char*)base.bytes, sizeof(base)) + salt + tools::get_varint_data(idx);
-  return rct::hashToPoint(rct::hash2rct(crypto::cn_fast_hash(hashed.data(), hashed.size())));
+  static const std::string domain_separator(config::HASH_KEY_BULLETPROOF_EXPONENT);
+  std::string hashed = std::string((const char*)base.bytes, sizeof(base)) + domain_separator + tools::get_varint_data(idx);
+  rct::key e;
+
+  ge_p3 e_p3;
+  rct::hash_to_p3(e_p3, rct::hash2rct(crypto::cn_fast_hash(hashed.data(), hashed.size())));
+  ge_p3_tobytes(e.bytes, &e_p3);
+  CHECK_AND_ASSERT_THROW_MES(!(e == rct::identity()), "Exponent is point at infinity");
+  return e;
 }
 
 static void init_exponents()

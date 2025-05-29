@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include "serialization/serialization.h"
 #include "serialization/keyvalue_serialization.h"
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/version.hpp>

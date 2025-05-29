@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -43,10 +43,6 @@
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "WalletAPI"
-
-namespace epee {
-    unsigned int g_test_dbg_lock_sleep = 0;
-}
 
 namespace Monero {
 
@@ -237,8 +233,8 @@ void WalletManagerImpl::setDaemonAddress(const std::string &address)
 
 bool WalletManagerImpl::connected(uint32_t *version)
 {
-    epee::json_rpc::request<cryptonote::COMMAND_RPC_GET_VERSION::request> req_t = AUTO_VAL_INIT(req_t);
-    epee::json_rpc::response<cryptonote::COMMAND_RPC_GET_VERSION::response, std::string> resp_t = AUTO_VAL_INIT(resp_t);
+    epee::json_rpc::request<cryptonote::COMMAND_RPC_GET_VERSION::request> req_t{};
+    epee::json_rpc::response<cryptonote::COMMAND_RPC_GET_VERSION::response, std::string> resp_t{};
     req_t.jsonrpc = "2.0";
     req_t.id = epee::serialization::storage_entry(0);
     req_t.method = "get_version";
@@ -285,7 +281,6 @@ double WalletManagerImpl::miningHashRate()
     cryptonote::COMMAND_RPC_MINING_STATUS::request mreq;
     cryptonote::COMMAND_RPC_MINING_STATUS::response mres;
 
-    epee::net_utils::http::http_simple_client http_client;
     if (!epee::net_utils::invoke_http_json("/mining_status", mreq, mres, m_http_client))
       return 0.0;
     if (!mres.active)
@@ -346,7 +341,7 @@ std::string WalletManagerImpl::resolveOpenAlias(const std::string &address, bool
     return addresses.front();
 }
 
-std::tuple<bool, std::string, std::string, std::string, std::string> WalletManager::checkUpdates(const std::string &software)
+std::tuple<bool, std::string, std::string, std::string, std::string> WalletManagerBase::checkUpdates(const std::string &software)
 {
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
@@ -360,7 +355,7 @@ std::tuple<bool, std::string, std::string, std::string, std::string> WalletManag
     if (!tools::check_updates(software, buildtag, version, hash))
       return std::make_tuple(false, "", "", "", "");
 
-    if (tools::vercmp(version.c_str(), ARQMA_VERSION) > 0)
+    if (tools::vercmp(version.c_str(), ARQMA_VERSION_STR) > 0)
     {
       std::string user_url = tools::get_update_url(software, buildtag, version, true);
       std::string auto_url = tools::get_update_url(software, buildtag, version, false);
@@ -372,7 +367,7 @@ std::tuple<bool, std::string, std::string, std::string, std::string> WalletManag
 
 
 ///////////////////// WalletManagerFactory implementation //////////////////////
-WalletManager *WalletManagerFactory::getWalletManager()
+WalletManagerBase *WalletManagerFactory::getWalletManager()
 {
 
     static WalletManagerImpl * g_walletManager = nullptr;

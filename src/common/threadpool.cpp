@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -30,29 +30,23 @@
 #include "misc_log_ex.h"
 #include "common/threadpool.h"
 
-#include <cassert>
-#include <limits>
-#include <stdexcept>
-
 #include "cryptonote_config.h"
 #include "common/util.h"
 
-static __thread int depth = 0;
-static __thread bool is_leaf = false;
+static thread_local int depth = 0;
+static thread_local bool is_leaf = false;
 
 namespace tools
 {
 threadpool::threadpool(unsigned int max_threads) : running(true), active(0) {
-  boost::thread::attributes attrs;
-  attrs.set_stack_size(THREAD_STACK_SIZE);
-  max = max_threads ? max_threads : tools::get_max_concurrency();
-  size_t i = max ? max - 1 : 0;
-  while(i--) {
-    threads.push_back(boost::thread(attrs, boost::bind(&threadpool::run, this, false)));
-  }
+  create(max_threads);
 }
 
 threadpool::~threadpool() {
+  destroy();
+}
+
+void threadpool::destroy() {
   try
   {
     const boost::unique_lock<boost::mutex> lock(mutex);
@@ -66,13 +60,38 @@ threadpool::~threadpool() {
     running = false;
     has_work.notify_all();
   }
-  for (size_t i = 0; i < threads.size(); i++) {
-    try { threads[i].join(); }
+  for(size_t i = 0; i < threads.size(); i++)
+  {
+    try
+    {
+      threads[i].join();
+    }
     catch (...) { /* ignore */ }
+  }
+  threads.clear();
+}
+
+void threadpool::recycle()
+{
+  destroy();
+  create(max);
+}
+
+void threadpool::create(unsigned int max_threads)
+{
+  const boost::unique_lock<boost::mutex> lock(mutex);
+  boost::thread::attributes attrs;
+  attrs.set_stack_size(THREAD_STACK_SIZE);
+  max = max_threads ? max_threads : tools::get_max_concurrency();
+  size_t i = max ? max - 1 : 0;
+  running = true;
+  while(i--) {
+    threads.push_back(boost::thread(attrs, boost::bind(&threadpool::run, this, false)));
   }
 }
 
-void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf) {
+void threadpool::submit(waiter *obj, std::function<void()> f, bool leaf)
+{
   CHECK_AND_ASSERT_THROW_MES(!is_leaf, "A leaf routine is using a thread pool");
   boost::unique_lock<boost::mutex> lock(mutex);
   if(!leaf && ((active == max && !queue.empty()) || depth > 0)) {
@@ -111,7 +130,7 @@ threadpool::waiter::~waiter()
   catch (...) { /* ignore */ }
   try
   {
-    wait(NULL);
+    wait();
   }
   catch (const std::exception& e)
   {
@@ -119,13 +138,13 @@ threadpool::waiter::~waiter()
   }
 }
 
-void threadpool::waiter::wait(threadpool *tpool)
+bool threadpool::waiter::wait()
 {
-  if (tpool)
-    tpool->run(true);
+  pool.run(true);
   boost::unique_lock<boost::mutex> lock(mt);
   while(num)
     cv.wait(lock);
+  return !error();
 }
 
 void threadpool::waiter::inc()
@@ -156,12 +175,13 @@ void threadpool::run(bool flush)
     if (!running) break;
 
     active++;
-    e = queue.front();
+    e = std::move(queue.front());
     queue.pop_front();
     lock.unlock();
     ++depth;
     is_leaf = e.leaf;
-    e.f();
+    try { e.f(); }
+    catch (const std::exception &ex) { e.wo->set_error(); try { MERROR("Exception in threadpool job: " << ex.what()); } catch (...) {} }
     --depth;
     is_leaf = false;
 

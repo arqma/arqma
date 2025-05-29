@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2016-2018, The Monero Project
 //
 // All rights reserved.
@@ -29,9 +29,11 @@
 
 #pragma once
 
+#include <rapidjson/writer.h>
 #include <unordered_map>
 #include <vector>
 
+#include "byte_stream.h"
 #include "message.h"
 #include "cryptonote_protocol/cryptonote_protocol_defs.h"
 #include "rpc/message_data_structs.h"
@@ -41,26 +43,25 @@
 #define BEGIN_RPC_MESSAGE_CLASS(classname) \
 class classname \
 { \
-  public: \
-    static const char* const name;
+  public:
 
 #define BEGIN_RPC_MESSAGE_REQUEST \
-    class Request : public Message \
+    class Request final : public Message \
     { \
       public: \
         Request() { } \
         ~Request() { } \
-        rapidjson::Value toJson(rapidjson::Document& doc) const; \
-        void fromJson(rapidjson::Value& val);
+        void doToJson(rapidjson::Writer<epee::byte_stream>& dest) const override final; \
+        void fromJson(const rapidjson::Value& val) override final;
 
 #define BEGIN_RPC_MESSAGE_RESPONSE \
-    class Response : public Message \
+    class Response final : public Message \
     { \
       public: \
         Response() { } \
         ~Response() { } \
-        rapidjson::Value toJson(rapidjson::Document& doc) const; \
-        void fromJson(rapidjson::Value& val);
+        void doToJson(rapidjson::Writer<epee::byte_stream>& dest) const override final; \
+        void fromJson(const rapidjson::Value& val) override final;
 
 #define END_RPC_MESSAGE_REQUEST };
 #define END_RPC_MESSAGE_RESPONSE };
@@ -238,18 +239,21 @@ BEGIN_RPC_MESSAGE_CLASS(GetBlockTemplate);
   BEGIN_RPC_MESSAGE_REQUEST;
     RPC_MESSAGE_MEMBER(uint64_t, reserve_size);
     RPC_MESSAGE_MEMBER(std::string, wallet_address);
+    RPC_MESSAGE_MEMBER(std::string, prev_block);
+    RPC_MESSAGE_MEMBER(std::string, extra_nonce);
   END_RPC_MESSAGE_REQUEST;
   BEGIN_RPC_MESSAGE_RESPONSE;
-    RPC_MESSAGE_MEMBER(std::string, blocktemplate_blob);
     RPC_MESSAGE_MEMBER(std::string, blockhashing_blob);
+    RPC_MESSAGE_MEMBER(std::string, blocktemplate_blob);
     RPC_MESSAGE_MEMBER(uint64_t, difficulty);
-    RPC_MESSAGE_MEMBER(uint64_t, expected_reward);
     RPC_MESSAGE_MEMBER(uint64_t, height);
+    RPC_MESSAGE_MEMBER(uint64_t, expected_reward);
+    RPC_MESSAGE_MEMBER(std::string, next_seed_hash);
     RPC_MESSAGE_MEMBER(std::string, prev_hash);
     RPC_MESSAGE_MEMBER(uint64_t, reserved_offset);
-    RPC_MESSAGE_MEMBER(std::string, status);
     RPC_MESSAGE_MEMBER(std::string, seed_hash);
-    RPC_MESSAGE_MEMBER(std::string, next_seed_hash);
+    RPC_MESSAGE_MEMBER(uint64_t, seed_height);
+    RPC_MESSAGE_MEMBER(std::string, status);
   END_RPC_MESSAGE_RESPONSE;
 END_RPC_MESSAGE_CLASS;
 

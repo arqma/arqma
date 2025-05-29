@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -195,7 +195,6 @@ namespace
   {
     epee::wipeable_string trimmed_words = "", word;
 
-    const auto &word_map = language->get_word_map();
     const auto &trimmed_word_map = language->get_trimmed_word_map();
     const uint32_t unique_prefix_length = language->get_unique_prefix_length();
 

@@ -1,5 +1,5 @@
-// Copyright (c) 2018-2020, The Arqma Network
-// Copyright (c) 2014-2020, The Monero Project
+// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
 //
@@ -28,11 +28,11 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include "common/command_line.h"
 #include "serialization/crypto.h"
-#include "cryptonote_core/tx_pool.h"
 #include "cryptonote_core/cryptonote_core.h"
-#include "cryptonote_core/blockchain.h"
+#include "blockchain_objects.h"
 #include "blockchain_db/blockchain_db.h"
 #include "version.h"
 
@@ -67,7 +67,6 @@ static std::map<uint64_t, uint64_t> load_outputs(const std::string &filename)
       s[len - 1] = 0;
     if (!s[0])
       continue;
-    std::pair<uint64_t, uint64_t> output;
     uint64_t offset, num_offsets;
     if (sscanf(s, "@%" PRIu64, &amount) == 1)
     {
@@ -161,9 +160,9 @@ int main(int argc, char* argv[])
   const std::string input = command_line::get_arg(vm, arg_input);
 
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
-  std::unique_ptr<Blockchain> core_storage;
-  tx_memory_pool m_mempool(*core_storage);
-  core_storage.reset(new Blockchain(m_mempool));
+  BlockchainAndSNlistAndPool blockchain_objects = {};
+  Blockchain *core_storage = &blockchain_objects.blockchain;
+  //std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
   BlockchainDB *db = new_db();
   if (db == NULL)
   {
@@ -176,7 +175,7 @@ int main(int argc, char* argv[])
 
   try
   {
-    db->open(filename, 0);
+    db->open(filename, core_storage->nettype(), 0);
   }
   catch (const std::exception& e)
   {
@@ -210,7 +209,7 @@ int main(int argc, char* argv[])
       for (const auto &out: tx.vout)
       {
         uint64_t amount = out.amount;
-        if (miner_tx && tx.version >= 2)
+        if (miner_tx && tx.version >= cryptonote::txversion::v2)
           amount = 0;
         if (amount == 0)
           continue;

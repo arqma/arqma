@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -34,8 +34,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
-#include <boost/math/special_functions/round.hpp>
 
+#include "common/arqma.h"
 #include "int-util.h"
 #include "crypto/hash.h"
 #include "cryptonote_config.h"
@@ -244,7 +244,7 @@ namespace cryptonote {
     harmonic_mean_D = N / sum_inverse_D;
 
     // Keep LWMA sane in case something unforeseen occurs.
-    if (static_cast<int64_t>(boost::math::round(LWMA)) < T / 20)
+    if (static_cast<int64_t>(arqma::round(LWMA)) < T / 20)
       LWMA = static_cast<double>(T / 20);
 
     nextDifficulty = harmonic_mean_D * T / LWMA * adjust;
@@ -373,5 +373,72 @@ namespace cryptonote {
       next_D = ((next_D+500)/1000)*1000 + std::min(static_cast<uint64_t>(999), (TS[N]-TS[N-10])/10);
     }
     return  next_D;
+  }
+//v16 diffculty algo
+  difficulty_type next_difficulty_v16(std::vector<uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties) {
+
+    uint64_t  T = DIFFICULTY_TARGET_V16;
+    uint64_t  N = DIFFICULTY_WINDOW_V16; // N=45, 60, and 90 for T=600, 120, 60.
+    uint64_t  L(0), ST(0), next_D, prev_D, avg_D, i;
+
+    assert(timestamps.size() == cumulative_difficulties.size() && timestamps.size() <= N+1 );
+
+    // If it's a new coin, do startup code. Do not remove in case other coins copy your code.
+    uint64_t difficulty_guess = 80000;
+    if ( timestamps.size() <= 16 ) {   return difficulty_guess;   }
+    if ( timestamps.size() < N + 1 ) { N = timestamps.size()-1;  }
+
+    // If hashrate/difficulty ratio after a fork is < 1/3 prior ratio, hardcode D for N+1 blocks after fork.
+    // This will also cover up a very common type of backwards-incompatible fork.
+    // difficulty_guess = 100000; //  Dev may change.  Guess low than anything expected.
+    // if ( height <= UPGRADE_HEIGHT + 1 + N ) { return difficulty_guess;  }
+
+    // Safely convert out-of-sequence timestamps into > 0 solvetimes.
+    std::vector<uint64_t>TS(N+1);
+    TS[0] = timestamps[0];
+    for ( i = 1; i <= N; i++) {
+      if ( timestamps[i]  > TS[i-1]  ) {   TS[i] = timestamps[i];  }
+      else {  TS[i] = TS[i-1];   }
+    }
+
+    for ( i = 1; i <= N; i++) {
+      // Temper long solvetime drops if they were preceded by 3 or 6 fast solves.
+      if ( i > 4 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-4] < (14*T)/10 ) {   ST = 2*T; }
+      else if ( i > 7 && TS[i]-TS[i-1] > 5*T  && TS[i-1] - TS[i-7] < 4*T ) {   ST = 2*T; }
+      else { // Assume normal conditions, so get ST.
+        // LWMA drops too much from long ST, so limit drops with a 3*T limit
+        ST = std::min(3*T ,TS[i] - TS[i-1]);
+      }
+      L +=  ST * i ;
+    }
+    if (L < N*N*T/20 ) { L =  N*N*T/20; }
+    avg_D = ( cumulative_difficulties[N] - cumulative_difficulties[0] )/ N;
+
+    // Prevent round off error for small D and overflow for large D.
+    if (avg_D > 2000000*N*N*T) {
+      next_D = (avg_D/(200*L))*(N*(N+1)*T*97);
+    }
+    else {    next_D = (avg_D*N*(N+1)*T*97)/(200*L);    }
+
+    prev_D =  cumulative_difficulties[N] - cumulative_difficulties[N-1] ;
+
+    // Apply 10% jump rule.
+    if (  ( TS[N] - TS[N-1] < (2*T)/10 ) ||
+         ( TS[N] - TS[N-2] < (5*T)/10 ) ||
+         ( TS[N] - TS[N-3] < (8*T)/10 )    )
+    {
+      next_D = std::max( next_D, std::min( (prev_D*110)/100, (105*avg_D)/100 ) );
+    }
+    // Make all insignificant digits zero for easy reading.
+    i = 1000000000;
+    while (i > 1) {
+      if ( next_D > i*100 ) { next_D = ((next_D+i/2)/i)*i; break; }
+      else { i /= 10; }
+    }
+    // Make least 3 digits equal avg of past 10 solvetimes.
+    if ( next_D > 100000 ) {
+      next_D = ((next_D+500)/1000)*1000 + std::min(static_cast<uint64_t>(999), (TS[N]-TS[N-10])/10);
+    }
+    return next_D;
   }
 }

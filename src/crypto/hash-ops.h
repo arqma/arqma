@@ -1,22 +1,22 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification, are
 // permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this list of
 //    conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice, this list
 //    of conditions and the following disclaimer in the documentation and/or other
 //    materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its contributors may be
 //    used to endorse or promote products derived from this software without specific
 //    prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
@@ -26,12 +26,17 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
+//
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
 
-#if !defined(__cplusplus)
+#if defined(__cplusplus)
+
+#include <cstddef>
+#include <cstdint>
+
+#else
 
 #include <assert.h>
 #include <stdbool.h>
@@ -94,5 +99,9 @@ void rx_slow_hash_allocate_state(void);
 void rx_slow_hash_free_state(void);
 uint64_t rx_seedheight(const uint64_t height);
 void rx_seedheights(const uint64_t height, uint64_t *seed_height, uint64_t *next_height);
-void rx_slow_hash(const uint64_t mainheight, const uint64_t seedheight, const char *seedhash, const void *data, size_t length, char *hash, int miners, int is_alt);
-void rx_reorg(const uint64_t split_height);
+
+void rx_set_main_seedhash(const char *seedhash, size_t max_dataset_init_threads);
+void rx_slow_hash(const char *seedhash, const void *data, size_t length, char *result_hash);
+
+void rx_set_miner_thread(uint32_t value, size_t max_dataset_init_threads);
+uint32_t rx_get_miner_thread(void);

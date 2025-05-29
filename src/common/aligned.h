@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, The Arqma Network
+// Copyright (c) 2018-2022, The Arqma Network
 // Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
@@ -30,7 +30,10 @@
 #pragma once
 
 #ifdef __cplusplus
+#include <cstddef>
 extern "C" {
+#else
+#include <stddef.h>
 #endif
 
 void *aligned_malloc(size_t bytes, size_t align);

@@ -45,6 +45,7 @@
   #include "readline_buffer.h"
 #endif
 
+namespace pl = std::placeholders;
 namespace epee
 {
   class async_stdin_reader
@@ -179,7 +180,7 @@ namespace epee
 #else
       while (m_run.load(std::memory_order_relaxed))
       {
-        int retval = ::WaitForSingleObject(::GetStdHandle(STD_INPUT_HANDLE), 100);
+        DWORD retval = ::WaitForSingleObject(::GetStdHandle(STD_INPUT_HANDLE), 100);
         switch (retval)
         {
           case WAIT_FAILED:
@@ -357,6 +358,7 @@ eof:
           if (m_stdin_reader.eos())
           {
             MGINFO("EOF on stdin, exiting");
+            std::cout << std::endl;
             break;
           }
           if (!get_line_ret)
@@ -434,7 +436,7 @@ eof:
   bool run_default_console_handler_no_srv_param(t_server* ptsrv, t_handler handlr, std::function<std::string(void)> prompt, const std::string& usage = "")
   {
     async_console_handler console_handler;
-    return console_handler.run(ptsrv, std::bind<bool>(no_srv_param_adapter<t_server, t_handler>, std::placeholders::_1, std::placeholders::_2, handlr), prompt, usage);
+    return console_handler.run(ptsrv, std::bind<bool>(no_srv_param_adapter<t_server, t_handler>, pl::_1, pl::_2, handlr), prompt, usage);
   }
 
   template<class t_server, class t_handler>
@@ -481,7 +483,7 @@ eof:
   class command_handler {
   public:
     typedef boost::function<bool (const std::vector<std::string> &)> callback;
-    typedef std::map<std::string, std::pair<callback, std::pair<std::string, std::string>>> lookup;
+    typedef std::map<std::string, std::pair<callback, std::pair<std::string, std::string> > > lookup;
 
     std::string get_usage()
     {
@@ -564,7 +566,7 @@ eof:
 
     bool run_handling(std::function<std::string(void)> prompt, const std::string& usage_string, std::function<void(void)> exit_handler = NULL)
     {
-      return m_console_handler.run(std::bind(&console_handlers_binder::process_command_str, this, std::placeholders::_1), prompt, usage_string, exit_handler);
+      return m_console_handler.run(std::bind(&console_handlers_binder::process_command_str, this, pl::_1), prompt, usage_string, exit_handler);
     }
 
     void print_prompt()
