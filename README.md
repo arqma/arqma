@@ -139,7 +139,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v0.7.0`
+`$ cd arqma && git checkout release-v7.0.0`
 `$ git submodule init && git submodule update`
 
 ### Build instructions
