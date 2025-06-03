@@ -258,8 +258,9 @@ namespace config
     } }; // Bender's nightmare
   std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
   uint32_t const GENESIS_NONCE = 19993;
-  std::string const GOVERNANCE_WALLET_ADDRESS = "ar2dJ21SCuNiJndoQBf5ojhbdA7K8B3sREpnWSg4pHedXcwMbvUkYREAapZJMn3cVRj6VqDqDkj9bFoXLJViCmFs2qWkdufHt";
+  std::string const GOV_WALLET_ADDRESS = "ar2dJ21SCuNiJndoQBf5ojhbdA7K8B3sREpnWSg4pHedXcwMbvUkYREAapZJMn3cVRj6VqDqDkj9bFoXLJViCmFs2qWkdufHt";
   std::string const DEV_WALLET_ADDRESS = "ar2qmaDevL5BaCgfNFz872NZmR6bDq1fKc1Qz2AiLU633yNs3vXi1JWh5q7vXq4dmY6E6PwRohqEdWtQPFEdZXjB38DtYQCXt";
+  std::string const NET_WALLET_ADDRESS = "ar3k85DeZBxBccvHouqaHnfvmZ4CVWLG5BC8JQ5F1bB1FhjGBz4qiV85jaNwgqXu7eQ9cB6dCvqVheZaFu97SNoe1FDsPih3K";
 
   namespace testnet
   {
@@ -272,8 +273,9 @@ namespace config
     boost::uuids::uuid const NETWORK_ID = { {
         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
       } }; // Bender's daydream
-    std::string const GOVERNANCE_WALLET_ADDRESS = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkYzCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
+    std::string const GOV_WALLET_ADDRESS = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkYzCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
     std::string const DEV_WALLET_ADDRESS = "atywfJChhS1XLjfY2pDGUHNo5BcWMM5ZJeFs4pWGs9p7gCbxSguxoyBWLDYasHuY7yHppCWYRbPPMHNVf2EXuzpq2xMZLhQZMW";
+    std::string const NET_WALLET_ADDRESS = "";
   }
 
   namespace stagenet
@@ -287,8 +289,9 @@ namespace config
     boost::uuids::uuid const NETWORK_ID = { {
         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
       } }; // Bender's daydream
-    std::string const GOVERNANCE_WALLET_ADDRESS = "as3DH2He8go7QzsiWc2PK4by2XdQZmUTF8Bv2bKY3egmRH9zPAF3iwWFteTPYaob4m5GuCNTLHFgtVdA6nbuP3Gp1x4Fvjv5G";
+    std::string const GOV_WALLET_ADDRESS = "as3DH2He8go7QzsiWc2PK4by2XdQZmUTF8Bv2bKY3egmRH9zPAF3iwWFteTPYaob4m5GuCNTLHFgtVdA6nbuP3Gp1x4Fvjv5G";
     std::string const DEV_WALLET_ADDRESS = "as1gAmaQQZMDy8SQzeqQSxGJJJpinLxSpgALxxZEDyNL6QB6hREvXzoVDi9LrFGJVu1x33toQVe9hWeXdhsjnkg7199GtodQy";
+    std::string const NET_WALLET_ADDRESS = "";
   }
 
   namespace blockchain_settings
@@ -408,8 +411,9 @@ namespace cryptonote
     boost::uuids::uuid NETWORK_ID;
     std::string GENESIS_TX;
     uint32_t GENESIS_NONCE;
-    std::string const *GOVERNANCE_WALLET_ADDRESS;
+    std::string const *GOV_WALLET_ADDRESS;
     std::string const *DEV_WALLET_ADDRESS;
+    std::string const *NET_WALLET_ADDRESS;
   };
   inline const config_t& get_config(network_type nettype, uint8_t hard_fork_version = 1)
   {
@@ -423,8 +427,9 @@ namespace cryptonote
       ::config::NETWORK_ID,
       ::config::GENESIS_TX,
       ::config::GENESIS_NONCE,
-      &::config::GOVERNANCE_WALLET_ADDRESS,
-      &::config::DEV_WALLET_ADDRESS
+      &::config::GOV_WALLET_ADDRESS,
+      &::config::DEV_WALLET_ADDRESS,
+      &::config::NET_WALLET_ADDRESS
     };
 
     static config_t testnet = {
@@ -437,8 +442,9 @@ namespace cryptonote
       ::config::testnet::NETWORK_ID,
       ::config::GENESIS_TX,
       ::config::GENESIS_NONCE,
-      &::config::testnet::GOVERNANCE_WALLET_ADDRESS,
-      &::config::testnet::DEV_WALLET_ADDRESS
+      &::config::testnet::GOV_WALLET_ADDRESS,
+      &::config::testnet::DEV_WALLET_ADDRESS,
+      &::config::testnet::NET_WALLET_ADDRESS
     };
 
     static config_t stagenet = {
@@ -451,8 +457,9 @@ namespace cryptonote
       ::config::stagenet::NETWORK_ID,
       ::config::GENESIS_TX,
       ::config::GENESIS_NONCE,
-      &::config::stagenet::GOVERNANCE_WALLET_ADDRESS,
-      &::config::stagenet::DEV_WALLET_ADDRESS
+      &::config::stagenet::GOV_WALLET_ADDRESS,
+      &::config::stagenet::DEV_WALLET_ADDRESS,
+      &::config::stagenet::NET_WALLET_ADDRESS
     };
 
     switch (nettype)

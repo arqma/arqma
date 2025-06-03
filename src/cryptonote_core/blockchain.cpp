@@ -1356,27 +1356,39 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
   {
     size_t vout_end = b.miner_tx.vout.size();
 
-    if(b.miner_tx.vout[vout_end - 2].amount != reward_parts.governance)
+    if(b.miner_tx.vout[vout_end - 3].amount != reward_parts.gov)
     {
-      MERROR("Governance reward amount incorrect. Should be: " << print_money(reward_parts.governance) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 2].amount));
+      MERROR("Governance reward amount incorrect. Should be: " << print_money(reward_parts.gov) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 3].amount));
       return false;
     }
 
-    if(!validate_governance_reward_key(height, *cryptonote::get_config(m_nettype, hard_fork_version).GOVERNANCE_WALLET_ADDRESS, vout_end - 2, boost::get<cryptonote::txout_to_key>(b.miner_tx.vout[vout_end - 2].target).key, m_nettype))
+    if(!validate_gov_reward_key(height, *cryptonote::get_config(m_nettype, hard_fork_version).GOV_WALLET_ADDRESS, vout_end - 3, boost::get<cryptonote::txout_to_key>(b.miner_tx.vout[vout_end - 3].target).key, m_nettype))
     {
       MERROR("Governance reward public key incorrect.");
       return false;
     }
 
-    if(b.miner_tx.vout[vout_end - 1].amount != reward_parts.development)
+    if(b.miner_tx.vout[vout_end - 2].amount != reward_parts.dev)
     {
-      MERROR_VER("Dev_Fund reward amount incorrect. Should be: " << print_money(reward_parts.development) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 1].amount));
+      MERROR_VER("Dev_Fund reward amount incorrect. Should be: " << print_money(reward_parts.dev) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 2].amount));
       return false;
     }
 
-    if(!validate_development_reward_key(height, *cryptonote::get_config(m_nettype, hard_fork_version).DEV_WALLET_ADDRESS, vout_end - 1, boost::get<cryptonote::txout_to_key>(b.miner_tx.vout[vout_end - 1].target).key, m_nettype))
+    if(!validate_dev_reward_key(height, *cryptonote::get_config(m_nettype, hard_fork_version).DEV_WALLET_ADDRESS, vout_end - 2, boost::get<cryptonote::txout_to_key>(b.miner_tx.vout[vout_end - 2].target).key, m_nettype))
     {
       MERROR_VER("Dev_Fund reward public key incorrect.");
+      return false;
+    }
+
+    if (b.miner_tx.vout[vout_end - 1].amount != reward_parts.net)
+    {
+      MERROR_VER("Net_fund reward amount incorrect. Should be: " << print_money(reward_parts.net) << ", While is: " << print_money(b.miner_tx.vout[vout_end - 1].amount));
+      return false;
+    }
+
+    if (!validate_net_reward_key(height, *cryptonote::get_config(m_nettype, hard_fork_version).NET_WALLET_ADDRESS, vout_end - 1, boost::get<cryptonote::txout_to_key>(b.miner_tx.vout[vout_end - 1].target).key, m_nettype))
+    {
+      MERROR_VER("Net_fund reward public key incorrect.");
       return false;
     }
 
@@ -1398,7 +1410,7 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
 
   base_reward = reward_parts.adjusted_base_reward;
   // Due to errors in floating point or rounding which happen quite often we will add +1 atomic to workaround errors
-  uint64_t max_base_reward = reward_parts.base_miner + reward_parts.governance + reward_parts.development + reward_parts.service_node_paid + 1;
+  uint64_t max_base_reward = reward_parts.base_miner + reward_parts.net + reward_parts.gov + reward_parts.dev + reward_parts.service_node_paid + 1;
   uint64_t max_money_in_use = max_base_reward + fee;
   if(money_in_use > max_money_in_use)
   {

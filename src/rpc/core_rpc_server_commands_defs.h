@@ -114,12 +114,16 @@ namespace cryptonote
       std::string status;
       bool untrusted;
       std::string hash;
+      uint64_t immutable_height;
+      std::string immutable_hash;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(height)
         KV_SERIALIZE(status)
         KV_SERIALIZE(untrusted)
         KV_SERIALIZE(hash)
+        KV_SERIALIZE(immutable_height)
+        KV_SERIALIZE(immutable_hash)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -667,6 +671,7 @@ namespace cryptonote
       std::string status;
       uint64_t height;
       uint64_t target_height;
+      uint64_t immutable_height;
       uint64_t difficulty;
       uint64_t target;
       uint64_t tx_count;
@@ -682,6 +687,7 @@ namespace cryptonote
       bool stagenet;
       std::string nettype;
       std::string top_block_hash;
+      std::string immutable_block_hash;
       uint64_t cumulative_difficulty;
       uint64_t block_size_limit;
       uint64_t block_weight_limit;
@@ -704,6 +710,7 @@ namespace cryptonote
         KV_SERIALIZE(status)
         KV_SERIALIZE(height)
         KV_SERIALIZE(target_height)
+        KV_SERIALIZE(immutable_height)
         KV_SERIALIZE(difficulty)
         KV_SERIALIZE(target)
         KV_SERIALIZE(tx_count)
@@ -719,6 +726,7 @@ namespace cryptonote
         KV_SERIALIZE(stagenet)
         KV_SERIALIZE(nettype)
         KV_SERIALIZE(top_block_hash)
+        KV_SERIALIZE(immutable_block_hash)
         KV_SERIALIZE(cumulative_difficulty)
         KV_SERIALIZE(block_size_limit)
         KV_SERIALIZE_OPT(block_weight_limit, (uint64_t)0)

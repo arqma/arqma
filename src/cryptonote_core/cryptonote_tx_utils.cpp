@@ -121,15 +121,15 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
+  bool validate_gov_reward_key(uint64_t height, const std::string& gov_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
   {
     keypair gov_key = get_deterministic_keypair_from_height(height);
 
-    cryptonote::address_parse_info governance_wallet_address;
-    cryptonote::get_account_address_from_str(governance_wallet_address, nettype, governance_wallet_address_str);
+    cryptonote::address_parse_info gov_wallet_address;
+    cryptonote::get_account_address_from_str(gov_wallet_address, nettype, gov_wallet_address_str);
     crypto::public_key correct_key;
 
-    if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, output_index, correct_key))
+    if(!get_deterministic_output_key(gov_wallet_address.address, gov_key, output_index, correct_key))
     {
       MERROR("Failed to generate deterministic output key for governance wallet output validation");
       return false;
@@ -138,17 +138,34 @@ namespace cryptonote
     return correct_key == output_key;
   }
   //---------------------------------------------------------------
-  bool validate_development_reward_key(uint64_t height, const std::string& development_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
+  bool validate_dev_reward_key(uint64_t height, const std::string& dev_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
   {
     keypair gov_key = get_deterministic_keypair_from_height(height);
 
-    cryptonote::address_parse_info development_wallet_address;
-    cryptonote::get_account_address_from_str(development_wallet_address, nettype, development_wallet_address_str);
+    cryptonote::address_parse_info dev_wallet_address;
+    cryptonote::get_account_address_from_str(dev_wallet_address, nettype, dev_wallet_address_str);
     crypto::public_key correct_key;
 
-    if(!get_deterministic_output_key(development_wallet_address.address, gov_key, output_index, correct_key))
+    if(!get_deterministic_output_key(dev_wallet_address.address, gov_key, output_index, correct_key))
     {
       MERROR("Failed to generate deterministic output key for dev wallet output validation");
+      return false;
+    }
+
+    return correct_key == output_key;
+  }
+  //---------------------------------------------------------------
+  bool validate_net_reward_key(uint64_t height, const std::string& net_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
+  {
+    keypair gov_key = get_deterministic_keypair_from_height(height);
+
+    cryptonote::address_parse_info net_wallet_address;
+    cryptonote::get_account_address_from_str(net_wallet_address, nettype, net_wallet_address_str);
+    crypto::public_key correct_key;
+
+    if (!get_deterministic_output_key(net_wallet_address.address, gov_key, output_index, correct_key))
+    {
+      MERROR("Failed to generate deterministic output key for net wallet output validation");
       return false;
     }
 
@@ -302,11 +319,11 @@ namespace cryptonote
     // Governance
     if(hard_fork_version >= 16)
     {
-      cryptonote::address_parse_info governance_wallet_address;
-      cryptonote::get_account_address_from_str(governance_wallet_address, nettype, *cryptonote::get_config(nettype, hard_fork_version).GOVERNANCE_WALLET_ADDRESS);
+      cryptonote::address_parse_info gov_wallet_address;
+      cryptonote::get_account_address_from_str(gov_wallet_address, nettype, *cryptonote::get_config(nettype, hard_fork_version).GOV_WALLET_ADDRESS);
       crypto::public_key out_eph_public_key{};
 
-      if(!get_deterministic_output_key(governance_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
+      if(!get_deterministic_output_key(gov_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
       {
         MERROR("Failed to generate deterministic output key for governance wallet output creation");
         return false;
@@ -316,7 +333,7 @@ namespace cryptonote
       tk.key = out_eph_public_key;
 
       tx_out out;
-      summary_amounts += out.amount = reward_parts.governance;
+      summary_amounts += out.amount = reward_parts.gov;
       out.target = tk;
       tx.vout.push_back(out);
       tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
@@ -325,11 +342,11 @@ namespace cryptonote
     // Dev_Fund
     if(hard_fork_version >= 16)
     {
-      cryptonote::address_parse_info development_wallet_address;
-      cryptonote::get_account_address_from_str(development_wallet_address, nettype, *cryptonote::get_config(nettype, hard_fork_version).DEV_WALLET_ADDRESS);
+      cryptonote::address_parse_info dev_wallet_address;
+      cryptonote::get_account_address_from_str(dev_wallet_address, nettype, *cryptonote::get_config(nettype, hard_fork_version).DEV_WALLET_ADDRESS);
       crypto::public_key out_eph_public_key{};
 
-      if(!get_deterministic_output_key(development_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
+      if(!get_deterministic_output_key(dev_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
       {
         MERROR("Failed to generate deterministic output key for Dev_Fund wallet output creation");
         return false;
@@ -339,13 +356,36 @@ namespace cryptonote
       tk.key = out_eph_public_key;
 
       tx_out out;
-      summary_amounts += out.amount = reward_parts.development;
+      summary_amounts += out.amount = reward_parts.dev;
       out.target = tk;
       tx.vout.push_back(out);
       tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
     }
 
-    uint64_t expected_amount = reward_parts.miner_reward() + reward_parts.service_node_paid + reward_parts.governance + reward_parts.development;
+    // Net_Fund
+    if (hard_fork_version >= 16)
+    {
+      cryptonote::address_parse_info net_wallet_address;
+      cryptonote::get_account_address_from_str(net_wallet_address, nettype, *cryptonote::get_config(nettype, hard_fork_version).NET_WALLET_ADDRESS);
+      crypto::public_key out_eph_public_key{};
+
+      if(!get_deterministic_output_key(net_wallet_address.address, gov_key, tx.vout.size(), out_eph_public_key))
+      {
+        MERROR("Failed to generate deterministic output key for Net_Fund wallet output creation");
+        return false;
+      }
+
+      txout_to_key tk;
+      tk.key = out_eph_public_key;
+
+      tx_out out;
+      summary_amounts += out.amount = reward_parts.net;
+      out.target = tk;
+      tx.vout.push_back(out);
+      tx.output_unlock_times.push_back(height + arqma_bc::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS);
+    }
+
+    uint64_t expected_amount = reward_parts.miner_reward() + reward_parts.service_node_paid + reward_parts.gov + reward_parts.dev + reward_parts.net;
     CHECK_AND_ASSERT_MES(summary_amounts == expected_amount, false, "Failed to construct miner tx, summary_amounts: " << summary_amounts << " not equal total block_reward = " << expected_amount);
 
     //lock
@@ -386,17 +426,20 @@ namespace cryptonote
       result.service_node_paid = calculate_sum_of_portions(arqma_context.snode_winner_info, result.service_node_total);
 
     result.adjusted_base_reward = result.original_base_reward;
-    result.governance = dev_reward_formula(result.original_base_reward, hard_fork_version);
-    result.development = dev_reward_formula(result.original_base_reward, hard_fork_version);
+    result.gov = dev_reward_formula(result.original_base_reward, hard_fork_version);
+    result.dev = dev_reward_formula(result.original_base_reward, hard_fork_version);
+    result.net = dev_reward_formula(result.original_base_reward, hard_fork_version);
 
-    result.adjusted_base_reward += (result.governance + result.development);
+    result.adjusted_base_reward += (result.gov + result.dev + result.net);
 
     result.base_miner = result.original_base_reward - result.service_node_paid;
     result.base_miner_fee = arqma_context.fee;
 
-    if (arqma_context.height == 1730035)
+    if (arqma_context.height == 1731472)
     {
-      result.governance += (2000000 * config::blockchain_settings::ARQMA);
+      result.gov += (2000000 * config::blockchain_settings::ARQMA);
+      result.dev += (500000 * config::blockchain_settings::ARQMA);
+      result.net += (500000 * config::blockchain_settings::ARQMA);
       return true;
     }
 

@@ -188,20 +188,16 @@ namespace cryptonote
     BEGIN_SERIALIZE()
       ENUM_FIELD(version, version >= txversion::v1 && version < txversion::_count);
       if(version >= txversion::v3)
+      {
+        ENUM_FIELD_N("tx_type", tx_type, tx_type < txtype::_count);
         FIELD(output_unlock_times)
+      }
       VARINT_FIELD(unlock_time)
       FIELD(vin)
       FIELD(vout)
       if(version >= txversion::v3 && vout.size() != output_unlock_times.size())
         return false;
       FIELD(extra)
-      if(version >= txversion::v3)
-      {
-        ENUM_FIELD_N("tx_type", tx_type, tx_type < txtype::_count);
-        //FIELD(hard_fork_version)
-        //if (hard_fork_version > cryptonote::network_version_count - 1)
-        //  return false;
-      }
     END_SERIALIZE()
 
     transaction_prefix() { set_null(); }
