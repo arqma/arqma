@@ -51,12 +51,12 @@ namespace command_helper
   const char* USAGE_PAYMENTS("payments <PID_1> [<PID_2> ... <PID_N>]");
   const char* USAGE_PAYMENT_ID("payment_id");
   const char* USAGE_TRANSFER("transfer [index=<N1>[,<N2>,...]] [<priority>] (<URI> | <address> <amount>) [<payment_id>]");
-  const char* USAGE_LOCKED_TRANSFER("locked_transfer [index=<N1>[,<N2>,...]] [<priority>] (<URI> | <addr> <amount>) <lockblocks> [<payment_id>]");
-  const char* USAGE_LOCKED_SWEEP_ALL("locked_sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<address>] <lockblocks> [<payment_id>]");
-  const char* USAGE_SWEEP_ALL("sweep_all [index=<N1>[,<N2>,...]] [<priority>] [outputs=<N>] [<address>] [<payment_id>]");
-  const char* USAGE_SWEEP_BELOW("sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] <address> [<payment_id>]");
-  const char* USAGE_SWEEP_SINGLE("sweep_single [<priority>] [outputs=<N>] <key_image> <address> [<payment_id>]");
-  const char* USAGE_DONATE("donate [index=<N1>[,<N2>,...]] [<priority>] <amount> [<payment_id>]");
+  const char* USAGE_LOCKED_TRANSFER("locked_transfer [index=<N1>[,<N2>,...]] [<priority>] (<URI> | <addr> <amount>) <lockblocks> [<payment_id (obsolete)>]");
+  const char* USAGE_LOCKED_SWEEP_ALL("locked_sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<address>] <lockblocks> [<payment_id (obsolete)>]");
+  const char* USAGE_SWEEP_ALL("sweep_all [index=<N1>[,<N2>,...]] [<priority>] [outputs=<N>] [<address>] [<payment_id (obsolete)>]");
+  const char* USAGE_SWEEP_BELOW("sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] <address> [<payment_id (obsolete)>]");
+  const char* USAGE_SWEEP_SINGLE("sweep_single [<priority>] [outputs=<N>] <key_image> <address> [<payment_id (obsolete)>]");
+  const char* USAGE_DONATE("donate [index=<N1>[,<N2>,...]] [<priority>] <amount> [<payment_id (obsolete)>]");
   const char* USAGE_SIGN_TRANSFER("sign_transfer [export_raw]");
   const char* USAGE_SET_LOG("set_log <level>|{+,-,}<categories>");
   const char* USAGE_ACCOUNT("account\n"
@@ -172,7 +172,7 @@ namespace command_helper
                   "  Set the wallet's refresh behaviour.\n "
                   "priority [0|1|2|3|4]\n "
                   "  Set the fee to default/unimportant/normal/elevated/priority.\n "
-                  "confirm-missing-payment-id <1|0>\n "
+                  "confirm-missing-payment-id <1|0> (OBSOLETE)\n "
                   "ask-password <0|1|2   (or never|action|decrypt)>\n "
                   "unit <arqma|milliarq|microarq|nanoarq>\n "
                   "  Set the default Arqma (sub-)unit.\n "

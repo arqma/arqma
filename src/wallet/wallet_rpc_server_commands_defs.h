@@ -36,6 +36,7 @@
 #include "cryptonote_basic/subaddress_index.h"
 #include "crypto/hash.h"
 #include "wallet_rpc_server_error_codes.h"
+#include "wallet2.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "wallet.rpc"
@@ -429,23 +430,15 @@ namespace wallet_rpc
 
       struct response_t
       {
-        uint64_t  height;
+        uint64_t height;
+        uint64_t immutable_height;
         BEGIN_KV_SERIALIZE_MAP()
           KV_SERIALIZE(height)
+          KV_SERIALIZE(immutable_height)
         END_KV_SERIALIZE_MAP()
       };
       typedef epee::misc_utils::struct_init<response_t> response;
     };
-
-  struct transfer_destination
-  {
-    uint64_t amount;
-    std::string address;
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE(amount)
-      KV_SERIALIZE(address)
-    END_KV_SERIALIZE_MAP()
-  };
 
   struct COMMAND_RPC_TRANSFER
   {
@@ -1355,45 +1348,6 @@ namespace wallet_rpc
     typedef epee::misc_utils::struct_init<response_t> response;
   };
 
-  struct transfer_entry
-  {
-    std::string txid;
-    std::string payment_id;
-    uint64_t height;
-    uint64_t timestamp;
-    uint64_t amount;
-    uint64_t fee;
-    std::string note;
-    std::list<transfer_destination> destinations;
-    std::string type;
-    uint64_t unlock_time;
-    cryptonote::subaddress_index subaddr_index;
-    std::string address;
-    std::vector<cryptonote::subaddress_index> subaddr_indices;
-    bool double_spend_seen;
-    uint64_t confirmations;
-    uint64_t suggested_confirmations_threshold;
-
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE(txid);
-      KV_SERIALIZE(payment_id);
-      KV_SERIALIZE(height);
-      KV_SERIALIZE(timestamp);
-      KV_SERIALIZE(amount);
-      KV_SERIALIZE(fee);
-      KV_SERIALIZE(note);
-      KV_SERIALIZE(destinations);
-      KV_SERIALIZE(type);
-      KV_SERIALIZE(unlock_time)
-      KV_SERIALIZE(subaddr_index);
-      KV_SERIALIZE(subaddr_indices);
-      KV_SERIALIZE(address);
-      KV_SERIALIZE(double_spend_seen)
-      KV_SERIALIZE_OPT(confirmations, (uint64_t)0)
-      KV_SERIALIZE_OPT(suggested_confirmations_threshold, (uint64_t)0)
-    END_KV_SERIALIZE_MAP()
-  };
-
   struct COMMAND_RPC_GET_SPEND_PROOF
   {
     struct request_t
@@ -1541,11 +1495,11 @@ namespace wallet_rpc
 
     struct response_t
     {
-      std::list<transfer_entry> in;
-      std::list<transfer_entry> out;
-      std::list<transfer_entry> pending;
-      std::list<transfer_entry> failed;
-      std::list<transfer_entry> pool;
+      std::list<transfer_view> in;
+      std::list<transfer_view> out;
+      std::list<transfer_view> pending;
+      std::list<transfer_view> failed;
+      std::list<transfer_view> pool;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(in);
@@ -1553,6 +1507,21 @@ namespace wallet_rpc
         KV_SERIALIZE(pending);
         KV_SERIALIZE(failed);
         KV_SERIALIZE(pool);
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_TRANSFERS_CSV
+  {
+    typedef epee::misc_utils::struct_init<COMMAND_RPC_GET_TRANSFERS::request_t> request;
+
+    struct response_t
+    {
+      std::string csv;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(csv);
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -1574,8 +1543,8 @@ namespace wallet_rpc
 
     struct response_t
     {
-      transfer_entry transfer;
-      std::list<transfer_entry> transfers;
+      transfer_view transfer;
+      std::list<transfer_view> transfers;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(transfer);

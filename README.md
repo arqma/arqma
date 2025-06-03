@@ -287,7 +287,7 @@ application.
 
 * Change branch to last Release:
 
-	`$ cd arqma && git checkout release-v0.6.1`
+	`$ cd arqma && git checkout release-v7.0.0`
 
 * Activate and update submodules:
 

@@ -171,16 +171,16 @@ namespace boost
   {
     a & x.version;
     if(x.version >= cryptonote::txversion::v3)
+    {
+      a & x.tx_type;
       a & x.output_unlock_times;
+    }
     a & x.unlock_time;
     a & x.vin;
     a & x.vout;
     a & x.extra;
     if(x.version >= cryptonote::txversion::v3)
-    {
-      a & x.tx_type;
       a & x.hard_fork_version;
-    }
   }
 
   template <class Archive>

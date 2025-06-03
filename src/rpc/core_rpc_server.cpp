@@ -222,6 +222,13 @@ namespace cryptonote
     m_core.get_blockchain_top(res.height, hash);
     ++res.height; // block height to chain height
     res.hash = string_tools::pod_to_hex(hash);
+    res.immutable_height = 0;
+    cryptonote::checkpoint_t checkpoint;
+    if (m_core.get_blockchain_storage().get_db().get_immutable_checkpoint(&checkpoint, res.height - 1))
+    {
+      res.immutable_height = checkpoint.height;
+      res.immutable_hash = string_tools::pod_to_hex(checkpoint.block_hash);
+    }
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -249,6 +256,15 @@ namespace cryptonote
     res.target_height = m_core.get_target_blockchain_height();
     res.difficulty = m_core.get_blockchain_storage().get_difficulty_for_next_block();
     res.target = m_core.get_blockchain_storage().get_difficulty_target();
+
+    res.immutable_height = 0;
+    cryptonote::checkpoint_t checkpoint;
+    if (m_core.get_blockchain_storage().get_db().get_immutable_checkpoint(&checkpoint, res.height - 1))
+    {
+      res.immutable_height = checkpoint.height;
+      res.immutable_block_hash = string_tools::pod_to_hex(checkpoint.block_hash);
+    }
+
     res.tx_count = m_core.get_blockchain_storage().get_total_transactions() - res.height; //without coinbase
     res.tx_pool_size = m_core.get_pool_transactions_count();
     res.alt_blocks_count = restricted ? 0 : m_core.get_blockchain_storage().get_alternative_blocks_count();

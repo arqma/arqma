@@ -40,8 +40,9 @@ namespace cryptonote
   //---------------------------------------------------------------
   keypair get_deterministic_keypair_from_height(uint64_t height);
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key);
-  bool validate_governance_reward_key(uint64_t height, const std::string& governance_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
-  bool validate_development_reward_key(uint64_t height, const std::string& development_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
+  bool validate_gov_reward_key(uint64_t height, const std::string& gov_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
+  bool validate_dev_reward_key(uint64_t height, const std::string& dev_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
+  bool validate_net_reward_key(uint64_t height, const std::string& net_wallet_address_str, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
 
   uint64_t dev_reward_formula(uint64_t base_reward, uint8_t hard_fork_version);
 
@@ -58,8 +59,9 @@ namespace cryptonote
     network_type nettype;
     crypto::public_key snode_winner_key;
     std::vector<std::pair<account_public_address, stake_portions>> snode_winner_info;
-    uint64_t governance;
-    uint64_t development;
+    uint64_t gov;
+    uint64_t dev;
+    uint64_t net;
   };
 
   class Blockchain;
@@ -82,8 +84,9 @@ namespace cryptonote
     uint64_t service_node_total;
     uint64_t service_node_paid;
 
-    uint64_t governance;
-    uint64_t development;
+    uint64_t gov;
+    uint64_t dev;
+    uint64_t net;
     uint64_t base_miner;
     uint64_t base_miner_fee;
 
@@ -98,8 +101,9 @@ namespace cryptonote
     using portions = uint64_t;
     uint64_t height;
     uint64_t fee;
-    uint64_t governance;
-    uint64_t development;
+    uint64_t gov;
+    uint64_t dev;
+    uint64_t net;
     std::vector<std::pair<account_public_address, portions>> snode_winner_info;
   };
 

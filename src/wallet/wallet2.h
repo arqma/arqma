@@ -147,8 +147,9 @@ private:
     stake,
     miner,
     service_node,
-    development,
-    governance
+    dev,
+    gov,
+    net
   };
 
   inline const char *pay_type_string(pay_type type)
@@ -167,10 +168,12 @@ private:
         return "miner";
       case pay_type::service_node:
         return "snode";
-      case pay_type::development:
+      case pay_type::dev:
         return "dev";
-      case pay_type::governance:
+      case pay_type::gov:
         return "gov";
+      case pay_type::net:
+        return "net";
       default:
         assert(false);
         return "xxxxx";
@@ -228,6 +231,73 @@ private:
   };
 
   enum class stake_check_result { allowed, not_allowed, try_later };
+
+  struct transfer_destination
+  {
+    std::string address;
+    uint64_t amount;
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(amount)
+      KV_SERIALIZE(address)
+    END_KV_SERIALIZE_MAP()
+  };
+
+  struct transfer_view
+  {
+    std::string txid;
+    std::string payment_id;
+    uint64_t height;
+    uint64_t timestamp;
+    uint64_t amount;
+    uint64_t fee;
+    std::string note;
+    std::list<transfer_destination> destinations;
+    std::string type;
+    uint64_t unlock_time;
+    cryptonote::subaddress_index subaddr_index;
+    std::vector<cryptonote::subaddress_index> subaddr_indices;
+    std::string address;
+    bool double_spend_seen;
+    uint64_t confirmations;
+    uint64_t suggested_confirmations_threshold;
+    uint64_t checkpointed;
+
+    tools::pay_type pay_type;
+    bool confirmed;
+    crypto::hash hash;
+    std::string lock_msg;
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(txid);
+      KV_SERIALIZE(payment_id);
+      KV_SERIALIZE(height);
+      KV_SERIALIZE(timestamp);
+      KV_SERIALIZE(amount);
+      KV_SERIALIZE(fee);
+      KV_SERIALIZE(note);
+      KV_SERIALIZE(destinations);
+
+      if (this_ref.type.empty())
+      {
+        std::string type = pay_type_string(this_ref.pay_type);
+        KV_SERIALIZE_VALUE(type)
+      }
+      else
+      {
+        KV_SERIALIZE(type)
+      }
+
+      KV_SERIALIZE(unlock_time)
+      KV_SERIALIZE(subaddr_index)
+      KV_SERIALIZE(subaddr_indices)
+      KV_SERIALIZE(address);
+      KV_SERIALIZE(double_spend_seen)
+      KV_SERIALIZE_OPT(confirmations, (uint64_t)0)
+      KV_SERIALIZE_OPT(suggested_confirmations_threshold, (uint64_t)0)
+      KV_SERIALIZE(checkpointed)
+    END_KV_SERIALIZE_MAP()
+  };
 
   class wallet_keys_unlocker;
   class wallet2
@@ -379,7 +449,7 @@ private:
       pay_type m_type;
       cryptonote::subaddress_index m_subaddr_index;
 
-      bool is_coinbase() const { return ((m_type == pay_type::miner) || (m_type == pay_type::service_node) || (m_type == pay_type::development) || (m_type == pay_type::governance)); }
+      bool is_coinbase() const { return ((m_type == pay_type::miner) || (m_type == pay_type::service_node) || (m_type == pay_type::dev) || (m_type == pay_type::gov) || (m_type == pay_type::net)); }
     };
 
     struct address_tx : payment_details
@@ -743,13 +813,13 @@ private:
     bool explicit_refresh_from_block_height() const {return m_explicit_refresh_from_block_height;}
 
     bool deinit();
-    bool init(std::string daemon_address = "http://127.0.0.1:19994",
+    bool init(std::string daemon_address,
       boost::optional<epee::net_utils::http::login> daemon_login = boost::none,
       boost::asio::ip::tcp::endpoint proxy = {},
       uint64_t upper_transaction_weight_limit = 0,
       bool trusted_daemon = true,
       epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
-    bool set_daemon(std::string daemon_address = "http://127.0.0.1:19994",
+    bool set_daemon(std::string daemon_address,
       boost::optional<epee::net_utils::http::login> daemon_login = boost::none, bool trusted_daemon = true,
       epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
 
@@ -883,8 +953,33 @@ private:
     bool sign_multisig_tx_to_file(multisig_tx_set &exported_txs, const std::string &filename, std::vector<crypto::hash> &txids);
     std::vector<pending_tx> create_unmixable_sweep_transactions();
     void discard_unmixable_outputs();
+    bool is_connected() const;
     bool check_connection(uint32_t *version = NULL, bool *ssl = NULL, uint32_t timeout = 200000);
+
+    transfer_view make_transfer_view(const crypto::hash &txid, const crypto::hash &payment_id, const wallet2::payment_details &pd) const;
+    transfer_view make_transfer_view(const crypto::hash &txid, const tools::wallet2::confirmed_transfer_details &pd) const;
+    transfer_view make_transfer_view(const crypto::hash &txid, const tools::wallet2::unconfirmed_transfer_details &pd) const;
+    transfer_view make_transfer_view(const crypto::hash &payment_id, const tools::wallet2::pool_payment_details &pd) const;
+
     void get_transfers(wallet2::transfer_container& incoming_transfers) const;
+
+    struct get_transfers_args_t
+    {
+      bool in = true;
+      bool out = true;
+      bool pending = true;
+      bool failed = true;
+      bool pool = true;
+      bool coinbase = true;
+      bool filter_by_height = false;
+      uint64_t min_height = 0;
+      uint64_t max_height = CRYPTONOTE_MAX_BLOCK_NUMBER;
+      std::set<uint32_t> subaddr_indices;
+      uint32_t account_index;
+      bool all_accounts;
+    };
+    void get_transfers(get_transfers_args_t args, std::vector<transfer_view>& transfers);
+    std::string transfers_to_csv(const std::vector<transfer_view>& transfers, bool formatting = false) const;
     void get_payments(const crypto::hash& payment_id, std::list<wallet2::payment_details>& payments, uint64_t min_height = 0, const boost::optional<uint32_t>& subaddr_account = boost::none, const std::set<uint32_t>& subaddr_indices = {}) const;
     void get_payments(std::list<std::pair<crypto::hash,wallet2::payment_details>>& payments, uint64_t min_height, uint64_t max_height = (uint64_t)-1, const boost::optional<uint32_t>& subaddr_account = boost::none, const std::set<uint32_t>& subaddr_indices = {}) const;
     void get_payments_out(std::list<std::pair<crypto::hash,wallet2::confirmed_transfer_details>>& confirmed_payments,
@@ -903,6 +998,7 @@ private:
     bool is_transfer_unlocked(uint64_t unlock_time, uint64_t block_height, crypto::key_image const *key_image = nullptr) const;
 
     uint64_t get_last_block_reward() const { return m_last_block_reward; }
+    uint64_t get_immutable_height() const { return m_immutable_height; }
 
     template <class t_archive>
     inline void serialize(t_archive &a, const unsigned int ver)
@@ -1008,6 +1104,9 @@ private:
       if(ver < 25)
         return;
       a & m_last_block_reward;
+      if (ver < 26)
+        return;
+      a & m_immutable_height;
     }
 
     /*!
@@ -1039,8 +1138,6 @@ private:
     void set_default_priority(uint32_t p) { m_default_priority = p; }
     bool auto_refresh() const { return m_auto_refresh; }
     void auto_refresh(bool r) { m_auto_refresh = r; }
-    bool confirm_missing_payment_id() const { return m_confirm_missing_payment_id; }
-    void confirm_missing_payment_id(bool always) { m_confirm_missing_payment_id = always; }
     AskPasswordType ask_password() const { return m_ask_password; }
     void ask_password(AskPasswordType ask) { m_ask_password = ask; }
     void set_min_output_count(uint32_t count) { m_min_output_count = count; }
@@ -1065,8 +1162,6 @@ private:
     void segregation_height(uint64_t height) { m_segregation_height = height; }
     bool ignore_fractional_outputs() const { return m_ignore_fractional_outputs; }
     void ignore_fractional_outputs(bool value) { m_ignore_fractional_outputs = value; }
-    bool confirm_non_default_ring_size() const { return m_confirm_non_default_ring_size; }
-    void confirm_non_default_ring_size(bool always) { m_confirm_non_default_ring_size = always; }
     bool track_uses() const { return m_track_uses; }
     void track_uses(bool value) { m_track_uses = value; }
     const std::string & device_name() const { return m_device_name; }
@@ -1532,8 +1627,6 @@ private:
     // If m_refresh_from_block_height is explicitly set to zero we need this to differentiate it from the case that
     // m_refresh_from_block_height was defaulted to zero.*/
     bool m_explicit_refresh_from_block_height;
-    bool m_confirm_missing_payment_id;
-    bool m_confirm_non_default_ring_size;
     AskPasswordType m_ask_password;
     uint32_t m_min_output_count;
     uint64_t m_min_output_value;
@@ -1553,6 +1646,7 @@ private:
     size_t m_subaddress_lookahead_major, m_subaddress_lookahead_minor;
     std::string m_device_name;
     bool m_offline;
+    uint64_t m_immutable_height;
 
     std::string m_ring_database;
     bool m_ring_history_saved;
@@ -1577,7 +1671,7 @@ private:
   bool parse_subaddress_indices(const std::string& arg, std::set<uint32_t>& subaddr_indices, std::string *err_msg = nullptr);
   bool parse_priority(const std::string& arg, uint32_t& priority);
 }
-BOOST_CLASS_VERSION(tools::wallet2, 25)
+BOOST_CLASS_VERSION(tools::wallet2, 26)
 BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 11)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info, 1)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info::LR, 0)
