@@ -740,6 +740,8 @@ namespace cryptonote
 
      bool is_update_available() const { return m_update_available; }
 
+     bool fluffy_blocks_enabled() const { return m_fluffy_blocks_enabled; }
+
      /**
       * @brief get whether transaction relay should be padded
       *
@@ -1105,6 +1107,7 @@ namespace cryptonote
      size_t m_last_update_length;
      boost::mutex m_update_mutex;
 
+     bool m_fluffy_blocks_enabled;
      bool m_offline;
      bool m_pad_transactions;
 

@@ -139,6 +139,26 @@ namespace cryptonote
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
+  struct NOTIFY_NEW_BLOCK
+  {
+    const static int ID = BC_COMMANDS_POOL_BASE + 1;
+
+    struct request_t
+    {
+      block_complete_entry b;
+      uint64_t current_blockchain_height;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(b)
+        KV_SERIALIZE(current_blockchain_height)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+  };
+
+  /************************************************************************/
+  /*                                                                      */
+  /************************************************************************/
   struct NOTIFY_NEW_TRANSACTIONS
   {
     const static int ID = BC_COMMANDS_POOL_BASE + 2;

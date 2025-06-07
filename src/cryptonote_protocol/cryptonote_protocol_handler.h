@@ -49,8 +49,6 @@
 #include "block_queue.h"
 #include "common/perf_timer.h"
 #include "cryptonote_basic/connection_context.h"
-#include "net/levin_base.h"
-#include "p2p/net_node_common.h"
 #include <boost/circular_buffer.hpp>
 
 PUSH_WARNINGS
@@ -87,6 +85,7 @@ namespace cryptonote
     t_cryptonote_protocol_handler(t_core& rcore, nodetool::i_p2p_endpoint<connection_context>* p_net_layout, bool offline = false);
 
     BEGIN_INVOKE_MAP2(cryptonote_protocol_handler)
+      HANDLE_NOTIFY_T2(NOTIFY_NEW_BLOCK, &cryptonote_protocol_handler::handle_notify_new_block)
       HANDLE_NOTIFY_T2(NOTIFY_NEW_TRANSACTIONS, &cryptonote_protocol_handler::handle_notify_new_transactions)
       HANDLE_NOTIFY_T2(NOTIFY_REQUEST_GET_OBJECTS, &cryptonote_protocol_handler::handle_request_get_objects)
       HANDLE_NOTIFY_T2(NOTIFY_RESPONSE_GET_OBJECTS, &cryptonote_protocol_handler::handle_response_get_objects)
@@ -122,6 +121,7 @@ namespace cryptonote
 
   private:
     //----------------- commands handlers ----------------------------------------------
+    int handle_notify_new_block(int command, NOTIFY_NEW_BLOCK::request& arg, cryptonote_connection_context& context);
     int handle_notify_new_transactions(int command, NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& context);
     int handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context);
     int handle_response_get_objects(int command, NOTIFY_RESPONSE_GET_OBJECTS::request& arg, cryptonote_connection_context& context);
@@ -151,15 +151,15 @@ namespace cryptonote
 
       if (connections.size())
       {
-        epee::levin::message_writer arg_buff{256 * 1024};
-        epee::serialization::store_t_to_binary(arg, arg_buff.buffer);
-        return m_p2p->relay_notify_to_list(T::ID, std::move(arg_buff), std::move(connections));
+        epee::byte_slice arg_buff;
+        epee::serialization::store_t_to_binary(arg, arg_buff, 256 * 1024);
+        return m_p2p->relay_notify_to_list(T::ID, epee::to_span(arg_buff), std::move(connections));
       }
 
       return true;
     }
 
-    virtual bool relay_block(NOTIFY_NEW_FLUFFY_BLOCK::request& arg, cryptonote_connection_context& exclude_context);
+    virtual bool relay_block(NOTIFY_NEW_BLOCK::request& arg, cryptonote_connection_context& exclude_context);
     virtual bool relay_transactions(NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& exclude_context);
     virtual bool relay_uptime_proof(NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& exclude_context);
     virtual bool relay_service_node_votes(NOTIFY_NEW_SERVICE_NODE_VOTE::request& arg, cryptonote_connection_context& exclude_context);
@@ -213,10 +213,9 @@ namespace cryptonote
     bool post_notify(typename t_parameter::request& arg, cryptonote_connection_context& context)
     {
       LOG_PRINT_L2("[" << epee::net_utils::print_connection_context_short(context) << "] post " << typeid(t_parameter).name() << " -->");
-
-      epee::levin::message_writer out{256 * 1024};
-      epee::serialization::store_t_to_binary(arg, out.buffer);
-      return m_p2p->invoke_notify_to_peer(t_parameter::ID, std::move(out), context);
+      epee::byte_slice blob;
+      epee::serialization::store_t_to_binary(arg, blob, 256 * 1024);
+      return m_p2p->invoke_notify_to_peer(t_parameter::ID, epee::to_span(blob), context);
     }
   };
 
