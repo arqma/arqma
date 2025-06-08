@@ -1435,7 +1435,7 @@ namespace cryptonote
                 MERROR("Checkpoint blob given but not expecting a checkpoint at this height");
                 return false;
               }
-#if 1
+#if 0
               std::vector<std::shared_ptr<const service_nodes::quorum>> alt_states;
               std::shared_ptr<const service_nodes::quorum> quorum = m_core.get_quorum(
                   service_nodes::quorum_type::checkpointing, checkpoint->height, false /*include_old*/, &alt_states);
