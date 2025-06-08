@@ -226,7 +226,7 @@ namespace cryptonote
     // kept_by_block
     if(!kept_by_block && m_timed_out_transactions.find(id) != m_timed_out_transactions.end())
     {
-      // not clear if we should set that, since verifivation (sic) did not fail before, since
+      // not clear if we should set that, since verification (sic) did not fail before, since
       // the tx was accepted before timing out.
       tvc.m_verification_failed = true;
       return false;

@@ -115,7 +115,7 @@ namespace cryptonote
   class checkpoints : public cryptonote::BlockAddedHook, public cryptonote::BlockchainDetachedHook
   {
   public:
-    bool block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, checkpoint_t const *checkpoint) override;
+    void block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs) override;
     void blockchain_detached(uint64_t height) override;
 
     bool get_checkpoint(uint64_t height, checkpoint_t &checkpoint) const;
@@ -162,7 +162,7 @@ namespace cryptonote
      *         true if the passed parameters match the stored checkpoint,
      *         false otherwise
      */
-    bool check_block(uint64_t height, const crypto::hash& h, bool *is_a_checkpoint = nullptr, bool *service_node_checkpoint = nullptr) const;
+    bool check_block(uint64_t height, const crypto::hash& h, bool *is_a_checkpoint = nullptr, bool *rejected_by_service_node = nullptr) const;
 
     /**
      * @brief checks if alternate chain blocks should be kept for a given height
@@ -178,7 +178,7 @@ namespace cryptonote
      * @return true if alternate blocks are allowed given the parameters,
      *         otherwise false
      */
-    bool is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height, bool *service_node_checkpoint = nullptr);
+    bool is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height, bool *rejected_by_service_node = nullptr);
 
     /**
      * @brief gets the highest checkpoint height
@@ -199,7 +199,7 @@ namespace cryptonote
   private:
     network_type m_nettype = UNDEFINED;
     uint64_t m_last_cull_height = 0;
-    uint64_t m_immutable_height = 0;
+    uint64_t m_oldest_allowable_alternative_block = 0;
     BlockchainDB *m_db;
   };
 

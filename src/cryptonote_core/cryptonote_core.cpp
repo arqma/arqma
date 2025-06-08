@@ -1524,16 +1524,17 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::relay_service_node_votes()
   {
+    auto height = get_current_blockchain_height();
+    auto votes = m_quorum_cop.get_relayable_votes(height);
+
+    if (votes.empty())
+      return true;
+
     NOTIFY_NEW_SERVICE_NODE_VOTE::request req = {};
-    req.votes = m_quorum_cop.get_relayable_votes(get_current_blockchain_height());
-    if(req.votes.size())
-    {
-      cryptonote_connection_context fake_context{};
-      if(get_protocol()->relay_service_node_votes(req, fake_context))
-      {
-        m_quorum_cop.set_votes_relayed(req.votes);
-      }
-    }
+    req.votes = std::move(votes);
+    cryptonote_connection_context fake_context{};
+    if (get_protocol()->relay_service_node_votes(req, fake_context))
+      m_quorum_cop.set_votes_relayed(req.votes);
 
     return true;
   }
@@ -1670,6 +1671,14 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::add_new_block(const block& b, block_verification_context& bvc, checkpoint_t const *checkpoint)
   {
+    uint64_t latest_height = std::max(get_current_blockchain_height(), get_target_blockchain_height());
+    if (get_nettype() == cryptonote::MAINNET &&
+        latest_height >= HF_VERSION_16_CHECKPOINTING_SOFT_FORK_HEIGHT &&
+        get_block_height(b) < HF_VERSION_16_CHECKPOINTING_SOFT_FORK_HEIGHT)
+    {
+      checkpoint = nullptr;
+    }
+
     bool result = m_blockchain_storage.add_new_block(b, bvc, checkpoint);
     if (result)
     {
@@ -1725,6 +1734,36 @@ namespace cryptonote
         return false;
       }
       b = &lb;
+    }
+
+    if (checkpoint)
+    {
+      if (b->major_version >= network_version_16)
+      {
+        if (checkpoint->signatures.size() > 1)
+        {
+          for (size_t i = 0; i < (checkpoint->signatures.size() - 1); i++)
+          {
+            auto curr = checkpoint->signatures[i].voter_index;
+            auto next = checkpoint->signatures[i + 1].voter_index;
+
+            if (curr >= next)
+            {
+              LOG_PRINT_L1("Voters in checkpoints are not given in ascending order, block failed");
+              bvc.m_verification_failed = true;
+              return false;
+            }
+          }
+        }
+      }
+      else
+      {
+        std::sort(checkpoint->signatures.begin(),
+                  checkpoint->signatures.end(),
+                  [](service_nodes::voter_to_signature const &lhs, service_nodes::voter_to_signature const &rhs) {
+                    return lhs.voter_index < rhs.voter_index;
+                  });
+      }
     }
 
     add_new_block(*b, bvc, checkpoint);

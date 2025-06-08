@@ -100,6 +100,12 @@ namespace cryptonote {
       already_generated_coins -= arqma_bc::PREMINE_BURN;
     }
 
+    if (hard_fork_version > 15)
+    {
+      reward = arqma_bc::HF16_BL_REWARD;
+      return true;
+    }
+
     uint64_t base_reward = (MONEY_SUPPLY - already_generated_coins) >> emission_speed_factor;
     if (base_reward < FINAL_SUBSIDY_PER_MINUTE*target_minutes)
     {
@@ -121,11 +127,6 @@ namespace cryptonote {
     {
       MERROR("Block cumulative weight too big: " << current_block_weight << ", expected less than: " << 2 * median_weight);
       return false;
-    }
-    if (hard_fork_version >= 16)
-    {
-      reward = arqma_bc::HF16_BL_REWARD;
-      return true;
     }
 
     assert(median_weight < std::numeric_limits<uint32_t>::max());
