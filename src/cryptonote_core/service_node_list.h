@@ -44,7 +44,6 @@ namespace cryptonote
 {
   class Blockchain;
   class BlockchainDB;
-  struct checkpoint_t;
 };
 
 namespace service_nodes
@@ -272,11 +271,11 @@ namespace service_nodes
     service_node_list(const service_node_list &) = delete;
     service_node_list &operator=(const service_node_list &) = delete;
 
-    bool block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const *checkpoint) override;
+    void block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs) override;
     void blockchain_detached(uint64_t height) override;
     void init() override;
     bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &base_reward) const override;
-    bool alt_block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const *checkpoint) override;
+    void alt_block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs) override;
     std::vector<std::pair<cryptonote::account_public_address, uint64_t>> get_winner_addresses_and_portions() const;
     crypto::public_key select_winner() const;
 

@@ -40,7 +40,6 @@ namespace cryptonote
 {
   class core;
   struct vote_verification_context;
-  struct checkpoint_t;
 };
 
 namespace service_nodes
@@ -92,7 +91,7 @@ namespace service_nodes
     explicit quorum_cop(cryptonote::core& core);
 
     void init() override;
-    bool block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const */*checkpoint*/) override;
+    void block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs) override;
     void blockchain_detached(uint64_t height) override;
 
     void set_votes_relayed(std::vector<quorum_vote_t> const &relayed_votes);

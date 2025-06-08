@@ -90,7 +90,8 @@ namespace cryptonote
     {1000000, "0db826448a9978bec4617f3f1a23c33c708f82949a2e504602c5d4faac878639"},
     {1050000, "931108145f3989036f3064b0ac74c77df28e39fd18f775f625cc5e03e4b5c034"},
     {1100000, "d50613bbbfec20514d5e9933fae7ca3f21bd4861a9757c9002133ae30998e199"},
-    {1134090, "644d30e172bef0ae77e60383ef219ee7af722c703c80be5c8a432e7d0c379932"}
+    {1134090, "644d30e172bef0ae77e60383ef219ee7af722c703c80be5c8a432e7d0c379932"},
+    {1150000, "5d66aeff47e97d76ec0a521c8a610e80249c6076b7cb487b57ca7fff90103291"}
   };
   //---------------------------------------------------------------------------
   crypto::hash get_newest_hardcoded_checkpoint(cryptonote::network_type nettype, uint64_t *height)
@@ -185,14 +186,37 @@ namespace cryptonote
     return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, checkpoint_t const *checkpoint)
+  void checkpoints::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)
   {
     uint64_t const height = get_block_height(block);
     if (height < service_nodes::CHECKPOINT_STORE_PERSISTENTLY_INTERVAL || block.major_version < network_version_16)
-      return true;
+      return;
 
-    if (checkpoint)
-      update_checkpoint(*checkpoint);
+    if (m_nettype == MAINNET && height == HF_VERSION_16_CHECKPOINTING_SOFT_FORK_HEIGHT)
+    {
+      uint64_t start_height = 0;
+      get_newest_hardcoded_checkpoint(m_nettype, &start_height);
+      start_height += 1; // Don't start deleting from the hardcoded height
+
+      if ((start_height % service_nodes::CHECKPOINT_INTERVAL) > 0)
+        start_height += (service_nodes::CHECKPOINT_INTERVAL - (start_height % service_nodes::CHECKPOINT_INTERVAL));
+
+      for (uint64_t delete_height = start_height;
+           delete_height <= height;
+           delete_height += service_nodes::CHECKPOINT_INTERVAL)
+      {
+        try
+        {
+          m_db->remove_block_checkpoint(delete_height);
+        }
+        catch (const std::exception &e)
+        {
+          MERROR(
+              "Deleting historical checkpoints on mainnet soft-fork to checkpointing failed non-trivially at height: "
+              << delete_height << ", what = " << e.what());
+        }
+      }
+    }
 
     uint64_t end_cull_height = 0;
     {
@@ -220,8 +244,6 @@ namespace cryptonote
         MERROR("Pruning block checkpoint on block added failed non-trivially at height: " << m_last_cull_height << ", what = " << e.what());
       }
     }
-
-    return true;
   }
   //---------------------------------------------------------------------------
   void checkpoints::blockchain_detached(uint64_t height)
@@ -257,27 +279,26 @@ namespace cryptonote
     return height <= top_checkpoint_height;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::check_block(uint64_t height, const crypto::hash& h, bool* is_a_checkpoint, bool *service_node_checkpoint) const
+  bool checkpoints::check_block(uint64_t height, const crypto::hash& h, bool* is_a_checkpoint, bool *rejected_by_service_node) const
   {
     checkpoint_t checkpoint;
     bool found = get_checkpoint(height, checkpoint);
     if (is_a_checkpoint) *is_a_checkpoint = found;
-    if (service_node_checkpoint) *service_node_checkpoint = false;
 
     if(!found)
       return true;
 
     bool result = checkpoint.check(h);
-    if (service_node_checkpoint)
-      *service_node_checkpoint = (checkpoint.type == checkpoint_type::service_node);
+    if (rejected_by_service_node)
+      *rejected_by_service_node = checkpoint.type == checkpoint_type::service_node && result;
 
     return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height, bool *service_node_checkpoint)
+  bool checkpoints::is_alternative_block_allowed(uint64_t blockchain_height, uint64_t block_height, bool *rejected_by_service_node)
   {
-    if (service_node_checkpoint)
-      *service_node_checkpoint = false;
+    if (rejected_by_service_node)
+      *rejected_by_service_node = false;
 
     if(0 == block_height)
       return false;
@@ -293,12 +314,12 @@ namespace cryptonote
     if (m_db->get_immutable_checkpoint(&immutable_checkpoint, blockchain_height))
     {
       immutable_height = immutable_checkpoint.height;
-      if (service_node_checkpoint)
-        *service_node_checkpoint = (immutable_checkpoint.type == checkpoint_type::service_node);
+      if (rejected_by_service_node)
+        *rejected_by_service_node = (immutable_checkpoint.type == checkpoint_type::service_node);
     }
 
-    m_immutable_height = std::max(immutable_height, m_immutable_height);
-    bool result = block_height > m_immutable_height;
+    m_oldest_allowable_alternative_block = std::max(immutable_height, m_oldest_allowable_alternative_block);
+    bool result = block_height > m_oldest_allowable_alternative_block;
     return result;
   }
   //---------------------------------------------------------------------------

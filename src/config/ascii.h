@@ -110,7 +110,7 @@ const std::string ascii_arqma_logo_win =
     "   ░   ▒     ░░   ░    ░   ░ ░      ░     ░   ▒     \n"
     "       ░  ░   ░         ░           ░         ░  ░  \n"
     "                                                         \n"
-    "            🔐  CIPHERSTORM VAULT RELEASE  🔐             ";
+    "            🔐  Cipherstorm Vault Release  🔐             ";
 
  #ifdef _WIN32
  const std::string ascii_arqma_logo = ascii_arqma_logo_win;

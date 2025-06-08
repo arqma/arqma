@@ -1029,32 +1029,12 @@ namespace service_nodes
     return false;
   }
   //----------------------------------------------------------------------------
-  bool service_node_list::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const *checkpoint)
+  void service_node_list::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)
   {
-    if (block.major_version < 16)
-      return true;
-
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     process_block(block, txs);
 
-    if (checkpoint)
-    {
-      std::shared_ptr<const quorum> quorum = get_quorum(quorum_type::checkpointing, checkpoint->height);
-      if (!quorum)
-      {
-        LOG_PRINT_L1("Failed to get testing quorum checkpoint for block: " << cryptonote::get_block_hash(block));
-        return false;
-      }
-
-      if (!service_nodes::verify_checkpoint(block.major_version, *checkpoint, *quorum))
-      {
-        LOG_PRINT_L1("Service Node checkpoint failed verification for block: " << cryptonote::get_block_hash(block));
-        return false;
-      }
-    }
-
     store();
-    return true;
   }
 
   static std::vector<size_t> generate_shuffled_service_node_index_list(size_t list_size, crypto::hash const &block_hash, quorum_type type, size_t sublist_size = 0, size_t sublist_up_to = 0)
@@ -1120,8 +1100,7 @@ namespace service_nodes
 
     auto active_snode_list = state.active_service_nodes_infos();
     decltype(active_snode_list) decomm_snode_list;
-    if (hf_ver >= 16)
-      decomm_snode_list = state.decommissioned_service_nodes_infos();
+    decomm_snode_list = state.decommissioned_service_nodes_infos();
 
     quorum_type const max_quorum_type = max_quorum_type_for_hf(hf_ver);
     for (int type_int = 0; type_int <= (int)max_quorum_type; type_int++)
@@ -1143,12 +1122,12 @@ namespace service_nodes
       else if (type == quorum_type::checkpointing)
       {
         size_t total_nodes = active_snode_list.size();
-        if (total_nodes >= CHECKPOINT_QUORUM_SIZE)
-        {
-          pub_keys_indexes = generate_shuffled_service_node_index_list(total_nodes, state.block_hash, type);
-          num_workers = std::min(pub_keys_indexes.size(), CHECKPOINT_QUORUM_SIZE);
-        }
+        if (hf_ver >= cryptonote::network_version_16 && total_nodes < CHECKPOINT_QUORUM_SIZE)
+          continue;
+
+        pub_keys_indexes = generate_shuffled_service_node_index_list(total_nodes, state.block_hash, type);
         result.checkpointing = quorum;
+        num_workers = std::min(pub_keys_indexes.size(), CHECKPOINT_QUORUM_SIZE);
       }
       else
       {
@@ -1516,18 +1495,15 @@ namespace service_nodes
     return true;
   }
   //----------------------------------------------------------------------------
-  bool service_node_list::alt_block_added(cryptonote::block const &block, std::vector<cryptonote::transaction> const &txs, cryptonote::checkpoint_t const *checkpoint)
+  void service_node_list::alt_block_added(cryptonote::block const &block, std::vector<cryptonote::transaction> const &txs)
   {
-    if (block.major_version < 16)
-      return true;
-
     uint64_t block_height = cryptonote::get_block_height(block);
     state_t const *starting_state = nullptr;
     crypto::hash const block_hash = get_block_hash(block);
 
     auto it = m_transient.alt_state.find(block_hash);
     if (it != m_transient.alt_state.end())
-      return true;
+      return;
 
     if (!starting_state)
     {
@@ -1544,16 +1520,17 @@ namespace service_nodes
         starting_state = &it->second;
     }
 
-    if (!starting_state)
+    if (starting_state)
     {
-      LOG_PRINT_L1("Received alr block but could not find parent state in historical state");
-      return false;
+      if (starting_state->block_hash != block.prev_id)
+      {
+        LOG_PRINT_L1("Unexpected state_t's hash: " << starting_state->block_hash << ", does not match the block prev hash: " << block.prev_id);
+        return;
+      }
     }
-
-    if (starting_state->block_hash != block.prev_id)
+    else
     {
-      LOG_PRINT_L1("Unexpected state_t's hash: " << starting_state->block_hash << ", does not match the block prev hash: " << block.prev_id);
-      return false;
+      return;
     }
 
     state_t alt_state = *starting_state;
@@ -1564,31 +1541,6 @@ namespace service_nodes
     else
       m_transient.alt_state.emplace(block_hash, std::move(alt_state));
 
-    if (checkpoint)
-    {
-      std::vector<std::shared_ptr<const service_nodes::quorum>> alt_quorums;
-      std::shared_ptr<const quorum> quorum = get_quorum(quorum_type::checkpointing, checkpoint->height, false, &alt_quorums);
-      if (!quorum)
-        return false;
-
-      if (!service_nodes::verify_checkpoint(block.major_version, *checkpoint, *quorum))
-      {
-        bool verified_on_alt_quorum = false;
-        for (std::shared_ptr<const service_nodes::quorum> alt_quorum : alt_quorums)
-        {
-          if (service_nodes::verify_checkpoint(block.major_version, *checkpoint, *alt_quorum))
-          {
-            verified_on_alt_quorum = true;
-            break;
-          }
-        }
-
-        if (!verified_on_alt_quorum)
-          return false;
-      }
-    }
-
-    return true;
   }
   //----------------------------------------------------------------------------
   static service_node_list::quorum_for_serialization serialize_quorum_state(uint8_t hard_fork_version, uint64_t height, quorum_manager const &quorums)
@@ -2035,7 +1987,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
 
       for (size_t i = 0; i < last_index; i++)
       {
-        state_serialized &entry = data_in.states[i];
+        state_serialized &entry = data_in.states[last_index];
         if (entry.block_hash == crypto::null_hash)
           entry.block_hash = m_blockchain.get_block_id_by_height(entry.height);
         m_transient.state_history.emplace_hint(m_transient.state_history.end(), this, std::move(entry));

@@ -31,7 +31,7 @@ namespace service_nodes
 
   constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
   constexpr size_t STATE_CHANGE_QUORUM_SIZE                        = 10;
-  constexpr int MIN_TIME_IN_S_BEFORE_VOTING                        = UPTIME_PROOF_MAX_TIME_IN_SECONDS;
+  constexpr ptrdiff_t MIN_TIME_IN_S_BEFORE_VOTING                  = UPTIME_PROOF_MAX_TIME_IN_SECONDS;
   constexpr size_t CHECKPOINT_QUORUM_SIZE                          = 20;
   constexpr size_t CHECKPOINT_MIN_VOTES                            = 13;
 

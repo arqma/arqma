@@ -178,12 +178,12 @@ public:
   void set_service_node_proof(const crypto::public_key &pubkey, const service_nodes::proof_info &proof) override { }
   bool remove_service_node_proof(const crypto::public_key &pubkey) override { return false; }
 
-  virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob, const cryptonote::blobdata *checkpoint) override {}
-  virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob, cryptonote::blobdata *checkpoint) override { return false; }
+  virtual void add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob) override {}
+  virtual bool get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob) override { return false; }
   virtual void remove_alt_block(const crypto::hash &blkid) override {}
   virtual uint64_t get_alt_block_count() override { return 0; }
   virtual void drop_alt_blocks() override {}
-  virtual bool for_all_alt_blocks(std::function<bool(const crypto::hash &blkid, const alt_block_data_t &data, const cryptonote::blobdata *block_blob, const cryptonote::blobdata *checkpoint_blob)> f, bool include_blob = false) const override { return true; }
+  virtual bool for_all_alt_blocks(std::function<bool(const crypto::hash &blkid, const alt_block_data_t &data, const cryptonote::blobdata *blob)> f, bool include_blob = false) const override { return true; }
 };
 
 }
