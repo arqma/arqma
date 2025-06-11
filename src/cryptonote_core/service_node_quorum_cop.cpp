@@ -196,6 +196,11 @@ namespace service_nodes
       return;
 
     service_nodes::quorum_type const max_quorum_type = service_nodes::max_quorum_type_for_hf(hard_fork_version);
+    bool tested_myself_once_per_block = false;
+
+    time_t start_time = m_core.get_start_time();
+    time_t const now = time(nullptr);
+    uint64_t const live_time = (now - m_core.get_start_time());
     for (int i = 0; i <= (int)max_quorum_type; i++)
     {
       quorum_type const type = static_cast<quorum_type>(i);
@@ -210,34 +215,41 @@ namespace service_nodes
 
         case quorum_type::obligations:
         {
-          time_t const now = time(nullptr);
-          bool alive_for_min_time = (now - m_core.get_start_time()) >= MIN_TIME_IN_S_BEFORE_VOTING;
-          if (!alive_for_min_time)
-            break;
-
           m_obligations_height = std::max(m_obligations_height, start_voting_from_height);
           for (; m_obligations_height < (height - REORG_SAFETY_BUFFER_IN_BLOCKS); m_obligations_height++)
           {
-            uint8_t const obligations_height_hard_fork_version = m_core.get_hard_fork_version(m_obligations_height);
-            if (obligations_height_hard_fork_version < cryptonote::network_version_16) continue;
+            uint8_t const obligations_height_hf_version = m_core.get_hard_fork_version(m_obligations_height);
+            if (obligations_height_hf_version < cryptonote::network_version_16)
+              continue;
 
-            if (obligations_height_hard_fork_version >= cryptonote::network_version_16)
+            if (obligations_height_hf_version >= cryptonote::network_version_16)
             {
-              if (auto quorum = m_core.get_quorum(quorum_type::checkpointing, m_obligations_height))
+              service_nodes::quorum_type checkpoint_type = quorum_type::checkpointing;
+              auto quorum = m_core.get_quorum(checkpoint_type, m_obligations_height);
+              std::vector<cryptonote::block> blocks;
+              if (quorum && m_core.get_blocks(m_obligations_height, 1, blocks))
               {
-                uint64_t quorum_height = offset_testing_quorum_height(quorum_type::checkpointing, m_obligations_height);
-                for (size_t index_in_quorum = 0; index_in_quorum < quorum->workers.size(); index_in_quorum++)
+                cryptonote::block const &block = blocks[0];
+                if (start_time < static_cast<ptrdiff_t>(block.timestamp)) // NOTE: If we started up before receiving the block, we likely have the voting information, if not we probab∑ly don't.
                 {
-                  crypto::public_key const &key = quorum->workers[index_in_quorum];
-                  m_core.record_checkpoint_vote(key, quorum_height, m_vote_pool.received_checkpoint_vote(m_obligations_height, index_in_quorum));
+                  uint64_t quorum_height = offset_testing_quorum_height(checkpoint_type, m_obligations_height);
+                  for (size_t index_in_quorum = 0; index_in_quorum < quorum->validators.size(); index_in_quorum++)
+                  {
+                    crypto::public_key const &key = quorum->validators[index_in_quorum];
+                    m_core.record_checkpoint_vote(key, quorum_height, m_vote_pool.received_checkpoint_vote(m_obligations_height, index_in_quorum));
+                  }
                 }
               }
             }
 
+            bool alive_for_min_time = live_time >= MIN_TIME_IN_S_BEFORE_VOTING;
+            if (!alive_for_min_time)
+              continue;
+
             if (!my_keys)
               continue;
 
-            auto quorum = m_core.get_quorum(quorum_type::obligations, m_obligations_height);
+            std::shared_ptr<const quorum> quorum = m_core.get_quorum(quorum_type::obligations, m_obligations_height);
             if (!quorum)
             {
               LOG_ERROR("Obligations quorum for height: " << m_obligations_height << " was not cached in daemon!");
@@ -245,20 +257,16 @@ namespace service_nodes
             }
 
             if (quorum->workers.empty()) continue;
+
             int index_in_group = voting_enabled ? find_index_in_quorum_group(quorum->validators, my_keys->pub) : -1;
             if (index_in_group >= 0)
             {
-              //
-              // NOTE: I am in the quorum
-              //
               auto worker_states = m_core.get_service_node_list_state(quorum->workers);
               auto worker_it = worker_states.begin();
               CRITICAL_REGION_LOCAL(m_lock);
               int good = 0, total = 0;
               for (size_t node_index = 0; node_index < quorum->workers.size(); ++worker_it, ++node_index)
               {
-                // If the SN no longer exists then it will be omitted from the worker_states vector,]
-                // so if the elements do not line up skip ahead.
                 while (worker_it->pubkey != quorum->workers[node_index] && node_index < quorum->workers.size())
                   node_index++;
                 if (node_index == quorum->workers.size())
@@ -271,8 +279,8 @@ namespace service_nodes
                 if (!info.can_be_voted_on(m_obligations_height))
                   continue;
 
-                auto test_results = check_service_node(obligations_height_hard_fork_version, node_key, info);
-                bool passed = test_results.passed();
+                auto test_results = check_service_node(obligations_height_hf_version, node_key, info);
+                bool passed       = test_results.passed();
 
                 if (test_results.uptime_proved && !test_results.voted_in_checkpoints
                     && m_core.get_nettype() == cryptonote::MAINNET
@@ -290,13 +298,15 @@ namespace service_nodes
                 if (passed) {
                   if (info.is_decommissioned()) {
                     vote_for_state = new_state::recommission;
-                    LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " is now passing required checks, voting to recommission");
+                    LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " is now passing required checks; voting to recommission");
                   } else if (!test_results.single_ip) {
-                    vote_for_state = new_state::ip_change_penalty;
-                    LOG_PRINT_L2("Service node: " << quorum->workers[node_index] << " was observed with multiple IPs recently, voting to reset reward position");
+                      // Don't worry about this if the SN is getting recommissioned (above) -- it'll
+                      // already reenter at the bottom.
+                      vote_for_state = new_state::ip_change_penalty;
+                      LOG_PRINT_L2("Service node " << quorum->workers[node_index] << " was observed with multiple IPs recently; voting to reset reward position");
                   } else {
-                    good++;
-                    continue;
+                      good++;
+                      continue;
                   }
 
                 }
@@ -306,26 +316,28 @@ namespace service_nodes
 
                   if (info.is_decommissioned()) {
                     if (credit >= 0) {
-                      LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " is still not passing required checks, but has remaining credit ("
-                                                                  << credit << " blocks); abstaining (to leave decommissioned)");
+                      LOG_PRINT_L2("Decommissioned service node "
+                                   << quorum->workers[node_index]
+                                   << " is still not passing required checks, but has remaining credit (" << credit
+                                   << " blocks); abstaining (to leave decommissioned)");
                       continue;
                     }
 
                     LOG_PRINT_L2("Decommissioned service node " << quorum->workers[node_index] << " has no remaining credit; voting to deregister");
-                    vote_for_state = new_state::deregister; // Credit ran out!
-                  }
-                  else
-                  {
+                    vote_for_state = new_state::deregister;
+                  } else {
                     if (credit >= DECOMMISSION_MINIMUM) {
                       vote_for_state = new_state::decommission;
-                      LOG_PRINT_L2("Service node " << quorum->workers[node_index] << " has stopped passing required checks, but has sufficient earned credit ("
-                                                   << credit << " blocks) to avoid deregistration; voting to decommission");
-                    }
-                    else
-                    {
+                      LOG_PRINT_L2("Service node "
+                                   << quorum->workers[node_index]
+                                   << " has stopped passing required checks, but has sufficient earned credit (" << credit << " blocks) to avoid deregistration; voting to decommission");
+                    } else {
                       vote_for_state = new_state::deregister;
-                      LOG_PRINT_L2("Service node " << quorum->workers[node_index] << " has stopped passing required checks, but does not have sufficient earned credit ("
-                                                   << credit << " blocks, " << DECOMMISSION_MINIMUM << " required) to decommission; voting to deregister");
+                      LOG_PRINT_L2("Service node "
+                                   << quorum->workers[node_index]
+                                   << " has stopped passing required checks, but does not have sufficient earned credit ("
+                                   << credit << " blocks, " << DECOMMISSION_MINIMUM
+                                   << " required) to decommission; voting to deregister");
                     }
                   }
                 }
@@ -333,10 +345,45 @@ namespace service_nodes
                 quorum_vote_t vote = service_nodes::make_state_change_vote(m_obligations_height, static_cast<uint16_t>(index_in_group), node_index, vote_for_state, *my_keys);
                 cryptonote::vote_verification_context vvc;
                 if (!handle_vote(vote, vvc))
-                  LOG_ERROR("Failed to add uptime check_state vote; reason: " << print_vote_verification_context(vvc, &vote));
+                  LOG_ERROR("Failed to add state change vote; reason: " << print_vote_verification_context(vvc, &vote));
               }
               if (good > 0)
                 LOG_PRINT_L2(good << " of " << total << " service nodes are active and passing checks; no state change votes required");
+            }
+            else if (!tested_myself_once_per_block && find_index_in_quorum_group(quorum->workers, my_keys->pub))
+            {
+              tested_myself_once_per_block = true;
+              // NOTE: Not in validating quorum , check if we're the ones
+              // being tested. If so, check if we would be decommissioned
+              // based on _our_ data and if so, report it to the user so they
+              // know about it.
+
+              const auto states_array = m_core.get_service_node_list_state({my_keys->pub});
+              if (states_array.size())
+              {
+                const auto &info     = *states_array[0].info;
+                auto my_test_results = check_service_node(obligations_height_hf_version, my_keys->pub, info);
+
+                if (info.is_active())
+                {
+                  if (!my_test_results.passed())
+                  {
+                    // NOTE: Don't warn uptime proofs if the daemon is just
+                    // recently started and is candidate for testing (i.e.
+                    // restarting the daemon)
+                    if (!my_test_results.uptime_proved && live_time < ARQMA_HOUR(1))
+                        continue;
+
+                    LOG_PRINT_L0("Service Node (yours) is active but is not passing tests for quorum: " << m_obligations_height);
+                    LOG_PRINT_L0(my_test_results.why());
+                  }
+                }
+                else if (info.is_decommissioned())
+                {
+                  LOG_PRINT_L0("Service Node (yours) is currently decommissioned and being tested in quorum: " << m_obligations_height);
+                  LOG_PRINT_L0(my_test_results.why());
+                }
+              }
             }
           }
         }
@@ -353,7 +400,8 @@ namespace service_nodes
             m_last_checkpointed_height = std::max(start_checkpointing_height, m_last_checkpointed_height);
             for (; m_last_checkpointed_height <= height; m_last_checkpointed_height += CHECKPOINT_INTERVAL)
             {
-              if (m_core.get_hard_fork_version(m_last_checkpointed_height) <= cryptonote::network_version_16)
+              uint8_t checkpointed_height_hf_version = m_core.get_hard_fork_version(m_last_checkpointed_height);
+              if (checkpointed_height_hf_version <= cryptonote::network_version_16)
                 continue;
 
               if (m_last_checkpointed_height < REORG_SAFETY_BUFFER_IN_BLOCKS)
@@ -366,14 +414,14 @@ namespace service_nodes
                 continue;
               }
 
-              int index_in_group = find_index_in_quorum_group(quorum->workers, my_keys->pub);
+              int index_in_group = find_index_in_quorum_group(quorum->validators, my_keys->pub);
               if (index_in_group <= -1) continue;
 
               //
               // NOTE: I am in the quorum, handle checkpointing
               //
               crypto::hash block_hash = m_core.get_block_id_by_height(m_last_checkpointed_height);
-              quorum_vote_t vote = make_checkpointing_vote(block_hash, m_last_checkpointed_height, static_cast<uint16_t>(index_in_group), *my_keys);
+              quorum_vote_t vote = make_checkpointing_vote(checkpointed_height_hf_version, block_hash, m_last_checkpointed_height, static_cast<uint16_t>(index_in_group), *my_keys);
               cryptonote::vote_verification_context vvc = {};
               if (!handle_vote(vote, vvc))
                 LOG_ERROR("Failed to add checkpoint vote reason: " << print_vote_verification_context(vvc, &vote));
@@ -406,7 +454,7 @@ namespace service_nodes
       return true;
     }
 
-    uint8_t const hard_fork_version = core.get_blockchain_storage().get_current_hard_fork_version();
+    uint8_t const hf_version = core.get_blockchain_storage().get_current_hard_fork_version();
 
     // NOTE: Verify state change is still valid or have we processed some other state change already that makes it invalid
     {
@@ -428,7 +476,7 @@ namespace service_nodes
     cryptonote::transaction state_change_tx{};
     if (cryptonote::add_service_node_state_change_to_tx_extra(state_change_tx.extra, state_change))
     {
-      state_change_tx.version = cryptonote::transaction::get_max_version_for_hf(hard_fork_version);
+      state_change_tx.version = cryptonote::transaction::get_max_version_for_hf(hf_version);
       state_change_tx.tx_type = cryptonote::txtype::state_change;
 
       cryptonote::tx_verification_context tvc{};
@@ -461,6 +509,18 @@ namespace service_nodes
 
     cryptonote::checkpoint_t checkpoint{};
     cryptonote::Blockchain &blockchain = core.get_blockchain_storage();
+
+    // NOTE: Multiple network threads are going to try and update the
+    // checkpoint, blockchain.update_checkpoint does NOT do any
+    // validation- that is done here since we want to keep code for
+    // converting votes to data suitable for the DB in service node land.
+
+    // So then, multiple threads can race to update the checkpoint. One
+    // thread could retrieve an outdated checkpoint whilst another has
+    // already updated it. i.e. we could replace a checkpoint with lesser
+    // votes prematurely. The actual update in the DB is an atomic
+    // operation, but this check and validation step is NOT, taking the
+    // lock here makes it so.
 
     std::unique_lock<cryptonote::Blockchain> lock{blockchain};
 
@@ -513,16 +573,7 @@ namespace service_nodes
   bool quorum_cop::handle_vote(quorum_vote_t const &vote, cryptonote::vote_verification_context &vvc)
   {
     vvc = {};
-    uint64_t curr_height = m_core.get_blockchain_storage().get_current_blockchain_height();
-    if (m_core.get_nettype() == cryptonote::MAINNET &&
-        curr_height >= HF_VERSION_16_CHECKPOINTING_SOFT_FORK_HEIGHT &&
-        vote.block_height < HF_VERSION_16_CHECKPOINTING_SOFT_FORK_HEIGHT)
-    {
-      return true;
-    }
-
-    uint64_t const latest_height = std::max(m_core.get_current_blockchain_height(), m_core.get_target_blockchain_height());
-    if (!verify_vote_age(vote, latest_height, vvc))
+    if (!verify_vote_age(vote, m_core.get_current_blockchain_height(), vvc))
       return false;
 
     std::shared_ptr<const quorum> quorum = m_core.get_quorum(vote.type, vote.block_height);
@@ -532,7 +583,7 @@ namespace service_nodes
       return false;
     }
 
-    if (!verify_vote_signature(vote, vvc, *quorum))
+    if (!verify_vote_signature(m_core.get_hard_fork_version(vote.block_height), vote, vvc, *quorum))
       return false;
 
     std::vector<pool_vote_entry> votes = m_vote_pool.add_pool_vote_if_unique(vote, vvc);

@@ -1010,7 +1010,7 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<block_extended_info>
   while (m_db->top_block_hash() != alt_chain.front().bl.prev_id)
   {
     block b = pop_block_from_blockchain();
-    disconnected_chain.push_back(b);
+    disconnected_chain.push_front(b);
   }
 
   auto split_height = m_db->height();
@@ -1038,11 +1038,8 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<block_extended_info>
       // just the latter (because the rollback was done above).
       rollback_blockchain_switching(disconnected_chain, split_height);
 
-      // FIXME: Why do we keep invalid blocks around?  Possibly in case we hear
-      // about them again so we can immediately dismiss them, but needs some
-      // looking into.
       const crypto::hash blkid = cryptonote::get_block_hash(bei.bl);
-      add_block_as_invalid(bei, blkid);
+      add_block_as_invalid(bei.bl);
       MERROR("Block was inserted as invalid while connecting new alt chain, block_id: " << blkid);
       m_db->remove_alt_block(blkid);
       alt_ch_iter++;
@@ -1050,8 +1047,7 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<block_extended_info>
       for(auto alt_ch_to_orph_iter = alt_ch_iter; alt_ch_to_orph_iter != alt_chain.end(); )
       {
         const auto &bei = *alt_ch_to_orph_iter++;
-        const crypto::hash blkid = cryptonote::get_block_hash(bei.bl);
-        add_block_as_invalid(bei, blkid);
+        add_block_as_invalid(bei.bl);
         m_db->remove_alt_block(blkid);
       }
       return false;
@@ -1735,7 +1731,7 @@ bool Blockchain::build_alt_chain(const crypto::hash &prev_id, std::list<block_ex
   cryptonote::blobdata blob;
   bool found = m_db->get_alt_block(prev_id, &data, &blob);
   timestamps.clear();
-  while (found)
+  while(found)
   {
     block_extended_info bei;
     CHECK_AND_ASSERT_MES(cryptonote::parse_and_validate_block_from_blob(blob, bei.bl), false, "Failed to parse Alt Block");
@@ -1811,7 +1807,8 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
       }
       else
       {
-        MERROR_VER("Block with id: " << id << std::endl << " can't be accepted for alternative chain, block height: " << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
+        MERROR_VER("Block with id: " << id << std::endl << " can NOT be accepted for alternative chain, block_height: "
+                   << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
         bvc.m_verification_failed = true;
         return false;
       }
@@ -1916,8 +1913,6 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     }
     bei.cumulative_difficulty += current_diff;
 
-    // add block to alternate blocks storage,
-    // as well as the current "alt chain" container
     CHECK_AND_ASSERT_MES(!m_db->get_alt_block(id, NULL, NULL), false, "insertion of new alternative block returned as it already exists");
     cryptonote::alt_block_data_t data;
     data.height = bei.height;
@@ -1944,7 +1939,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     }
 
     bool checkpointed = has_checkpoint || is_a_checkpoint;
-    if (checkpointed || (main_chain_cumulative_difficulty < bei.cumulative_difficulty)) // check if difficulty bigger then in main chain
+    if (checkpointed || (main_chain_cumulative_difficulty < bei.cumulative_difficulty))
     {
       if (checkpointed)
       {
@@ -1963,7 +1958,6 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
       else
         MGINFO_GREEN("###### REORGANIZE on height: " << alt_chain.front().height << " of " << m_db->height() - 1 << " with cum_difficulty " << m_db->get_block_cumulative_difficulty(m_db->height() - 1) << std::endl << " alternative blockchain size: " << alt_chain.size() << " with cum_difficulty " << bei.cumulative_difficulty);
 
-      // NOTE: No longer discard chains, because we can reorg the last 2 Service Node checkpoints, so checkpointed chains aren't always final
       bool r = switch_to_alternative_blockchain(alt_chain);
       if (r)
         bvc.m_added_to_main_chain = true;
@@ -1973,7 +1967,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     }
     else
     {
-      std::vector<transaction> txs;
+      std::vector<transaction>  txs;
       std::vector<crypto::hash> missed;
       if (!get_transactions(b.tx_hashes, txs, missed))
       {
@@ -2111,9 +2105,6 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
     //pack block
     e.block = std::move(bl.first);
   }
-
-  // get and pack other transactions, if needed
-  get_transactions_blobs(arg.txs, rsp.txs, rsp.missed_ids);
 
   return true;
 }
@@ -2566,21 +2557,13 @@ bool Blockchain::find_blockchain_supplement(const uint64_t req_start_block, cons
   return true;
 }
 //------------------------------------------------------------------
-bool Blockchain::add_block_as_invalid(const block& bl, const crypto::hash& h)
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  block_extended_info bei{};
-  bei.bl = bl;
-  return add_block_as_invalid(bei, h);
-}
-//------------------------------------------------------------------
-bool Blockchain::add_block_as_invalid(const block_extended_info& bei, const crypto::hash& h)
+bool Blockchain::add_block_as_invalid(cryptonote::block const &block)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   auto lock = tools::unique_lock(*this);
-  auto i_res = m_invalid_blocks.insert(std::map<crypto::hash, block_extended_info>::value_type(h, bei));
-  CHECK_AND_ASSERT_MES(i_res.second, false, "at insertion invalid by tx returned status existed");
-  MINFO("BLOCK ADDED AS INVALID: " << h << std::endl << ", prev_id=" << bei.bl.prev_id << ", m_invalid_blocks count=" << m_invalid_blocks.size());
+  auto i_res = m_invalid_blocks.insert(get_block_hash(block));
+  CHECK_AND_ASSERT_MES(i_res.second, false, "at insertion invalid block returned status failed");
+  MINFO("BLOCK ADDED AS INVALID: " << (*i_res.first) << std::endl << ", prev_id=" << block.prev_id << ", m_invalid_blocks count=" << m_invalid_blocks.size());
   return true;
 }
 //------------------------------------------------------------------
@@ -4009,7 +3992,7 @@ leave:
         MERROR_VER("Block with id: " << id  << " has at least one transaction (id: " << tx_id << ") with wrong inputs.");
 
         //TODO: why is this done?  make sure that keeping invalid blocks makes sense.
-        add_block_as_invalid(bl, id);
+        add_block_as_invalid(bl);
         MERROR_VER("Block with id " << id << " added as invalid because of wrong inputs in transactions");
         MERROR_VER("tx_index " << tx_index << ", m_blocks_txs_check " << m_blocks_txs_check.size() << ":");
         for (const auto &h: m_blocks_txs_check) MERROR_VER("  " << h);
@@ -4027,7 +4010,7 @@ leave:
       {
         MERROR_VER("Block with id: " << id << " has at least one transaction (id: " << tx_id << ") with wrong inputs.");
         //TODO: why is this done?  make sure that keeping invalid blocks makes sense.
-        add_block_as_invalid(bl, id);
+        add_block_as_invalid(bl);
         MERROR_VER("Block with id " << id << " added as invalid because of wrong inputs in transactions");
         bvc.m_verification_failed = true;
         return_tx_to_pool(txs);

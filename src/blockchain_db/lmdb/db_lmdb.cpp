@@ -4629,10 +4629,10 @@ void BlockchainLMDB::add_alt_block(const crypto::hash &blkid, const cryptonote::
 
   MDB_val k = {sizeof(blkid), (void *)&blkid};
   const size_t val_size = sizeof(alt_block_data_t) + blob.size();
+
   std::unique_ptr<char[]> val(new char[val_size]);
   memcpy(val.get(), &data, sizeof(alt_block_data_t));
   memcpy(val.get() + sizeof(alt_block_data_t), blob.data(), blob.size());
-
   MDB_val v = {val_size, (void *)val.get()};
   if(auto result = mdb_cursor_put(m_cur_alt_blocks, &k, &v, MDB_NODUPDATA)) {
     if(result == MDB_KEYEXIST)
@@ -4658,7 +4658,7 @@ bool BlockchainLMDB::get_alt_block(const crypto::hash &blkid, alt_block_data_t *
 
   if(result)
     throw0(DB_ERROR(lmdb_error("Error attempting to retrieve alternate block " + epee::string_tools::pod_to_hex(blkid) + " from the db: ", result).c_str()));
-  if (v.mv_size < sizeof(alt_block_data_t))
+  if(v.mv_size < sizeof(alt_block_data_t))
     throw0(DB_ERROR("Record size is less than expected"));
 
   const alt_block_data_t *ptr = (const alt_block_data_t*)v.mv_data;

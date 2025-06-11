@@ -51,31 +51,6 @@
 
 namespace service_nodes
 {
-  bool convert_deregister_vote_to_legacy(quorum_vote_t const &vote, legacy_deregister_vote &legacy_vote)
-  {
-    if (vote.type != quorum_type::obligations || vote.state_change.state != new_state::deregister)
-      return false;
-
-    legacy_vote.block_height           = vote.block_height;
-    legacy_vote.service_node_index     = vote.state_change.worker_index;
-    legacy_vote.voters_quorum_index    = vote.index_in_group;
-    legacy_vote.signature              = vote.signature;
-    return true;
-  }
-
-  quorum_vote_t convert_legacy_deregister_vote(legacy_deregister_vote const &vote)
-  {
-    quorum_vote_t result             = {};
-    result.type                      = quorum_type::obligations;
-    result.block_height              = vote.block_height;
-    result.signature                 = vote.signature;
-    result.group                     = quorum_group::validator;
-    result.index_in_group            = vote.voters_quorum_index;
-    result.state_change.worker_index = vote.service_node_index;
-    result.state_change.state        = new_state::deregister;
-    return result;
-  }
-
   static crypto::hash make_state_change_vote_hash(uint64_t block_height, uint32_t service_node_index, new_state state)
   {
     uint16_t state_int = static_cast<uint16_t>(state);
@@ -203,13 +178,15 @@ namespace service_nodes
     uint64_t validator_index_tracker = -1;
     for (const auto& vote : state_change.votes)
     {
-      if (validator_index_tracker >= vote.validator_index)
       {
-        vvc.m_votes_not_sorted = true;
-        LOG_PRINT_L1("Vote validator index is not stored in ascending order, prev validator index: " << validator_index_tracker << ", curr index: " << vote.validator_index);
-        return bad_tx(tvc);
+        if (validator_index_tracker >= vote.validator_index)
+        {
+          vvc.m_votes_not_sorted = true;
+          LOG_PRINT_L1("Vote validator index is not stored in ascending order, prev validator index: " << validator_index_tracker << ", curr index: " << vote.validator_index);
+          return bad_tx(tvc);
+        }
+        validator_index_tracker = vote.validator_index;
       }
-      validator_index_tracker = vote.validator_index;
 
       if (!bounds_check_validator_index(quorum, vote.validator_index, &vvc))
         return bad_tx(tvc);
@@ -252,7 +229,10 @@ namespace service_nodes
       std::array<size_t, service_nodes::CHECKPOINT_QUORUM_SIZE> unique_vote_set = {};
       for (service_nodes::voter_to_signature const &voter_to_signature : checkpoint.signatures)
       {
-        if (!bounds_check_worker_index(quorum, voter_to_signature.voter_index, nullptr)) return false;
+        service_nodes::voter_to_signature const &voter_to_signature = checkpoint.signatures[i];
+
+        if (!bounds_check_validator_index(quorum, voter_to_signature.voter_index, nullptr))
+          return false;
 
         if (unique_vote_set[voter_to_signature.voter_index]++)
         {
@@ -260,7 +240,7 @@ namespace service_nodes
           return false;
         }
 
-        crypto::public_key const &key = quorum.workers[voter_to_signature.voter_index];
+        crypto::public_key const &key = quorum.validators[voter_to_signature.voter_index];
         if (!crypto::check_signature(checkpoint.block_hash, key, voter_to_signature.signature))
         {
           LOG_PRINT_L1("Invalid signature for votes");
@@ -293,13 +273,13 @@ namespace service_nodes
     return result;
   }
 
-  quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys)
+  quorum_vote_t make_checkpointing_vote(uint8_t hard_fork_version, crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys)
   {
     quorum_vote_t result         = {};
     result.type                  = quorum_type::checkpointing;
     result.checkpoint.block_hash = block_hash;
     result.block_height          = block_height;
-    result.group                 = quorum_group::worker;
+    result.group                 = quorum_group::validator;
     result.index_in_group        = index_in_quorum;
     result.signature             = make_signature_from_vote(result, keys);
     return result;
@@ -340,10 +320,10 @@ namespace service_nodes
     return result;
   }
 
-  bool verify_vote_signature(const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::quorum &quorum)
+  bool verify_vote_signature(uint8_t hard_fork_version, const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::quorum &quorum)
   {
     bool result = true;
-    if (vote.type >= quorum_type::_count)
+    if (vote.type >= tools::enum_top<quorum_type>)
     {
       vvc.m_invalid_vote_type = true;
       result = false;
@@ -397,15 +377,15 @@ namespace service_nodes
 
       case quorum_type::checkpointing:
       {
-        if (vote.group != quorum_group::worker)
+        if (vote.group != quorum_group::validator)
         {
-          LOG_PRINT_L1("Vote received specifies incorrect voting group, expected vote from worker");
+          LOG_PRINT_L1("Vote received specifies incorrect voting group");
           vvc.m_incorrect_voting_group = true;
           return false;
         }
         else
         {
-          key = quorum.workers[vote.index_in_group];
+          key = quorum.validators[vote.index_in_group];
           hash = vote.checkpoint.block_hash;
         }
       }
@@ -416,7 +396,11 @@ namespace service_nodes
       return result;
 
     result = crypto::check_signature(hash, key, vote.signature);
-    if (!result)
+    if (result)
+      MDEBUG("Signature accepted for " << vote.type << " voter " << vote.index_in_group << "/" << key
+              << (vote.type == quorum_type::obligations ? " voting for worker " + std::to_string(vote.state_change.worker_index) : "")
+              << " at height " << vote.block_height);
+    else
       vvc.m_signature_not_valid = true;
 
     return result;
@@ -583,6 +567,62 @@ namespace service_nodes
     }
 
     return false;
+  }
+
+  void vote_to_blob(const quorum_vote_t& vote, unsigned char blob[])
+  {
+    blob[0] = vote.version;
+    blob[1] = static_cast<uint8_t>(vote.type);
+    for (size_t i = 2; i < 8; i++)
+      blob[i] = 0; // padding
+    {
+      uint64_t height = boost::endian::native_to_little(vote.block_height);
+      std::memcpy(&blob[8], &height, 8);
+    }
+    blob[16] = static_cast<uint8_t>(vote.group);
+    blob[17] = 0; // padding
+    {
+      uint16_t iig = boost::endian::native_to_little(vote.index_in_group);
+      std::memcpy(&blob[18], &iig, 2);
+    }
+    std::memcpy(&blob[20], &vote.signature, 64);
+    for (size_t i = 84; i < 88; i++)
+      blob[i] = 0; // padding
+    if (vote.type == quorum_type::checkpointing)
+    {
+      std::memcpy(&blob[84], &vote.checkpoint, 32);
+      for (size_t i = 116; i < 120; i++)
+        blob[i] = 0; // padding
+    }
+    else
+    {
+      uint16_t wi = boost::endian::native_to_little(vote.state_change.worker_index);
+      uint16_t st = boost::endian::native_to_little(static_cast<uint16_t>(vote.state_change.state));
+      std::memcpy(&blob[84], &wi, 2);
+      std::memcpy(&blob[86], &st, 2);
+      for (size_t i = 88; i < 120; i++)
+        blob[i] = 0;
+    }
+  }
+
+  void blob_to_vote(const unsigned char blob[], quorum_vote_t& vote)
+  {
+    vote.version = blob[0];
+    vote.type = static_cast<quorum_type>(blob[1]);
+    std::memcpy(&vote.block_height, &blob[8], 8); boost::endian::little_to_native_inplace(vote.block_height);
+    vote.group = static_cast<quorum_group>(blob[16]);
+    std::memcpy(&vote.index_in_group, &blob[18], 2); boost::endian::little_to_native_inplace(vote.index_in_group);
+    std::memcpy(&vote.signature, &blob[20], 64);
+    if (vote.type == quorum_type::checkpointing)
+    {
+      std::memcpy(&vote.checkpoint, &blob[84], 32);
+    }
+    else
+    {
+      std::memcpy(&vote.state_change.worker_index, &blob[84], 2); boost::endian::little_to_native_inplace(vote.state_change.worker_index);
+      uint16_t st;
+      std::memcpy(&st, &blob[86], 2); vote.state_change.state = static_cast<new_state>(boost::endian::little_to_native(st));
+    }
   }
 }; // namespace service_nodes
 

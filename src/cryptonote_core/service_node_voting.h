@@ -61,7 +61,6 @@ namespace service_nodes
     obligations = 0,
     checkpointing,
     _count,
-    rpc_request_all_quorums_sentinel_value = 255,
   };
 
   inline std::ostream &operator<<(std::ostream &os, quorum_type v)
@@ -89,15 +88,35 @@ namespace service_nodes
       state_change_vote state_change;
       checkpoint_vote checkpoint;
     };
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(version)
+      KV_SERIALIZE_ENUM(type)
+      KV_SERIALIZE(block_height)
+      KV_SERIALIZE_ENUM(group)
+      KV_SERIALIZE(index_in_group)
+      KV_SERIALIZE_VAL_POD_AS_BLOB(signature)
+      if (this_ref.type == quorum_type::checkpointing)
+      {
+        KV_SERIALIZE_VAL_POD_AS_BLOB_N(checkpoint.block_hash, "checkpoint")
+      }
+      else
+      {
+        KV_SERIALIZE(state_change.worker_index)
+        KV_SERIALIZE_ENUM(state_change.state)
+      }
+    END_KV_SERIALIZE_MAP()
   };
 
-  struct service_node_keys;
+  void vote_to_blob(const quorum_vote_t& vote, unsigned char blob[]);
+  void blob_to_vote(const unsigned char blob[], quorum_vote_t& vote);
 
   struct voter_to_signature
   {
     voter_to_signature() = default;
     voter_to_signature(quorum_vote_t const &vote) : voter_index(vote.index_in_group), signature(vote.signature) { }
     uint16_t voter_index;
+    char padding[6];
     crypto::signature signature;
     BEGIN_SERIALIZE()
       FIELD(voter_index)
@@ -105,14 +124,16 @@ namespace service_nodes
     END_SERIALIZE()
   };
 
+  struct service_node_keys;
+
   quorum_vote_t make_state_change_vote(uint64_t block_height, uint16_t index_in_group, uint16_t worker_index, new_state state, const service_node_keys &keys);
-  quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
+  quorum_vote_t make_checkpointing_vote(uint8_t hard_fork_version, crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
   cryptonote::checkpoint_t make_empty_service_node_checkpoint(crypto::hash const &block_hash, uint64_t height);
 
   bool verify_checkpoint(cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum);
   bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context& vvc, const service_nodes::quorum &quorum);
   bool verify_vote_age(const quorum_vote_t& vote, uint64_t latest_height, cryptonote::vote_verification_context &vvc);
-  bool verify_vote_signature(const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::quorum &quorum);
+  bool verify_vote_signature(uint8_t hard_fork_version, const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::quorum &quorum);
   crypto::signature make_signature_from_vote(quorum_vote_t const &vote, const service_node_keys &keys);
   crypto::signature make_signature_from_tx_change_state(cryptonote::tx_extra_service_node_state_change const &state_change, const service_node_keys &keys);
 
@@ -126,9 +147,6 @@ namespace service_nodes
     uint32_t          voters_quorum_index;
     crypto::signature signature;
   };
-
-  bool           convert_deregister_vote_to_legacy(quorum_vote_t const &vote, legacy_deregister_vote &legacy);
-  quorum_vote_t  convert_legacy_deregister_vote   (legacy_deregister_vote const &vote);
 
   struct pool_vote_entry
   {
