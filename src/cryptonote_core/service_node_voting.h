@@ -130,7 +130,7 @@ namespace service_nodes
   quorum_vote_t make_checkpointing_vote(uint8_t hard_fork_version, crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
   cryptonote::checkpoint_t make_empty_service_node_checkpoint(crypto::hash const &block_hash, uint64_t height);
 
-  bool verify_checkpoint(cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum);
+  bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum);
   bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context& vvc, const service_nodes::quorum &quorum);
   bool verify_vote_age(const quorum_vote_t& vote, uint64_t latest_height, cryptonote::vote_verification_context &vvc);
   bool verify_vote_signature(uint8_t hard_fork_version, const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::quorum &quorum);

@@ -210,40 +210,55 @@ namespace service_nodes
     return true;
   }
 
-  bool verify_checkpoint(cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum)
+  bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum)
   {
     if (checkpoint.type == cryptonote::checkpoint_type::service_node)
     {
+      if ((checkpoint.height % service_nodes::CHECKPOINT_INTERVAL) != 0)
+      {
+        LOG_PRINT_L1("Checkpoint given but not expecting a checkpoint at height: " << checkpoint.height);
+        return false;
+      }
+
       if (checkpoint.signatures.size() < service_nodes::CHECKPOINT_MIN_VOTES)
       {
-        LOG_PRINT_L1("Checkpoint has insufficient signatures to be considered");
+        LOG_PRINT_L1("Checkpoint has insufficient signatures to be considered at height: " << checkpoint.height);
         return false;
       }
 
       if (checkpoint.signatures.size() > service_nodes::CHECKPOINT_QUORUM_SIZE)
       {
-        LOG_PRINT_L1("Checkpoint has too many signatures to be considered");
+        LOG_PRINT_L1("Checkpoint has too many signatures to be considered at height: " << checkpoint.height);
         return false;
       }
 
       std::array<size_t, service_nodes::CHECKPOINT_QUORUM_SIZE> unique_vote_set = {};
-      for (service_nodes::voter_to_signature const &voter_to_signature : checkpoint.signatures)
+      for (size_t i = 0; i < checkpoint.signatures.size(); i++)
       {
         service_nodes::voter_to_signature const &voter_to_signature = checkpoint.signatures[i];
+        if (hard_fork_version >= cryptonote::network_version_16 && i < (checkpoint.signatures.size() - 1))
+        {
+          auto curr = checkpoint.signatures[i].voter_index;
+          auto next = checkpoint.signatures[i + 1].voter_index;
 
-        if (!bounds_check_validator_index(quorum, voter_to_signature.voter_index, nullptr))
-          return false;
+          if (curr >= next)
+          {
+            LOG_PRINT_L1("Voters in checkpoints are not given in ascending order, checkpoint failed verification at height: " << checkpoint.height);
+            return false;
+          }
+        }
 
+        if (!bounds_check_validator_index(quorum, voter_to_signature.voter_index, nullptr)) return false;
+        crypto::public_key const &key = quorum.validators[voter_to_signature.voter_index];
         if (unique_vote_set[voter_to_signature.voter_index]++)
         {
-          LOG_PRINT_L1("Voter quorum index is duplicated: " << voter_to_signature.voter_index);
+          LOG_PRINT_L1("Voter: " << epee::string_tools::pod_to_hex(key) << ", quorum index is duplicated: " << voter_to_signature.voter_index << ", checkpoint failed verification at height: " << checkpoint.height);
           return false;
         }
 
-        crypto::public_key const &key = quorum.validators[voter_to_signature.voter_index];
         if (!crypto::check_signature(checkpoint.block_hash, key, voter_to_signature.signature))
         {
-          LOG_PRINT_L1("Invalid signature for votes");
+          LOG_PRINT_L1("Invalid signatures for votes, checkpoint failed verification at height: " << checkpoint.height << " for voter: " << epee::string_tools::pod_to_hex(key));
           return false;
         }
       }
