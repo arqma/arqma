@@ -2499,13 +2499,13 @@ namespace cryptonote
 
     bool at_least_one_succeeded = false;
     res.quorums.reserve(std::min((uint64_t)16, count));
-    for (size_t height = start; height != start;)
+    for (size_t height = start; height != end;)
     {
       uint8_t hard_fork_version = m_core.get_hard_fork_version(height);
       if (hard_fork_version != HardFork::INVALID_HARD_FORK_VERSION_FOR_HEIGHT)
       {
         auto start_quorum_iterator = static_cast<service_nodes::quorum_type>(0);
-        auto end_quorum_iterator = static_cast<service_nodes::quorum_type>(1);
+        auto end_quorum_iterator = service_nodes::max_quorum_type_for_hf(hard_fork_version);
 
         if (req.quorum_type != COMMAND_RPC_GET_QUORUM_STATE::ALL_QUORUMS_SENTINEL_VALUE)
         {

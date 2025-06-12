@@ -1095,7 +1095,7 @@ namespace service_nodes
     return true;
   }
 
-  static quorum_manager generate_quorums(cryptonote::network_type nettype, service_node_list::state_t const &state, cryptonote::block const &block)
+  static quorum_manager generate_quorums(service_node_list::state_t const &state, cryptonote::block const &block)
   {
     quorum_manager result = {};
     crypto::hash block_hash;
@@ -1103,7 +1103,6 @@ namespace service_nodes
     uint64_t const height = cryptonote::get_block_height(block);
     assert(state.height == height + 1);
 
-    uint8_t const hf_ver = block.major_version;
     if (!cryptonote::get_block_hash(block, block_hash))
     {
       MERROR("Block height: " << height << " returned null hash");
@@ -1114,7 +1113,7 @@ namespace service_nodes
     decltype(active_snode_list) decomm_snode_list;
     decomm_snode_list = state.decommissioned_service_nodes_infos();
 
-    quorum_type const max_quorum_type = max_quorum_type_for_hf(hf_ver);
+    quorum_type const max_quorum_type = max_quorum_type_for_hf(block.major_version);
     for (int type_int = 0; type_int <= (int)max_quorum_type; type_int++)
     {
       auto type = static_cast<quorum_type>(type_int);
@@ -1178,7 +1177,6 @@ namespace service_nodes
     assert(height == block_height);
     quorums = {};
     block_hash = cryptonote::get_block_hash(block);
-    uint8_t const hf_ver = block.major_version;
 
     // Remove expired blacklisted key images
     for (auto entry = key_image_blacklist.begin(); entry != key_image_blacklist.end();)
@@ -1266,6 +1264,7 @@ namespace service_nodes
         }
       }
     }
+    quorums = generate_quorums(*this, block);
   }
 
   void service_node_list::process_block(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)

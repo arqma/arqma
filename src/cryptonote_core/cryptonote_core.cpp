@@ -232,7 +232,7 @@ namespace cryptonote
     "store-quorum-history"
   , "Store the Service Node Quorum history for the last N blocks. "
     "Specify the number of blocks or 1 to store the entire history."
-  , 25};
+  , 5};
   //-----------------------------------------------------------------------------------------------
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
