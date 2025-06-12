@@ -93,6 +93,9 @@ namespace service_nodes
       return;
     }
 
+    m_rescanning = true;
+    ARQMA_DEFER { m_rescanning = false; };
+
     auto scan_start = std::chrono::high_resolution_clock::now();
     uint64_t chain_height = m_blockchain.get_current_blockchain_height();
     uint64_t current_height = chain_height - 1;
@@ -571,7 +574,7 @@ namespace service_nodes
         info.decommission_count++;
         info.swarm_id = UNASSIGNED_SWARM_ID;
 
-        if (sn_list)
+        if (sn_list && !sn_list->m_rescanning)
         {
           auto &proof = sn_list->proofs[key];
           proof.timestamp = proof.effective_timestamp = 0;
@@ -907,7 +910,7 @@ namespace service_nodes
     if(iter != service_nodes_infos.end())
       return false;
 
-    if (sn_list)
+    if (sn_list && !sn_list->m_rescanning)
     {
       auto &proof = sn_list->proofs[key];
       proof = {};
@@ -1033,7 +1036,6 @@ namespace service_nodes
   {
     std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
     process_block(block, txs);
-
     store();
   }
 
@@ -1093,16 +1095,25 @@ namespace service_nodes
     return true;
   }
 
-  static quorum_manager generate_quorums(uint8_t hf_ver, service_node_list::state_t const &state)
+  static quorum_manager generate_quorums(service_node_list::state_t const &state, cryptonote::block const &block)
   {
     quorum_manager result = {};
-    assert(state.block_hash != crypto::null_hash);
+    crypto::hash block_hash;
+
+    uint64_t const height = cryptonote::get_block_height(block);
+    assert(state.height == height + 1);
+
+    if (!cryptonote::get_block_hash(block, block_hash))
+    {
+      MERROR("Block height: " << height << " returned null hash");
+      return result;
+    }
 
     auto active_snode_list = state.active_service_nodes_infos();
     decltype(active_snode_list) decomm_snode_list;
     decomm_snode_list = state.decommissioned_service_nodes_infos();
 
-    quorum_type const max_quorum_type = max_quorum_type_for_hf(hf_ver);
+    quorum_type const max_quorum_type = max_quorum_type_for_hf(block.major_version);
     for (int type_int = 0; type_int <= (int)max_quorum_type; type_int++)
     {
       auto type = static_cast<quorum_type>(type_int);
@@ -1121,13 +1132,14 @@ namespace service_nodes
       }
       else if (type == quorum_type::checkpointing)
       {
-        size_t total_nodes = active_snode_list.size();
-        if (hf_ver >= cryptonote::network_version_16 && total_nodes < CHECKPOINT_QUORUM_SIZE)
+        if ((height + REORG_SAFETY_BUFFER_IN_BLOCKS) % CHECKPOINT_INTERVAL != 0)
           continue;
 
-        pub_keys_indexes = generate_shuffled_service_node_index_list(total_nodes, state.block_hash, type);
+        size_t total_nodes = active_snode_list.size();
+
+        pub_keys_indexes = generate_shuffled_service_node_index_list(total_nodes, block_hash, type);
         result.checkpointing = quorum;
-        num_workers = std::min(pub_keys_indexes.size(), CHECKPOINT_QUORUM_SIZE);
+        num_validators = std::min(pub_keys_indexes.size(), CHECKPOINT_QUORUM_SIZE);
       }
       else
       {
@@ -1165,7 +1177,6 @@ namespace service_nodes
     assert(height == block_height);
     quorums = {};
     block_hash = cryptonote::get_block_hash(block);
-    uint8_t const hf_ver = block.major_version;
 
     // Remove expired blacklisted key images
     for (auto entry = key_image_blacklist.begin(); entry != key_image_blacklist.end();)
@@ -1212,7 +1223,7 @@ namespace service_nodes
     for (uint32_t index = 0; index < txs.size(); ++index)
     {
       const cryptonote::transaction& tx = txs[index];
-      if (tx.tx_type == cryptonote::txtype::stake)
+      if (tx.is_transfer())
       {
         process_registration_tx(nettype, block, tx, index, my_keys);
         need_swarm_update += process_contribution_tx(nettype, block, tx, index);
@@ -1253,8 +1264,7 @@ namespace service_nodes
         }
       }
     }
-
-    quorums = generate_quorums(hf_ver, *this);
+    quorums = generate_quorums(*this, block);
   }
 
   void service_node_list::process_block(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs)

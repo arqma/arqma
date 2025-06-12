@@ -232,7 +232,7 @@ namespace cryptonote
     "store-quorum-history"
   , "Store the Service Node Quorum history for the last N blocks. "
     "Specify the number of blocks or 1 to store the entire history."
-  , 0};
+  , 5};
   //-----------------------------------------------------------------------------------------------
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
@@ -1755,14 +1755,6 @@ namespace cryptonote
             }
           }
         }
-      }
-      else
-      {
-        std::sort(checkpoint->signatures.begin(),
-                  checkpoint->signatures.end(),
-                  [](service_nodes::voter_to_signature const &lhs, service_nodes::voter_to_signature const &rhs) {
-                    return lhs.voter_index < rhs.voter_index;
-                  });
       }
     }
 

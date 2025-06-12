@@ -426,6 +426,7 @@ namespace service_nodes
 
   private:
 
+    bool m_rescanning = false;
     void rescan_starting_from_curr_state(bool store_to_disk);
     void process_block(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs);
 

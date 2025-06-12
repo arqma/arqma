@@ -1029,6 +1029,8 @@ namespace net_utils
   bool connection<T>::add_ref()
   {
     try {
+      if (connection<T>::weak_from_this().expired())
+        return false;
       auto self = connection<T>::shared_from_this();
       std::lock_guard<std::mutex> guard(m_state.lock);
       this->self = std::move(self);
