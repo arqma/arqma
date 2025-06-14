@@ -75,12 +75,12 @@ namespace serialization
     CATCH_ENTRY("portable_storage::load_from_json", false)
   }
 
-  bool portable_storage::load_from_binary(const std::string& target, const limits_t *limits)
+  bool portable_storage::load_from_binary(const std::string& target)
   {
-    return load_from_binary(epee::strspan<uint8_t>(target), limits);
+    return load_from_binary(epee::strspan<uint8_t>(target));
   }
 
-  bool portable_storage::load_from_binary(const epee::span<const uint8_t> source, const limits_t *limits)
+  bool portable_storage::load_from_binary(const epee::span<const uint8_t> source)
   {
     m_root.m_entries.clear();
     if(source.size() < sizeof(storage_block_header))
@@ -103,8 +103,6 @@ namespace serialization
     }
     TRY_ENTRY();
     throwable_buffer_reader buf_reader(source.data()+sizeof(storage_block_header), source.size()-sizeof(storage_block_header));
-    if (limits)
-      buf_reader.set_limits(limits->n_objects, limits->n_fields, limits->n_strings);
     buf_reader.read(m_root);
     return true;//TODO:
     CATCH_ENTRY("portable_storage::load_from_binary", false);

@@ -2459,8 +2459,8 @@ bool Blockchain::get_transactions(const std::vector<crypto::hash>& txs_ids, std:
       cryptonote::blobdata tx;
       if (m_db->get_tx_blob(tx_hash, tx))
       {
-        txs.emplace_back();
-        if (!parse_and_validate_tx_from_blob(tx, txs.back()))
+        auto& added_tx = txs.emplace_back();
+        if (!parse_and_validate_tx_from_blob(tx, added_tx))
         {
           LOG_ERROR("Invalid transaction");
           return false;
@@ -4515,6 +4515,8 @@ uint64_t Blockchain::prevalidate_block_hashes(uint64_t height, const std::vector
 {
   // new: . . . . . X X X X X . . . . . .
   // pre: A A A A B B B B C C C C D D D D
+
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
 
   // easy case: height >= hashes
   if (height >= m_blocks_hash_of_hashes.size() * HASH_OF_HASHES_STEP)

@@ -157,7 +157,7 @@ namespace nodetool
     const command_line::arg_descriptor<int64_t> arg_limit_rate_down = {"limit-rate-down", "set limit-rate-down [kB/s]", P2P_DEFAULT_LIMIT_RATE_DOWN};
     const command_line::arg_descriptor<int64_t> arg_limit_rate = {"limit-rate", "set limit-rate [kB/s]", -1};
 
-    const command_line::arg_descriptor<uint32_t> arg_max_connections_per_ip = {"max-connections-per-ip", "Maximum number of p2p connections allowed from the same IP address", 1};
+    const command_line::arg_descriptor<uint32_t> arg_max_connections_per_ip = {"max-connections-per-ip", "Maximum number of p2p connections allowed from the same IP address", 5};
 
     boost::optional<std::vector<proxy>> get_proxies(boost::program_options::variables_map const& vm)
     {

@@ -80,7 +80,7 @@ namespace cryptonote {
   //-----------------------------------------------------------------------------------------------
   size_t get_max_tx_size()
   {
-    return arqma_tx::TRANSACTION_SIZE_LIMIT;
+    return CRYPTONOTE_MAX_TX_SIZE;
   }
   //-----------------------------------------------------------------------------------------------
   bool get_base_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint64_t &reward, uint8_t hard_fork_version, uint64_t height)

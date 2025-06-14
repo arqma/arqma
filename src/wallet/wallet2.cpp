@@ -1529,12 +1529,12 @@ static uint64_t decodeRct(const rct::rctSig & rv, const crypto::key_derivation &
     switch (rv.type)
     {
     case rct::RCTTypeSimple:
-//    case rct::RCTTypeSimpleBulletproof:
+    case rct::RCTTypeSimpleBulletproof:
     case rct::RCTTypeBulletproof:
     case rct::RCTTypeBulletproof2:
       return rct::decodeRctSimple(rv, rct::sk2rct(scalar1), i, mask, hwdev);
     case rct::RCTTypeFull:
-//    case rct::RCTTypeFullBulletproof:
+    case rct::RCTTypeFullBulletproof:
       return rct::decodeRct(rv, rct::sk2rct(scalar1), i, mask, hwdev);
     default:
       LOG_ERROR("Unsupported rct type: " << rv.type);
@@ -3050,7 +3050,7 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
           short_chain_history.clear();
           get_short_chain_history(short_chain_history);
           fast_refresh(stop_height, blocks_start_height, short_chain_history, true);
-          THROW_WALLET_EXCEPTION_IF(m_blockchain.size() != stop_height, error::wallet_internal_error, "Unexpected hashchain size");
+          THROW_WALLET_EXCEPTION_IF((m_blockchain.size() == stop_height || (m_blockchain.size() == 1 && stop_height == 0) ? false : true), error::wallet_internal_error, "Unexpected hashchain size");
           THROW_WALLET_EXCEPTION_IF(m_blockchain.offset() != 0, error::wallet_internal_error, "Unexpected hashchain offset");
           for (const auto &h: tip)
             m_blockchain.push_back(h);
@@ -3096,6 +3096,11 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
       {
         LOG_PRINT_L1("Another try pull_blocks (try_count=" << try_count << ")...");
         first = true;
+        start_height = 0;
+        blocks.clear();
+        parsed_blocks.clear();
+        short_chain_history.clear();
+        get_short_chain_history(short_chain_history, 1);
         ++try_count;
       }
       else

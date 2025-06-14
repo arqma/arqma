@@ -141,12 +141,12 @@ namespace service_nodes
       return bad_tx(tvc);
     }
 
-    if (state_change.votes.size() > service_nodes::STATE_CHANGE_QUORUM_SIZE)
+/*    if (state_change.votes.size() > service_nodes::STATE_CHANGE_QUORUM_SIZE)
     {
       LOG_PRINT_L1("Too many votes");
       return bad_tx(tvc);
     }
-
+*/
     if (!bounds_check_worker_index(quorum, state_change.service_node_index, &vvc))
       return bad_tx(tvc);
 
@@ -175,11 +175,11 @@ namespace service_nodes
 
     crypto::hash const hash = make_state_change_vote_hash(state_change.block_height, state_change.service_node_index, state_change.state);
     std::array<int, service_nodes::STATE_CHANGE_QUORUM_SIZE> validator_set = {};
-    uint64_t validator_index_tracker = -1;
+    int validator_index_tracker = -1;
     for (const auto& vote : state_change.votes)
     {
-      {
-        if (validator_index_tracker >= vote.validator_index)
+/*      {
+        if (validator_index_tracker >= static_cast<int>(vote.validator_index))
         {
           vvc.m_votes_not_sorted = true;
           LOG_PRINT_L1("Vote validator index is not stored in ascending order, prev validator index: " << validator_index_tracker << ", curr index: " << vote.validator_index);
@@ -187,7 +187,7 @@ namespace service_nodes
         }
         validator_index_tracker = vote.validator_index;
       }
-
+*/
       if (!bounds_check_validator_index(quorum, vote.validator_index, &vvc))
         return bad_tx(tvc);
 
