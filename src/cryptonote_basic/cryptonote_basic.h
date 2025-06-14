@@ -241,7 +241,10 @@ namespace cryptonote
 
     transaction() { set_null(); }
     transaction(const transaction &t);
+    transaction(transaction&& t);
     transaction& operator=(const transaction& t);
+    transaction& operator=(transaction&& t);
+    ~transaction() = default;
     void set_null();
     void invalidate_hashes();
     bool is_hash_valid() const { return hash_valid.load(std::memory_order_acquire); }

@@ -83,13 +83,6 @@ namespace cryptonote
       return amount;
     }
 
-    uint64_t get_transaction_weight_limit(uint8_t version)
-    {
-      if(version < network_version_13)
-        return config::tx_settings::TRANSACTION_SIZE_LIMIT * 4;
-      return config::tx_settings::TRANSACTION_SIZE_LIMIT;
-    }
-
     // This class is meant to create a batch when none currently exists.
     // If a batch exists, it can't be from another thread, since we can
     // only be called with the txpool lock taken, and it is held during
@@ -239,6 +232,14 @@ namespace cryptonote
       return false;
     }
 
+    if (version >= 16 && tx.version < txversion::v3)
+    {
+      LOG_PRINT_L1("Wrong Transaction Version");
+      tvc.m_verification_failed = true;
+      tvc.m_invalid_version = true;
+      return false;
+    }
+
     // fee per kilobyte, size rounded up.
     uint64_t fee;
 
@@ -278,15 +279,6 @@ namespace cryptonote
     {
       tvc.m_verification_failed = true;
       tvc.m_fee_too_low = true;
-      return false;
-    }
-
-    size_t tx_weight_limit = get_transaction_weight_limit(version);
-    if(!kept_by_block && tx_weight > tx_weight_limit)
-    {
-      LOG_PRINT_L1("transaction is too heavy: " << tx_weight << " bytes, maximum weight: " << tx_weight_limit);
-      tvc.m_verification_failed = true;
-      tvc.m_too_big = true;
       return false;
     }
 
@@ -1447,17 +1439,11 @@ namespace cryptonote
   size_t tx_memory_pool::validate(uint8_t version)
   {
     auto locks = tools::unique_locks(m_transactions_lock, m_blockchain);
-    size_t tx_weight_limit = get_transaction_weight_limit(version);
     std::unordered_set<crypto::hash> remove;
 
     m_txpool_weight = 0;
-    m_blockchain.for_all_txpool_txes([this, &remove, tx_weight_limit](const crypto::hash &txid, const txpool_tx_meta_t &meta, const cryptonote::blobdata*) {
-      m_txpool_weight += meta.weight;
-      if (meta.weight > tx_weight_limit) {
-        LOG_PRINT_L1("Transaction " << txid << " is too big (" << meta.weight << " bytes), removing it from pool");
-        remove.insert(txid);
-      }
-      else if (m_blockchain.have_tx(txid)) {
+    m_blockchain.for_all_txpool_txes([this, &remove](const crypto::hash &txid, const txpool_tx_meta_t &meta, const cryptonote::blobdata*) {
+      if (m_blockchain.have_tx(txid)) {
         LOG_PRINT_L1("Transaction " << txid << " is in the blockchain, removing it from pool");
         remove.insert(txid);
       }

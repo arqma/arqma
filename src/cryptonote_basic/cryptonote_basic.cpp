@@ -16,46 +16,69 @@ namespace cryptonote
 
   transaction::transaction(const transaction &t)
     : transaction_prefix(t)
-    , hash_valid(false)
-    , blob_size_valid(false)
+    , hash_valid(t.is_hash_valid())
+    , blob_size_valid(t.is_blob_size_valid())
     , signatures(t.signatures)
     , rct_signatures(t.rct_signatures)
+    , hash(t.hash)
+    , blob_size(t.blob_size)
+    , pruned(t.pruned)
+    , unprunable_size(t.unprunable_size.load())
+    , prefix_size(t.prefix_size.load())
+  {}
+
+  transaction::transaction(transaction &&t)
+    : transaction_prefix(std::move(t))
+    , hash_valid(t.is_hash_valid())
+    , blob_size_valid(t.is_blob_size_valid())
+    , signatures(std::move(t.signatures))
+    , rct_signatures(std::move(t.rct_signatures))
+    , hash(std::move(t.hash))
+    , blob_size(std::move(t.blob_size))
     , pruned(t.pruned)
     , unprunable_size(t.unprunable_size.load())
     , prefix_size(t.prefix_size.load())
   {
-    if (t.is_hash_valid())
-    {
-      hash = t.hash;
-      set_hash_valid(true);
-    }
-    if (t.is_blob_size_valid())
-    {
-      blob_size = t.blob_size;
-      set_blob_size_valid(true);
-    }
+    t.set_null();
   }
 
   transaction& transaction::operator=(const transaction& t)
   {
+    if (this == std::addressof(t))
+      return *this;
+
     transaction_prefix::operator=(t);
-    set_hash_valid(false);
-    set_blob_size_valid(false);
+
+    set_hash_valid(t.is_hash_valid());
+    set_blob_size_valid(t.is_blob_size_valid());
     signatures = t.signatures;
     rct_signatures = t.rct_signatures;
-    if (t.is_hash_valid())
-    {
-      hash = t.hash;
-      set_hash_valid(true);
-    }
-    if (t.is_blob_size_valid())
-    {
-      blob_size = t.blob_size;
-      set_blob_size_valid(true);
-    }
+    hash = t.hash;
+    blob_size = t.blob_size;
     pruned = t.pruned;
     unprunable_size = t.unprunable_size.load();
     prefix_size = t.prefix_size.load();
+    return *this;
+  }
+
+  transaction& transaction::operator=(transaction &&t)
+  {
+    if (this == std::addressof(t))
+      return *this;
+
+    transaction_prefix::operator=(std::move(t));
+
+    set_hash_valid(t.is_hash_valid());
+    set_blob_size_valid(t.is_blob_size_valid());
+    signatures = std::move(t.signatures);
+    rct_signatures = std::move(t.rct_signatures);
+    hash = std::move(t.hash);
+    blob_size = std::move(t.blob_size);
+    pruned = std::move(t.pruned);
+    unprunable_size = t.unprunable_size.load();
+    prefix_size = t.prefix_size.load();
+
+    t.set_null();
     return *this;
   }
 
@@ -64,7 +87,7 @@ namespace cryptonote
     transaction_prefix::set_null();
     signatures.clear();
     rct_signatures = {};
-    rct_signatures.type = rct::RCTTypeNull;
+    rct_signatures = rct::rctSig{};
     set_hash_valid(false);
     set_blob_size_valid(false);
     pruned = false;
@@ -109,18 +132,24 @@ namespace cryptonote
 
   block& block::operator=(const block& b)
   {
-    block_header::operator=(b);
-    miner_tx = b.miner_tx;
-    tx_hashes = b.tx_hashes;
-    copy_hash(b);
+    if (this != std::addressof(b))
+    {
+      block_header::operator=(b);
+      miner_tx = b.miner_tx;
+      tx_hashes = b.tx_hashes;
+      copy_hash(b);
+    }
     return *this;
   }
   block& block::operator=(block&& b)
   {
-    block_header::operator=(std::move(b));
-    miner_tx = std::move(b.miner_tx);
-    tx_hashes = std::move(b.tx_hashes);
-    copy_hash(b);
+    if (this != std::addressof(b))
+    {
+      block_header::operator=(std::move(b));
+      miner_tx = std::move(b.miner_tx);
+      tx_hashes = std::move(b.tx_hashes);
+      copy_hash(b);
+    }
     return *this;
   }
 
