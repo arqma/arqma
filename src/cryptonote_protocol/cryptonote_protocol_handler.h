@@ -171,6 +171,7 @@ namespace cryptonote
     bool on_connection_synchronized();
     bool should_download_next_span(cryptonote_connection_context& context, bool standby);
     void drop_connection(cryptonote_connection_context &context, bool add_fail, bool flush_all_spans);
+    void drop_connection(const boost::uuids::uuid&);
     bool kick_idle_peers();
     bool check_standby_peers();
     bool update_sync_search();

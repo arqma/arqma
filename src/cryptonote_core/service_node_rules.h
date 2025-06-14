@@ -31,7 +31,7 @@ namespace service_nodes
 
   constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
   constexpr size_t STATE_CHANGE_QUORUM_SIZE                        = 10;
-  constexpr ptrdiff_t MIN_TIME_IN_S_BEFORE_VOTING                  = UPTIME_PROOF_MAX_TIME_IN_SECONDS;
+  constexpr int MIN_TIME_IN_S_BEFORE_VOTING                        = UPTIME_PROOF_MAX_TIME_IN_SECONDS;
   constexpr size_t CHECKPOINT_QUORUM_SIZE                          = 20;
   constexpr size_t CHECKPOINT_MIN_VOTES                            = 13;
 
@@ -69,6 +69,16 @@ namespace service_nodes
   constexpr uint64_t VOTE_OR_TX_VERIFY_HEIGHT_BUFFER                = 5;
 
   constexpr std::array<int, 3> MIN_STORAGE_SERVER_VERSION           = {1, 0, 0};
+
+  struct proof_version
+  {
+    uint8_t hardfork;
+    std::array<uint16_t, 3> version;
+  };
+
+  constexpr proof_version MIN_UPTIME_PROOF_VERSIONS[] = {
+    {cryptonote::network_version_16, {7,1,1}},
+  };
 
   using swarm_id_t = uint64_t;
   constexpr swarm_id_t UNASSIGNED_SWARM_ID                          = UINT64_MAX;

@@ -47,13 +47,6 @@ namespace epee
       typedef epee::serialization::hsection hsection;
       typedef epee::serialization::harray  harray;
 
-      struct limits_t
-      {
-        size_t n_objects;
-        size_t n_fields;
-        size_t n_strings;
-      };
-
       portable_storage(){}
       virtual ~portable_storage(){}
       hsection   open_section(const std::string& section_name,  hsection hparent_section, bool create_if_notexist = false);
@@ -84,8 +77,8 @@ namespace epee
 
       //-------------------------------------------------------------------------------
       bool		store_to_binary(byte_slice& target, std::size_t initial_buffer_size = 8192);
-      bool		load_from_binary(const epee::span<const uint8_t> target, const limits_t *limits = NULL);
-      bool		load_from_binary(const std::string& target, const limits_t *limits = NULL);
+      bool		load_from_binary(const epee::span<const uint8_t> target);
+      bool		load_from_binary(const std::string& target);
 
       template<class trace_policy>
       bool		  dump_as_xml(std::string& targetObj, const std::string& root_name = "");

@@ -32,7 +32,9 @@
 #pragma once
 #include <unordered_set>
 #include <atomic>
+#include <algorithm>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/optional/optional_fwd.hpp>
 #include "net/net_utils_base.h"
 #include "copyable_atomic.h"
 #include "crypto/hash.h"
@@ -42,8 +44,8 @@ namespace cryptonote
 
   struct cryptonote_connection_context: public epee::net_utils::connection_context_base
   {
-    cryptonote_connection_context(): m_state(state_before_handshake), m_remote_blockchain_height(0), m_last_response_height(0),
-        m_last_request_time(boost::date_time::not_a_date_time), m_callback_request_count(0), m_last_known_hash(crypto::null_hash), m_pruning_seed(0), m_rpc_port(0), m_anchor(false), m_zmq_port(0) {}
+    cryptonote_connection_context(): m_state(state_before_handshake), m_remote_blockchain_height(0), m_last_response_height(0), m_expected_heights_start(0),
+        m_last_request_time(boost::date_time::not_a_date_time), m_callback_request_count(0), m_last_known_hash(crypto::null_hash), m_pruning_seed(0), m_rpc_port(0), m_anchor(false) {}
 
     enum state
     {
@@ -54,20 +56,29 @@ namespace cryptonote
       state_normal
     };
 
+    static constexpr int handshake_command() noexcept { return 1001; }
     bool handshake_complete() const noexcept { return m_state != state_before_handshake; }
+
+    static size_t get_max_bytes(int command) noexcept;
+
+    void set_state_normal();
+
+    boost::optional<crypto::hash> get_expected_hash(uint64_t height) const;
 
     state m_state;
     std::vector<crypto::hash> m_needed_objects;
+    std::vector<crypto::hash> m_expected_heights;
     std::unordered_set<crypto::hash> m_requested_objects;
     uint64_t m_remote_blockchain_height;
     uint64_t m_last_response_height;
+    uint64_t m_expected_heights_start;
     boost::posix_time::ptime m_last_request_time;
     epee::copyable_atomic m_callback_request_count; //in debug purpose: problem with double callback rise
     crypto::hash m_last_known_hash;
     uint32_t m_pruning_seed;
     uint16_t m_rpc_port;
-    uint16_t m_zmq_port;
     bool m_anchor;
+    uint64_t m_expect_height;
     //size_t m_score;  TODO: add score calculations
   };
 

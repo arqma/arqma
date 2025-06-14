@@ -1697,16 +1697,6 @@ namespace service_nodes
   }
 #endif
 
-  struct proof_version
-  {
-    uint8_t hardfork;
-    std::array<uint16_t, 3> version;
-  };
-
-  static constexpr proof_version hf_min_arqma_version[] = {
-    {16, {7,0,0}},
-  };
-
   template <typename T>
   static bool update_val(T &val, const T &to)
   {
@@ -1765,7 +1755,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
 }
 
 
-#define REJECT_PROOF(log) do { LOG_PRINT_L2("Rejecting uptime proof from " << proof.pubkey << ": " << log); return false; } while (0)
+#define REJECT_PROOF(log) do { LOG_PRINT_L2("Rejecting uptime proof from " << proof.pubkey << ": " log); return false; } while (0)
 
   bool service_node_list::handle_uptime_proof(cryptonote::NOTIFY_UPTIME_PROOF::request const &proof, bool &my_uptime_proof_confirmation)
   {
@@ -1775,7 +1765,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
     if ((proof.timestamp < now - UPTIME_PROOF_BUFFER_IN_SECONDS) || (proof.timestamp > now + UPTIME_PROOF_BUFFER_IN_SECONDS))
       REJECT_PROOF("timestamp is too far from now");
 
-    for (auto &min : hf_min_arqma_version)
+    for (auto const &min : MIN_UPTIME_PROOF_VERSIONS)
       if (hard_fork_version >= min.hardfork && proof.arqma_snode_version < min.version)
         REJECT_PROOF("v" << min.version[0] << "." << min.version[1] << "." << min.version[2] << "+ arqma version is required for v" << std::to_string(hard_fork_version) << "+ network proofs");
 

@@ -53,11 +53,6 @@ namespace
     snprintf(buf, sizeof(buf), "command-%u", command);
     return on_levin_traffic(context, initiator, sent, error, bytes, buf);
   }
-  static const constexpr epee::serialization::portable_storage::limits_t default_levin_limits = {
-    8192, // objects
-    16384, // fields
-    16384, // strings
-  };
 }
 
 namespace epee
@@ -85,7 +80,7 @@ namespace epee
           return false;
         }
         serialization::portable_storage stg_ret;
-        if(!stg_ret.load_from_binary(buff, &default_levin_limits))
+        if(!stg_ret.load_from_binary(buff))
         {
           on_levin_traffic(context, true, false, true, buff.size(), command);
           LOG_ERROR("Failed to load_from_binary on command " << command);
@@ -134,7 +129,7 @@ namespace epee
     int buff_to_t_adapter(int command, const epee::span<const uint8_t> in_buff, byte_slice& buff_out, callback_t cb, t_context& context)
     {
       serialization::portable_storage strg;
-      if(!strg.load_from_binary(in_buff, &default_levin_limits))
+      if(!strg.load_from_binary(in_buff))
       {
         on_levin_traffic(context, false, false, true, in_buff.size(), command);
         LOG_ERROR("Failed to load_from_binary in command " << command);
@@ -168,7 +163,7 @@ namespace epee
     int buff_to_t_adapter(t_owner* powner, int command, const epee::span<const uint8_t> in_buff, callback_t cb, t_context& context)
     {
       serialization::portable_storage strg;
-      if(!strg.load_from_binary(in_buff, &default_levin_limits))
+      if(!strg.load_from_binary(in_buff))
       {
         on_levin_traffic(context, false, false, true, in_buff.size(), command);
         LOG_ERROR("Failed to load_from_binary in notify " << command);
