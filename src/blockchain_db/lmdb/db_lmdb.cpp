@@ -1584,19 +1584,21 @@ void BlockchainLMDB::open(const std::string& filename, cryptonote::network_type 
 
   MDB_val_str(k, "version");
   MDB_val v;
+  using db_version_t = uint32_t;
   auto get_result = mdb_get(txn, m_properties, &k, &v);
   if(get_result == MDB_SUCCESS)
   {
-    const uint32_t db_version = *(const uint32_t *)v.mv_data;
+    db_version_t db_version;
+    std::memcpy(&db_version, v.mv_data, sizeof(db_version));
     bool failed = false;
-    if (db_version > static_cast<decltype(db_version)>(VERSION))
+    if (db_version > static_cast<db_version_t>(VERSION))
     {
       MWARNING("Existing lmdb database was made by a later version (" << db_version << "). We don't know how it will change yet.");
       MFATAL("Existing lmdb database is incompatible with this version.");
       MFATAL("Please delete the existing database and resync.");
       failed = true;
     }
-    else if (db_version < static_cast<decltype(db_version)>(VERSION))
+    else if (db_version > static_cast<db_version_t>(VERSION))
     {
       if (mdb_flags & MDB_RDONLY)
       {
@@ -1628,7 +1630,7 @@ void BlockchainLMDB::open(const std::string& filename, cryptonote::network_type 
     if (m_height == 0)
     {
       MDB_val_str(k, "version");
-      MDB_val_copy<uint32_t> v(static_cast<uint32_t>(VERSION));
+      MDB_val_copy<db_version_t> v(static_cast<db_version_t>(VERSION));
       auto put_result = mdb_put(txn, m_properties, &k, &v, 0);
       if (put_result != MDB_SUCCESS)
       {
@@ -2398,7 +2400,69 @@ bool BlockchainLMDB::for_all_txpool_txes(std::function<bool(const crypto::hash&,
   return ret;
 }
 
-bool BlockchainLMDB::for_all_alt_blocks(std::function<bool(const crypto::hash&, const alt_block_data_t&, const cryptonote::blobdata*)> f, bool include_blob) const
+enum struct blob_type : uint8_t
+{
+  block,
+  checkpoint
+};
+
+struct blob_header
+{
+  blob_type type;
+  uint32_t  size;
+};
+static_assert(sizeof(blob_type) == 1,   "Expect 1 byte, otherwise require endian swap");
+
+static blob_header write_little_endian_blob_header(blob_type type, uint32_t size)
+{
+  blob_header result = {type, size};
+  native_to_little_inplace(result.size);
+  return result;
+}
+
+static blob_header native_endian_blob_header(const blob_header *header)
+{
+  blob_header result = {header->type, header->size};
+  little_to_native_inplace(result.size);
+  return result;
+}
+
+static bool read_alt_block_data_from_mdb_val(MDB_val const v, alt_block_data_t *data, cryptonote::blobdata *block, cryptonote::blobdata *checkpoint)
+{
+  size_t const conservative_min_size = sizeof(*data) + sizeof(blob_header);
+  if (v.mv_size < conservative_min_size)
+    return false;
+
+  const char *src      = static_cast<const char *>(v.mv_data);
+  const char *end      = static_cast<const char *>(src + v.mv_size);
+  const auto *alt_data = (const alt_block_data_t *)src;
+  if (data)
+    *data = *alt_data;
+
+  src = reinterpret_cast<const char *>(alt_data + 1);
+  while (src < end)
+  {
+    blob_header header = native_endian_blob_header(reinterpret_cast<const blob_header *>(src));
+    src += sizeof(header);
+    if (header.type == blob_type::block)
+    {
+      if (block)
+        block->assign((const char *)src, header.size);
+    }
+    else
+    {
+      assert(header.type == blob_type::checkpoint);
+      if (checkpoint)
+        checkpoint->assign((const char *)src, header.size);
+    }
+
+    src += header.size;
+  }
+
+  return true;
+}
+
+bool BlockchainLMDB::for_all_alt_blocks(std::function<bool(const crypto::hash&, const alt_block_data_t&, const cryptonote::blobdata*, const cryptonote::blobdata *)> f, bool include_blob) const
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
@@ -2420,18 +2484,18 @@ bool BlockchainLMDB::for_all_alt_blocks(std::function<bool(const crypto::hash&, 
     if(result)
       throw0(DB_ERROR(lmdb_error("Failed to enumerate alt blocks: ", result).c_str()));
     const crypto::hash &blkid = *(const crypto::hash*)k.mv_data;
-    if (v.mv_size < sizeof(alt_block_data_t))
-      throw0(DB_ERROR("alt_blocks record is too small"));
-    const alt_block_data_t *data = (const alt_block_data_t*)v.mv_data;
-    const cryptonote::blobdata *passed_bd = NULL;
-    cryptonote::blobdata bd;
-    if (include_blob)
-    {
-      bd.assign(reinterpret_cast<const char*>(v.mv_data) + sizeof(alt_block_data_t), v.mv_size - sizeof(alt_block_data_t));
-      passed_bd = &bd;
-    }
 
-    if (!f(blkid, *data, passed_bd)) {
+    cryptonote::blobdata block;
+    cryptonote::blobdata checkpoint;
+
+    alt_block_data_t data                = {};
+    cryptonote::blobdata *block_ptr      = (include_blob) ? &block : nullptr;
+    cryptonote::blobdata *checkpoint_ptr = (include_blob) ? &checkpoint : nullptr;
+    if (!read_alt_block_data_from_mdb_val(v, &data, block_ptr, checkpoint_ptr))
+      throw0(DB_ERROR("Record size is less than expected"));
+
+    if (!f(blkid, data, block_ptr, checkpoint_ptr))
+    {
       ret = false;
       break;
     }
@@ -4619,7 +4683,7 @@ uint8_t BlockchainLMDB::get_hard_fork_version(uint64_t height) const
   return ret;
 }
 
-void BlockchainLMDB::add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &blob)
+void BlockchainLMDB::add_alt_block(const crypto::hash &blkid, const cryptonote::alt_block_data_t &data, const cryptonote::blobdata &block, cryptonote::blobdata const *checkpoint)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
@@ -4627,12 +4691,32 @@ void BlockchainLMDB::add_alt_block(const crypto::hash &blkid, const cryptonote::
 
   CURSOR(alt_blocks)
 
-  MDB_val k = {sizeof(blkid), (void *)&blkid};
-  const size_t val_size = sizeof(alt_block_data_t) + blob.size();
+  MDB_val k       = {sizeof(blkid), (void *)&blkid};
+  size_t val_size = sizeof(alt_block_data_t);
+  val_size       += sizeof(blob_header) + block.size();
+  if (checkpoint)
+    val_size     += sizeof(blob_header) + checkpoint->size();
 
   std::unique_ptr<char[]> val(new char[val_size]);
-  memcpy(val.get(), &data, sizeof(alt_block_data_t));
-  memcpy(val.get() + sizeof(alt_block_data_t), blob.data(), blob.size());
+  char *dest = val.get();
+
+  memcpy(dest, &data, sizeof(alt_block_data_t));
+  dest += sizeof(alt_block_data_t);
+
+  blob_header block_header = write_little_endian_blob_header(blob_type::block, block.size());
+  memcpy(dest, reinterpret_cast<char const *>(&block_header), sizeof(block_header));
+  dest += sizeof(block_header);
+  memcpy(dest, block.data(), block.size());
+  dest += block.size();
+
+  if (checkpoint)
+  {
+    blob_header checkpoint_header = write_little_endian_blob_header(blob_type::checkpoint, checkpoint->size());
+    memcpy(dest, reinterpret_cast<char const *>(&checkpoint_header), sizeof(checkpoint_header));
+    dest += sizeof(checkpoint_header);
+    memcpy(dest, checkpoint->data(), checkpoint->size());
+  }
+
   MDB_val v = {val_size, (void *)val.get()};
   if(auto result = mdb_cursor_put(m_cur_alt_blocks, &k, &v, MDB_NODUPDATA)) {
     if(result == MDB_KEYEXIST)
@@ -4642,7 +4726,7 @@ void BlockchainLMDB::add_alt_block(const crypto::hash &blkid, const cryptonote::
   }
 }
 
-bool BlockchainLMDB::get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *blob)
+bool BlockchainLMDB::get_alt_block(const crypto::hash &blkid, alt_block_data_t *data, cryptonote::blobdata *block, cryptonote::blobdata *checkpoint)
 {
   LOG_PRINT_L3("BlockchainLMDB:: " << __func__);
   check_open();
@@ -4658,14 +4742,8 @@ bool BlockchainLMDB::get_alt_block(const crypto::hash &blkid, alt_block_data_t *
 
   if(result)
     throw0(DB_ERROR(lmdb_error("Error attempting to retrieve alternate block " + epee::string_tools::pod_to_hex(blkid) + " from the db: ", result).c_str()));
-  if(v.mv_size < sizeof(alt_block_data_t))
+  if(!read_alt_block_data_from_mdb_val(v, data, block, checkpoint))
     throw0(DB_ERROR("Record size is less than expected"));
-
-  const alt_block_data_t *ptr = (const alt_block_data_t*)v.mv_data;
-  if (data)
-    *data = *ptr;
-  if (blob)
-    blob->assign((const char*)(ptr + 1), v.mv_size - sizeof(alt_block_data_t));
 
   return true;
 }
@@ -4675,7 +4753,7 @@ void BlockchainLMDB::remove_alt_block(const crypto::hash &blkid)
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
   mdb_txn_cursors *m_cursors = &m_wcursors;
-
+ 
   CURSOR(alt_blocks)
 
   MDB_val k = {sizeof(blkid), (void *)&blkid};
@@ -5846,11 +5924,13 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
 
   for (entry_t const &entry : new_entries)
   {
-    const size_t val_size = sizeof(entry.data) + entry.blob.size();
+    blob_header block_header = write_little_endian_blob_header(blob_type::block, entry.blob.size());
+    const size_t val_size    = sizeof(entry.data) + sizeof(block_header) + entry.blob.size();
     std::unique_ptr<char[]> val_buf(new char[val_size]);
 
     memcpy(val_buf.get(), &entry.data, sizeof(entry.data));
-    memcpy(val_buf.get() + sizeof(entry.data), entry.blob.data(), entry.blob.size());
+    memcpy(val_buf.get() + sizeof(entry.data), reinterpret_cast<const char *>(&block_header), sizeof(block_header));
+    memcpy(val_buf.get() + sizeof(entry.data) + sizeof(block_header), entry.blob.data(), entry.blob.size());
 
     MDB_val_set(key, entry.key);
     MDB_val val = {val_size, (void *)val_buf.get()};

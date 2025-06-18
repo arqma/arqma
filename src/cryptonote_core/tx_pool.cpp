@@ -480,6 +480,7 @@ namespace cryptonote
     m_blockchain.remove_txpool_tx(txid);
     m_txpool_weight -= meta->weight;
     remove_transaction_keyimages(tx, txid);
+    MINFO("Removing tx " << txid << " from txpool: weight: " << meta->weight << ", fee/byte: " << tx_fee);
     m_txs_by_fee_and_receive_time.erase(it);
 
     return true;
@@ -490,6 +491,8 @@ namespace cryptonote
     std::unique_lock<tx_memory_pool> tx_lock{*this, std::defer_lock};
     std::unique_lock<Blockchain> bc_lock{m_blockchain, std::defer_lock};
     boost::lock(tx_lock, bc_lock);
+    if (bytes == 0)
+      bytes = m_txpool_max_weight;
     LockedTXN lock(m_blockchain);
     bool changed = false;
 
@@ -540,7 +543,7 @@ namespace cryptonote
     auto it = m_txs_by_fee_and_receive_time.end();
     if (it != m_txs_by_fee_and_receive_time.begin())
       it = std::prev(it);
-    while(m_txpool_weight > m_txpool_max_weight && it != m_txs_by_fee_and_receive_time.begin())
+    while(m_txpool_weight <= bytes && it != m_txs_by_fee_and_receive_time.begin())
     {
       if (!try_pruning(it, false))
         return;
@@ -548,8 +551,8 @@ namespace cryptonote
     lock.commit();
     if(changed)
       ++m_cookie;
-    if(m_txpool_weight > m_txpool_max_weight)
-      MINFO("Pool weight after pruning is still larger than limit: " << m_txpool_weight << "/" << m_txpool_max_weight);
+    if(m_txpool_weight > bytes)
+      MINFO("Pool weight after pruning is still larger than limit: " << m_txpool_weight << "/" << bytes);
   }
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::insert_key_images(const transaction_prefix &tx, const crypto::hash &id, bool kept_by_block)
@@ -1119,7 +1122,7 @@ namespace cryptonote
 
           std::vector<service_nodes::service_node_pubkey_info> service_node_array = service_node_list.get_service_node_list_state({service_node_pubkey});
 
-          if (service_node_array.empty() || !service_node_array[0].info->can_transition_to_state(state_change.block_height, state_change.state))
+          if (service_node_array.empty() || !service_node_array[0].info->can_transition_to_state(blk.major_version, state_change.block_height, state_change.state))
           {
             transaction tx;
             cryptonote::blobdata blob;

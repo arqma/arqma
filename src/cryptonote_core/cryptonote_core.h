@@ -62,8 +62,8 @@ DISABLE_VS_WARNINGS(4355)
 namespace cryptonote
 {
    struct test_options {
-     const std::vector<std::pair<uint8_t, uint64_t>> hard_forks;
-     const size_t long_term_block_weight_window;
+     std::vector<std::pair<uint8_t, uint64_t>> hard_forks;
+     size_t long_term_block_weight_window;
    };
 
   extern const command_line::arg_descriptor<std::string, false, true, 2> arg_data_dir;
@@ -71,7 +71,6 @@ namespace cryptonote
   extern const command_line::arg_descriptor<bool, false> arg_stagenet_on;
   extern const command_line::arg_descriptor<bool, false> arg_regtest_on;
   extern const command_line::arg_descriptor<difficulty_type> arg_fixed_difficulty;
-  extern const command_line::arg_descriptor<bool> arg_dev_allow_local;
   extern const command_line::arg_descriptor<bool> arg_offline;
   extern const command_line::arg_descriptor<size_t> arg_block_download_max_size;
 

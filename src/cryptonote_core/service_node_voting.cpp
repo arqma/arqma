@@ -131,7 +131,7 @@ namespace service_nodes
     return false;
   }
 
-  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context &tvc, const service_nodes::quorum &quorum)
+  bool verify_tx_state_change(const cryptonote::tx_extra_service_node_state_change &state_change, uint64_t latest_height, cryptonote::tx_verification_context &tvc, const service_nodes::quorum &quorum, uint8_t hard_fork_version)
   {
     auto &vvc = tvc.m_vote_ctx;
     if (state_change.votes.size() < service_nodes::STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE)
@@ -141,12 +141,12 @@ namespace service_nodes
       return bad_tx(tvc);
     }
 
-/*    if (state_change.votes.size() > service_nodes::STATE_CHANGE_QUORUM_SIZE)
+    if (state_change.votes.size() > service_nodes::STATE_CHANGE_QUORUM_SIZE)
     {
       LOG_PRINT_L1("Too many votes");
       return bad_tx(tvc);
     }
-*/
+
     if (!bounds_check_worker_index(quorum, state_change.service_node_index, &vvc))
       return bad_tx(tvc);
 
@@ -178,7 +178,8 @@ namespace service_nodes
     int validator_index_tracker = -1;
     for (const auto& vote : state_change.votes)
     {
-/*      {
+      if (hard_fork_version >= cryptonote::network_version_16)
+      {
         if (validator_index_tracker >= static_cast<int>(vote.validator_index))
         {
           vvc.m_votes_not_sorted = true;
@@ -187,7 +188,7 @@ namespace service_nodes
         }
         validator_index_tracker = vote.validator_index;
       }
-*/
+
       if (!bounds_check_validator_index(quorum, vote.validator_index, &vvc))
         return bad_tx(tvc);
 
@@ -288,7 +289,7 @@ namespace service_nodes
     return result;
   }
 
-  quorum_vote_t make_checkpointing_vote(uint8_t hard_fork_version, crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys)
+  quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys)
   {
     quorum_vote_t result         = {};
     result.type                  = quorum_type::checkpointing;

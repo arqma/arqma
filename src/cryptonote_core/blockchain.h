@@ -67,11 +67,18 @@
 #include "cryptonote_basic/hardfork.h"
 #include "blockchain_db/blockchain_db.h"
 
-namespace service_nodes { class service_node_list; struct voting_pool; }
+namespace service_nodes { class service_node_list; }
 namespace tools { class Notify; }
 
 namespace cryptonote
 {
+  struct block_and_checkpoint
+  {
+    cryptonote::block block;
+    checkpoint_t checkpoint;
+    bool checkpointed;
+  };
+
   class tx_memory_pool;
   struct test_options;
 
@@ -106,7 +113,11 @@ namespace cryptonote
      */
     struct block_extended_info
     {
+      block_extended_info() = default;
+      block_extended_info(const alt_block_data_t &src, block const &blk, checkpoint_t const *checkpoint);
       block bl; //!< the block
+      bool checkpointed;
+      checkpoint_t checkpoint;
       uint64_t height; //!< the height of the block in the blockchain
       uint64_t block_cumulative_weight; //!< the weight of the block
       difficulty_type cumulative_difficulty; //!< the accumulated difficulty after that block
@@ -1184,7 +1195,7 @@ namespace cryptonote
      *
      * @return false if the reorganization fails, otherwise true
      */
-    bool switch_to_alternative_blockchain(std::list<block_extended_info> &alt_chain);
+    bool switch_to_alternative_blockchain(const std::list<block_extended_info> &alt_chain, bool keep_disconnected_chain);
 
     /**
      * @brief removes the most recent block from the blockchain
@@ -1220,7 +1231,7 @@ namespace cryptonote
      *
      * @return true if the block was added successfully, otherwise false
      */
-    bool handle_block_to_main_chain(const block& bl, const crypto::hash& id, block_verification_context& bvc);
+    bool handle_block_to_main_chain(const block& bl, const crypto::hash& id, block_verification_context& bvc, checkpoint_t const *checkpoint);
 
     /**
      * @brief validate and add a new block to an alternate blockchain
@@ -1235,7 +1246,7 @@ namespace cryptonote
      *
      * @return true if the block was added successfully, otherwise false
      */
-    bool handle_alternative_block(const block& b, const crypto::hash& id, block_verification_context& bvc, bool has_checkpoint);
+    bool handle_alternative_block(const block& b, const crypto::hash& id, block_verification_context& bvc, checkpoint_t const *checkpoint);
 
     /**
      * @brief builds a list of blocks connecting a block to the main chain
@@ -1247,7 +1258,7 @@ namespace cryptonote
      *
      * @return true on success, false otherwise
      */
-    bool build_alt_chain(const crypto::hash &prev_id, std::list<block_extended_info> &alt_chain, std::vector<uint64_t> &timestamps, block_verification_context& bvc) const;
+    bool build_alt_chain(const crypto::hash &prev_id, std::list<block_extended_info> &alt_chain, std::vector<uint64_t> &timestamps, block_verification_context& bvc, int *num_alt_checkpoints, int *num_checkpoints) const;
 
     /**
      * @brief gets the difficulty requirement for a new block on an alternate chain
@@ -1257,7 +1268,7 @@ namespace cryptonote
      *
      * @return the difficulty requirement
      */
-    difficulty_type get_next_difficulty_for_alternative_chain(const std::list<block_extended_info> &alt_chain, block_extended_info& bei) const;
+    difficulty_type get_next_difficulty_for_alternative_chain(const std::list<block_extended_info> &alt_chain, uint64_t height) const;
 
     /**
      * @brief sanity checks a miner transaction before validating an entire block
@@ -1301,7 +1312,7 @@ namespace cryptonote
      *
      * @return false if something goes wrong with reverting (very bad), otherwise true
      */
-    bool rollback_blockchain_switching(std::list<block>& original_chain, uint64_t rollback_height);
+    bool rollback_blockchain_switching(const std::list<block_and_checkpoint>& original_chain, uint64_t rollback_height);
 
     /**
      * @brief gets recent block weights for median calculation

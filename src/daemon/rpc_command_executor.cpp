@@ -2370,6 +2370,7 @@ bool t_rpc_command_executor::sync_info()
 
 bool t_rpc_command_executor::prune_blockchain()
 {
+#if 0
     cryptonote::COMMAND_RPC_PRUNE_BLOCKCHAIN::request req;
     cryptonote::COMMAND_RPC_PRUNE_BLOCKCHAIN::response res;
     std::string fail_message = "Unsuccessful";
@@ -2394,6 +2395,9 @@ bool t_rpc_command_executor::prune_blockchain()
     }
 
     tools::success_msg_writer() << "Blockchain pruned: seed";
+#else
+    tools::fail_msg_writer() << "Blockchain pruning is not supported in Arqma";
+#endif
     return true;
 }
 
