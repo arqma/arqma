@@ -66,13 +66,8 @@ namespace cryptonote
 
   height_to_hash const HARDCODED_MAINNET_CHECKPOINTS[] = {
     {0,       "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328"},
-    {1,       "6115a8e9902af15d31d14c698621d54e9bb594b0da053591ec5d1ceb537960ea"},
-    {1000,    "6b94e23fedee9ed59f0517805419062c0318e729ad19858f3f6fc51fd65e33d1"},
-    {10000,   "1a35ebbe820d2cad63112750d602817c00ce1e11e48fce302a9edb697f635533"},
-    {100000,  "8d7251c892a048740b0dbb4da24f44a9e5433b04e61426eb1a9671ea7ad69639"},
-    {125000,  "77e0f2c0d8e2033c77b1eca65027554f4849634756731d14d4b98f28de678ae6"},
-    {175000,  "d26a135e373447fd1603ec98022db674c1d4d320b4ff9cae9f9c322c81afd1a5"},
-    {1150000, "5d66aeff47e97d76ec0a521c8a610e80249c6076b7cb487b57ca7fff90103291"}
+    {1731481, "94b47df7c0895399f85dff9f7a1d7c2e67f8809e2a2b5fb14bc9714a2bb1490d"},
+    {1731482, "942d66af0c7fd6f366e35f18dbb1ca668693a4ad37a6058d61bc920550fe10b7"}
   };
   //---------------------------------------------------------------------------
   crypto::hash get_newest_hardcoded_checkpoint(cryptonote::network_type nettype, uint64_t *height)
