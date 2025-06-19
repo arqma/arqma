@@ -176,7 +176,7 @@ namespace service_nodes
     crypto::hash const hash = make_state_change_vote_hash(state_change.block_height, state_change.service_node_index, state_change.state);
     std::array<int, service_nodes::STATE_CHANGE_QUORUM_SIZE> validator_set = {};
     int validator_index_tracker = -1;
-    for (const auto& vote : state_change.votes)
+    for (const auto &vote : state_change.votes)
     {
       if (hard_fork_version >= cryptonote::network_version_16)
       {
@@ -380,7 +380,7 @@ namespace service_nodes
         {
           LOG_PRINT_L1("Vote received specifies incorrect voting group, expected vote from validator");
           vvc.m_incorrect_voting_group = true;
-          return false;
+          result = false;
         }
         else
         {
@@ -397,7 +397,7 @@ namespace service_nodes
         {
           LOG_PRINT_L1("Vote received specifies incorrect voting group");
           vvc.m_incorrect_voting_group = true;
-          return false;
+          result = false;
         }
         else
         {

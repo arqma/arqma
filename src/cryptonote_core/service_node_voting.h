@@ -62,7 +62,7 @@ namespace service_nodes
   {
     obligations = 0,
     checkpointing,
-    _count,
+    _count
   };
 
   inline std::ostream &operator<<(std::ostream &os, quorum_type v)

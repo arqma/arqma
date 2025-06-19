@@ -27,7 +27,7 @@ namespace service_nodes
 
   constexpr size_t STATE_CHANGE_NTH_OF_THE_NETWORK_TO_TEST         = 100;
   constexpr size_t STATE_CHANGE_MIN_NODES_TO_TEST                  = 50;
-  constexpr uint64_t VOTE_LIFETIME                                 = BLOCKS_EXPECTED_IN_HOURS(1);
+  constexpr uint64_t VOTE_LIFETIME                                 = 15; //BLOCKS_EXPECTED_IN_HOURS(1);
 
   constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
   constexpr size_t STATE_CHANGE_QUORUM_SIZE                        = 10;

@@ -112,7 +112,7 @@ namespace cryptonote
 
   }
   //---------------------------------------------------------------------------------
-  bool tx_memory_pool::have_duplicated_non_standard_tx(transaction const &tx) const
+  bool tx_memory_pool::have_duplicated_non_standard_tx(transaction const &tx, uint8_t hard_fork_version) const
   {
     auto &service_node_list = m_blockchain.get_service_node_list();
     if(tx.tx_type == txtype::state_change)
@@ -144,19 +144,27 @@ namespace cryptonote
           continue;
         }
 
-        crypto::public_key service_node_to_change_in_the_pool;
-        bool same_service_node = false;
-        if (can_resolve_quorum_pubkey && service_node_list.get_quorum_pubkey(quorum_type, quorum_group, pool_tx_state_change.block_height, pool_tx_state_change.service_node_index, service_node_to_change_in_the_pool))
+        if (hard_fork_version >= cryptonote::network_version_16)
         {
-          same_service_node = (service_node_to_change == service_node_to_change_in_the_pool);
+          crypto::public_key service_node_to_change_in_the_pool;
+          bool same_service_node = false;
+          if (can_resolve_quorum_pubkey && service_node_list.get_quorum_pubkey(quorum_type, quorum_group, pool_tx_state_change.block_height, pool_tx_state_change.service_node_index, service_node_to_change_in_the_pool))
+          {
+            same_service_node = (service_node_to_change == service_node_to_change_in_the_pool);
+          }
+          else
+          {
+            same_service_node = (state_change == pool_tx_state_change);
+          }
+
+          if (same_service_node && pool_tx_state_change.state == state_change.state)
+            return true;
         }
         else
         {
-          same_service_node = (state_change == pool_tx_state_change);
+          if (state_change == pool_tx_state_change)
+            return true;
         }
-
-        if (same_service_node && pool_tx_state_change.state == state_change.state)
-          return true;
       }
     }
     else if (tx.tx_type == txtype::key_image_unlock)
@@ -296,7 +304,7 @@ namespace cryptonote
         return false;
       }
 
-      if(have_duplicated_non_standard_tx(tx))
+      if(have_duplicated_non_standard_tx(tx, version))
       {
         mark_double_spend(tx);
         LOG_PRINT_L1("Transaction with id: " << id << " already has a duplicated tx for height");
@@ -341,7 +349,7 @@ namespace cryptonote
         meta.last_relayed_time = time(NULL);
         meta.relayed = relayed;
         meta.do_not_relay = do_not_relay;
-        meta.double_spend_seen = (have_tx_keyimges_as_spent(tx) || have_duplicated_non_standard_tx(tx));
+        meta.double_spend_seen = (have_tx_keyimges_as_spent(tx) || have_duplicated_non_standard_tx(tx, version));
         meta.bf_padding = 0;
         memset(meta.padding, 0, sizeof(meta.padding));
         try
@@ -417,7 +425,7 @@ namespace cryptonote
 
     ++m_cookie;
 
-    MINFO("Transaction added to pool: txid " << id << " weight: " << tx_weight << " fee/byte: " << (fee / (double)tx_weight));
+    MINFO("Transaction added to pool: txid " << id << " weight: " << tx_weight << " fee/byte: " << (fee / (double)(tx_weight ? tx_weight : 1)));
 
     prune(m_txpool_max_weight);
 
