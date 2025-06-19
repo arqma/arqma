@@ -3126,6 +3126,7 @@ namespace cryptonote
       m_core.m_last_storage_server_ping = time(nullptr);
       res.status = "OK";
     }
+    m_core.reset_proof_interval();
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------

@@ -1838,6 +1838,11 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
+  void core::reset_proof_interval()
+  {
+    m_check_uptime_proof_interval.reset();
+  }
+
   void core::do_uptime_proof_call()
   {
     std::vector<service_nodes::service_node_pubkey_info> const states = get_service_node_list_state({ m_service_node_keys->pub });
@@ -1851,23 +1856,21 @@ namespace cryptonote
         next_proof_time += UPTIME_PROOF_FREQUENCY_IN_SECONDS + UPTIME_PROOF_TIMER_SECONDS/2;
 
         if ((uint64_t) std::time(nullptr) < next_proof_time)
-          return true;
+          return;
 
         if (!check_storage_server_ping(m_last_storage_server_ping))
         {
           MGINFO_RED("Failed to submit uptime proof: have not heard from the storage server recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon");
-          return true;
+          return;
         }
 
         submit_uptime_proof();
-
-        return true;
       });
     }
     else
     {
       // reset the interval so that we're ready when we register.
-      m_check_uptime_proof_interval = {};
+      m_check_uptime_proof_interval.reset();
     }
   }
   //-----------------------------------------------------------------------------------------------

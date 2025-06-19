@@ -35,9 +35,9 @@ namespace cryptonote
       case cryptonote::NOTIFY_REQUEST_FLUFFY_MISSING_TX::ID:
         return 1024 * 1024; // 1 MB
       case cryptonote::NOTIFY_UPTIME_PROOF::ID:
-        return 1024 * 1024 * 64;
+        return 1024 * 1024 * 10;
       case cryptonote::NOTIFY_NEW_SERVICE_NODE_VOTE::ID:
-        return 1024 * 1024 * 64;
+        return 1024 * 1024 * 10;
       default:
         break;
     };

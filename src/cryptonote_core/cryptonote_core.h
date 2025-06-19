@@ -34,6 +34,7 @@
 
 
 #include <ctime>
+#include <chrono>
 
 #include <boost/function.hpp>
 #include <boost/program_options/options_description.hpp>
@@ -61,6 +62,8 @@ DISABLE_VS_WARNINGS(4355)
 
 namespace cryptonote
 {
+  using namespace std::literals;
+
    struct test_options {
      std::vector<std::pair<uint8_t, uint64_t>> hard_forks;
      size_t long_term_block_weight_window;
@@ -826,6 +829,8 @@ namespace cryptonote
       */
      bool submit_uptime_proof();
 
+     void reset_proof_interval();
+
      /**
       * @brief get the blockchain pruning seed
       *
@@ -1060,15 +1065,15 @@ namespace cryptonote
 
      cryptonote_protocol_stub m_protocol_stub; //!< cryptonote protocol stub instance
 
-     epee::math_helper::once_a_time_seconds<60*60*12, false> m_store_blockchain_interval; //!< interval for manual storing of Blockchain, if enabled
-     epee::math_helper::once_a_time_seconds<60*60*2, true> m_fork_moaner; //!< interval for checking HardFork status
-     epee::math_helper::once_a_time_seconds<60*2, false> m_txpool_auto_relayer; //!< interval for checking re-relaying txpool transactions
-     epee::math_helper::once_a_time_seconds<60*60*12, true> m_check_updates_interval; //!< interval for checking for new versions
-     epee::math_helper::once_a_time_seconds<60*10, true> m_check_disk_space_interval; //!< interval for checking for disk space
-     epee::math_helper::once_a_time_seconds<60*60*5, true> m_blockchain_pruning_interval; //!< interval for incremental blockchain pruning
-     epee::math_helper::once_a_time_seconds<UPTIME_PROOF_TIMER_SECONDS, true> m_check_uptime_proof_interval; //!< interval for submitting uptime proof
-     epee::math_helper::once_a_time_seconds<60*2, false> m_service_node_vote_relayer;
-     epee::math_helper::once_a_time_seconds<60*60, false> m_sn_proof_cleanup_interval;
+     epee::math_helper::periodic_task m_store_blockchain_interval{12h, false}; //!< interval for manual storing of Blockchain, if enabled
+     epee::math_helper::periodic_task m_fork_moaner{2h}; //!< interval for checking HardFork status
+     epee::math_helper::periodic_task m_txpool_auto_relayer{2min, false}; //!< interval for checking re-relaying txpool transactions
+     epee::math_helper::periodic_task m_check_updates_interval{12h}; //!< interval for checking for new versions
+     epee::math_helper::periodic_task m_check_disk_space_interval{10min}; //!< interval for checking for disk space
+     epee::math_helper::periodic_task m_blockchain_pruning_interval{5h}; //!< interval for incremental blockchain pruning
+     epee::math_helper::periodic_task m_check_uptime_proof_interval{std::chrono::seconds{UPTIME_PROOF_TIMER_SECONDS}}; //!< interval for submitting uptime proof
+     epee::math_helper::periodic_task m_service_node_vote_relayer{2min, false};
+     epee::math_helper::periodic_task m_sn_proof_cleanup_interval{1h, false};
 
      std::atomic<bool> m_starter_message_showed; //!< has the "daemon will sync now" message been shown?
 
