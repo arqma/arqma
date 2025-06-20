@@ -169,6 +169,7 @@ namespace nodetool
       MCLOG_CYAN(el::Level::Info, "global", "Host " << address.host_str() << " unblocked.");
       return true;
     }
+
     return false;
   }
   //-----------------------------------------------------------------------------------

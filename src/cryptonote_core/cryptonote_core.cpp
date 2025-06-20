@@ -104,11 +104,6 @@ namespace cryptonote
   , "Fixed difficulty used for testing."
   , 0
   };
-  const command_line::arg_descriptor<bool> arg_dev_allow_local = {
-    "dev-allow-local-ips"
-  , "Allow local IPs for local and received service node public IP (for local testing only)"
-  , false
-  };
   const command_line::arg_descriptor<std::string, false, true, 2> arg_data_dir = {
     "data-dir"
   , "Specify data directory"
@@ -232,7 +227,7 @@ namespace cryptonote
     "store-quorum-history"
   , "Store the Service Node Quorum history for the last N blocks. "
     "Specify the number of blocks or 1 to store the entire history."
-  , 5};
+  , 0};
   //-----------------------------------------------------------------------------------------------
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
@@ -266,7 +261,6 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------
   bool core::update_checkpoints_from_json_file()
   {
-    if (m_nettype != MAINNET) return true;
     if (m_checkpoints_updating.test_and_set()) return true;
 
     bool res = true;
@@ -317,7 +311,6 @@ namespace cryptonote
     command_line::add_arg(desc, arg_stagenet_on);
     command_line::add_arg(desc, arg_regtest_on);
     command_line::add_arg(desc, arg_fixed_difficulty);
-    command_line::add_arg(desc, arg_dev_allow_local);
     command_line::add_arg(desc, arg_prep_blocks_threads);
     command_line::add_arg(desc, arg_fast_block_sync);
     command_line::add_arg(desc, arg_show_time_stats);
@@ -331,7 +324,9 @@ namespace cryptonote
     command_line::add_arg(desc, arg_max_txpool_weight);
     command_line::add_arg(desc, arg_pad_transactions);
     command_line::add_arg(desc, arg_block_notify);
+#if 0
     command_line::add_arg(desc, arg_prune_blockchain);
+#endif
     command_line::add_arg(desc, arg_reorg_notify);
     command_line::add_arg(desc, arg_keep_alt_blocks);
     command_line::add_arg(desc, arg_service_node);
@@ -364,9 +359,6 @@ namespace cryptonote
     if (command_line::get_arg(vm, arg_test_drop_download) == true)
       test_drop_download();
 
-    if (command_line::get_arg(vm, arg_dev_allow_local))
-      m_service_node_list.debug_allow_local_ips = true;
-
     bool service_node = command_line::get_arg(vm, arg_service_node);
 
     if (service_node) {
@@ -390,15 +382,8 @@ namespace cryptonote
 
         if (!epee::net_utils::is_ip_public(m_sn_public_ip))
         {
-          if (m_service_node_list.debug_allow_local_ips)
-          {
-            MWARNING("Address given for public-ip is not public. Allowing it because dev-allow-local-ips was specified. This Service Node WILL NOT WORK ON ONE PUBLIC ARQMA NETWORK!");
-          }
-          else
-          {
-            MERROR("Address given for public-ip is not public: " << epee::string_tools::get_ip_string_from_int32(m_sn_public_ip));
-            storage_ok = false;
-          }
+          MERROR("Address given for public-ip is not public: " << epee::string_tools::get_ip_string_from_int32(m_sn_public_ip));
+          storage_ok = false;
         }
       }
       else
@@ -500,7 +485,7 @@ namespace cryptonote
     uint64_t blocks_threads = command_line::get_arg(vm, arg_prep_blocks_threads);
     std::string check_updates_string = command_line::get_arg(vm, arg_check_updates);
     size_t max_txpool_weight = command_line::get_arg(vm, arg_max_txpool_weight);
-    bool prune_blockchain = command_line::get_arg(vm, arg_prune_blockchain);
+    bool const prune_blockchain = false; /*command_line::get_arg(vm, arg_prune_blockchain);*/
     bool keep_alt_blocks = command_line::get_arg(vm, arg_keep_alt_blocks);
 
     if(m_service_node_keys)
@@ -1671,14 +1656,6 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::add_new_block(const block& b, block_verification_context& bvc, checkpoint_t const *checkpoint)
   {
-    uint64_t latest_height = std::max(get_current_blockchain_height(), get_target_blockchain_height());
-    if (get_nettype() == cryptonote::MAINNET &&
-        latest_height >= HF_VERSION_16_CHECKPOINTING_SOFT_FORK_HEIGHT &&
-        get_block_height(b) < HF_VERSION_16_CHECKPOINTING_SOFT_FORK_HEIGHT)
-    {
-      checkpoint = nullptr;
-    }
-
     bool result = m_blockchain_storage.add_new_block(b, bvc, checkpoint);
     if (result)
     {
@@ -1734,28 +1711,6 @@ namespace cryptonote
         return false;
       }
       b = &lb;
-    }
-
-    if (checkpoint)
-    {
-      if (b->major_version >= network_version_16)
-      {
-        if (checkpoint->signatures.size() > 1)
-        {
-          for (size_t i = 0; i < (checkpoint->signatures.size() - 1); i++)
-          {
-            auto curr = checkpoint->signatures[i].voter_index;
-            auto next = checkpoint->signatures[i + 1].voter_index;
-
-            if (curr >= next)
-            {
-              LOG_PRINT_L1("Voters in checkpoints are not given in ascending order, block failed");
-              bvc.m_verification_failed = true;
-              return false;
-            }
-          }
-        }
-      }
     }
 
     add_new_block(*b, bvc, checkpoint);
@@ -1882,6 +1837,11 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
+  void core::reset_proof_interval()
+  {
+    m_check_uptime_proof_interval.reset();
+  }
+
   void core::do_uptime_proof_call()
   {
     std::vector<service_nodes::service_node_pubkey_info> const states = get_service_node_list_state({ m_service_node_keys->pub });
@@ -1895,23 +1855,21 @@ namespace cryptonote
         next_proof_time += UPTIME_PROOF_FREQUENCY_IN_SECONDS + UPTIME_PROOF_TIMER_SECONDS/2;
 
         if ((uint64_t) std::time(nullptr) < next_proof_time)
-          return true;
+          return;
 
         if (!check_storage_server_ping(m_last_storage_server_ping))
         {
           MGINFO_RED("Failed to submit uptime proof: have not heard from the storage server recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon");
-          return true;
+          return;
         }
 
         submit_uptime_proof();
-
-        return true;
       });
     }
     else
     {
       // reset the interval so that we're ready when we register.
-      m_check_uptime_proof_interval = {};
+      m_check_uptime_proof_interval.reset();
     }
   }
   //-----------------------------------------------------------------------------------------------

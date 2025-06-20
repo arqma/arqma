@@ -81,11 +81,11 @@ namespace cryptonote
     command_line::add_arg(desc, arg_restricted_rpc);
     command_line::add_arg(desc, arg_bootstrap_daemon_address);
     command_line::add_arg(desc, arg_bootstrap_daemon_login);
-    cryptonote::rpc_args::init_options(desc, true);
     command_line::add_arg(desc, arg_rpc_max_connections_per_public_ip);
     command_line::add_arg(desc, arg_rpc_max_connections_per_private_ip);
     command_line::add_arg(desc, arg_rpc_max_connections);
     command_line::add_arg(desc, arg_rpc_response_soft_limit);
+    cryptonote::rpc_args::init_options(desc, true);
   }
   //------------------------------------------------------------------------------------------------------------------------------
   core_rpc_server::core_rpc_server(
@@ -2069,7 +2069,7 @@ namespace cryptonote
         b.host = i->first;
         b.ip = 0;
         uint32_t ip;
-        if (epee::string_tools::get_ip_int32_from_string(ip, i->first))
+        if (epee::string_tools::get_ip_int32_from_string(ip, b.host))
           b.ip = ip;
         b.seconds = i->second - now;
         res.bans.push_back(b);
@@ -2087,6 +2087,7 @@ namespace cryptonote
     for (auto i = req.bans.begin(); i != req.bans.end(); ++i)
     {
       epee::net_utils::network_address na;
+
       if (!i->host.empty())
       {
         auto na_parsed = net::get_network_address(i->host, 0);
@@ -3125,6 +3126,7 @@ namespace cryptonote
       m_core.m_last_storage_server_ping = time(nullptr);
       res.status = "OK";
     }
+    m_core.reset_proof_interval();
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------

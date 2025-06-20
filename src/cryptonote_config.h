@@ -190,7 +190,7 @@
 #define HF_VERSION_LONG_TERM_BLOCK_WEIGHT               14
 
 #define HF_VERSION_SERVICE_NODES                        16
-#define HF_VERSION_16_CHECKPOINTING_SOFT_FORK_HEIGHT    ((uint64_t)(-1))
+
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
 #define HASH_OF_HASHES_STEP                             256

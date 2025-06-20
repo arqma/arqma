@@ -59,6 +59,7 @@ namespace cryptonote
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
+  using namespace std::literals;
 
   //! tuple of <deregister, transaction fee, receive time> for organization
   typedef std::pair<std::tuple<bool, double, std::time_t>, crypto::hash> tx_by_fee_and_receive_time_entry;
@@ -416,7 +417,7 @@ namespace cryptonote
      * @return true if it already exists
      *
      */
-    bool have_duplicated_non_standard_tx(transaction const &tx) const;
+    bool have_duplicated_non_standard_tx(transaction const &tx, uint8_t hard_fork_version) const;
 
     /**
      * @brief check if any spent key image in a transaction is in the pool
@@ -483,7 +484,7 @@ namespace cryptonote
      */
     void mark_double_spend(const transaction &tx);
 
-    bool remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta = nullptr, const sorted_tx_container::iterator *stc_it = nullptr);
+//    bool remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta = nullptr, const sorted_tx_container::iterator *stc_it = nullptr);
 
     /**
      * @brief prune lowest fee/byte txes till we're not above bytes
@@ -503,20 +504,14 @@ namespace cryptonote
      */
     typedef std::unordered_map<crypto::key_image, std::unordered_set<crypto::hash>> key_images_container;
 
-#if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
-public:
-#endif
     mutable boost::recursive_mutex m_transactions_lock;  //!< mutex for the pool
-#if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
-private:
-#endif
 
     //! container for spent key images from the transactions in the pool
     key_images_container m_spent_key_images;
 
     //TODO: this time should be a named constant somewhere, not hard-coded
     //! interval on which to check for stale/"stuck" transactions
-    epee::math_helper::once_a_time_seconds<30> m_remove_stuck_tx_interval;
+    epee::math_helper::periodic_task m_remove_stuck_tx_interval{30s};
 
     //TODO: look into doing this better
     //!< container for transactions organized by fee per size and receive time

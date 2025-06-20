@@ -34,6 +34,7 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/utility.hpp>
 #include "ringct/rctOps.h"
+#include "cryptonote_core/service_node_list.h"
 
 namespace cryptonote
 {
@@ -51,17 +52,17 @@ namespace cryptonote
 
   struct arqma_miner_tx_context
   {
-    using stake_portions = uint64_t;
-
-    arqma_miner_tx_context(network_type type = MAINNET, crypto::public_key const &winner = crypto::null_pkey,
-                           std::vector<std::pair<account_public_address, stake_portions>> const &winner_info = {});
+    arqma_miner_tx_context(network_type type = MAINNET, service_nodes::block_winner const &block_winner = service_nodes::null_block_winner)
+      : nettype(type)
+      , block_winner(std::move(block_winner))
+    {
+    }
 
     network_type nettype;
-    crypto::public_key snode_winner_key;
-    std::vector<std::pair<account_public_address, stake_portions>> snode_winner_info;
-    uint64_t gov;
-    uint64_t dev;
-    uint64_t net;
+    service_nodes::block_winner block_winner;
+    uint64_t gov = 0;
+    uint64_t dev = 0;
+    uint64_t net = 0;
   };
 
   class Blockchain;
@@ -104,7 +105,7 @@ namespace cryptonote
     uint64_t gov;
     uint64_t dev;
     uint64_t net;
-    std::vector<std::pair<account_public_address, portions>> snode_winner_info;
+    std::vector<service_nodes::payout_entry> service_node_payouts = service_nodes::null_winner;
   };
 
   bool get_arqma_block_reward(size_t median_weight, size_t current_block_weight, uint64_t already_generated_coins, uint8_t hard_fork_version, block_reward_parts &result, const arqma_block_reward_context &arqma_context);
