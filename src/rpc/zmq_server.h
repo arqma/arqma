@@ -30,16 +30,10 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/utility/string_ref.hpp>
-#include <cstdint>
-#include <memory>
-#include <string>
 
 #include "common/command_line.h"
-#include "cryptonote_basic/fwd.h"
 #include "net/zmq.h"
-#include "rpc/fwd.h"
-#include "rpc/rpc_handler.h"
-#include "span.h"
+#include "rpc_handler.h"
 
 namespace cryptonote
 {
@@ -47,7 +41,7 @@ namespace cryptonote
 namespace rpc
 {
 
-class ZmqServer final
+class ZmqServer
 {
   public:
 
@@ -55,11 +49,12 @@ class ZmqServer final
 
     ~ZmqServer();
 
+    static void init_options(boost::program_options::options_description& desc);
+
     void serve();
 
-    void* init_rpc(boost::string_ref address, boost::string_ref port);
-
-    std::shared_ptr<listener::zmq_pub> init_pub(epee::span<const std::string> addresses);
+    bool addIPCSocket(boost::string_ref address, boost::string_ref port);
+    bool addTCPSocket(boost::string_ref address, boost::string_ref port);
 
     void run();
     void stop();
@@ -72,9 +67,6 @@ class ZmqServer final
     boost::thread run_thread;
 
     net::zmq::socket rep_socket;
-    net::zmq::socket pub_socket;
-    net::zmq::socket relay_socket;
-    std::shared_ptr<listener::zmq_pub> shared_state;
 };
 
 }  // namespace cryptonote

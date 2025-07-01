@@ -32,11 +32,11 @@ project(arqma CXX)
 
 set(cryptonote_protocol_sources
   block_queue.cpp
-  cryptonote_protocol_handler-base.cpp
   cryptonote_protocol_handler.inl
   core_protocol_instantiation.cpp
   p2p_net_node_instantiation.cpp
-  levin_notify.cpp)
+  levin_notify.cpp
+  arqnet.cpp)
 
 set(cryptonote_protocol_headers)
 
@@ -53,6 +53,7 @@ arqma_add_library(cryptonote_protocol
 target_link_libraries(cryptonote_protocol
   PUBLIC
     p2p
+    arqnet
   PRIVATE
     easylogging
     ${EXTRA_LIBRARIES})

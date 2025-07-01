@@ -76,7 +76,7 @@ namespace epee
           if (!buff.empty())
             on_levin_traffic(context, true, false, true, buff.size(), command);
           LOG_PRINT_L1("Failed to invoke command " << command << " return code " << code);
-          cb(code, result_struct, context);
+          cb(code, std::move(result_struct), context);
           return false;
         }
         serialization::portable_storage stg_ret;
@@ -84,18 +84,18 @@ namespace epee
         {
           on_levin_traffic(context, true, false, true, buff.size(), command);
           LOG_ERROR("Failed to load_from_binary on command " << command);
-          cb(LEVIN_ERROR_FORMAT, result_struct, context);
+          cb(LEVIN_ERROR_FORMAT, std::move(result_struct), context);
           return false;
         }
         if (!result_struct.load(stg_ret))
         {
           on_levin_traffic(context, true, false, true, buff.size(), command);
           LOG_ERROR("Failed to load result struct on command " << command);
-          cb(LEVIN_ERROR_FORMAT, result_struct, context);
+          cb(LEVIN_ERROR_FORMAT, std::move(result_struct), context);
           return false;
         }
         on_levin_traffic(context, true, false, false, buff.size(), command);
-        cb(code, result_struct, context);
+        cb(code, std::move(result_struct), context);
         return true;
       }, inv_timeout);
       if(res <= 0)

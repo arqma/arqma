@@ -28,18 +28,11 @@
 
 #include "zmq_server.h"
 
-#include <boost/utility/string_ref.hpp>
 #include <chrono>
-#include <cstring>
-#include <utility>
-#include <stdexcept>
+#include <cstdint>
 #include <system_error>
 
 #include "byte_slice.h"
-#include "rpc/zmq_pub.h"
-
-#undef ARQMA_DEFAULT_LOG_CATEGORY
-#define ARQMA_DEFAULT_LOG_CATEGORY "net.zmq"
 
 namespace cryptonote
 {
@@ -47,62 +40,19 @@ namespace cryptonote
 namespace
 {
   constexpr const int num_zmq_threads = 1;
-  constexpr const std::int64_t max_message_size = 10 * 1024 * 1024; // 10 MiB
-  constexpr const std::chrono::seconds linger_timeout{2}; // wait period for pending out messages
-
-  net::zmq::socket init_socket(void* context, int type, epee::span<const std::string> addresses)
-  {
-    if (context == nullptr)
-      throw std::logic_error{"NULL context provided"};
-
-    net::zmq::socket out{};
-    out.reset(zmq_socket(context, type));
-    if (!out)
-    {
-      ARQMA_LOG_ZMQ_ERROR("Failed to create ZMQ socket");
-      return nullptr;
-    }
-
-    if (zmq_setsockopt(out.get(), ZMQ_MAXMSGSIZE, std::addressof(max_message_size), sizeof(max_message_size)) != 0)
-    {
-      ARQMA_LOG_ZMQ_ERROR("Failed to set maximum incoming message size");
-      return nullptr;
-    }
-
-    static constexpr const int linger_value = std::chrono::milliseconds{linger_timeout}.count();
-    if (zmq_setsockopt(out.get(), ZMQ_LINGER, std::addressof(linger_value), sizeof(linger_value)) != 0)
-    {
-      ARQMA_LOG_ZMQ_ERROR("Failed to set linger timeout");
-      return nullptr;
-    }
-
-    for (const std::string& address : addresses)
-    {
-      if (zmq_bind(out.get(), address.c_str()) < 0)
-      {
-        ARQMA_LOG_ZMQ_ERROR("ZMQ bind failed");
-        return nullptr;
-      }
-      MINFO("ZMQ now listening at " << address);
-    }
-
-    return out;
-  }
-} // anonymous
+  constexpr const std::int64_t max_message_size = 10 * 1024 * 1024;
+  constexpr const std::chrono::seconds linger_timeout{2};
+}
 
 namespace rpc
 {
 
 ZmqServer::ZmqServer(RpcHandler& h) :
     handler(h),
-    context(zmq_init(num_zmq_threads)),
-    rep_socket(nullptr),
-    pub_socket(nullptr),
-    relay_socket(nullptr),
-    shared_state(nullptr)
+    context(zmq_init(num_zmq_threads))
 {
-    if (!context)
-        ARQMA_ZMQ_THROW("Unable to create ZMQ context");
+  if (!context)
+    ARQMA_ZMQ_THROW("Unable to create ZMQ context");
 }
 
 ZmqServer::~ZmqServer()
@@ -113,58 +63,22 @@ void ZmqServer::serve()
 {
   try
   {
-    // socket must close before `zmq_term` will exit.
-    const net::zmq::socket rep = std::move(rep_socket);
-    const net::zmq::socket pub = std::move(pub_socket);
-    const net::zmq::socket relay = std::move(relay_socket);
-    const std::shared_ptr<listener::zmq_pub> state = std::move(shared_state);
-
-    const unsigned init_count = unsigned(bool(pub)) + bool(relay) + bool(state);
-    if (!rep || (init_count && init_count != 3))
+    const net::zmq::socket socket = std::move(rep_socket);
+    if (!socket)
     {
-      MERROR("ZMQ RPC server socket is null");
+      MERROR("ZMQ RPC server reply socket is null");
       return;
     }
 
-    MINFO("Arqma ZMQ Server started");
-
-    const int read_flags = pub ? ZMQ_DONTWAIT : 0;
-    std::array<zmq_pollitem_t, 3> sockets =
-    {{
-      {relay.get(), 0, ZMQ_POLLIN, 0},
-      {pub.get(), 0, ZMQ_POLLIN, 0},
-      {rep.get(), 0, ZMQ_POLLIN, 0}
-    }};
-
     while (1)
     {
-      if (pub)
-        ARQMA_UNWRAP(net::zmq::retry_op(zmq_poll, sockets.data(), sockets.size(), -1));
+      std::string message = ARQMA_UNWRAP(net::zmq::receive(socket.get()));
+      MDEBUG("Received RPC request: \"" << message << "\"");
+      epee::byte_slice response = handler.handle(std::move(message));
 
-      if (sockets[0].revents)
-        state->relay_to_pub(relay.get(), pub.get());
-
-      if (sockets[1].revents)
-        state->sub_request(ARQMA_UNWRAP(net::zmq::receive(pub.get(), ZMQ_DONTWAIT)));
-
-      if (!pub || sockets[2].revents)
-      {
-        expect<std::string> message = net::zmq::receive(rep.get(), read_flags);
-        if (!message)
-        {
-          if (message != net::zmq::make_error_code(EAGAIN))
-            ARQMA_THROW(message.error(), "Read failure on ZMQ-RPC");
-        }
-        else
-        {
-          MDEBUG("Received RPC request \"" << *message << "\"");
-          epee::byte_slice response = handler.handle(std::move(*message));
-
-          const boost::string_ref response_view{reinterpret_cast<const char*>(response.data()), response.size()};
-          MDEBUG("Sending RPC reply: \"" << response_view << "\"");
-          ARQMA_UNWRAP(net::zmq::send(std::move(response), rep.get()));
-        }
-      }
+      const boost::string_ref response_view{reinterpret_cast<const char*>(response.data()), response.size()};
+      MDEBUG("Sending RPC reply: \"" << response_view << "\"");
+      ARQMA_UNWRAP(net::zmq::send(std::move(response), socket.get()));
     }
   }
   catch (const std::system_error& e)
@@ -182,12 +96,38 @@ void ZmqServer::serve()
   }
 }
 
-void* ZmqServer::init_rpc(boost::string_ref address, boost::string_ref port)
+bool ZmqServer::addIPCSocket(const boost::string_ref address, const boost::string_ref port)
+{
+  MERROR("ZmqServer::addIPCSocket not yet implemented!");
+  return false;
+}
+
+bool ZmqServer::addTCPSocket(boost::string_ref address, boost::string_ref port)
 {
   if (!context)
   {
     MERROR("ZMQ RPC Server already shutdown");
-    return nullptr;
+    return false;
+  }
+
+  rep_socket.reset(zmq_socket(context.get(), ZMQ_REP));
+  if (!rep_socket)
+  {
+    ARQMA_LOG_ZMQ_ERROR("ZMQ RPC Server socket create failed");
+    return false;
+  }
+
+  if (zmq_setsockopt(rep_socket.get(), ZMQ_MAXMSGSIZE, std::addressof(max_message_size), sizeof(max_message_size)) != 0)
+  {
+    ARQMA_LOG_ZMQ_ERROR("Failed to set maximum incoming message size");
+    return false;
+  }
+
+  static constexpr const int linger_value = std::chrono::milliseconds{linger_timeout}.count();
+  if (zmq_setsockopt(rep_socket.get(), ZMQ_LINGER, std::addressof(linger_value), sizeof(linger_value)) != 0)
+  {
+    ARQMA_LOG_ZMQ_ERROR("Failed to set linger timeout");
+    return false;
   }
 
   if (address.empty())
@@ -200,34 +140,12 @@ void* ZmqServer::init_rpc(boost::string_ref address, boost::string_ref port)
   bind_address += ":";
   bind_address.append(port.data(), port.size());
 
-  rep_socket = init_socket(context.get(), ZMQ_REP, {std::addressof(bind_address), 1});
-  return bool(rep_socket) ? context.get() : nullptr;
-}
-
-std::shared_ptr<listener::zmq_pub> ZmqServer::init_pub(epee::span<const std::string> addresses)
-{
-  try
+  if (zmq_bind(rep_socket.get(), bind_address.c_str()) < 0)
   {
-    shared_state = std::make_shared<listener::zmq_pub>(context.get());
-    pub_socket = init_socket(context.get(), ZMQ_XPUB, addresses);
-    if (!pub_socket)
-      throw std::runtime_error{"Unable to initialize ZMQ_XPUB socket"};
-
-    const std::string relay_address[] = {listener::zmq_pub::relay_endpoint()};
-    relay_socket = init_socket(context.get(), ZMQ_PAIR, relay_address);
-    if (relay_socket)
-      throw std::runtime_error{"Unable to initialize ZMQ_PAIR relay"};
+    ARQMA_LOG_ZMQ_ERROR("ZMQ RPC Server bind failed");
+    return false;
   }
-  catch (const std::runtime_error& e)
-  {
-    shared_state = nullptr;
-    pub_socket = nullptr;
-    relay_socket = nullptr;
-    MERROR("Failed to create ZMQ/Pub listener: " << e.what());
-    return nullptr;
-  }
-
-  return shared_state;
+  return true;
 }
 
 void ZmqServer::run()
@@ -240,7 +158,7 @@ void ZmqServer::stop()
   if (!run_thread.joinable())
     return;
 
-  context.reset(); // destroying context terminates all calls
+  context.reset();
   run_thread.join();
 }
 

@@ -470,7 +470,7 @@ endif()
 # elseif(CMAKE_SYSTEM_NAME MATCHES ".*BSDI.*")
 #   set(BSDI TRUE)
 
-include_directories(external/rapidjson/include external/easylogging++ src contrib/epee/include external)
+include_directories(external/rapidjson/include external/easylogging++ src contrib/epee/include external/cppzmq external)
 
 if(APPLE)
   include_directories(SYSTEM /usr/include/malloc)
@@ -1207,6 +1207,11 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND ARCH_WIDTH EQUAL "32" AND NOT IOS AND
   if(ATOMIC_FOUND)
     list(APPEND EXTRA_LIBRARIES ${ATOMIC})
   endif()
+endif()
+
+option(ARQMA_DEBUG_SHORT_PROOFS "Quick proofs on test networks" OFF)
+if (ARQMA_DEBUG_SHORT_PROOFS)
+  add_definitions(-DUPTIME_PROOF_BASE_MINUTE=3)
 endif()
 
 add_subdirectory(contrib)

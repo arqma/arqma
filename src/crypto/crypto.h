@@ -51,12 +51,12 @@ namespace crypto {
 #include "random.h"
   }
 
-  struct ec_point {
+  struct alignas(size_t) ec_point {
     char data[32];
     operator bool() const { static constexpr char null[32] = {0}; return memcmp(data, null, sizeof(data)); }
   };
 
-  struct ec_scalar {
+  struct alignas(size_t) ec_scalar {
     char data[32];
   };
 
@@ -86,31 +86,34 @@ namespace crypto {
 
   struct signature {
     ec_scalar c, r;
+
+    operator bool() const { static constexpr char null[64] = {0}; return memcmp(this, null, sizeof(null)); }
   };
 
-  struct ed25519_public_key {
+  struct alignas(size_t) ed25519_public_key {
     unsigned char data[32];
     static constexpr ed25519_public_key null() { return {0}; }
     operator bool() const { return memcmp(data, null().data, sizeof(data)); }
   };
 
-  struct ed25519_secret_key_ {
+  struct alignas(size_t) ed25519_secret_key_ {
     unsigned char data[64];
   };
   using ed25519_secret_key = epee::mlocked<tools::scrubbed<ed25519_secret_key_>>;
 
-  struct ed25519_signature {
+  struct alignas(size_t) ed25519_signature {
     unsigned char data[64];
     static constexpr ed25519_signature null() { return {0}; }
+    operator bool() const { auto z = null(); return memcmp(this, &z, sizeof(z)); }
   };
 
-  struct x25519_public_key {
+  struct alignas(size_t) x25519_public_key {
     unsigned char data[32];
     static constexpr x25519_public_key null() { return {0}; }
     operator bool() const { return memcmp(data, null().data, sizeof(data)); }
   };
 
-  struct x25519_secret_key_ {
+  struct alignas(size_t) x25519_secret_key_ {
     unsigned char data[32];
   };
   using x25519_secret_key = epee::mlocked<tools::scrubbed<x25519_secret_key_>>;
@@ -129,6 +132,17 @@ namespace crypto {
    */
   inline void rand(size_t N, uint8_t *bytes) {
     generate_random_bytes_thread_safe(N, bytes);
+  }
+
+  constexpr size_t SIZE_TS_IN_HASH = sizeof(crypto::hash) / sizeof(size_t);
+  static_assert(SIZE_TS_IN_HASH * sizeof(size_t) == sizeof(crypto::hash) && alignof(crypto::hash) >= alignof(size_t), "Expected crypto::hash size/alignment not satisfied");
+
+  inline void hash_xor(crypto::hash &dest, const crypto::hash &src)
+  {
+    size_t (&dest_)[SIZE_TS_IN_HASH] = reinterpret_cast<size_t (&)[SIZE_TS_IN_HASH]>(dest);
+    const size_t (&src_)[SIZE_TS_IN_HASH] = reinterpret_cast<const size_t (&)[SIZE_TS_IN_HASH]>(src);
+    for (size_t i = 0; i < SIZE_TS_IN_HASH; ++i)
+      dest_[i] ^= src_[i];
   }
 
   /* Generate a value filled with random bytes.
@@ -254,6 +268,14 @@ namespace crypto {
   const extern crypto::public_key null_pkey;
   const extern crypto::secret_key null_skey;
 }
+
+EPEE_TYPE_IS_SPANNABLE(crypto::ec_scalar)
+EPEE_TYPE_IS_SPANNABLE(crypto::public_key)
+EPEE_TYPE_IS_SPANNABLE(crypto::key_derivation)
+EPEE_TYPE_IS_SPANNABLE(crypto::key_image)
+EPEE_TYPE_IS_SPANNABLE(crypto::signature)
+EPEE_TYPE_IS_SPANNABLE(crypto::ed25519_public_key)
+EPEE_TYPE_IS_SPANNABLE(crypto::x25519_public_key)
 
 CRYPTO_MAKE_HASHABLE(public_key)
 CRYPTO_MAKE_HASHABLE_CONSTANT_TIME(secret_key)

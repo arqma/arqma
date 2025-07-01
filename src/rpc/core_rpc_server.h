@@ -45,13 +45,14 @@ using namespace epee;
 
 namespace cryptonote
 {
+  static constexpr auto rpc_long_poll_timeout = 15s;
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
   class core_rpc_server: public epee::http_server_impl_base<core_rpc_server>
   {
   public:
-
+    static constexpr int DEFAULT_RPC_THREADS = 6;
     static const command_line::arg_descriptor<std::string, false, true, 2> arg_rpc_bind_port;
     static const command_line::arg_descriptor<std::string> arg_rpc_restricted_bind_port;
     static const command_line::arg_descriptor<bool> arg_restricted_rpc;
@@ -67,6 +68,7 @@ namespace cryptonote
     static const command_line::arg_descriptor<std::size_t> arg_rpc_max_connections_per_private_ip;
     static const command_line::arg_descriptor<std::size_t> arg_rpc_max_connections;
     static const command_line::arg_descriptor<std::size_t> arg_rpc_response_soft_limit;
+    static const command_line::arg_descriptor<int> arg_rpc_long_poll_connections;
 
     typedef epee::net_utils::connection_context_base connection_context;
 
@@ -180,6 +182,7 @@ namespace cryptonote
         MAP_JON_RPC_WE_IF("prune_blockchain",                      on_prune_blockchain,                        COMMAND_RPC_PRUNE_BLOCKCHAIN, !m_restricted)
         MAP_JON_RPC_WE_IF("perform_blockchain_test",               on_perform_blockchain_test,                 COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST, !m_restricted)
         MAP_JON_RPC_WE_IF("storage_server_ping",                   on_storage_server_ping,                     COMMAND_RPC_STORAGE_SERVER_PING, !m_restricted)
+        MAP_JON_RPC_WE_IF("arqnet_ping",                           on_arqnet_ping,                             COMMAND_RPC_ARQNET_PING, !m_restricted)
         MAP_JON_RPC_WE("get_service_nodes_states_changes",         on_get_service_nodes_state_changes,         COMMAND_RPC_GET_SN_STATE_CHANGES)
         MAP_JON_RPC_WE_IF("report_peer_storage_server_status",     on_report_peer_storage_server_status,       COMMAND_RPC_REPORT_PEER_SS_STATUS, !m_restricted)
       END_JSON_RPC_MAP()
@@ -261,12 +264,16 @@ namespace cryptonote
     bool on_prune_blockchain(const COMMAND_RPC_PRUNE_BLOCKCHAIN::request& req, COMMAND_RPC_PRUNE_BLOCKCHAIN::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_perform_blockchain_test(const COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST::request& req, COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_storage_server_ping(const COMMAND_RPC_STORAGE_SERVER_PING::request& req, COMMAND_RPC_STORAGE_SERVER_PING::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
+    bool on_arqnet_ping(const COMMAND_RPC_ARQNET_PING::request& req, COMMAND_RPC_ARQNET_PING::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_checkpoints(const COMMAND_RPC_GET_CHECKPOINTS::request& req, COMMAND_RPC_GET_CHECKPOINTS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_service_nodes_state_changes(const COMMAND_RPC_GET_SN_STATE_CHANGES::request& req, COMMAND_RPC_GET_SN_STATE_CHANGES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_report_peer_storage_server_status(const COMMAND_RPC_REPORT_PEER_SS_STATUS::request& req, COMMAND_RPC_REPORT_PEER_SS_STATUS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     //------------------------------
 
+    int m_max_long_poll_connections;
 private:
+    std::atomic<int> m_long_poll_active_connections;
+
     bool check_core_busy();
     bool check_core_ready();
 

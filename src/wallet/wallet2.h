@@ -873,7 +873,7 @@ private:
     bool is_deprecated() const;
     void refresh(bool trusted_daemon);
     void refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blocks_fetched);
-    void refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blocks_fetched, bool& received_money, bool check_pool = true);
+    void refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blocks_fetched, bool& received_money);
     bool refresh(bool trusted_daemon, uint64_t & blocks_fetched, bool& received_money, bool& ok);
 
     void set_refresh_type(RefreshType refresh_type) { m_refresh_type = refresh_type; }
@@ -1296,6 +1296,13 @@ private:
     uint64_t import_key_images(const std::vector<std::pair<crypto::key_image, crypto::signature>> &signed_key_images, size_t offset, uint64_t &spent, uint64_t &unspent, bool check_spent = true);
     uint64_t import_key_images(const std::string &filename, uint64_t &spent, uint64_t &unspent);
 
+    crypto::hash get_long_poll_tx_pool_checksum() const
+    {
+      std::lock_guard<decltype(m_long_poll_tx_pool_checksum_mutex)> lock(m_long_poll_tx_pool_checksum_mutex);
+      return m_long_poll_tx_pool_checksum;
+    }
+
+    bool long_poll_pool_state();
     void update_pool_state(bool refreshed = false);
     void remove_obsolete_pool_txs(const std::vector<crypto::hash> &tx_hashes);
 
@@ -1357,21 +1364,21 @@ private:
     inline bool invoke_http_json(const boost::string_ref uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST")
     {
       if(m_offline) return false;
-      boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
+      std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
       return epee::net_utils::invoke_http_json(uri, req, res, *m_http_client, timeout, http_method);
     }
     template<class t_request, class t_response>
     inline bool invoke_http_bin(const boost::string_ref uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST")
     {
       if(m_offline) return false;
-      boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
+      std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
       return epee::net_utils::invoke_http_bin(uri, req, res, *m_http_client, timeout, http_method);
     }
     template<class t_request, class t_response>
     inline bool invoke_http_json_rpc(const boost::string_ref uri, const std::string& method_name, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST", const std::string& req_id = "0")
     {
       if(m_offline) return false;
-      boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
+      std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
       return epee::net_utils::invoke_http_json_rpc(uri, method_name, req, res, *m_http_client, timeout, http_method, req_id);
     }
 
@@ -1398,6 +1405,8 @@ private:
     uint64_t get_bytes_received() const;
 
     void set_offline(bool offline = true);
+
+    bool m_long_poll_disabled = false;
 
     enum struct stake_result_status
     {
@@ -1582,6 +1591,12 @@ private:
     std::unordered_map<crypto::hash, crypto::secret_key> m_tx_keys;
     std::unordered_map<crypto::hash, std::vector<crypto::secret_key>> m_additional_tx_keys;
 
+    std::recursive_mutex m_long_poll_mutex;
+    epee::net_utils::http::http_simple_client m_long_poll_client;
+    mutable std::mutex m_long_poll_tx_pool_checksum_mutex;
+    crypto::hash m_long_poll_tx_pool_checksum = {};
+    epee::net_utils::ssl_options_t m_long_poll_ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_autodetect;
+
     transfer_container m_transfers;
     payment_container m_payments;
     std::unordered_map<crypto::key_image, size_t> m_key_images;
@@ -1599,7 +1614,7 @@ private:
 
     std::atomic<bool> m_run;
 
-    boost::recursive_mutex m_daemon_rpc_mutex;
+    std::recursive_mutex m_daemon_rpc_mutex;
 
     bool m_trusted_daemon;
     i_wallet2_callback* m_callback;

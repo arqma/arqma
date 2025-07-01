@@ -383,6 +383,7 @@ namespace cryptonote
 
     std::atomic<bool> m_idle_run;
     boost::thread m_idle_thread;
+    boost::thread m_long_poll_thread;
     boost::mutex m_idle_mutex;
     boost::condition_variable m_idle_cond;
 
@@ -390,5 +391,8 @@ namespace cryptonote
     bool m_auto_refresh_refreshing;
     std::atomic<bool> m_in_manual_refresh;
     uint32_t m_current_subaddress_account;
+
+    std::atomic<uint64_t> m_password_asked_on_height;
+    crypto::hash m_password_asked_on_checksum;
   };
 }

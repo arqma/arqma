@@ -44,6 +44,7 @@ set(common_sources
   notify.cpp
   password.cpp
   perf_timer.cpp
+  random.cpp
   rules.cpp
   pruning.cpp
   spawn.cpp

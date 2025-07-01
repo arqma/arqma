@@ -434,6 +434,8 @@ private:
   // migrate from DB version 4 to 5
   void migrate_4_5(cryptonote::network_type nettype);
 
+  void migrate_5_6();
+
   void cleanup_batch();
 
   bool get_block_checkpoint_internal(uint64_t height, checkpoint_t &checkpoint, MDB_cursor_op op) const;

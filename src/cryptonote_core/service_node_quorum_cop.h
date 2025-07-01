@@ -96,7 +96,7 @@ namespace service_nodes
     void blockchain_detached(uint64_t height) override;
 
     void set_votes_relayed(std::vector<quorum_vote_t> const &relayed_votes);
-    std::vector<quorum_vote_t> get_relayable_votes(uint64_t current_height);
+    std::vector<quorum_vote_t> get_relayable_votes(uint64_t current_height, uint8_t hard_fork_version, bool quorum_relay);
     bool handle_vote(quorum_vote_t const &vote, cryptonote::vote_verification_context &vvc);
 
     static int64_t calculate_decommission_credit(const service_node_info &info, uint64_t current_height);
@@ -110,4 +110,8 @@ namespace service_nodes
     uint64_t m_last_checkpointed_height;
     mutable epee::critical_section m_lock;
   };
+
+  int find_index_in_quorum_group(std::vector<crypto::public_key> const &group, const crypto::public_key &my_pubkey);
+
+  uint64_t quorum_checksum(const std::vector<crypto::public_key> &pubkeys, size_t offset = 0);
 }

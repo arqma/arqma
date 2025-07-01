@@ -166,12 +166,12 @@ namespace service_nodes
     m_vote_pool.set_relayed(relayed_votes);
   }
 
-  std::vector<quorum_vote_t> quorum_cop::get_relayable_votes(uint64_t current_height)
+  std::vector<quorum_vote_t> quorum_cop::get_relayable_votes(uint64_t current_height, uint8_t hard_fork_version, bool quorum_relay)
   {
-    return m_vote_pool.get_relayable_votes(current_height);
+    return m_vote_pool.get_relayable_votes(current_height, hard_fork_version, quorum_relay);
   }
 
-  static int find_index_in_quorum_group(std::vector<crypto::public_key> const &group, crypto::public_key const &my_pubkey)
+  int find_index_in_quorum_group(std::vector<crypto::public_key> const &group, crypto::public_key const &my_pubkey)
   {
     int result = -1;
     auto it = std::find(group.begin(), group.end(), my_pubkey);
@@ -471,7 +471,7 @@ namespace service_nodes
       cryptonote::tx_verification_context tvc{};
       cryptonote::blobdata const tx_blob = cryptonote::tx_to_blob(state_change_tx);
 
-      bool result = core.handle_incoming_tx(tx_blob, tvc, false, false, false);
+      bool result = core.handle_incoming_tx(tx_blob, tvc, cryptonote::tx_pool_options::new_tx());
       if (!result || tvc.m_verification_failed)
       {
         LOG_PRINT_L1("A full state change tx for height: " << vote.block_height <<
@@ -488,7 +488,7 @@ namespace service_nodes
     return true;
   }
 
-  static bool handle_checkpoint_vote(cryptonote::core &core, const quorum_vote_t& vote, const std::vector<pool_vote_entry>& votes, const quorum& quorum)
+  static bool handle_checkpoint_vote(cryptonote::core& core, const quorum_vote_t& vote, const std::vector<pool_vote_entry>& votes, const quorum& quorum)
   {
     if (votes.size() < CHECKPOINT_MIN_VOTES)
     {
@@ -633,4 +633,29 @@ namespace service_nodes
 
     return credit;
   }
+
+  uint64_t quorum_checksum(const std::vector<crypto::public_key> &pubkeys, size_t offset)
+  {
+    constexpr size_t KEY_BYTES = sizeof(crypto::public_key);
+
+    uint64_t sum = 0;
+    alignas(uint64_t) std::array<char, sizeof(uint64_t)> local;
+    for (auto &pk : pubkeys)
+    {
+      offset %= KEY_BYTES;
+      auto *pkdata = reinterpret_cast<const char *>(&pk);
+      if (offset <= KEY_BYTES - sizeof(uint64_t))
+        std::memcpy(local.data(), pkdata + offset, sizeof(uint64_t));
+      else
+      {
+        size_t prewrap = KEY_BYTES - offset;
+        std::memcpy(local.data(), pkdata + offset, prewrap);
+        std::memcpy(local.data() + prewrap, pkdata, sizeof(uint64_t) - prewrap);
+      }
+      sum += boost::endian::little_to_native(*reinterpret_cast<uint64_t *>(local.data()));
+      ++offset;
+    }
+    return sum;
+  }
+
 }

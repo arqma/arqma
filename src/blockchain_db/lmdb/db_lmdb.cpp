@@ -69,6 +69,7 @@ enum struct lmdb_version
 {
   v4 = 4,
   v5,
+  v6,
   _count
 };
 
@@ -4082,9 +4083,14 @@ uint64_t BlockchainLMDB::add_block(const std::pair<block, blobdata>& blk, size_t
   return ++m_height;
 }
 
-void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
+struct checkpoint_mdb_buffer
 {
-  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  char data[sizeof(blk_checkpoint_header) + (sizeof(service_nodes::voter_to_signature) * service_nodes::CHECKPOINT_QUORUM_SIZE)];
+  size_t len;
+};
+
+static bool convert_checkpoint_into_buffer(checkpoint_t const &checkpoint, checkpoint_mdb_buffer &result)
+{
   blk_checkpoint_header header = {};
   header.height = checkpoint.height;
   header.block_hash = checkpoint.block_hash;
@@ -4093,19 +4099,16 @@ void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
   native_to_little_inplace(header.height);
   native_to_little_inplace(header.num_signatures);
 
-  size_t const MAX_BYTES_REQUIRED = sizeof(header) + (sizeof(*checkpoint.signatures.data()) * service_nodes::CHECKPOINT_QUORUM_SIZE);
-  uint8_t buffer[MAX_BYTES_REQUIRED];
-
   size_t const bytes_for_signatures = sizeof(*checkpoint.signatures.data()) * checkpoint.signatures.size();
-  size_t const actual_bytes_used = sizeof(header) + bytes_for_signatures;
-  if (actual_bytes_used > MAX_BYTES_REQUIRED)
+  result.len = sizeof(header) + bytes_for_signatures;
+  if (result.len > sizeof(result.data))
   {
-    LOG_PRINT_L0("Unexpected pre-calculated maximum number of bytes. " << MAX_BYTES_REQUIRED << " is insufficient to store signatures. Requiring: " << actual_bytes_used << " bytes");
-    assert(actual_bytes_used <= MAX_BYTES_REQUIRED);
-    return;
+    LOG_PRINT_L0("Unexpected pre-calculated maximum number of bytes. " << sizeof(result.data) << " is insufficient to store signatures. Requiring: " << result.len << " bytes");
+    assert(result.len <= sizeof(result.data));
+    return false;
   }
 
-  uint8_t *buffer_ptr = buffer;
+  char *buffer_ptr = result.data;
   memcpy(buffer_ptr, (void *)&header, sizeof(header));
   buffer_ptr += sizeof(header);
 
@@ -4114,14 +4117,24 @@ void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
 
   // Bounds check memcpy
   {
-    uint8_t const *end = buffer + MAX_BYTES_REQUIRED;
+    char const *end = result.data + sizeof(result.data);
     if(buffer_ptr > end)
     {
       LOG_PRINT_L0("Unexpected memcpy bounds overflow on update_block_checkpoint");
       assert(buffer_ptr <= end);
-      return;
+      return false;
     }
   }
+
+  return true;
+}
+
+void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+
+  checkpoint_mdb_buffer buffer = {};
+  convert_checkpoint_into_buffer(checkpoint, buffer);
 
   check_open();
   mdb_txn_cursors *m_cursors = &m_wcursors;
@@ -4129,8 +4142,8 @@ void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
 
   MDB_val_set(key, checkpoint.height);
   MDB_val value = {};
-  value.mv_size = actual_bytes_used;
-  value.mv_data = buffer;
+  value.mv_size = buffer.len;
+  value.mv_data = buffer.data;
   int ret = mdb_cursor_put(m_cursors->block_checkpoints, &key, &value, 0);
   if(ret)
     throw0(DB_ERROR(lmdb_error("Failed to update block checkpoint in db transaction: ", ret).c_str()));
@@ -4854,13 +4867,14 @@ void BlockchainLMDB::fixup()
 
 #define LOGIF(y)    if (ELPP->vRegistry()->allowed(y, "global"))
 
-static int write_db_version(MDB_env *env, MDB_dbi &dest, mdb_txn_safe &txn, uint32_t version)
+static int write_db_version(MDB_env *env, MDB_dbi &dest, uint32_t version)
 {
   MDB_val v = {};
   v.mv_data = (void *)&version;
   v.mv_size = sizeof(version);
   MDB_val_copy<const char *> vk("version");
 
+  mdb_txn_safe txn(false);
   int result = mdb_txn_begin(env, NULL, 0, txn);
   if (result) return result;
   result = mdb_put(txn, dest, &vk, &v, 0);
@@ -5399,7 +5413,7 @@ void BlockchainLMDB::migrate_0_1()
   } while(0);
 
   uint32_t version = 1;
-  if (int result = write_db_version(m_env, m_properties, txn, version))
+  if (int result = write_db_version(m_env, m_properties, version))
     throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
 }
 
@@ -5532,7 +5546,7 @@ void BlockchainLMDB::migrate_1_2()
   } while(0);
 
   uint32_t version = 2;
-  if (int result = write_db_version(m_env, m_properties, txn, version))
+  if (int result = write_db_version(m_env, m_properties, version))
     throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
 }
 
@@ -5653,7 +5667,7 @@ void BlockchainLMDB::migrate_2_3()
   } while(0);
 
   uint32_t version = 3;
-  if (int result = write_db_version(m_env, m_properties, txn, version))
+  if (int result = write_db_version(m_env, m_properties, version))
     throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
 }
 
@@ -5797,7 +5811,7 @@ void BlockchainLMDB::migrate_3_4()
   } while(0);
 
   uint32_t version = 4;
-  if (int result = write_db_version(m_env, m_properties, txn, version))
+  if (int result = write_db_version(m_env, m_properties, version))
     throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
 }
 
@@ -5940,8 +5954,71 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
 
   txn.commit();
 
-  if (int result = write_db_version(m_env, m_properties, txn, (uint32_t)lmdb_version::v5))
+  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v5))
     throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
+}
+
+void BlockchainLMDB::migrate_5_6()
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  MGINFO_YELLOW("Migrating blockchain from DB Version 5 to 6 - this may take a while");
+
+  std::vector<checkpoint_t> checkpoints;
+  checkpoints.reserve(1024);
+  {
+    mdb_txn_safe txn(false);
+    if (auto result = mdb_txn_begin(m_env, NULL, 0, txn))
+      throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
+
+    if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints)) return;
+    MDB_cursor *cursor;
+    if (auto ret = mdb_cursor_open(txn, m_block_checkpoints, &cursor))
+      throw0(DB_ERROR(lmdb_error("Failed to open a cursor for block checkpoints: ", ret).c_str()));
+
+    for (MDB_cursor_op op = MDB_FIRST;; op = MDB_NEXT)
+    {
+      MDB_val key, val;
+      int ret = mdb_cursor_get(cursor, &key, &val, op);
+      if (ret == MDB_NOTFOUND) break;
+      if (ret) throw0(DB_ERROR(lmdb_error("Failed to enumerate block checkpoints: ", ret).c_str()));
+      checkpoint_t checkpoint = convert_mdb_val_to_checkpoint(val);
+      checkpoints.push_back(checkpoint);
+    }
+
+    if (auto ret = mdb_drop(txn, m_block_checkpoints, 1))
+      throw0(DB_ERROR(lmdb_error("Failed to delete old block checkpoints table: ", ret).c_str()));
+    mdb_dbi_close(m_env, m_block_checkpoints);
+    txn.commit();
+  }
+
+  {
+    mdb_txn_safe txn(false);
+    if (auto result = mdb_txn_begin(m_env, NULL, 0, txn))
+      throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
+
+    lmdb_db_open(txn, LMDB_BLOCK_CHECKPOINTS, MDB_INTEGERKEY | MDB_CREATE, m_block_checkpoints, "Failed to open db handle for m_block_checkpoints");
+    mdb_set_compare(txn, m_block_checkpoints, compare_uint64);
+
+    MDB_cursor *cursor;
+    if (auto ret = mdb_cursor_open(txn, m_block_checkpoints, &cursor))
+      throw0(DB_ERROR(lmdb_error("Failed to open a cursor for block checkpoints: ", ret).c_str()));
+
+    for (checkpoint_t const &checkpoint : checkpoints)
+    {
+      checkpoint_mdb_buffer buffer = {};
+      convert_checkpoint_into_buffer(checkpoint, buffer);
+      MDB_val_set(key, checkpoint.height);
+      MDB_val value = {};
+      value.mv_size = buffer.len;
+      value.mv_data = buffer.data;
+      int ret = mdb_cursor_put(cursor, &key, &value, 0);
+      if (ret) throw0(DB_ERROR(lmdb_error("Failed to update block checkpoint in db transaction: ", ret).c_str()));
+    }
+    txn.commit();
+  }
+
+  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v6))
+    throw0(DB_ERROR(lmdb_error("Failed to update version for thr db: ", result).c_str()));
 }
 
 void BlockchainLMDB::migrate(const uint32_t oldversion, cryptonote::network_type nettype)
@@ -5958,6 +6035,8 @@ void BlockchainLMDB::migrate(const uint32_t oldversion, cryptonote::network_type
       migrate_3_4();
     case 4:
       migrate_4_5(nettype);
+    case 5:
+      migrate_5_6();
     default:
       break;
   }
@@ -6043,6 +6122,7 @@ struct service_node_proof_serialized
     : timestamp{native_to_little(info.timestamp)}
     , ip{native_to_little(info.public_ip)}
     , storage_port{native_to_little(info.storage_port)}
+    , arqnet_port{native_to_little(info.arqnet_port)}
     , version{native_to_little(info.version[0]), native_to_little(info.version[1]), native_to_little(info.version[2])}
     , pubkey_ed25519{info.pubkey_ed25519}
   {
@@ -6053,6 +6133,8 @@ struct service_node_proof_serialized
     if (info.timestamp > info.effective_timestamp)
       info.effective_timestamp = info.timestamp;
     info.public_ip = little_to_native(ip);
+    info.storage_port = little_to_native(storage_port);
+    info.arqnet_port = little_to_native(arqnet_port);
     for (size_t i = 0; i < info.version.size(); i++)
       info.version[i] = little_to_native(version[i]);
     info.update_pubkey(pubkey_ed25519);
@@ -6067,6 +6149,7 @@ struct service_node_proof_serialized
   uint64_t timestamp;
   uint32_t ip;
   uint16_t storage_port;
+  uint16_t arqnet_port;
   uint16_t version[3];
   uint16_t _padding{0};
   crypto::ed25519_public_key pubkey_ed25519;

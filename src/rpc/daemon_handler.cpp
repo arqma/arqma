@@ -258,7 +258,7 @@ namespace rpc
     {
       std::vector<cryptonote::transaction> pool_txs;
 
-      m_core.get_pool_transactions(pool_txs);
+      m_core.get_pool().get_transactions(pool_txs);
 
       for (const auto& tx : pool_txs)
       {
@@ -366,7 +366,7 @@ namespace rpc
     cryptonote_connection_context fake_context{};
     tx_verification_context tvc{};
 
-    if(!m_core.handle_incoming_tx(tx_blob, tvc, false, false, !relay) || tvc.m_verification_failed)
+    if(!m_core.handle_incoming_tx(tx_blob, tvc, tx_pool_options::new_tx(!relay)) || tvc.m_verification_failed)
     {
       if (tvc.m_verification_failed)
       {
@@ -538,7 +538,7 @@ namespace rpc
 
     res.info.tx_count = chain.get_total_transactions() - res.info.height; //without coinbase
 
-    res.info.tx_pool_size = m_core.get_pool_transactions_count();
+    res.info.tx_pool_size = m_core.get_pool().get_transactions_count();
 
     res.info.alt_blocks_count = chain.get_alternative_blocks_count();
 
@@ -882,7 +882,7 @@ namespace rpc
 
   void DaemonHandler::handle(const GetTransactionPool::Request& req, GetTransactionPool::Response& res)
   {
-    bool r = m_core.get_pool_for_rpc(res.transactions, res.key_images);
+    bool r = m_core.get_pool().get_pool_for_rpc(res.transactions, res.key_images);
 
     if (!r) res.status = Message::STATUS_FAILED;
     else res.status = Message::STATUS_OK;

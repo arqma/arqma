@@ -35,6 +35,7 @@
 #include <boost/preprocessor/stringize.hpp>
 #include <cstdint>
 #include "include_base_utils.h"
+#include <chrono>
 using namespace epee;
 
 #include "version.h"
@@ -54,6 +55,7 @@ using namespace epee;
 #include "mnemonics/electrum-words.h"
 #include "rpc/rpc_args.h"
 #include "rpc/core_rpc_server_commands_defs.h"
+#include "rpc/core_rpc_server.h"
 #include "daemonizer/daemonizer.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -115,8 +117,14 @@ namespace tools
     m_net_server.add_idle_handler([this](){
       if (m_auto_refresh_period == 0) // disabled
         return true;
-      if (boost::posix_time::microsec_clock::universal_time() < m_last_auto_refresh_time + boost::posix_time::seconds(m_auto_refresh_period))
-        return true;
+
+      if (!m_long_poll_new_changes)
+      {
+        if (boost::posix_time::microsec_clock::universal_time() < m_last_auto_refresh_time + boost::posix_time::seconds(m_auto_refresh_period))
+          return true;
+      }
+      m_long_poll_new_changes = false;
+
       try {
         if (m_wallet) m_wallet->refresh(m_wallet->is_trusted_daemon());
       } catch (const std::exception& ex) {
@@ -133,6 +141,29 @@ namespace tools
       }
       return true;
     }, 500);
+
+    m_long_poll_thread = boost::thread([&] {
+      for (;;)
+      {
+        if (m_auto_refresh_period == 0 || !m_wallet)
+        {
+          std::this_thread::sleep_for(std::chrono::seconds(10));
+          continue;
+        }
+
+        if (m_wallet->m_long_poll_disabled)
+          return true;
+
+        try
+        {
+          if (m_wallet->long_poll_pool_state())
+            m_long_poll_new_changes = true;
+        }
+        catch (...)
+        {
+        }
+      }
+    });
 
     //DO NOT START THIS SERVER IN MORE THEN 1 THREADS WITHOUT REFACTORING
     return epee::http_server_impl_base<wallet_rpc_server, connection_context>::run(1, true);
@@ -2396,8 +2427,6 @@ namespace tools
         res.transfers.push_back(m_wallet->make_transfer_view(i->first, i->second));
       }
     }
-
-    m_wallet->update_pool_state();
 
     std::list<std::pair<crypto::hash, tools::wallet2::pool_payment_details>> pool_payments;
     m_wallet->get_unconfirmed_payments(pool_payments, req.account_index);

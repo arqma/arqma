@@ -46,6 +46,7 @@ extern "C" {
 #include "common/scoped_message_writer.h"
 #include "common/i18n.h"
 #include "common/util.h"
+#include "common/random.h"
 #include "blockchain.h"
 #include "common/lock.h"
 #include "service_node_quorum_cop.h"
@@ -80,7 +81,7 @@ namespace service_nodes
 
   static constexpr service_node_info::version_t get_minimum_sn_info_version(uint8_t hard_fork_version)
   {
-    return service_node_info::version_t::v0;
+    return hard_fork_version < cryptonote::network_version_17 ? service_node_info::version_t::v0 : service_node_info::version_t::v1;
   }
 
   service_node_list::service_node_list(cryptonote::Blockchain& blockchain)
@@ -478,14 +479,14 @@ namespace service_nodes
     cryptonote::tx_extra_service_node_state_change state_change;
     if(!cryptonote::get_service_node_state_change_from_tx_extra(tx.extra, state_change))
     {
-      LOG_PRINT_L1("Transaction: " << cryptonote::get_transaction_hash(tx) << " did not have valid state change data in tx extra, rejecting malformed tx");
+      MERROR("Transaction: " << cryptonote::get_transaction_hash(tx) << " did not have valid state change data in tx extra, rejecting malformed tx");
       return false;
     }
 
     auto it = state_history.find(state_change.block_height);
     if (it == state_history.end())
     {
-      LOG_PRINT_L1("Transaction: " << cryptonote::get_transaction_hash(tx) << " in block " << cryptonote::get_block_height(block) << " " << cryptonote::get_block_hash(block) << ", references quorum at height " << state_change.block_height << " but that height is not stored!");
+      MERROR("Transaction: " << cryptonote::get_transaction_hash(tx) << " in block " << cryptonote::get_block_height(block) << " " << cryptonote::get_block_hash(block) << ", references quorum at height " << state_change.block_height << " but that height is not stored!");
       return false;
     }
 
@@ -511,14 +512,14 @@ namespace service_nodes
 
     if (!quorums)
     {
-      LOG_PRINT_L1("Could not get a quorum that could completely validate the votes from state change in tx: " << get_transaction_hash(tx) << ", skipping transaction");
+      MERROR("Could not get a quorum that could completely validate the votes from state change in tx: " << get_transaction_hash(tx) << ", skipping transaction");
       return false;
     }
 
     crypto::public_key key;
     if (!get_pubkey_from_quorum(*quorums->obligations, quorum_group::worker, state_change.service_node_index, key))
     {
-      LOG_PRINT_L1("Retrieving the public key from state change in tx: " << cryptonote::get_transaction_hash(tx) << " failed");
+      MERROR("Retrieving the public key from state change in tx: " << cryptonote::get_transaction_hash(tx) << " failed");
       return false;
     }
 
@@ -856,8 +857,6 @@ namespace service_nodes
     info.last_reward_block_height      = block_height;
     info.last_reward_transaction_index = index;
     info.swarm_id                      = UNASSIGNED_SWARM_ID;
-    info.proof->pubkey_ed25519         = crypto::ed25519_public_key::null();
-    info.proof->pubkey_x25519          = crypto::x25519_public_key::null();
     info.last_ip_change_height         = block_height;
     info.version                       = get_minimum_sn_info_version(hard_fork_version);
 
@@ -1072,12 +1071,12 @@ namespace service_nodes
     if ((0 < sublist_size && sublist_size < list_size) && (0 < sublist_up_to && sublist_up_to < list_size))
     {
       assert(sublist_size <= sublist_up_to);
-      arqma_shuffle(result.begin(), result.begin() + sublist_up_to, seed);
-      arqma_shuffle(result.begin() + sublist_size, result.end(), seed);
+      tools::shuffle_portable(result.begin(), result.begin() + sublist_up_to, seed);
+      tools::shuffle_portable(result.begin() + sublist_size, result.end(), seed);
     }
     else
     {
-      arqma_shuffle(result.begin(), result.end(), seed);
+      tools::shuffle_portable(result.begin(), result.end(), seed);
     }
     return result;
   }
@@ -1677,7 +1676,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   static crypto::hash hash_uptime_proof(const cryptonote::NOTIFY_UPTIME_PROOF::request &proof, uint8_t hard_fork_version)
   {
-    auto buf = tools::memcpy_le(proof.pubkey, proof.timestamp, proof.public_ip, proof.storage_port, proof.pubkey_ed25519);
+    auto buf = tools::memcpy_le(proof.pubkey.data, proof.timestamp, proof.public_ip, proof.storage_port, proof.pubkey_ed25519.data, proof.arqnet_port);
     size_t buf_size = buf.size();
 
     crypto::hash result;
@@ -1685,7 +1684,7 @@ namespace service_nodes
     return result;
   }
   //----------------------------------------------------------------------------
-  cryptonote::NOTIFY_UPTIME_PROOF::request service_node_list::generate_uptime_proof(const service_node_keys &keys, uint32_t public_ip, uint16_t storage_port) const
+  cryptonote::NOTIFY_UPTIME_PROOF::request service_node_list::generate_uptime_proof(const service_node_keys &keys, uint32_t public_ip, uint16_t storage_port, uint16_t arqnet_port) const
   {
     cryptonote::NOTIFY_UPTIME_PROOF::request result = {};
     result.arqma_snode_version                      = ARQMA_VERSION;
@@ -1693,6 +1692,7 @@ namespace service_nodes
     result.pubkey                                   = keys.pub;
     result.public_ip                                = public_ip;
     result.storage_port                             = storage_port;
+    result.arqnet_port                              = arqnet_port;
     result.pubkey_ed25519                           = keys.pub_ed25519;
 
     crypto::hash hash = hash_uptime_proof(result, m_blockchain.get_current_hard_fork_version());
@@ -1736,12 +1736,13 @@ namespace service_nodes
     db.set_service_node_proof(pubkey, *this);
   }
 
-  bool proof_info::update(uint64_t ts, uint32_t ip, uint16_t s_port, std::array<uint16_t, 3> ver, const crypto::ed25519_public_key &pk_ed, const crypto::x25519_public_key &pk_x2)
+  bool proof_info::update(uint64_t ts, uint32_t ip, uint16_t s_port, uint16_t a_port, std::array<uint16_t, 3> ver, const crypto::ed25519_public_key &pk_ed, const crypto::x25519_public_key &pk_x2)
   {
     bool update_db = false;
     update_db |= update_val(timestamp, ts);
     update_db |= update_val(public_ip, ip);
     update_db |= update_val(storage_port, s_port);
+    update_db |= update_val(arqnet_port, a_port);
     update_db |= update_val(version, ver);
     update_db |= update_val(pubkey_ed25519, pk_ed);
     effective_timestamp = timestamp;
@@ -1811,6 +1812,12 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
     if (0 != crypto_sign_ed25519_pk_to_curve25519(derived_x25519_pubkey.data, proof.pubkey_ed25519.data) || !derived_x25519_pubkey)
       REJECT_PROOF("invalid ed25519 pubkey included in proof (x25519 derivation failed)");
 
+    if (hard_fork_version >= cryptonote::network_version_17)
+    {
+      if (proof.arqnet_port == 0)
+        REJECT_PROOF("invalid arqnet port in uptime proof");
+    }
+
     auto locks = tools::unique_locks(m_blockchain, m_sn_mutex, m_x25519_map_mutex);
     auto it = m_state.service_nodes_infos.find(proof.pubkey);
     if (it == m_state.service_nodes_infos.end())
@@ -1832,7 +1839,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
       LOG_PRINT_L2("Accepted uptime proof from " << proof.pubkey);
     }
 
-    if (iproof.update(now, proof.public_ip, proof.storage_port, proof.arqma_snode_version, proof.pubkey_ed25519, derived_x25519_pubkey))
+    if (iproof.update(now, proof.public_ip, proof.storage_port, proof.arqnet_port, proof.arqma_snode_version, proof.pubkey_ed25519, derived_x25519_pubkey))
       iproof.store(proof.pubkey, m_blockchain);
 
     if ((uint64_t) m_x25519_map_last_pruned + X25519_MAP_PRUNING_INTERVAL <= now)
@@ -1879,17 +1886,16 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
   //---------------------------------------------------------------------------
   void service_node_list::initialize_x25519_map()
   {
-    auto sn_infos = get_service_node_list_state();
     auto locks = tools::unique_locks(m_sn_mutex, m_x25519_map_mutex);
 
     auto now = std::time(nullptr);
-    for (const auto &sn_info : sn_infos)
+    for (const auto &pk_info : m_state.service_nodes_infos)
     {
-      auto it = m_proofs.find(sn_info.pubkey);
+      auto it = m_proofs.find(pk_info.first);
       if (it == m_proofs.end())
         continue;
       if (const auto &x2_pk = it->second.pubkey_x25519)
-        m_x25519_to_pub.emplace(x2_pk, std::make_pair(sn_info.pubkey, now));
+        m_x25519_to_pub.emplace(x2_pk, std::make_pair(pk_info.first, now));
     }
   }
   //---------------------------------------------------------------------------
@@ -1929,8 +1935,18 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
       block_hash = sn_list->m_blockchain.get_block_id_by_height(height);
 
     for (auto &pubkey_info : state.infos)
-      service_nodes_infos.emplace(std::move(pubkey_info.pubkey), std::move(pubkey_info.info));
+    {
+      using version_t = service_node_info::version_t;
+      auto &info = const_cast<service_node_info &>(*pubkey_info.info);
 
+      if (info.version < version_t::v1)
+      {
+        info.version = version_t::v1;
+      }
+      assert(info.version == tools::enum_top<decltype(info.version)>);
+
+      service_nodes_infos.emplace(std::move(pubkey_info.pubkey), std::move(pubkey_info.info));
+    }
     quorums = quorum_for_serialization_to_quorum_manager(state.quorums);
   }
   //----------------------------------------------------------------------------

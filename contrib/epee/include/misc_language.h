@@ -30,6 +30,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <vector>
+
 namespace epee
 {
 namespace misc_utils
@@ -42,7 +43,7 @@ namespace misc_utils
       return it;
     }
 
-	bool sleep_no_w(long ms );
+	void sleep_no_w(long ms);
 
   template<typename T>
   T get_mid(const T &a, const T &b)

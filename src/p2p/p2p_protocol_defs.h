@@ -180,11 +180,11 @@ namespace nodetool
   /*                                                                      */
   /************************************************************************/
   template<class t_playload_type>
-    struct COMMAND_HANDSHAKE_T
-    {
-      const static int ID = P2P_COMMANDS_POOL_BASE + 1;
+  struct COMMAND_HANDSHAKE_T
+  {
+    const static int ID = P2P_COMMANDS_POOL_BASE + 1;
 
-    struct request_t
+    struct request
     {
       basic_node_data node_data;
       t_playload_type payload_data;
@@ -194,9 +194,8 @@ namespace nodetool
         KV_SERIALIZE(payload_data)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
+    struct response
     {
       basic_node_data node_data;
       t_playload_type payload_data;
@@ -208,7 +207,6 @@ namespace nodetool
         KV_SERIALIZE(local_peerlist_new)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<response_t> response;
   };
 
 
@@ -220,16 +218,15 @@ namespace nodetool
   {
     const static int ID = P2P_COMMANDS_POOL_BASE + 2;
 
-    struct request_t
+    struct request
     {
       t_playload_type payload_data;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(payload_data)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
+    struct response
     {
       t_playload_type payload_data;
       std::vector<peerlist_entry> local_peerlist_new;
@@ -239,7 +236,6 @@ namespace nodetool
         KV_SERIALIZE(local_peerlist_new)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<response_t> response;
   };
 
   /************************************************************************/
@@ -257,16 +253,15 @@ namespace nodetool
 
 #define PING_OK_RESPONSE_STATUS_TEXT "OK"
 
-    struct request_t
+    struct request
     {
       /*actually we don't need to send any real data*/
 
       BEGIN_KV_SERIALIZE_MAP()
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
+    struct response
     {
       std::string status;
       peerid_type peer_id;
@@ -276,7 +271,6 @@ namespace nodetool
         KV_SERIALIZE(peer_id)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<response_t> response;
   };
 
   /************************************************************************/
@@ -286,14 +280,13 @@ namespace nodetool
   {
     const static int ID = P2P_COMMANDS_POOL_BASE + 7;
 
-    struct request_t
+    struct request
     {
       BEGIN_KV_SERIALIZE_MAP()
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
+    struct response
     {
       uint32_t support_flags;
 
@@ -301,6 +294,5 @@ namespace nodetool
         KV_SERIALIZE(support_flags)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<response_t> response;
   };
 }

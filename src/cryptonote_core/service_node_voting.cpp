@@ -481,7 +481,7 @@ namespace service_nodes
           result.push_back(vote_entry.vote);
   }
 
-  std::vector<quorum_vote_t> voting_pool::get_relayable_votes(uint64_t height) const
+  std::vector<quorum_vote_t> voting_pool::get_relayable_votes(uint64_t height, uint8_t hard_fork_version, bool quorum_relay) const
   {
     CRITICAL_REGION_LOCAL(m_lock);
 
@@ -491,8 +491,16 @@ namespace service_nodes
     const uint64_t min_height = height > VOTE_LIFETIME ? height - VOTE_LIFETIME : 0;
 
     std::vector<quorum_vote_t> result;
-    append_relayable_votes(result, m_obligations_pool, max_last_sent, min_height);
-    append_relayable_votes(result, m_checkpoint_pool, max_last_sent, min_height);
+
+    if (quorum_relay && hard_fork_version < cryptonote::network_version_17)
+      return result;
+
+    if (hard_fork_version < cryptonote::network_version_17 || quorum_relay)
+      append_relayable_votes(result, m_obligations_pool, max_last_sent, min_height);
+
+    if (hard_fork_version < cryptonote::network_version_17 || !quorum_relay)
+      append_relayable_votes(result, m_checkpoint_pool, max_last_sent, min_height);
+
     return result;
   }
 

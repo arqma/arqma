@@ -33,7 +33,6 @@
 #include <time.h>
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
-#include <boost/function/function_fwd.hpp>
 #if BOOST_VERSION >= 107400
 #include <boost/serialization/library_version_type.hpp>
 #endif
@@ -80,6 +79,7 @@ namespace cryptonote
   };
 
   class tx_memory_pool;
+  struct tx_pool_options;
   struct test_options;
 
   /** Declares ways in which the BlockchainDB backend should be told to sync
@@ -397,7 +397,7 @@ namespace cryptonote
      *
      * @return true
      */
-    bool get_short_chain_history(std::list<crypto::hash>& ids) const;
+    void get_short_chain_history(std::list<crypto::hash>& ids) const;
 
     /**
      * @brief get recent block hashes for a foreign chain
@@ -707,8 +707,7 @@ namespace cryptonote
     bool get_split_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>>& txs, std::vector<crypto::hash>& missed_txs) const;
     bool get_transactions(const std::vector<crypto::hash>& txs_ids, std::vector<transaction>& txs, std::vector<crypto::hash>& missed_txs) const;
 
-    //debug functions
-
+    std::vector<uint64_t> get_transactions_heights(const std::vector<crypto::hash>& txs_ids) const;
     /**
      * @brief loads new checkpoints from a file
      *
@@ -740,7 +739,7 @@ namespace cryptonote
      *
      * @param notify the notify object to cal at every new block
      */
-    void add_block_notify(boost::function<void(std::uint64_t, epee::span<const block>)> &&notify);
+    void set_block_notify(const std::shared_ptr<tools::Notify> &notify) { m_block_notify = notify; }
 
     /**
      * @brief sets a reorg notify object to call for every reorg
@@ -980,6 +979,8 @@ namespace cryptonote
     bool update_blockchain_pruning();
     bool check_blockchain_pruning();
 
+    uint64_t get_immutable_height() const;
+
     void lock() const { m_blockchain_lock.lock(); }
     void unlock() const { m_blockchain_lock.unlock(); }
     bool try_lock() const { return m_blockchain_lock.try_lock(); }
@@ -1106,7 +1107,7 @@ namespace cryptonote
 
     bool m_batch_success;
 
-    std::vector<boost::function<void(std::uint64_t, epee::span<const block>)>> m_block_notifiers;
+    std::shared_ptr<tools::Notify> m_block_notify;
     std::shared_ptr<tools::Notify> m_reorg_notify;
 
     // for prepare_handle_incoming_blocks
