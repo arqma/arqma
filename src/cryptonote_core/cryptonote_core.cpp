@@ -49,6 +49,7 @@ extern "C" {
 #include "common/threadpool.h"
 #include "common/command_line.h"
 #include "daemon/command_line_args.h"
+#include "cryptonote_basic/events.h"
 #include "warnings.h"
 #include "crypto/crypto.h"
 #include "cryptonote_config.h"
@@ -59,6 +60,7 @@ extern "C" {
 #include "ringct/rctTypes.h"
 #include "blockchain_db/blockchain_db.h"
 #include "ringct/rctSigs.h"
+#include "rpc/zmq_pub.h"
 #include "common/notify.h"
 #include "version.h"
 #include "memwipe.h"
@@ -287,6 +289,12 @@ namespace cryptonote
       m_pprotocol = pprotocol;
     else
       m_pprotocol = &m_protocol_stub;
+  }
+  //-----------------------------------------------------------------------------------
+  void core::set_txpool_listener(boost::function<void(std::vector<txpool_event>)> zmq_pub)
+  {
+    CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
+    m_zmq_pub = std::move(zmq_pub);
   }
   //-----------------------------------------------------------------------------------
   bool core::update_checkpoints_from_json_file()
@@ -662,7 +670,19 @@ namespace cryptonote
     try
     {
       if(!command_line::is_arg_defaulted(vm, arg_block_notify))
-        m_blockchain_storage.set_block_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_block_notify).c_str())));
+      {
+        struct hash_notify
+        {
+          tools::Notify cmdline;
+          void operator()(std::uint64_t, epee::span<const block> blocks) const
+          {
+            for (const block bl : blocks)
+              cmdline.notify("%s", epee::string_tools::pod_to_hex(get_block_hash(bl)).c_str(), NULL);
+          }
+        };
+
+        m_blockchain_storage.add_block_notify(hash_notify{{command_line::get_arg(vm, arg_block_notify).c_str()}});
+      }
     }
     catch (const std::exception& e)
     {
@@ -1102,6 +1122,7 @@ namespace cryptonote
   bool core::handle_parsed_txs(std::vector<tx_verification_batch_info> &parsed_txs, const tx_pool_options &opts)
   {
     uint8_t hard_fork_version = m_blockchain_storage.get_current_hard_fork_version();
+    std::vector<txpool_event> results(parsed_txs.size());
     bool ok = true;
     bool tx_pool_changed = false;
     tx_pool_options tx_opts;
@@ -1137,6 +1158,10 @@ namespace cryptonote
 
     if (tx_pool_changed)
       m_long_poll_wake_up_clients.notify_all();
+
+    if (tx_pool_changed && m_zmq_pub)
+      m_zmq_pub(std::move(results));
+
     return ok;
   }
   //-----------------------------------------------------------------------------------------------
@@ -1259,7 +1284,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = m_nettype == MAINNET ? 1700000 : m_nettype == STAGENET ? 0 : 0;
+    static const uint64_t quick_height = m_nettype == MAINNET ? 1720000 : m_nettype == STAGENET ? 0 : 0;
     size_t res = 0;
     if(block_sync_size > 0)
       res = block_sync_size;

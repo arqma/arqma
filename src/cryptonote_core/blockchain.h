@@ -739,7 +739,7 @@ namespace cryptonote
      *
      * @param notify the notify object to cal at every new block
      */
-    void set_block_notify(const std::shared_ptr<tools::Notify> &notify) { m_block_notify = notify; }
+    void add_block_notify(boost::function<void(std::uint64_t, epee::span<const block>)> &&notify);
 
     /**
      * @brief sets a reorg notify object to call for every reorg
@@ -1107,7 +1107,7 @@ namespace cryptonote
 
     bool m_batch_success;
 
-    std::shared_ptr<tools::Notify> m_block_notify;
+    std::vector<boost::function<void(std::uint64_t, epee::span<const block>)>> m_block_notifiers;
     std::shared_ptr<tools::Notify> m_reorg_notify;
 
     // for prepare_handle_incoming_blocks

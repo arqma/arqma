@@ -1077,10 +1077,15 @@ bool Blockchain::switch_to_alternative_blockchain(const std::list<block_extended
   if (m_hardfork->get_current_version() >= RX_BLOCK_VERSION)
     rx_set_main_seedhash(seedhash.data, tools::get_max_concurrency());
 
-  std::shared_ptr<tools::Notify> block_notify = m_block_notify;
-  if (block_notify)
-    for (const auto &bei : alt_chain)
-      block_notify->notify("%s", epee::string_tools::pod_to_hex(get_block_hash(bei.bl)).c_str(), NULL);
+  for (const auto& notifier : m_block_notifiers)
+  {
+    std::size_t notify_height = split_height;
+    for (const auto& bei : alt_chain)
+    {
+      notifier(notify_height, {std::addressof(bei.bl), 1});
+      ++notify_height;
+    }
+  }
 
   MGINFO_GREEN("REORGANIZE SUCCESS! on height: " << split_height << ", new blockchain size: " << m_db->height());
   return true;
@@ -4156,9 +4161,8 @@ bool Blockchain::handle_block_to_main_chain(const block& bl, const crypto::hash&
   get_difficulty_for_next_block(); // just to cache it
   invalidate_block_template_cache();
 
-  std::shared_ptr<tools::Notify> block_notify = m_block_notify;
-  if (block_notify)
-    block_notify->notify("%s", epee::string_tools::pod_to_hex(id).c_str(), NULL);
+  for (const auto& notifier : m_block_notifiers)
+    notifier(new_height - 1, {std::addressof(bl), 1});
 
   const crypto::hash seedhash = get_block_id_by_height(crypto::rx_seedheight(new_height));
 
@@ -5025,6 +5029,15 @@ void Blockchain::set_user_options(uint64_t maxthreads, bool sync_on_blocks, uint
   m_max_prepare_blocks_threads = maxthreads;
 }
 
+void Blockchain::add_block_notify(boost::function<void(std::uint64_t, epee::span<const block>)>&& notify)
+{
+  if (notify)
+  {
+    CRITICAL_REGION_LOCAL(m_blockchain_lock);
+    m_block_notifiers.push_back(std::move(notify));
+  }
+}
+
 void Blockchain::safesyncmode(const bool onoff)
 {
   /* all of this is no-op'd if the user set a specific
@@ -5126,7 +5139,7 @@ void Blockchain::cancel()
 }
 
 #if defined(PER_BLOCK_CHECKPOINT)
-static const char expected_block_hashes_hash[] = "5dc6a3c0faa504453f8cd84e6cb3c105300260578063169c3c394c8069436cf8";
+static const char expected_block_hashes_hash[] = "6eb355d11ea405e477d008fab48602139319291df76bf158e565f56bab486518";
 void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get_checkpoints)
 {
   if (get_checkpoints == nullptr || !m_fast_sync)
