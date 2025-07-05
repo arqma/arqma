@@ -35,6 +35,7 @@
 
 #include <ctime>
 #include <chrono>
+#include <condition_variable>
 
 #include <boost/function.hpp>
 #include <boost/program_options/options_description.hpp>
