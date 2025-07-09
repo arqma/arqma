@@ -1406,7 +1406,7 @@ private:
 
     void set_offline(bool offline = true);
 
-    bool m_long_poll_disabled = false;
+    bool m_long_poll_enabled = false;
 
     enum struct stake_result_status
     {

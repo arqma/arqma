@@ -1678,6 +1678,8 @@ namespace service_nodes
   {
     auto buf = tools::memcpy_le(proof.pubkey.data, proof.timestamp, proof.public_ip, proof.storage_port, proof.pubkey_ed25519.data, proof.arqnet_port);
     size_t buf_size = buf.size();
+    if (hard_fork_version < cryptonote::network_version_17)
+      buf_size -= sizeof(proof.arqnet_port);
 
     crypto::hash result;
     crypto::cn_fast_hash(buf.data(), buf_size, result);
