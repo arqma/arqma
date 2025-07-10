@@ -277,7 +277,7 @@ namespace cryptonote
               m_nettype(UNDEFINED),
               m_update_available(false),
               m_last_storage_server_ping(0),
-              m_last_arqnet_ping(0),
+              /*m_last_arqnet_ping(0),*/
               m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
@@ -1769,6 +1769,7 @@ namespace cryptonote
           return;
         }
 
+/*
         uint8_t hard_fork_version = get_blockchain_storage().get_current_hard_fork_version();
         if (!check_external_ping(m_last_arqnet_ping, ARQNET_PING_LIFETIME, "Arq-Net"))
         {
@@ -1782,7 +1783,7 @@ namespace cryptonote
             MGINFO_RED("Have not heard from the Arq-Net recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon after Hard Fork 17");
           }
         }
-
+*/
         submit_uptime_proof();
       });
     }

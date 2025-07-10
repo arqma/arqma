@@ -1362,8 +1362,8 @@ namespace net_utils
   {
     TRY_ENTRY();
     CRITICAL_REGION_LOCAL(m_threads_lock);
-    //for (auto &thp : m_threads)
-    for (boost::shared_ptr<boost::thread>& thp : m_threads)
+    for (auto &thp : m_threads)
+    //for (boost::shared_ptr<boost::thread>& thp : m_threads)
     {
       if(thp->get_id() == boost::this_thread::get_id())
         return true;

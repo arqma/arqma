@@ -741,13 +741,13 @@ bool t_rpc_command_executor::show_status()
     else
       str << "NOT RECEIVED";
     str << " (storage), ";
-
+/*
     if (ires.last_arqnet_ping > 0)
       str << get_human_time_ago(ires.last_arqnet_ping, time(nullptr), true);
     else
       str << "NOT RECEIVED";
     str << " (Arq-Net)";
-
+*/
     tools::success_msg_writer() << str.str();
   }
 

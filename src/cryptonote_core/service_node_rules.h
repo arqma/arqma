@@ -69,7 +69,7 @@ namespace service_nodes
   constexpr uint64_t VOTE_OR_TX_VERIFY_HEIGHT_BUFFER                = 5;
 
   constexpr std::array<int, 3> MIN_STORAGE_SERVER_VERSION{{1, 0, 0}};
-  constexpr std::array<int, 3> MIN_ARQNET_VERSION{{1, 0, 0}};
+//  constexpr std::array<int, 3> MIN_ARQNET_VERSION{{1, 0, 0}};
 
   struct proof_version
   {

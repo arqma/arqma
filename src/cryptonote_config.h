@@ -237,7 +237,7 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 #define UPTIME_PROOF_MAX_TIME_IN_SECONDS                (UPTIME_PROOF_FREQUENCY_IN_SECONDS * 2 + UPTIME_PROOF_BUFFER_IN_SECONDS)
 
 #define STORAGE_SERVER_PING_LIFETIME                    UPTIME_PROOF_FREQUENCY_IN_SECONDS
-#define ARQNET_PING_LIFETIME                            UPTIME_PROOF_FREQUENCY_IN_SECONDS
+//#define ARQNET_PING_LIFETIME                            UPTIME_PROOF_FREQUENCY_IN_SECONDS
 
 namespace config
 {
