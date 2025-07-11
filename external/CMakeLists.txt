@@ -70,6 +70,8 @@ else()
   set(ZMQ_INCLUDE_DIRS ${zmq_prefix}/include CACHE STRING "ZMQ Include path")
 endif()
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(UNBOUND libunbound REQUIRED IMPORTED_TARGET)
 statusinfo("Using in-tree miniupnpc")
 add_subdirectory(miniupnp/miniupnpc)
 if(MSVC)
@@ -83,17 +85,18 @@ endif()
 
 target_link_libraries(miniupnpc INTERFACE libminiupnpc-static)
 
-  # NOTE: If STATIC is true, CMAKE_FIND_LIBRARY_SUFFIXES has been reordered.
-  # unbound has config tests which used OpenSSL libraries, so -ldl may need to
-  # be set in this case.
-  # The unbound CMakeLists.txt can set it, since it's also needed for the
-  # static OpenSSL libraries set up there after with target_link_libraries.
-
-statusinfo("Using in-tree unbound")
-add_subdirectory(unbound)
-target_link_libraries(libunbound INTERFACE unbound)
-target_include_directories(libunbound INTERFACE unbound/libunbound)
-set(UNBOUND_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/unbound/libunbound" PARENT_SCOPE)
+if(UNBOUND_FOUND)
+  statusinfo("Found PkgConfig::libunbound")
+  target_link_libraries(libunbound INTERFACE PkgConfig::UNBOUND)
+  set_target_properties(libunbound PROPERTIES IMPORTED_TARGET_LOCATION ${UNBOUND_LIBRARIES})
+  target_include_directories(libunbound INTERFACE ${UNBOUND_INCLUDE_DIRS})
+else()
+  statusinfo("Using in-tree unbound")
+  add_subdirectory(unbound)
+  target_link_libraries(libunbound INTERFACE unbound)
+  target_include_directories(libunbound INTERFACE unbound/libunbound)
+  set(UNBOUND_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/unbound/libunbound" PARENT_SCOPE)
+endif()
 
 add_subdirectory(easylogging++)
 add_subdirectory(qrcodegen)

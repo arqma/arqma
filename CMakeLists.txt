@@ -700,7 +700,7 @@ add_subdirectory(external)
 target_link_libraries(libzmq INTERFACE libzmq_vendor sodium)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
-include_directories(${UNBOUND_INCLUDE})
+include_directories(${UNBOUND_INCLUDE_DIRS})
 
 include_directories(${EASYLOGGING_INCLUDE})
 link_directories(${EASYLOGGING_LIBRARY_DIRS})
