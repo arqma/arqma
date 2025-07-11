@@ -163,6 +163,3 @@ target_link_libraries(daemon_rpc_server
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${EXTRA_LIBRARIES})
-
-target_include_directories(daemon_rpc_server PUBLIC ${ZMQ_INCLUDE_DIRS})
-target_include_directories(obj_daemon_rpc_server PUBLIC ${ZMQ_INCLUDE_DIRS})
