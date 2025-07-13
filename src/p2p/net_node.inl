@@ -33,10 +33,8 @@
 
 #include <algorithm>
 #include <boost/bind/bind.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/optional/optional.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <atomic>
 #include <functional>
@@ -59,6 +57,7 @@
 #include "net/parse.h"
 #include "cryptonote_config.h"
 #include "p2p/net_node.h"
+#include "common/periodic_task.h"
 
 #include <miniupnp/miniupnpc/miniupnpc.h>
 #include <miniupnp/miniupnpc/upnpcommands.h>
@@ -74,8 +73,8 @@ namespace nodetool
   template<class t_payload_net_handler>
   node_server<t_payload_net_handler>::~node_server()
   {
-    // tcp server uses io_context in destructor, and every zone uses
-    // io_context from public zone.
+    // tcp server uses io_service in destructor, and every zone uses
+    // io_service from public zone.
     for (auto current = m_network_zones.begin(); current != m_network_zones.end(); /* below */)
     {
       if (current->first != epee::net_utils::zone::public_)
@@ -167,25 +166,6 @@ namespace nodetool
     {
       m_blocked_hosts.erase(it);
       MCLOG_CYAN(el::Level::Info, "global", "Host " << address.host_str() << " unblocked.");
-      return true;
-    }
-
-    return false;
-  }
-  //-----------------------------------------------------------------------------------
-  template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::is_host_limit(const epee::net_utils::network_address &address)
-  {
-    const network_zone& zone = m_network_zones.at(address.get_zone());
-    if (zone.m_current_number_of_in_peers >= zone.m_config.m_net_config.max_in_connection_count)
-    {
-      MWARNING("Exceeded max incoming connections, so dropping this one.");
-      return true;
-    }
-
-    if (has_too_many_connections(address))
-    {
-      MWARNING("CONNECTION FROM " << address.host_str() << " REFUSED, too many connections from the same address");
       return true;
     }
 
@@ -305,7 +285,7 @@ namespace nodetool
     m_use_ipv6 = command_line::get_arg(vm, arg_p2p_use_ipv6);
     m_require_ipv4 = !command_line::get_arg(vm, arg_p2p_ignore_ipv4);
     public_zone.m_notifier = cryptonote::levin::notify{
-      public_zone.m_net_server.get_io_context(), public_zone.m_net_server.get_config_shared(), nullptr, epee::net_utils::zone::public_
+      public_zone.m_net_server.get_io_service(), public_zone.m_net_server.get_config_shared(), nullptr, epee::net_utils::zone::public_
     };
 
     if (command_line::has_arg(vm, arg_p2p_add_peer))
@@ -410,7 +390,7 @@ namespace nodetool
       }
 
       zone.m_notifier = cryptonote::levin::notify{
-        zone.m_net_server.get_io_context(), zone.m_net_server.get_config_shared(), std::move(this_noise), proxy.zone
+        zone.m_net_server.get_io_service(), zone.m_net_server.get_config_shared(), std::move(this_noise), proxy.zone
       };
     }
 
@@ -471,15 +451,17 @@ namespace nodetool
     net::get_network_address_host_and_port(addr, host, port);
     MINFO("Resolving node address: host=" << host << ", port=" << port);
 
-    boost::system::error_code ec;
-    io_context io_srv;
+    io_service io_srv;
     ip::tcp::resolver resolver(io_srv);
-    const auto results = resolver.resolve(host, port, boost::asio::ip::tcp::resolver::canonical_name, ec);
-    CHECK_AND_ASSERT_MES(!ec && !results.empty(), false, "Failed to resolve host name '" << host << "': " << ec.message() << ':' << ec.value());
+    boost::system::error_code ec;
+    ip::tcp::resolver::results_type result = resolver.resolve(host, port, boost::asio::ip::tcp::resolver::canonical_name, ec);
+    CHECK_AND_ASSERT_MES(!ec, false, "Failed to resolve host name '" << host << "': " << ec.message() << ':' << ec.value());
 
-    for (const auto& result : results)
+    auto i = result.begin();
+    auto iend = result.end();
+    for (; i != iend; ++i)
     {
-      const auto& endpoint = result.endpoint();
+      ip::tcp::endpoint endpoint = *i;
       if (endpoint.address().is_v4())
       {
         epee::net_utils::network_address na{epee::net_utils::ipv4_network_address{boost::asio::detail::socket_ops::host_to_network_long(endpoint.address().to_v4().to_uint()), endpoint.port()}};
@@ -530,7 +512,7 @@ namespace nodetool
       return zone_->second;
 
     network_zone& public_zone = m_network_zones[epee::net_utils::zone::public_];
-    return m_network_zones.emplace_hint(zone_, std::piecewise_construct, std::make_tuple(zone), std::tie(public_zone.m_net_server.get_io_context()))->second;
+    return m_network_zones.emplace_hint(zone_, std::piecewise_construct, std::make_tuple(zone), std::tie(public_zone.m_net_server.get_io_service()))->second;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -689,7 +671,7 @@ namespace nodetool
 
     //configure self
 
-    public_zone.m_net_server.set_threads_prefix("P2P"); // all zones use these threads/asio::io_context
+    public_zone.m_net_server.set_threads_prefix("P2P"); // all zones use these threads/asio::io_service
 
     // from here onwards, it's online stuff
     if (m_offline)
@@ -707,7 +689,6 @@ namespace nodetool
         std::string ipv6_addr = "";
         std::string ipv6_port = "";
         zone.second.m_net_server.set_connection_filter(this);
-        zone.second.m_net_server.set_connection_limit(this);
         MINFO("Binding (IPv4) on " << zone.second.m_bind_ip << ":" << zone.second.m_port);
         if (!zone.second.m_bind_ipv6_address.empty() && m_use_ipv6)
         {
@@ -753,7 +734,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::run()
   {
     // creating thread to log number of connections
-    mPeersLoggerThread.reset(new boost::thread([&]()
+    mPeersLoggerThread.emplace([&]()
     {
       _note("Thread monitor number of peers - start");
       const network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
@@ -772,7 +753,7 @@ namespace nodetool
             }
             else
             {
-              if(!(cntxt.m_state == p2p_connection_context::state_before_handshake && std::time(NULL) < cntxt.m_started + 10))
+              if(!(cntxt.m_state == p2p_connection_context::state_before_handshake && std::chrono::steady_clock::now() < cntxt.m_started + 10s))
                 ++number_of_out_peers;
             }
             return true;
@@ -780,23 +761,20 @@ namespace nodetool
           zone.second.m_current_number_of_in_peers = number_of_in_peers;
           zone.second.m_current_number_of_out_peers = number_of_out_peers;
         }
-        boost::this_thread::sleep_for(boost::chrono::seconds(1));
+        std::this_thread::sleep_for(1s);
       } // main loop of thread
       _note("Thread monitor number of peers - done");
-    })); // lambda
+    }); // lambda
 
     network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
-    public_zone.m_net_server.add_idle_handler(boost::bind(&node_server<t_payload_net_handler>::idle_worker, this), 1000);
-    public_zone.m_net_server.add_idle_handler(boost::bind(&t_payload_net_handler::on_idle, &m_payload_handler), 1000);
+    public_zone.m_net_server.add_idle_handler([this] { return idle_worker(); }, 1s);
+    public_zone.m_net_server.add_idle_handler([this] { return m_payload_handler.on_idle(); }, 1s);
 
     //here you can set worker threads count
     int thrds_count = 12;
-
-    boost::thread::attributes attrs;
-    attrs.set_stack_size(THREAD_STACK_SIZE);
     //go to loop
     MINFO("Run net_service loop( " << thrds_count << " threads)...");
-    if(!public_zone.m_net_server.run_server(thrds_count, true, attrs))
+    if(!public_zone.m_net_server.run_server(thrds_count, true))
     {
       LOG_ERROR("Failed to run net tcp server!");
     }
@@ -2044,9 +2022,23 @@ namespace nodetool
       return 1;
     }
 
+    if (zone.m_current_number_of_in_peers >= zone.m_config.m_net_config.max_in_connection_count)
+    {
+      LOG_WARNING_CC(context, "COMMAND_HANDSHAKE came, but already have max incoming connections, so dropping this one.");
+      drop_connection(context);
+      return 1;
+    }
+
     if(!m_payload_handler.process_payload_sync_data(arg.payload_data, context, true))
     {
       LOG_WARNING_CC(context, "COMMAND_HANDSHAKE came, but process_payload_sync_data returned false, dropping connection.");
+      drop_connection(context);
+      return 1;
+    }
+
+    if(has_too_many_connections(context.m_remote_address))
+    {
+      LOG_PRINT_CCONTEXT_L1("CONNECTION FROM " << context.m_remote_address.host_str() << " REFUSED, too many connections from the same address");
       drop_connection(context);
       return 1;
     }
@@ -2362,7 +2354,7 @@ namespace nodetool
       if (cntxt.m_is_income && cntxt.m_remote_address.is_same_host(address)) {
         count++;
 
-        if (count >= max_connections) {
+        if (count > max_connections) {
           return false;
         }
       }
@@ -2370,7 +2362,7 @@ namespace nodetool
       return true;
     });
 
-    return count >= max_connections;
+    return count > max_connections;
   }
 
   template<class t_payload_net_handler>
@@ -2573,7 +2565,7 @@ namespace nodetool
   boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>
   node_server<t_payload_net_handler>::socks_connect(network_zone& zone, const epee::net_utils::network_address& remote, epee::net_utils::ssl_support_t ssl_support)
   {
-    auto result = socks_connect_internal(zone.m_net_server.get_stop_signal(), zone.m_net_server.get_io_context(), zone.m_proxy_address, remote);
+    auto result = socks_connect_internal(zone.m_net_server.get_stop_signal(), zone.m_net_server.get_io_service(), zone.m_proxy_address, remote);
     if (result) // if no error
     {
       p2p_connection_context context{};

@@ -93,6 +93,7 @@ private:
   mutable uint64_t m_target_height;
   mutable uint64_t m_block_weight_limit;
   mutable time_t m_get_info_time;
+  mutable time_t m_height_time;
 };
 
 }

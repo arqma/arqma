@@ -29,7 +29,6 @@
 
 #include "node_rpc_proxy.h"
 #include "storages/http_abstract_invoke.h"
-#include <boost/thread.hpp>
 
 using namespace epee;
 
@@ -70,6 +69,7 @@ void NodeRPCProxy::invalidate()
   m_target_height = 0;
   m_block_weight_limit = 0;
   m_get_info_time = 0;
+  m_height_time = 0;
 }
 
 boost::optional<std::string> NodeRPCProxy::get_rpc_version(uint32_t &rpc_version) const
@@ -97,6 +97,7 @@ void NodeRPCProxy::set_height(uint64_t h)
   m_height = h;
   if (h < m_immutable_height)
     m_immutable_height = 0;
+  m_height_time = time(NULL);
 }
 
 boost::optional<std::string> NodeRPCProxy::get_info() const
@@ -121,12 +122,20 @@ boost::optional<std::string> NodeRPCProxy::get_info() const
     m_block_weight_limit = resp_t.block_weight_limit ? resp_t.block_weight_limit : resp_t.block_size_limit;
     m_immutable_height = resp_t.immutable_height;
     m_get_info_time = now;
+    m_height_time = now;
   }
   return boost::optional<std::string>();
 }
 
 boost::optional<std::string> NodeRPCProxy::get_height(uint64_t &height) const
 {
+  const time_t now = time(NULL);
+  if (now < m_height_time + 30)
+  {
+    height = m_height;
+    return boost::optional<std::string>();
+  }
+
   auto res = get_info();
   if (res)
     return res;

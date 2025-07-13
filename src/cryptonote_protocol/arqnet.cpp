@@ -6,7 +6,6 @@
 #include "arqnet/sn_network.h"
 #include "arqnet/conn_matrix.h"
 #include "cryptonote_config.h"
-#include "common/lock.h"
 
 #include <shared_mutex>
 
@@ -25,7 +24,7 @@ struct SNNWrapper {
   SNNetwork snn;
   cryptonote::core &core;
 
-  boost::shared_mutex mutex;
+  std::shared_mutex mutex;
 
   template <typename... Args>
   SNNWrapper(cryptonote::core &core, Args &&...args)

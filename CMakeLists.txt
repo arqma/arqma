@@ -1115,7 +1115,6 @@ endif()
 
 find_package(Boost 1.66.0 QUIET REQUIRED COMPONENTS ${BOOST_LIBRARIES})
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-add_definitions(-DBOOST_ASIO_ENABLE_SEQUENTIAL_STRAND_ALLOCATION)
 add_definitions(-DBOOST_NO_AUTO_PTR)
 add_definitions(-DBOOST_UUID_DISABLE_ALIGNMENT)
 

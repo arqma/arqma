@@ -39,7 +39,7 @@
 #include "cryptonote_basic/tx_extra.h"
 
 #include "string_tools.h"
-#include "math_helper.h"
+#include "common/periodic_task.h"
 #include "syncobj.h"
 
 #include <boost/serialization/base_object.hpp>

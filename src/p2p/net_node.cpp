@@ -29,12 +29,9 @@
 //
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#include <boost/algorithm/string/find_iterator.hpp>
-#include <boost/algorithm/string/finder.hpp>
-#include <boost/chrono/duration.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/optional/optional.hpp>
-#include <boost/thread/future.hpp>
+#include <future>
 #include <boost/utility/string_ref.hpp>
 #include <chrono>
 #include <utility>
@@ -51,9 +48,11 @@
 #include "p2p/p2p_protocol_defs.h"
 #include "string_tools.h"
 
+using namespace std::literals;
+
 namespace
 {
-    constexpr const boost::chrono::milliseconds future_poll_interval{500};
+    constexpr const std::chrono::milliseconds future_poll_interval = 500ms;
     constexpr const std::chrono::seconds socks_connect_timeout{P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT};
 
     std::int64_t get_max_connections(const boost::iterator_range<boost::string_ref::const_iterator> value) noexcept
@@ -157,7 +156,7 @@ namespace nodetool
     const command_line::arg_descriptor<int64_t> arg_limit_rate_down = {"limit-rate-down", "set limit-rate-down [kB/s]", P2P_DEFAULT_LIMIT_RATE_DOWN};
     const command_line::arg_descriptor<int64_t> arg_limit_rate = {"limit-rate", "set limit-rate [kB/s]", -1};
 
-    const command_line::arg_descriptor<uint32_t> arg_max_connections_per_ip = {"max-connections-per-ip", "Maximum number of p2p connections allowed from the same IP address", 3};
+    const command_line::arg_descriptor<uint32_t> arg_max_connections_per_ip = {"max-connections-per-ip", "Maximum number of connections allowed from the same IP address", 1};
 
     boost::optional<std::vector<proxy>> get_proxies(boost::program_options::variables_map const& vm)
     {
@@ -315,14 +314,14 @@ namespace nodetool
     }
 
     boost::optional<boost::asio::ip::tcp::socket>
-    socks_connect_internal(const std::atomic<bool>& stop_signal, boost::asio::io_context& service, const boost::asio::ip::tcp::endpoint& proxy, const epee::net_utils::network_address& remote)
+    socks_connect_internal(const std::atomic<bool>& stop_signal, boost::asio::io_service& service, const boost::asio::ip::tcp::endpoint& proxy, const epee::net_utils::network_address& remote)
     {
         using socket_type = net::socks::client::stream_type::socket;
         using client_result = std::pair<boost::system::error_code, socket_type>;
 
         struct notify
         {
-            boost::promise<client_result> socks_promise;
+            std::promise<client_result> socks_promise;
 
             void operator()(boost::system::error_code error, socket_type&& sock)
             {
@@ -330,9 +329,9 @@ namespace nodetool
             }
         };
 
-        boost::unique_future<client_result> socks_result{};
+        std::future<client_result> socks_result{};
         {
-            boost::promise<client_result> socks_promise{};
+            std::promise<client_result> socks_promise{};
             socks_result = socks_promise.get_future();
 
             auto client = net::socks::make_connect_client(
@@ -343,7 +342,7 @@ namespace nodetool
         }
 
         const auto start = std::chrono::steady_clock::now();
-        while (socks_result.wait_for(future_poll_interval) == boost::future_status::timeout)
+        while (socks_result.wait_for(future_poll_interval) == std::future_status::timeout)
         {
             if (socks_connect_timeout < std::chrono::steady_clock::now() - start)
             {
@@ -363,7 +362,7 @@ namespace nodetool
 
             MERROR("Failed to make socks connection to " << remote.str() << " (via " << proxy << "): " << result.first.message());
         }
-        catch (boost::broken_promise const&)
+        catch (const std::future_error&)
         {}
 
         return boost::none;

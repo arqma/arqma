@@ -499,21 +499,9 @@ bool t_command_parser_executor::start_mining(const std::vector<std::string>& arg
   if(nettype != cryptonote::MAINNET)
     std::cout << "Mining to a " << (nettype == cryptonote::TESTNET ? "testnet" : "stagenet") << " address, make sure this is intentional!" << std::endl;
   uint64_t threads_count = 1;
-  bool do_background_mining = false;
-  bool ignore_battery = false;
-  if(args.size() > 4)
+  if(args.size() > 2)
   {
     return false;
-  }
-
-  if(args.size() == 4)
-  {
-    ignore_battery = args[3] == "true";
-  }
-
-  if(args.size() >= 3)
-  {
-    do_background_mining = args[2] == "true";
   }
 
   if(args.size() >= 2)
@@ -522,7 +510,7 @@ bool t_command_parser_executor::start_mining(const std::vector<std::string>& arg
     threads_count = (ok && 0 < threads_count) ? threads_count : 1;
   }
 
-  m_executor.start_mining(info.address, threads_count, nettype, do_background_mining, ignore_battery);
+  m_executor.start_mining(info.address, threads_count, nettype);
 
   return true;
 }

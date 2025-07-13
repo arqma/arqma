@@ -67,9 +67,9 @@ namespace net_utils
 
 // ================================================================================================
 // static:
-boost::mutex network_throttle_manager::m_lock_get_global_throttle_in;
-boost::mutex network_throttle_manager::m_lock_get_global_throttle_inreq;
-boost::mutex network_throttle_manager::m_lock_get_global_throttle_out;
+std::mutex network_throttle_manager::m_lock_get_global_throttle_in;
+std::mutex network_throttle_manager::m_lock_get_global_throttle_inreq;
+std::mutex network_throttle_manager::m_lock_get_global_throttle_out;
 
 // ================================================================================================
 // methods:

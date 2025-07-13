@@ -44,7 +44,7 @@ namespace command_helper
 {
 
 
-  const char* USAGE_START_MINING("start_mining [<number_of_threads>] [bg_mining] [ignore_battery]");
+  const char* USAGE_START_MINING("start_mining [<number_of_threads>]");
   const char* USAGE_SET_DAEMON("set_daemon <host>[:<port>] [trusted|untrusted]");
   const char* USAGE_SHOW_BALANCE("balance [detail]");
   const char* USAGE_INCOMING_TRANSFERS("incoming_transfers [available|unavailable] [verbose] [uses] [index=<N1>[,<N2>[,...]]]");
@@ -118,7 +118,7 @@ namespace command_helper
 
 //chars related to this one up
 
-  const char* START_MINING("Start mining in the daemon (bg_mining and ignore_battery are optional booleans).");
+  const char* START_MINING("Start mining in the daemon.");
   const char* STOP_MINING("Stop mining in the daemon.");
   const char* SET_DAEMON("Set another daemon to connect to.");
   const char* SAVE_BC("Save the current blockchain data.");

@@ -28,9 +28,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
-#include <boost/thread/condition_variable.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
+#include <thread>
 #include <cstddef>
 #include <deque>
 #include <functional>
@@ -38,6 +36,8 @@
 #include <deque>
 #include <vector>
 #include <stdexcept>
+#include <mutex>
+#include <condition_variable>
 
 namespace tools
 {
@@ -64,8 +64,8 @@ public:
   // tasks are completed.
   class waiter
   {
-    boost::mutex mt;
-    boost::condition_variable cv;
+    std::mutex mt;
+    std::condition_variable cv;
     threadpool &pool;
     int num;
     bool error_flag;
@@ -101,9 +101,9 @@ public:
       bool leaf;
     } entry;
     std::deque<entry> queue;
-    boost::condition_variable has_work;
-    boost::mutex mutex;
-    std::vector<boost::thread> threads;
+    std::condition_variable has_work;
+    std::mutex mutex;
+    std::vector<std::thread> threads;
     unsigned int active;
     unsigned int max;
     bool running;

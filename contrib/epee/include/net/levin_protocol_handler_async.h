@@ -25,13 +25,12 @@
 //
 
 #pragma once
-#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/unordered_map.hpp>
-#include <boost/smart_ptr/make_shared.hpp>
 
 #include <atomic>
-#include <deque>
+#include <memory>
 
 #include "levin_base.h"
 #include "buffer.h"
@@ -180,13 +179,13 @@ public:
   struct anvoke_handler: invoke_response_handler_base
   {
     anvoke_handler(const callback_t& cb, uint64_t timeout, async_protocol_handler& con, int command)
-      :m_cb(cb), m_timeout(timeout), m_con(con), m_timer(con.m_pservice_endpoint->get_io_context()), m_timer_started(false),
+      :m_cb(cb), m_timeout(timeout), m_con(con), m_timer(con.m_pservice_endpoint->get_io_service()), m_timer_started(false),
       m_cancel_timer_called(false), m_timer_cancelled(false), m_command(command)
     {
       if(m_con.start_outer_call())
       {
         MDEBUG(con.get_context_ref() << "anvoke_handler, timeout: " << timeout);
-        m_timer.expires_from_now(boost::posix_time::milliseconds(timeout));
+        m_timer.expires_after(std::chrono::milliseconds(timeout));
         m_timer.async_wait([&con, command, cb, timeout](const boost::system::error_code& ec)
         {
           if(ec == boost::asio::error::operation_aborted)
@@ -204,7 +203,7 @@ public:
     {}
     callback_t m_cb;
     async_protocol_handler& m_con;
-    boost::asio::deadline_timer m_timer;
+    boost::asio::steady_timer m_timer;
     bool m_timer_started;
     bool m_cancel_timer_called;
     bool m_timer_cancelled;
@@ -236,21 +235,19 @@ public:
       if(!m_cancel_timer_called)
       {
         m_cancel_timer_called = true;
-        boost::system::error_code ignored_ec;
-        m_timer_cancelled = 1 == m_timer.cancel(ignored_ec);
+        m_timer_cancelled = 1 == m_timer.cancel();
       }
       return m_timer_cancelled;
     }
     virtual void reset_timer()
     {
-      boost::system::error_code ignored_ec;
-      if (!m_cancel_timer_called && m_timer.cancel(ignored_ec) > 0)
+      if (!m_cancel_timer_called && m_timer.cancel() > 0)
       {
         callback_t& cb = m_cb;
         uint64_t timeout = m_timeout;
         async_protocol_handler& con = m_con;
         int command = m_command;
-        m_timer.expires_from_now(boost::posix_time::milliseconds(m_timeout));
+        m_timer.expires_after(std::chrono::milliseconds(m_timeout));
         m_timer.async_wait([&con, cb, command, timeout](const boost::system::error_code& ec)
         {
           if(ec == boost::asio::error::operation_aborted)
@@ -265,7 +262,7 @@ public:
     }
   };
   critical_section m_invoke_response_handlers_lock;
-  std::list<boost::shared_ptr<invoke_response_handler_base>> m_invoke_response_handlers;
+  std::list<std::shared_ptr<invoke_response_handler_base>> m_invoke_response_handlers;
 
   template<class callback_t>
   bool add_invoke_response_handler(const callback_t &cb, uint64_t timeout, async_protocol_handler& con, int command)
@@ -276,7 +273,7 @@ public:
       MERROR("Adding response handler to a released object");
       return false;
     }
-    boost::shared_ptr<invoke_response_handler_base> handler(boost::make_shared<anvoke_handler<callback_t>>(cb, timeout, con, command));
+    std::shared_ptr<invoke_response_handler_base> handler(std::make_shared<anvoke_handler<callback_t>>(cb, timeout, con, command));
     m_invoke_response_handlers.push_back(handler);
     return handler->is_timer_started();
   }
@@ -352,7 +349,7 @@ public:
 
     // Never call callback inside critical section, that can cause deadlock. Callback can be called when
     // invoke_response_handler_base is cancelled
-    std::for_each(local_invoke_response_handlers.begin(), local_invoke_response_handlers.end(), [](const boost::shared_ptr<invoke_response_handler_base>& pinv_resp_hndlr) {
+    std::for_each(local_invoke_response_handlers.begin(), local_invoke_response_handlers.end(), [](const std::shared_ptr<invoke_response_handler_base>& pinv_resp_hndlr) {
       pinv_resp_hndlr->cancel();
     });
 
@@ -374,8 +371,7 @@ public:
 
   void request_callback()
   {
-    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(
-      boost::bind(&async_protocol_handler::finish_outer_call, this));
+    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
 
     m_pservice_endpoint->request_callback();
   }
@@ -427,7 +423,7 @@ public:
             if (!m_invoke_response_handlers.empty())
             {
               //async call scenario
-              boost::shared_ptr<invoke_response_handler_base> response_handler = m_invoke_response_handlers.front();
+              std::shared_ptr<invoke_response_handler_base> response_handler = m_invoke_response_handlers.front();
               response_handler->reset_timer();
               MDEBUG(m_connection_context << "LEVIN_PACKET partial msg received. len=" << cb << ", current total " << m_cache_in_buffer.size() << "/" << m_current_head.m_cb << " (" << (100.0f * m_cache_in_buffer.size() / (m_current_head.m_cb ? m_current_head.m_cb : 1)) << "%)");
             }
@@ -487,7 +483,7 @@ public:
             boost::unique_lock invoke_response_handlers_guard(m_invoke_response_handlers_lock);
             if(!m_invoke_response_handlers.empty())
             {//async call scenario
-              boost::shared_ptr<invoke_response_handler_base> response_handler = m_invoke_response_handlers.front();
+              std::shared_ptr<invoke_response_handler_base> response_handler = m_invoke_response_handlers.front();
               bool timer_cancelled = response_handler->cancel_timer();
                // Don't pop handler, to avoid destroying it
               if(timer_cancelled)
@@ -519,7 +515,7 @@ public:
           {
             if(m_current_head.m_have_to_return_data)
             {
-              byte_slice return_buff;
+              std::string return_buff;
               const uint32_t return_code = m_config.m_pcommands_handler->invoke(
                 m_current_head.m_command, buff_to_invoke, return_buff, m_connection_context
               );
@@ -530,8 +526,9 @@ public:
 
               bucket_head2 head = make_header(m_current_head.m_command, return_buff.size(), LEVIN_PACKET_RESPONSE, false);
               head.m_return_code = SWAP32LE(return_code);
+              return_buff.insert(0, reinterpret_cast<const char*>(&head), sizeof(head));
 
-              if (!m_pservice_endpoint->do_send(byte_slice{{epee::as_byte_span(head), epee::to_span(return_buff)}}))
+              if (!m_pservice_endpoint->do_send(byte_slice{std::move(return_buff)}))
                 return false;
 
               MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len= " << head.m_cb
@@ -616,8 +613,7 @@ public:
   template<class callback_t>
   bool async_invoke(int command, const epee::span<const uint8_t> in_buff, const callback_t &cb, size_t timeout = LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED)
   {
-    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(
-      boost::bind(&async_protocol_handler::finish_outer_call, this));
+    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
 
     if(timeout == LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED)
       timeout = m_config.m_invoke_timeout;
@@ -661,8 +657,7 @@ public:
 
   int invoke(int command, const epee::span<const uint8_t> in_buff, std::string& buff_out)
   {
-    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(
-                                      boost::bind(&async_protocol_handler::finish_outer_call, this));
+    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
 
     CRITICAL_REGION_LOCAL(m_call_lock);
 
@@ -710,9 +705,7 @@ public:
 
   int notify(int command, const epee::span<const uint8_t> in_buff)
   {
-    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(
-      boost::bind(&async_protocol_handler::finish_outer_call, this)
-    );
+    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
 
     CRITICAL_REGION_LOCAL(m_call_lock);
 
@@ -732,9 +725,7 @@ public:
       \return 1 on success */
   int send(byte_slice message)
   {
-    const misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(
-      boost::bind(&async_protocol_handler::finish_outer_call, this)
-    );
+    const misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
 
     const std::size_t length = message.size();
     if (!m_pservice_endpoint->do_send(std::move(message)))

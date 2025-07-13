@@ -39,32 +39,7 @@
 
 #include <string>
 #include <vector>
-
-#include <boost/asio.hpp>
-#include <boost/array.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
-
-#include "syncobj.h"
-
-#include "net/net_utils_base.h"
-#include "misc_log_ex.h"
-#include <boost/lambda/bind.hpp>
-#include <boost/lambda/lambda.hpp>
-#include <boost/uuid/random_generator.hpp>
-#include <boost/chrono.hpp>
-#include <boost/asio/deadline_timer.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/thread/thread.hpp>
-#include "misc_language.h"
-#include <sstream>
-#include <iomanip>
-#include <algorithm>
-
-#include <memory>
 #include <mutex>
-#include <fstream>
 
 namespace epee
 {
@@ -103,9 +78,9 @@ class network_throttle_manager {
 	//protected:
 	public: // XXX
 
-    static boost::mutex m_lock_get_global_throttle_in;
-    static boost::mutex m_lock_get_global_throttle_inreq;
-    static boost::mutex m_lock_get_global_throttle_out;
+    static std::mutex m_lock_get_global_throttle_in;
+    static std::mutex m_lock_get_global_throttle_inreq;
+    static std::mutex m_lock_get_global_throttle_out;
 
 		friend class connection_basic; // FRIEND - to directly access global throttle-s. !! REMEMBER TO USE LOCKS!
 		friend class connection_basic_pimpl; // ditto

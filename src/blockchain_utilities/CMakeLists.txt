@@ -135,7 +135,8 @@ arqma_add_executable(blockchain_import
 target_link_libraries(blockchain_import
   PRIVATE
     arqma_bc_utils_std_libs
-    blocks)
+    blocks
+    cryptonote_protocol)
 
 if(ARCH_WIDTH)
   target_compile_definitions(blockchain_import

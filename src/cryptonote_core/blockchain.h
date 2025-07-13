@@ -36,7 +36,11 @@
 #if BOOST_VERSION >= 107400
 #include <boost/serialization/library_version_type.hpp>
 #endif
-#include <boost/function/function_fwd.hpp>
+
+namespace boost::asio {
+  using io_service = io_context;
+}
+
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/list.hpp>
@@ -44,6 +48,7 @@
 #include <boost/multi_index/global_fun.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
+#include <boost/thread/thread.hpp>
 #include <atomic>
 #include <functional>
 #include <unordered_map>
@@ -739,7 +744,7 @@ namespace cryptonote
      *
      * @param notify the notify object to cal at every new block
      */
-    void add_block_notify(boost::function<void(std::uint64_t, epee::span<const block>)> &&notify);
+    void set_block_notify(const std::shared_ptr<tools::Notify> &notify) { m_block_notify = notify; }
 
     /**
      * @brief sets a reorg notify object to call for every reorg
@@ -985,10 +990,6 @@ namespace cryptonote
     void unlock() const { m_blockchain_lock.unlock(); }
     bool try_lock() const { return m_blockchain_lock.try_lock(); }
 
-    void lock() { m_blockchain_lock.lock(); }
-    void unlock() { m_blockchain_lock.unlock(); }
-    bool try_lock() { return m_blockchain_lock.try_lock(); }
-
     void cancel();
 
     /**
@@ -1032,7 +1033,7 @@ namespace cryptonote
 
     service_nodes::service_node_list& m_service_node_list;
 
-    mutable boost::recursive_mutex m_blockchain_lock; // TODO: add here reader/writer lock
+    mutable std::recursive_mutex m_blockchain_lock; // TODO: add here reader/writer lock
 
     // main chain
     size_t m_current_block_cumul_weight_limit;
@@ -1070,9 +1071,10 @@ namespace cryptonote
     crypto::hash m_difficulty_for_next_block_top_hash;
     difficulty_type m_difficulty_for_next_block;
 
-    boost::asio::io_context m_async_service;
+    boost::asio::io_service m_async_service;
     boost::thread_group m_async_pool;
-    std::unique_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> m_async_work_idle;
+    using work_type = boost::asio::executor_work_guard<decltype(m_async_service.get_executor())>;
+    std::unique_ptr<work_type> m_async_work_idle;
 
     // some invalid blocks
     std::set<crypto::hash> m_invalid_blocks;
@@ -1107,7 +1109,7 @@ namespace cryptonote
 
     bool m_batch_success;
 
-    std::vector<boost::function<void(std::uint64_t, epee::span<const block>)>> m_block_notifiers;
+    std::shared_ptr<tools::Notify> m_block_notify;
     std::shared_ptr<tools::Notify> m_reorg_notify;
 
     // for prepare_handle_incoming_blocks

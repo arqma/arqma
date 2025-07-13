@@ -269,14 +269,6 @@ namespace crypto {
   const extern crypto::secret_key null_skey;
 }
 
-EPEE_TYPE_IS_SPANNABLE(crypto::ec_scalar)
-EPEE_TYPE_IS_SPANNABLE(crypto::public_key)
-EPEE_TYPE_IS_SPANNABLE(crypto::key_derivation)
-EPEE_TYPE_IS_SPANNABLE(crypto::key_image)
-EPEE_TYPE_IS_SPANNABLE(crypto::signature)
-EPEE_TYPE_IS_SPANNABLE(crypto::ed25519_public_key)
-EPEE_TYPE_IS_SPANNABLE(crypto::x25519_public_key)
-
 CRYPTO_MAKE_HASHABLE(public_key)
 CRYPTO_MAKE_HASHABLE_CONSTANT_TIME(secret_key)
 CRYPTO_MAKE_HASHABLE(key_image)

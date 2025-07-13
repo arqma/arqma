@@ -71,7 +71,6 @@ target_link_libraries(wallet_api
     lmdb
     ${Boost_LOCALE_LIBRARY}
     ${ICU_LIBRARIES}
-    ${Boost_CHRONO_LIBRARY}
     ${Boost_SERIALIZATION_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}

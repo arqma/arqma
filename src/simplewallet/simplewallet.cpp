@@ -107,7 +107,7 @@ typedef cryptonote::simple_wallet sw;
   /* stop any background refresh, and take over */ \
   m_idle_run = false; \
   m_wallet->stop(); \
-  boost::unique_lock<boost::mutex> lock(m_idle_mutex); \
+  std::unique_lock lock{m_idle_mutex}; \
   m_idle_cond.notify_all(); \
   epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ \
   /* m_idle_mutex is still locked here */ \
@@ -2693,6 +2693,14 @@ simple_wallet::simple_wallet()
                            tr(command_helper::USAGE_HELP),
                            tr(command_helper::HELP));
 }
+
+simple_wallet::~simple_wallet()
+{
+  if (m_wallet)
+    m_wallet->m_long_poll_disabled = true;
+  if (m_long_poll_thread.joinable())
+    m_long_poll_thread.join();
+}
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::set_variable(const std::vector<std::string> &args)
 {
@@ -3996,7 +4004,7 @@ bool simple_wallet::close_wallet()
     m_idle_run.store(false, std::memory_order_relaxed);
     m_wallet->stop();
     {
-      boost::unique_lock<boost::mutex> lock(m_idle_mutex);
+      std::unique_lock lock{m_idle_mutex};
       m_idle_cond.notify_one();
     }
     m_idle_thread.join();
@@ -4090,16 +4098,6 @@ bool simple_wallet::start_mining(const std::vector<std::string>& args)
 
   bool ok = true;
   size_t arg_size = args.size();
-  if(arg_size >= 3)
-  {
-    if (!parse_bool_and_use(args[2], [&](bool r) { req.ignore_battery = r; }))
-      return true;
-  }
-  if(arg_size >= 2)
-  {
-    if (!parse_bool_and_use(args[1], [&](bool r) { req.do_background_mining = r; }))
-      return true;
-  }
   if(arg_size >= 1)
   {
     uint16_t num = 1;
@@ -7515,36 +7513,48 @@ bool simple_wallet::rescan_blockchain(const std::vector<std::string> &args_)
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::wallet_idle_thread()
 {
-  boost::posix_time::ptime last_refresh_time = boost::posix_time::neg_infin;
-
+  const auto start_time = std::chrono::steady_clock::now();
   while (true)
   {
-    boost::unique_lock<boost::mutex> lock(m_idle_mutex);
+    std::unique_lock lock{m_idle_mutex};
     if (!m_idle_run.load(std::memory_order_relaxed))
       break;
 
     // auto refresh
-    const boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
-    if (m_auto_refresh_enabled && (now - last_refresh_time).total_microseconds() > REFRESH_PERIOD * 1000000)
+    const auto dt_actual = (std::chrono::steady_clock::now() - start_time) % 1s;
+    constexpr auto threshold = 2ms;
+
+    if (dt_actual < threshold)
     {
-      m_auto_refresh_refreshing = true;
-      try
-      {
-        uint64_t fetched_blocks;
-        bool received_money;
-        if (try_connect_to_daemon(true))
-          m_wallet->refresh(m_wallet->is_trusted_daemon(), 0, fetched_blocks, received_money);
-      }
-      catch(...) {}
-      m_auto_refresh_refreshing = false;
-      last_refresh_time = boost::posix_time::microsec_clock::universal_time();
+      m_refresh_checker.do_call([this] { check_refresh(); });
+
+      if (!m_idle_run.load(std::memory_order_relaxed))
+        break;
     }
 
-    if (!m_idle_run.load(std::memory_order_relaxed))
-      break;
-
-    m_idle_cond.wait_for(lock, boost::chrono::seconds(1));
+    const auto dt = std::chrono::steady_clock::now() - start_time;
+    const auto wait = 1s - dt % 1s;
+    m_idle_cond.wait_for(lock, wait);
   }
+}
+//----------------------------------------------------------------------------------------------------
+bool simple_wallet::check_refresh()
+{
+  // auto refresh
+  if (m_auto_refresh_enabled)
+  {
+    m_auto_refresh_refreshing = true;
+    try
+    {
+      uint64_t fetched_blocks;
+      bool received_money;
+      if (try_connect_to_daemon(true))
+        m_wallet->refresh(m_wallet->is_trusted_daemon(), 0, fetched_blocks, received_money, false);
+    }
+    catch(...) {}
+    m_auto_refresh_refreshing = false;
+  }
+  return true;
 }
 //----------------------------------------------------------------------------------------------------
 std::string simple_wallet::get_prompt() const
@@ -7579,24 +7589,23 @@ bool simple_wallet::run()
   refresh_main(0, ResetNone, true);
 
   m_auto_refresh_enabled = m_wallet->auto_refresh();
-  m_idle_thread = boost::thread([&] { wallet_idle_thread(); });
+  m_idle_thread = std::thread([&] { wallet_idle_thread(); });
 
-  if (m_wallet->m_long_poll_enabled)
-  {
-    m_long_poll_thread = boost::thread([&] {
-      for (;;)
+  m_long_poll_thread = std::thread([&] {
+    for (;;)
+    {
+      if (m_wallet->m_long_poll_disabled)
+        return true;
+      try
       {
-        try
-        {
-          if (m_auto_refresh_enabled && m_wallet->long_poll_pool_state())
-            m_idle_cond.notify_one();
-        }
-        catch (...)
-        {
-        }
+        if (m_auto_refresh_enabled && m_wallet->long_poll_pool_state())
+          m_idle_cond.notify_one();
       }
-    });
-  }
+      catch (...)
+      {
+      }
+    }
+  });
 
   message_writer(console_color_green, false) << "Background refresh thread started";
   return m_cmd_binder.run_handling([this](){return get_prompt();}, "");

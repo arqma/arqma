@@ -166,7 +166,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   void service_node_list::init()
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     if (m_blockchain.get_current_hard_fork_version() < 16)
     {
       reset(true);
@@ -220,7 +220,7 @@ namespace service_nodes
   std::shared_ptr<const quorum> service_node_list::get_quorum(quorum_type type, uint64_t height, bool include_old, std::vector<std::shared_ptr<const quorum>> *alt_quorums) const
   {
     height = offset_testing_quorum_height(type, height);
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     quorum_manager const *quorums = nullptr;
     if (height == m_state.height)
       quorums = &m_state.quorums;
@@ -306,13 +306,13 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   size_t service_node_list::get_service_node_count() const
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     return m_state.service_nodes_infos.size();
   }
   //----------------------------------------------------------------------------
   std::vector<service_node_pubkey_info> service_node_list::get_service_node_list_state(const std::vector<crypto::public_key> &service_node_pubkeys) const
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     std::vector<service_node_pubkey_info> result;
 
     if(service_node_pubkeys.empty())
@@ -338,7 +338,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   void service_node_list::set_my_service_node_keys(const service_node_keys *keys)
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     m_service_node_keys = keys;
   }
   //----------------------------------------------------------------------------
@@ -351,7 +351,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::is_service_node(const crypto::public_key& pubkey, bool require_active) const
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     auto it = m_state.service_nodes_infos.find(pubkey);
     return it != m_state.service_nodes_infos.end() && (!require_active || it->second->is_active());
   }
@@ -1023,7 +1023,7 @@ namespace service_nodes
     if (block.major_version < cryptonote::network_version_16)
       return true;
 
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     process_block(block, txs);
 
     if (block.major_version >+ cryptonote::network_version_16 && checkpoint)
@@ -1083,7 +1083,7 @@ namespace service_nodes
 
   bool service_node_list::set_storage_server_peer_reachable(crypto::public_key const &pubkey, bool value)
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
 
     if (!m_state.service_nodes_infos.count(pubkey))
     {
@@ -1329,7 +1329,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   void service_node_list::blockchain_detached(uint64_t height)
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
 
     uint64_t revert_to_height = height - 1;
     bool reinitialise = false;
@@ -1440,7 +1440,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   bool service_node_list::validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &reward_parts) const
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     if(hard_fork_version < 16)
       return true;
 
@@ -1615,7 +1615,7 @@ namespace service_nodes
 
     data_for_serialization *data[] = {&m_cache_long_term_data, &m_cache_short_term_data};
     auto const serialize_version = data_for_serialization::get_version(hard_fork_version);
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
 
     for (data_for_serialization *serialize_entry : data)
     {
@@ -1733,7 +1733,7 @@ namespace service_nodes
 
   void proof_info::store(const crypto::public_key &pubkey, cryptonote::Blockchain &blockchain)
   {
-    std::unique_lock<cryptonote::Blockchain> lock{blockchain};
+    std::unique_lock lock{blockchain};
     auto &db = blockchain.get_db();
     db.set_service_node_proof(pubkey, *this);
   }
@@ -1879,7 +1879,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
   //---------------------------------------------------------------------------
   crypto::public_key service_node_list::get_pubkey_from_x25519(const crypto::x25519_public_key &x25519) const
   {
-    auto lock = tools::shared_lock(m_x25519_map_mutex);
+    std::shared_lock lock{m_x25519_map_mutex};
     auto it = m_x25519_to_pub.find(x25519);
     if (it != m_x25519_to_pub.end())
       return it->second.first;
@@ -1903,7 +1903,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
   //---------------------------------------------------------------------------
   void service_node_list::record_checkpoint_vote(crypto::public_key const &pubkey, uint64_t height, bool voted)
   {
-    std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+    std::lock_guard lock(m_sn_mutex);
     if (!m_state.service_nodes_infos.count(pubkey))
       return;
 

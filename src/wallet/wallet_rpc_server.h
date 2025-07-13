@@ -61,6 +61,7 @@ namespace tools
     bool run();
     void stop();
     void set_wallet(wallet2 *cr);
+    std::atomic<bool> m_long_poll_disabled;
 
   private:
 
@@ -270,9 +271,9 @@ namespace tools
       std::atomic<bool> m_stop;
       bool m_restricted;
       const boost::program_options::variables_map *m_vm;
-      uint32_t m_auto_refresh_period;
-      boost::posix_time::ptime m_last_auto_refresh_time;
-      boost::thread m_long_poll_thread;
+      std::chrono::milliseconds m_auto_refresh_period;
+      std::chrono::steady_clock::time_point m_last_auto_refresh_time;
+      std::thread m_long_poll_thread;
       std::atomic<bool> m_long_poll_new_changes;
   };
 }

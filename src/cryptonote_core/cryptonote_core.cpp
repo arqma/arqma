@@ -49,7 +49,6 @@ extern "C" {
 #include "common/threadpool.h"
 #include "common/command_line.h"
 #include "daemon/command_line_args.h"
-#include "cryptonote_basic/events.h"
 #include "warnings.h"
 #include "crypto/crypto.h"
 #include "cryptonote_config.h"
@@ -60,7 +59,6 @@ extern "C" {
 #include "ringct/rctTypes.h"
 #include "blockchain_db/blockchain_db.h"
 #include "ringct/rctSigs.h"
-#include "rpc/zmq_pub.h"
 #include "common/notify.h"
 #include "version.h"
 #include "memwipe.h"
@@ -291,12 +289,6 @@ namespace cryptonote
       m_pprotocol = &m_protocol_stub;
   }
   //-----------------------------------------------------------------------------------
-  void core::set_txpool_listener(boost::function<void(std::vector<txpool_event>)> zmq_pub)
-  {
-    CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
-    m_zmq_pub = std::move(zmq_pub);
-  }
-  //-----------------------------------------------------------------------------------
   bool core::update_checkpoints_from_json_file()
   {
     if (m_checkpoints_updating.test_and_set()) return true;
@@ -324,7 +316,7 @@ namespace cryptonote
 
     tools::download_async_handle handle;
     {
-      boost::lock_guard<boost::mutex> lock(m_update_mutex);
+      std::lock_guard lock{m_update_mutex};
       handle = m_update_download;
       m_update_download = 0;
     }
@@ -670,19 +662,7 @@ namespace cryptonote
     try
     {
       if(!command_line::is_arg_defaulted(vm, arg_block_notify))
-      {
-        struct hash_notify
-        {
-          tools::Notify cmdline;
-          void operator()(std::uint64_t, epee::span<const block> blocks) const
-          {
-            for (const block bl : blocks)
-              cmdline.notify("%s", epee::string_tools::pod_to_hex(get_block_hash(bl)).c_str(), NULL);
-          }
-        };
-
-        m_blockchain_storage.add_block_notify(hash_notify{{command_line::get_arg(vm, arg_block_notify).c_str()}});
-      }
+        m_blockchain_storage.set_block_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_block_notify).c_str())));
     }
     catch (const std::exception& e)
     {
@@ -934,7 +914,7 @@ namespace cryptonote
     }
     //std::cout << "!"<< tx.vin.size() << std::endl;
 
-    std::lock_guard<boost::mutex> lock(bad_semantics_txes_lock);
+    std::lock_guard lock{bad_semantics_txes_lock};
     for (int idx = 0; idx < 2; ++idx)
     {
       if (bad_semantics_txes[idx].find(tx_info.tx_hash) != bad_semantics_txes[idx].end())
@@ -1122,7 +1102,6 @@ namespace cryptonote
   bool core::handle_parsed_txs(std::vector<tx_verification_batch_info> &parsed_txs, const tx_pool_options &opts)
   {
     uint8_t hard_fork_version = m_blockchain_storage.get_current_hard_fork_version();
-    std::vector<txpool_event> results(parsed_txs.size());
     bool ok = true;
     bool tx_pool_changed = false;
     tx_pool_options tx_opts;
@@ -1158,9 +1137,6 @@ namespace cryptonote
 
     if (tx_pool_changed)
       m_long_poll_wake_up_clients.notify_all();
-
-    if (tx_pool_changed && m_zmq_pub)
-      m_zmq_pub(std::move(results));
 
     return ok;
   }
@@ -1431,7 +1407,7 @@ namespace cryptonote
     NOTIFY_UPTIME_PROOF::request req = m_service_node_list.generate_uptime_proof(*m_service_node_keys, m_sn_public_ip, m_storage_port, m_arqnet_port);
 
     cryptonote_connection_context fake_context{};
-    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context);
+    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context, true);
     if (relayed)
       MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_keys->pub);
 
@@ -1893,7 +1869,7 @@ namespace cryptonote
     boost::filesystem::path path(epee::string_tools::get_current_module_folder());
     path /= filename;
 
-    boost::unique_lock<boost::mutex> lock(m_update_mutex);
+    std::unique_lock lock{m_update_mutex};
 
     if (m_update_download != 0)
     {
@@ -1934,7 +1910,7 @@ namespace cryptonote
           MCERROR("updates", "Failed to download " << uri);
           good = false;
         }
-        boost::unique_lock<boost::mutex> lock(m_update_mutex);
+        std::unique_lock lock{m_update_mutex};
         m_update_download = 0;
         if (success && !remove)
         {

@@ -22,7 +22,7 @@ if len(sys.argv) < 3:
 else:
     m = re.match(r"((?:[a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+):(\d{4,5})", sys.argv[1])
     if m:
-        lokirpc = "http://{}:{}/json_rpc".format(m.group(1), m.group(2))
+        arqmarpc = "http://{}:{}/json_rpc".format(m.group(1), m.group(2))
         r = requests.post(arqmarpc, json={"jsonrpc":"2.0", "id":0, "method":"get_service_node_privkey"}).json()
         if "result" in r and "service_node_x25519_privkey" in r["result"]:
             x_key = PrivateKey(r["result"]["service_node_x25519_privkey"], encoder=nacl.encoding.HexEncoder)
@@ -45,7 +45,7 @@ if badargs:
     sys.exit(1)
 
 missed = set(sys.argv[2:])
-r = requests.post(lokirpc, json={"jsonrpc":"2.0", "id":0, "method":"get_service_nodes", "params": {
+r = requests.post(arqmarpc, json={"jsonrpc":"2.0", "id":0, "method":"get_service_nodes", "params": {
     "service_node_pubkeys": sys.argv[2:]}}).json()
 
 context = zmq.Context()

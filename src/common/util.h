@@ -31,8 +31,6 @@
 
 #pragma once
 
-#include <boost/thread/locks.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/optional.hpp>
 #include <boost/endian/conversion.hpp>
 #include <system_error>
@@ -216,8 +214,8 @@ namespace tools
     /*! \brief calles m_handler */
     static void handle_signal(int type)
     {
-      static boost::mutex m_mutex;
-      boost::unique_lock<boost::mutex> lock(m_mutex);
+      static std::mutex m_mutex;
+      std::unique_lock lock{m_mutex};
       m_handler(type);
     }
 
@@ -257,13 +255,7 @@ namespace tools
 
   uint64_t cumulative_block_sync_weight(cryptonote::network_type nettype, uint64_t start_block, uint64_t num_blocks);
 
-#ifdef __cpp_fold_expressions
-  template <typename... Ts> constexpr size_t constexpr_sum(Ts... ns) { return (0 + ... + size_t{ns}); }
-#else
-  constexpr size_t constexpr_sum() { return 0; }
-  template <typename T, typename... Tmore>
-  constexpr size_t constexpr_sum(T n, Tmore... more) { return size_t{n} + constexpr_sum(more...); }
-#endif
+  template <typename... T> constexpr size_t constexpr_sum(T... ns) { return (0 + ... + size_t{ns}); }
 
   namespace detail {
     // Copy an integer type, swapping to little-endian if needed

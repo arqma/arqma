@@ -133,14 +133,7 @@ namespace epee
   }
 
   template<typename T>
-  constexpr bool is_byte_spannable =
-#ifdef __cpp_lib_has_unique_object_representations
-    std::has_unique_object_representations<T>::value;
-#define EPEE_TYPE_IS_SPANNABLE(T)
-#else
-    std::is_trivially_copyable<T>() && alignof(T) == 1;
-#define EPEE_TYPE_IS_SPANNABLE(T) namespace epee { template <> constexpr bool is_byte_spannable<T> = std::is_trivially_copyable<T>(); }
-#endif
+  constexpr bool is_byte_spannable = std::has_unique_object_representations<T>::value;
 
   //! \return Cast data from `src` as `span<const std::uint8_t>`.
   template<typename T>
@@ -174,11 +167,11 @@ namespace epee
     return {reinterpret_cast<std::uint8_t*>(std::addressof(src)), sizeof(T)};
   }
 
-  //! make a span from a std::string
-  template<typename T>
-  span<const T> strspan(const std::string &s) noexcept
+  template<typename T, std::enable_if_t<
+      std::is_same_v<T, char> || std::is_same_v<T, unsigned char> ||
+      std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t> || std::is_same_v<T, std::byte>, int> = 0>
+  span<const T> strspan(std::string_view s) noexcept
   {
-    static_assert(std::is_same<T, char>() || std::is_same<T, unsigned char>() || std::is_same<T, int8_t>() || std::is_same<T, uint8_t>(), "Unexpected type");
     return {reinterpret_cast<const T*>(s.data()), s.size()};
   }
 }

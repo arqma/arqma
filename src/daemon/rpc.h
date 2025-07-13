@@ -86,7 +86,7 @@ public:
   {
     MGINFO("Stopping " << m_description << " RPC server...");
     m_server.send_stop_signal();
-    m_server.timed_wait_server_stop(5000);
+    m_server.server_stop();
   }
 
   cryptonote::core_rpc_server* get_server()

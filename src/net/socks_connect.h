@@ -31,7 +31,7 @@
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/thread/future.hpp>
+#include <future>
 #include <string>
 
 namespace net
@@ -49,7 +49,7 @@ namespace socks
 
             \return The socket if successful, and exception in the future with
                 error otherwise. */
-        boost::unique_future<boost::asio::ip::tcp::socket>
+        std::future<boost::asio::ip::tcp::socket>
             operator()(const std::string& remote_host, const std::string& remote_port, boost::asio::steady_timer& timeout) const;
     };
 } // socks

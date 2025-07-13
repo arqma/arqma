@@ -35,12 +35,11 @@
 #include <ctime>
 #include <chrono>
 #include <condition_variable>
+#include <mutex>
 
-#include <boost/function.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "cryptonote_basic/fwd.h"
 #include "cryptonote_protocol/cryptonote_protocol_handler_common.h"
 #include "storages/portable_storage_template_helper.h"
 #include "common/download.h"
@@ -55,7 +54,6 @@
 #include "cryptonote_basic/connection_context.h"
 #include "warnings.h"
 #include "crypto/hash.h"
-#include "rpc/fwd.h"
 
 PUSH_WARNINGS
 DISABLE_VS_WARNINGS(4355)
@@ -162,7 +160,7 @@ namespace cryptonote
        transaction tx;
      };
 
-     auto incoming_tx_lock() { return std::unique_lock<boost::recursive_mutex>{m_incoming_tx_lock}; }
+     auto incoming_tx_lock() { return std::unique_lock{m_incoming_tx_lock}; }
 
      std::vector<tx_verification_batch_info> parse_incoming_txs(const std::vector<blobdata>& tx_blobs, const tx_pool_options &opts);
 
@@ -431,8 +429,6 @@ namespace cryptonote
       * @param pprotocol the pointer to set ours as
       */
      void set_cryptonote_protocol(i_cryptonote_protocol* pprotocol);
-
-     void set_txpool_listener(boost::function<void(std::vector<txpool_event>)> zmq_pub);
 
      /**
       * @copydoc Blockchain::get_total_transactions
@@ -944,15 +940,15 @@ namespace cryptonote
 
      cryptonote_protocol_stub m_protocol_stub; //!< cryptonote protocol stub instance
 
-     epee::math_helper::periodic_task m_store_blockchain_interval{12h, false}; //!< interval for manual storing of Blockchain, if enabled
-     epee::math_helper::periodic_task m_fork_moaner{2h}; //!< interval for checking HardFork status
-     epee::math_helper::periodic_task m_txpool_auto_relayer{2min, false}; //!< interval for checking re-relaying txpool transactions
-     epee::math_helper::periodic_task m_check_updates_interval{12h}; //!< interval for checking for new versions
-     epee::math_helper::periodic_task m_check_disk_space_interval{10min}; //!< interval for checking for disk space
-     epee::math_helper::periodic_task m_blockchain_pruning_interval{5h}; //!< interval for incremental blockchain pruning
-     epee::math_helper::periodic_task m_check_uptime_proof_interval{std::chrono::seconds{UPTIME_PROOF_TIMER_SECONDS}}; //!< interval for submitting uptime proof
-     epee::math_helper::periodic_task m_service_node_vote_relayer{2min, false};
-     epee::math_helper::periodic_task m_sn_proof_cleanup_interval{1h, false};
+     tools::periodic_task m_store_blockchain_interval{12h, false}; //!< interval for manual storing of Blockchain, if enabled
+     tools::periodic_task m_fork_moaner{2h}; //!< interval for checking HardFork status
+     tools::periodic_task m_txpool_auto_relayer{2min, false}; //!< interval for checking re-relaying txpool transactions
+     tools::periodic_task m_check_updates_interval{12h}; //!< interval for checking for new versions
+     tools::periodic_task m_check_disk_space_interval{10min}; //!< interval for checking for disk space
+     tools::periodic_task m_blockchain_pruning_interval{5h}; //!< interval for incremental blockchain pruning
+     tools::periodic_task m_check_uptime_proof_interval{std::chrono::seconds{UPTIME_PROOF_TIMER_SECONDS}}; //!< interval for submitting uptime proof
+     tools::periodic_task m_service_node_vote_relayer{2min, false};
+     tools::periodic_task m_sn_proof_cleanup_interval{1h, false};
 
      std::atomic<bool> m_starter_message_showed; //!< has the "daemon will sync now" message been shown?
 
@@ -982,7 +978,7 @@ namespace cryptonote
      time_t start_time;
 
      std::unordered_set<crypto::hash> bad_semantics_txes[2];
-     boost::mutex bad_semantics_txes_lock;
+     std::mutex bad_semantics_txes_lock;
 
      enum {
        UPDATES_DISABLED,
@@ -993,13 +989,11 @@ namespace cryptonote
 
      tools::download_async_handle m_update_download;
      size_t m_last_update_length;
-     boost::mutex m_update_mutex;
+     std::mutex m_update_mutex;
 
      bool m_fluffy_blocks_enabled;
      bool m_offline;
      bool m_pad_transactions;
-
-     boost::function<void(std::vector<txpool_event>)> m_zmq_pub;
    };
 }
 

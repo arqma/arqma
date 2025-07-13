@@ -31,18 +31,15 @@
 
 #include <atomic>
 #include <string>
-#include <boost/version.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/lambda/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/utility/string_ref.hpp>
-
+#include <future>
 #include <functional>
 #include "net/net_utils_base.h"
 #include "net/net_ssl.h"
@@ -51,13 +48,19 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
+#if BOOST_VERSION >= 108700
+namespace boost::asio {
+  typedef io_context io_service;
+}
+#endif
+
 namespace epee
 {
 namespace net_utils
 {
     struct direct_connect
     {
-      boost::unique_future<boost::asio::ip::tcp::socket> operator()(const std::string& addr, const std::string& port, boost::asio::steady_timer&) const;
+      std::future<boost::asio::ip::tcp::socket> operator()(const std::string& addr, const std::string& port, boost::asio::steady_timer&) const;
     };
 
     class blocked_mode_client
@@ -99,11 +102,12 @@ namespace net_utils
           m_connector(direct_connect{}),
           m_ssl_options(epee::net_utils::ssl_support_t::e_ssl_support_autodetect),
           m_connected(false),
-          m_deadline(m_io_service),
+          m_deadline(m_io_service, std::chrono::steady_clock::time_point::max()),
           m_shutdowned(false),
           m_bytes_sent(0),
           m_bytes_received(0)
     {
+      check_deadline();
     }
 
     /*! The first/second parameters are host/port respectively. The third
@@ -119,7 +123,7 @@ namespace net_utils
 
         The return value is a future to a connected socket. Asynchronous
         failures should use the `set_exception` method. */
-    using connect_func = boost::unique_future<boost::asio::ip::tcp::socket>(const std::string&, const std::string&, boost::asio::steady_timer&);
+    using connect_func = std::function<std::future<boost::asio::ip::tcp::socket>(const std::string&, const std::string&, boost::asio::steady_timer&)>;
 
 		inline
 		~blocked_mode_client()
@@ -142,15 +146,11 @@ namespace net_utils
     try_connect_result_t try_connect(const std::string& addr, const std::string& port, std::chrono::milliseconds timeout)
     {
 		  m_deadline.expires_after(timeout);
-      boost::unique_future<boost::asio::ip::tcp::socket> connection = m_connector(addr, port, m_deadline);
-		  for (;;)
-		  {
+      auto connection = m_connector(addr, port, m_deadline);
+      do {
 	      m_io_service.restart();
 		    m_io_service.run_one();
-
-        if (connection.is_ready())
-          break;
-		  }
+		  } while (connection.wait_for(std::chrono::seconds{0}) != std::future_status::ready);
 
       m_ssl_socket->next_layer() = connection.get();
 		  m_deadline.cancel();
@@ -161,7 +161,7 @@ namespace net_utils
 					// SSL Options
 					if(m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled || m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
 					{
-						if(!m_ssl_options.handshake(m_io_service, *m_ssl_socket, boost::asio::ssl::stream_base::client, {}, addr, timeout))
+						if(!m_ssl_options.handshake(*m_ssl_socket, boost::asio::ssl::stream_base::client, {}, addr, timeout))
 						{
 							if(m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
 							{
@@ -231,7 +231,7 @@ namespace net_utils
         return true;
     }
     //! Change the connection routine (proxy, etc.)
-    void set_connector(std::function<connect_func> connector)
+    void set_connector(connect_func connector)
 		{
 			m_connector = std::move(connector);
 		}
@@ -265,7 +265,7 @@ namespace net_utils
 
 
 		inline
-		bool send(const boost::string_ref buff, std::chrono::milliseconds timeout)
+		bool send(const std::string& buff, std::chrono::milliseconds timeout)
 		{
 			try
 			{
@@ -278,16 +278,12 @@ namespace net_utils
 				// ec indicates completion.
 				boost::system::error_code ec = boost::asio::error::would_block;
 
-				// Start the asynchronous operation itself. The boost::lambda function
-				// object is used as a callback and will update the ec variable when the
-				// operation completes. The blocking_udp_client.cpp example shows how you
-				// can use boost::bind rather than boost::lambda.
-				async_write(buff.data(), buff.size(), ec);
+				async_write(buff.c_str(), buff.size(), ec);
 
 				// Block until the asynchronous operation has completed.
 				while (ec == boost::asio::error::would_block)
 				{
-                    m_io_service.restart();
+          m_io_service.restart();
 					m_io_service.run_one();
 				}
 
@@ -344,11 +340,6 @@ namespace net_utils
 				// operations will never fail with would_block, so any other value in
 				// ec indicates completion.
 				//boost::system::error_code ec = boost::asio::error::would_block;
-
-				// Start the asynchronous operation itself. The boost::lambda function
-				// object is used as a callback and will update the ec variable when the
-				// operation completes. The blocking_udp_client.cpp example shows how you
-				// can use boost::bind rather than boost::lambda.
 
 				boost::system::error_code ec = boost::asio::error::would_block;
 				size_t bytes_transferred = 0;
@@ -467,7 +458,7 @@ namespace net_utils
 			}
 
 			// Put the actor back to sleep.
-			m_deadline.async_wait(boost::bind(&blocked_mode_client::check_deadline, this));
+			m_deadline.async_wait([this] (const boost::system::error_code&) { check_deadline(); });
 		}
 
 		void shutdown_ssl()
@@ -475,7 +466,7 @@ namespace net_utils
 			// ssl socket shutdown blocks if server doesn't respond. We close after 2 secs
 			boost::system::error_code ec = boost::asio::error::would_block;
 			m_deadline.expires_after(std::chrono::milliseconds(2000));
-			m_ssl_socket->async_shutdown(boost::lambda::var(ec) = boost::lambda::_1);
+			m_ssl_socket->async_shutdown([&ec](const boost::system::error_code& e) { ec = e; });
 			while (ec == boost::asio::error::would_block)
 			{
                 m_io_service.restart();
@@ -483,11 +474,7 @@ namespace net_utils
 			}
 			// Ignore "short read" error
 			if(ec.category() == boost::asio::error::get_ssl_category() && ec.value() !=
-#if BOOST_VERSION >= 106200
 			    boost::asio::ssl::error::stream_truncated
-#else // older Boost supports only OpenSSL 1.0, so 1.0-only macros are appropriate
-			    ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)
-#endif
 			    )
 				MDEBUG("Problems at ssl shutdown: " << ec.message());
 		}
@@ -495,10 +482,11 @@ namespace net_utils
 	protected:
 	  void async_write(const void* data, size_t sz, boost::system::error_code& ec)
 		{
+		  auto handler = [&ec](const boost::system::error_code& e, size_t) { ec = e; };
 			if(m_ssl_options.support != ssl_support_t::e_ssl_support_disabled)
-                boost::asio::async_write(*m_ssl_socket, boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
+                boost::asio::async_write(*m_ssl_socket, boost::asio::buffer(data, sz), std::move(handler));
 			else
-				boost::asio::async_write(m_ssl_socket->next_layer(), boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
+				boost::asio::async_write(m_ssl_socket->next_layer(), boost::asio::buffer(data, sz), std::move(handler));
 		}
 
 		void async_read(char* buff, size_t sz, boost::asio::detail::transfer_at_least_t transfer_at_least, handler_obj& hndlr)
@@ -511,10 +499,10 @@ namespace net_utils
 		}
 
 	protected:
-		boost::asio::io_context m_io_service;
+		boost::asio::io_service m_io_service;
     boost::asio::ssl::context m_ctx;
 		std::shared_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> m_ssl_socket;
-    std::function<connect_func> m_connector;
+    connect_func m_connector;
 		ssl_options_t m_ssl_options;
 		bool m_connected;
 		boost::asio::steady_timer m_deadline;

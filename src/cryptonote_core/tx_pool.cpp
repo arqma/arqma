@@ -212,7 +212,7 @@ namespace cryptonote
   bool tx_memory_pool::add_tx(transaction &tx, /*const crypto::hash& tx_prefix_hash,*/ const crypto::hash &id, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, const tx_pool_options &opts, uint8_t hard_fork_version)
   {
     // this should already be called with that lock, but let's make it explicit for clarity
-    auto lock = tools::unique_lock(m_transactions_lock);
+    std::unique_lock lock{m_transactions_lock};
 
     PERF_TIMER(add_tx);
     if(tx.version == txversion::v0)
@@ -355,7 +355,7 @@ namespace cryptonote
         try
         {
           m_parsed_tx_cache.insert(std::make_pair(id, tx));
-          auto b_lock = tools::unique_lock(m_blockchain);
+          std::unique_lock b_lock{m_blockchain};
           LockedTXN lock(m_blockchain);
           m_blockchain.add_txpool_tx(id, blob, meta);
           if(!insert_key_images(tx, id, opts.kept_by_block))
@@ -400,7 +400,7 @@ namespace cryptonote
       {
         if(opts.kept_by_block)
           m_parsed_tx_cache.insert(std::make_pair(id, tx));
-        auto b_lock = tools::unique_lock(m_blockchain);
+        std::unique_lock b_lock{m_blockchain};
         LockedTXN lock(m_blockchain);
         m_blockchain.remove_txpool_tx(id);
         m_blockchain.add_txpool_tx(id, blob, meta);
@@ -444,13 +444,13 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   size_t tx_memory_pool::get_txpool_weight() const
   {
-    auto lock = tools::unique_lock(m_transactions_lock);
+    std::unique_lock lock{m_transactions_lock};
     return m_txpool_weight;
   }
   //---------------------------------------------------------------------------------
   void tx_memory_pool::set_txpool_max_weight(size_t bytes)
   {
-    auto lock = tools::unique_lock(m_transactions_lock);
+    std::unique_lock lock{m_transactions_lock};
     m_txpool_max_weight = bytes;
   }
   //---------------------------------------------------------------------------------
@@ -1129,7 +1129,7 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::on_blockchain_inc(block const &blk)
   {
-    auto lock = tools::unique_lock(m_transactions_lock);
+    std::unique_lock lock{m_transactions_lock};
     m_input_cache.clear();
     m_parsed_tx_cache.clear();
 
@@ -1189,7 +1189,7 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::on_blockchain_dec()
   {
-    auto lock = tools::unique_lock(m_transactions_lock);
+    std::unique_lock lock{m_transactions_lock};
     m_input_cache.clear();
     m_parsed_tx_cache.clear();
     return true;
@@ -1225,7 +1225,7 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::have_tx_keyimg_as_spent(const crypto::key_image& key_im) const
   {
-    auto lock = tools::unique_lock(m_transactions_lock);
+    std::unique_lock lock{m_transactions_lock};
     return m_spent_key_images.end() != m_spent_key_images.find(key_im);
   }
   //---------------------------------------------------------------------------------

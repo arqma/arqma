@@ -29,17 +29,12 @@
 #pragma once
 
 #include <boost/thread/thread.hpp>
-#include <boost/utility/string_ref.hpp>
-#include <cstdint>
-#include <memory>
+#include <zmq.hpp>
 #include <string>
+#include <memory>
 
 #include "common/command_line.h"
-#include "cryptonote_basic/fwd.h"
-#include "net/zmq.h"
-#include "rpc/fwd.h"
 #include "rpc_handler.h"
-#include "span.h"
 
 namespace cryptonote
 {
@@ -47,7 +42,10 @@ namespace cryptonote
 namespace rpc
 {
 
-class ZmqServer final
+static constexpr int DEFAULT_NUM_ZMQ_THREADS = 1;
+static constexpr int DEFAULT_RPC_RECV_TIMEOUT_MS = 1000;
+
+class ZmqServer
 {
   public:
 
@@ -55,11 +53,12 @@ class ZmqServer final
 
     ~ZmqServer();
 
+    static void init_options(boost::program_options::options_description& desc);
+
     void serve();
 
-    void* init_rpc(boost::string_ref address, boost::string_ref port);
-
-    std::shared_ptr<listener::zmq_pub> init_pub(epee::span<const std::string> addresses);
+    bool addIPCSocket(std::string address, std::string port);
+    bool addTCPSocket(std::string address, std::string port);
 
     void run();
     void stop();
@@ -67,14 +66,14 @@ class ZmqServer final
   private:
     RpcHandler& handler;
 
-    net::zmq::context context;
+    volatile bool stop_signal;
+    volatile bool running;
+
+    zmq::context_t context;
 
     boost::thread run_thread;
 
-    net::zmq::socket rep_socket;
-    net::zmq::socket pub_socket;
-    net::zmq::socket relay_socket;
-    std::shared_ptr<listener::zmq_pub> shared_state;
+    std::unique_ptr<zmq::socket_t> rep_socket;
 };
 
 }  // namespace cryptonote
