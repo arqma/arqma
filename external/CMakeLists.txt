@@ -71,7 +71,7 @@ else()
 endif()
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(UNBOUND libunbound REQUIRED IMPORTED_TARGET)
+pkg_check_modules(UNBOUND libunbound IMPORTED_TARGET)
 statusinfo("Using in-tree miniupnpc")
 add_subdirectory(miniupnp/miniupnpc)
 if(MSVC)
