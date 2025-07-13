@@ -30,8 +30,9 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
+#pragma once
 
-
+#include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/utility/value_init.hpp>
@@ -40,6 +41,7 @@
 #include "warnings.h"
 #include "string_tools_lexical.h"
 #include "misc_language.h"
+#include "net/abstract_tcp_server2.h"
 
 #include <mutex>
 #include <condition_variable>
@@ -204,15 +206,15 @@ namespace net_utils
     if (is_income && m_ssl_support != epee::net_utils::ssl_support_t::e_ssl_support_disabled)
       socket().async_receive(boost::asio::buffer(buffer_),
         strand_.wrap(
-          std::bind(&connection<t_protocol_handler>::handle_receive, self,
-            std::placeholders::_1,
-            std::placeholders::_2)));
+          boost::bind(&connection<t_protocol_handler>::handle_receive, self,
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred)));
     else
       async_read_some(boost::asio::buffer(buffer_),
         strand_.wrap(
-          std::bind(&connection<t_protocol_handler>::handle_read, self,
-            std::placeholders::_1,
-            std::placeholders::_2)));
+          boost::bind(&connection<t_protocol_handler>::handle_read, self,
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred)));
 #if !defined(_WIN32) || !defined(__i686)
 	  // not supported before Windows7, too lazy for runtime check
 	  // Just exclude for 32bit windows builds
@@ -686,13 +688,13 @@ namespace net_utils
         auto size_now = m_send_que.front().size();
         MDEBUG("do_send_chunk() NOW SENSD: packet="<<size_now<<" B");
         if (speed_limit_is_enabled())
-			do_send_handler_write( m_send_que.back().data(), m_send_que.back().size() ); // (((H)))
+			  do_send_handler_write( m_send_que.back().data(), m_send_que.back().size() ); // (((H)))
 
         CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), false, "Unexpected queue size");
         reset_timer(get_default_timeout(), false);
             async_write(boost::asio::buffer(m_send_que.front().data(), size_now ) ,
                                  strand_.wrap(
-                                 std::bind(&connection<t_protocol_handler>::handle_write, self, std::placeholders::_1, std::placeholders::_2)
+                                 boost::bind(&connection<t_protocol_handler>::handle_write, self, boost::placeholders::_1, boost::placeholders::_2)
                                  )
                                  );
         //_dbg3("(chunk): " << size_now);
@@ -894,7 +896,7 @@ namespace net_utils
 		CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), void(), "Unexpected queue size");
 		  async_write(boost::asio::buffer(m_send_que.front().data(), size_now) , 
            strand_.wrap(
-            std::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+            boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), boost::placeholders::_1, boost::placeholders::_2)
 			  )
           );
       //_dbg3("(normal)" << size_now);
@@ -1388,7 +1390,7 @@ namespace net_utils
       shared_context->connect_mut.lock(); shared_context->ec = ec_; shared_context->cond.notify_one(); shared_context->connect_mut.unlock();
     };
 
-    sock_.async_connect(remote_endpoint, std::bind<void>(connect_callback, std::placeholders::_1, local_shared_context));
+    sock_.async_connect(remote_endpoint, boost::bind<void>(connect_callback, boost::placeholders::_1, local_shared_context));
     while(local_shared_context->ec == boost::asio::error::would_block)
     {
       auto wait_stat = local_shared_context->cond.wait_for(lock, std::chrono::milliseconds{conn_timeout});

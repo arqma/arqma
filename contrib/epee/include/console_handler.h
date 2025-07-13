@@ -37,6 +37,7 @@
 #ifdef __OpenBSD__
 #include <stdio.h>
 #endif
+#include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -45,7 +46,6 @@
   #include "readline_buffer.h"
 #endif
 
-namespace pl = std::placeholders;
 namespace epee
 {
   class async_stdin_reader
@@ -59,7 +59,7 @@ namespace epee
 #ifdef HAVE_READLINE
       m_readline_buffer.start();
 #endif
-      m_reader_thread = boost::thread(std::bind(&async_stdin_reader::reader_thread_func, this));
+      m_reader_thread = std::thread([this]() { return reader_thread_func(); });
     }
 
     ~async_stdin_reader()
@@ -84,7 +84,7 @@ namespace epee
       if (state_eos == m_read_status)
         return false;
 
-      boost::unique_lock<boost::mutex> lock(m_response_mutex);
+      std::unique_lock lock{m_response_mutex};
       while (state_init == m_read_status)
       {
         m_response_cv.wait(lock);
@@ -126,7 +126,7 @@ namespace epee
   private:
     bool start_read()
     {
-      boost::unique_lock<boost::mutex> lock(m_request_mutex);
+      std::unique_lock lock{m_request_mutex};
       if (!m_run.load(std::memory_order_relaxed) || m_has_read_request)
         return false;
 
@@ -137,7 +137,7 @@ namespace epee
 
     bool wait_read()
     {
-      boost::unique_lock<boost::mutex> lock(m_request_mutex);
+      std::unique_lock lock{m_request_mutex};
       while (m_run.load(std::memory_order_relaxed) && !m_has_read_request)
       {
         m_request_cv.wait(lock);
@@ -239,7 +239,7 @@ eof:
         }
         else
         {
-          boost::unique_lock<boost::mutex> lock(m_response_mutex);
+          std::unique_lock lock{m_response_mutex};
           if (m_run.load(std::memory_order_relaxed))
           {
             m_line = std::move(line);
@@ -264,7 +264,7 @@ eof:
     };
 
   private:
-    boost::thread m_reader_thread;
+    std::thread m_reader_thread;
     std::atomic<bool> m_run;
 #ifdef HAVE_READLINE
     rdln::readline_buffer m_readline_buffer;
@@ -274,10 +274,10 @@ eof:
     bool m_has_read_request;
     t_state m_read_status;
 
-    boost::mutex m_request_mutex;
-    boost::mutex m_response_mutex;
-    boost::condition_variable m_request_cv;
-    boost::condition_variable m_response_cv;
+    std::mutex m_request_mutex;
+    std::mutex m_response_mutex;
+    std::condition_variable m_request_cv;
+    std::condition_variable m_response_cv;
   };
 
 
@@ -410,7 +410,7 @@ eof:
   bool start_default_console(t_server* ptsrv, t_handler handlr, std::function<std::string(void)> prompt, const std::string& usage = "")
   {
     std::shared_ptr<async_console_handler> console_handler = std::make_shared<async_console_handler>();
-    boost::thread([=](){console_handler->run<t_server, t_handler>(ptsrv, handlr, prompt, usage);}).detach();
+    std::thread([=](){console_handler->run<t_server, t_handler>(ptsrv, handlr, prompt, usage);}).detach();
     return true;
   }
 
@@ -436,7 +436,7 @@ eof:
   bool run_default_console_handler_no_srv_param(t_server* ptsrv, t_handler handlr, std::function<std::string(void)> prompt, const std::string& usage = "")
   {
     async_console_handler console_handler;
-    return console_handler.run(ptsrv, std::bind<bool>(no_srv_param_adapter<t_server, t_handler>, pl::_1, pl::_2, handlr), prompt, usage);
+    return console_handler.run(ptsrv, std::bind<bool>(no_srv_param_adapter<t_server, t_handler>, std::placeholders::_1, std::placeholders::_2, handlr), prompt, usage);
   }
 
   template<class t_server, class t_handler>
@@ -448,7 +448,7 @@ eof:
   template<class t_server, class t_handler>
   bool start_default_console_handler_no_srv_param(t_server* ptsrv, t_handler handlr, std::function<std::string(void)> prompt, const std::string& usage = "")
   {
-    boost::thread( boost::bind(run_default_console_handler_no_srv_param<t_server, t_handler>, ptsrv, handlr, prompt, usage) );
+    std::thread(std::bind(run_default_console_handler_no_srv_param<t_server, t_handler>, ptsrv, handlr, prompt, usage) );
     return true;
   }
 
@@ -566,7 +566,7 @@ eof:
 
     bool run_handling(std::function<std::string(void)> prompt, const std::string& usage_string, std::function<void(void)> exit_handler = NULL)
     {
-      return m_console_handler.run(std::bind(&console_handlers_binder::process_command_str, this, pl::_1), prompt, usage_string, exit_handler);
+      return m_console_handler.run(boost::bind(&console_handlers_binder::process_command_str, this, boost::placeholders::_1), prompt, usage_string, exit_handler);
     }
 
     void print_prompt()

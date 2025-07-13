@@ -869,8 +869,9 @@ bool async_protocol_handler_config<t_connection_context>::for_connection(const b
   async_protocol_handler<t_connection_context>* aph = nullptr;
   if (find_and_lock_connection(connection_id, aph) != LEVIN_OK)
     return false;
-  auto scope_exit_handler = misc_utils::create_scope_leave_handler(
-    boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
+//  auto scope_exit_handler = misc_utils::create_scope_leave_handler(
+//    boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
+  auto scope_exit_handler = misc_utils::create_scope_leave_handler([aph]() { aph->finish_outer_call(); });
   if(!cb(aph->get_context_ref()))
     return false;
   return true;
@@ -936,8 +937,9 @@ bool async_protocol_handler_config<t_connection_context>::close(boost::uuids::uu
   async_protocol_handler<t_connection_context>* aph = nullptr;
   if (find_and_lock_connection(connection_id, aph) != LEVIN_OK)
     return false;
-  auto scope_exit_handler = misc_utils::create_scope_leave_handler(
-    boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
+//  auto scope_exit_handler = misc_utils::create_scope_leave_handler(
+//    boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
+  auto scope_exit_handler = misc_utils::create_scope_leave_handler([aph]() { aph->finish_outer_call(); });
   if (!aph->close())
     return false;
   CRITICAL_REGION_LOCAL(m_connects_lock);
