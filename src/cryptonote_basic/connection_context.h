@@ -34,6 +34,7 @@
 #include <atomic>
 #include <algorithm>
 #include <chrono>
+#include <optional>
 #include <boost/optional/optional_fwd.hpp>
 #include "net/net_utils_base.h"
 #include "copyable_atomic.h"
