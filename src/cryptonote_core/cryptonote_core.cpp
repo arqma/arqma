@@ -535,7 +535,7 @@ namespace cryptonote
           s += "decomm.";
 
         uint64_t last_proof = 0;
-        snl.access_proof(keys->pub. [&](auto &proof) { last_proof = proof.timestamp; });
+        snl.access_proof(keys->pub, [&](auto &proof) { last_proof = proof.timestamp; });
         s += ", proof: ";
         time_t now = std::time(nullptr);
         s += time_ago_str(now, last_proof);
