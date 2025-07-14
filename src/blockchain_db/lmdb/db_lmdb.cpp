@@ -48,7 +48,6 @@
 #include "common/util.h"
 #include "common/pruning.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
-#include "cryptonote_config.h"
 #include "crypto/crypto.h"
 #include "profile_tools.h"
 #include "ringct/rctOps.h"
@@ -67,7 +66,10 @@ using namespace boost::endian;
 
 enum struct lmdb_version
 {
-  v4 = 4,
+  v1 = 1,
+  v2,
+  v3,
+  v4,
   v5,
   v6,
   _count
@@ -428,6 +430,7 @@ struct blk_checkpoint_header
   uint64_t num_signatures;
 };
 static_assert(sizeof(blk_checkpoint_header) == 2*sizeof(uint64_t) + sizeof(crypto::hash), "blk_checkpoint_header has unexpected padding");
+static_assert(sizeof(service_nodes::voter_to_signature) == sizeof(uint16_t) + 6 /*padding*/ + sizeof(crypto::signature), "Unexpected padding/struct size change. DB checkpoint signature entries need to be re-migrated to the new size");
 
 typedef struct blk_height {
     crypto::hash bh_hash;
@@ -5962,6 +5965,95 @@ void BlockchainLMDB::migrate_5_6()
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   MGINFO_YELLOW("Migrating blockchain from DB Version 5 to 6 - this may take a while");
+
+  mdb_txn_safe txn(false);
+  {
+    int result = mdb_txn_begin(m_env, NULL, 0, txn);
+    if (result) throw0(DB_ERROR(lmdb_error("Failed to create a transaction for thr db: ", result).c_str()));
+  }
+
+  if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
+    return;
+
+  MDB_cursor *cursor;
+  if (auto ret = mdb_cursor_open(txn, m_block_checkpoints, &cursor))
+    throw0(DB_ERROR(lmdb_error("Failed to open a cursor for block checkpoints: ", ret).c_str()));
+
+  struct unaligned_signature
+  {
+    char c[32];
+    char r[32];
+  };
+
+  struct unaligned_voter_to_signature
+  {
+    uint16_t voter_index;
+    unaligned_signature signature;
+  };
+
+  for (MDB_cursor_op op = MDB_FIRST;; op = MDB_NEXT)
+  {
+    MDB_val key, val;
+    int ret = mdb_cursor_get(cursor, &key, &val, op);
+    if (ret == MDB_NOTFOUND) break;
+    if (ret) throw0(DB_ERROR(lmdb_error("Failed to enumerate block checkpoints: ", ret).c_str()));
+
+    auto const *header = static_cast<blk_checkpoint_header const *>(val.mv_data);
+    auto num_sigs      = little_to_native(header->num_signatures);
+    auto const *aligned_signatures = reinterpret_cast<service_nodes::voter_to_signature *>(static_cast<uint8_t *>(val.mv_data) + sizeof(*header));
+    if (num_sigs == 0)
+      continue;
+
+    checkpoint_t checkpoint = {};
+    checkpoint.height       = little_to_native(header->height);
+    checkpoint.type         = (num_sigs > 0) ? checkpoint_type::service_node : checkpoint_type::hardcoded;
+    checkpoint.block_hash   = header->block_hash;
+
+    bool unaligned_checkpoint = false;
+    {
+      std::array<int, service_nodes::CHECKPOINT_QUORUM_SIZE> vote_set = {};
+      for (size_t i = 0; i < num_sigs; i++)
+      {
+        auto const &entry = aligned_signatures[i];
+        size_t const actual_num_bytes_for_signature = val.mv_size - sizeof(*header);
+        size_t const expected_num_bytes_for_signature = sizeof(service_nodes::voter_to_signature) * num_sigs;
+        if (actual_num_bytes_for_signature != expected_num_bytes_for_signature)
+        {
+          unaligned_checkpoint = true;
+          break;
+        }
+
+      }
+    }
+
+    if (unaligned_checkpoint)
+    {
+      auto const *unaligned_signatures = reinterpret_cast<unaligned_voter_to_signature *>(static_cast<uint8_t *>(val.mv_data) + sizeof(*header));
+      for (size_t i = 0; i < num_sigs; i++)
+      {
+        auto const &unaligned = unaligned_signatures[i];
+        service_nodes::voter_to_signature aligned = {};
+        aligned.voter_index                       = unaligned.voter_index;
+        memcpy(aligned.signature.c.data, unaligned.signature.c, sizeof(aligned.signature.c));
+        memcpy(aligned.signature.r.data, unaligned.signature.r, sizeof(aligned.signature.r));
+        checkpoint.signatures.push_back(aligned);
+      }
+    }
+    else
+    {
+      break;
+    }
+
+    checkpoint_mdb_buffer buffer = {};
+    if (!convert_checkpoint_into_buffer(checkpoint, buffer))
+      throw0(DB_ERROR("Failed to convert migrated checkpoint into buffer"));
+
+    val.mv_size = buffer.len;
+    val.mv_data = buffer.data;
+    ret = mdb_cursor_put(cursor, &key, &val, MDB_CURRENT);
+    if (ret) throw0(DB_ERROR(lmdb_error("Failed to update block checkpoint in db migration transaction: ", ret).c_str()));
+  }
+  txn.commit();
 
   std::vector<checkpoint_t> checkpoints;
   checkpoints.reserve(1024);

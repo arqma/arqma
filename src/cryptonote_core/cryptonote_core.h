@@ -949,6 +949,7 @@ namespace cryptonote
      tools::periodic_task m_check_uptime_proof_interval{std::chrono::seconds{UPTIME_PROOF_TIMER_SECONDS}}; //!< interval for submitting uptime proof
      tools::periodic_task m_service_node_vote_relayer{2min, false};
      tools::periodic_task m_sn_proof_cleanup_interval{1h, false};
+     tools::periodic_task m_systemd_notify_interval{10s};
 
      std::atomic<bool> m_starter_message_showed; //!< has the "daemon will sync now" message been shown?
 

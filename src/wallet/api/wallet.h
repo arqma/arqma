@@ -243,6 +243,7 @@ private:
     std::mutex        m_refreshMutex2;
     std::condition_variable m_refreshCV;
     std::thread       m_refreshThread;
+    std::thread       m_longPollThread;
     // flag indicating wallet is recovering from seed
     // so it shouldn't be considered as new and pull blocks (slow-refresh)
     // instead of pulling hashes (fast-refresh)

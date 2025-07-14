@@ -40,6 +40,9 @@ using namespace epee;
 
 extern "C" {
 #include <sodium.h>
+#ifdef ENABLE_SYSTEMD
+  #include <systemd/sd-daemon.h>
+#endif
 }
 
 #include "cryptonote_core.h"
@@ -147,7 +150,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<uint64_t> arg_prep_blocks_threads = {
     "prep-blocks-threads"
   , "Max number of threads to use when preparing block hashes in groups."
-  , 4
+  , 8
   };
   static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
@@ -492,6 +495,58 @@ namespace cryptonote
     return m_blockchain_storage.get_alternative_blocks_count();
   }
   //-----------------------------------------------------------------------------------------------
+#ifdef ENABLE_SYSTEMD
+  static std::string time_ago_str(time_t now, time_t then)
+  {
+    if (then >= now)
+      return "now"s;
+    if (then == 0)
+      return "never"s;
+    int seconds = now - then;
+    if (seconds >= 60)
+      return std::to_string(seconds / 60) + "m" + std::to_string(seconds % 60) + "s";
+    return std::to_string(seconds % 60) + "s";
+  }
+
+  static std::string get_systemd_status_string(const core &c)
+  {
+    std::string s;
+    s.reserve(128);
+    s += "Height: ";
+    s += std::to_string(c.get_blockchain_storage().get_current_blockchain_height());
+    s += ", SN: ";
+    auto keys = c.get_service_node_keys();
+    if (!keys)
+      s += "no";
+    else
+    {
+      auto &snl = c.get_service_node_list();
+      auto states = snl.get_service_node_list_state({ keys->pub });
+      if (states.empty())
+        s += "not registered";
+      else
+      {
+        auto &info = *states[0].info;
+        if (!info.is_fully_funded())
+          s += "awaiting contr.";
+        else if (info.is_active())
+          s += "active";
+        else if (info.is_decommissioned())
+          s += "decomm.";
+
+        uint64_t last_proof = 0;
+        snl.access_proof(keys->pub. [&](auto &proof) { last_proof = proof.timestamp; });
+        s += ", proof: ";
+        time_t now = std::time(nullptr);
+        s += time_ago_str(now, last_proof);
+        s += ", storage: ";
+        s += time_ago_str(now, c.m_last_storage_server_ping);
+      }
+    }
+    return s;
+  }
+#endif
+  //-----------------------------------------------------------------------------------------------
   bool core::init(const boost::program_options::variables_map& vm, const cryptonote::test_options *test_options, const GetCheckpointsCallback& get_checkpoints/* = nullptr */)
   {
     start_time = std::time(nullptr);
@@ -767,6 +822,10 @@ namespace cryptonote
       m_arqnet_obj = arqnet_new(*this, arqnet_listen);
     }
 
+#ifdef ENABLE_SYSTEMD
+    sd_notify(0, ("READY=1\nSTATUS=" + get_systemd_status_string(*this)).c_str());
+#endif
+
     return true;
   }
   //-----------------------------------------------------------------------------------------------
@@ -847,6 +906,9 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::deinit()
   {
+#ifdef ENABLE_SYSTEMD
+    sd_notify(0, "STOPPING=1\nSTATUS=Shutting down");
+#endif
     if (m_arqnet_obj)
       arqnet_delete(m_arqnet_obj);
     m_long_poll_wake_up_clients.notify_all();
@@ -1800,6 +1862,11 @@ namespace cryptonote
 
     m_miner.on_idle();
     m_mempool.on_idle();
+
+#ifdef ENABLE_SYSTEMD
+    m_systemd_notify_interval.do_call([this] { sd_notify(0, ("WATCHDOG=1\nSTATUS=" + get_systemd_status_string(*this)).c_str()); });
+#endif
+
     return true;
   }
 

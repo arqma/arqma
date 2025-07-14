@@ -289,7 +289,7 @@ namespace service_nodes
     return result;
   }
 
-  quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys)
+  quorum_vote_t make_checkpointing_vote(uint8_t hard_fork_version, crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys)
   {
     quorum_vote_t result         = {};
     result.type                  = quorum_type::checkpointing;

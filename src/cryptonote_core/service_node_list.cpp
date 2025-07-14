@@ -1841,6 +1841,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
       LOG_PRINT_L2("Accepted uptime proof from " << proof.pubkey);
     }
 
+    auto old_x25519 = iproof.pubkey_x25519;
     if (iproof.update(now, proof.public_ip, proof.storage_port, proof.arqnet_port, proof.arqma_snode_version, proof.pubkey_ed25519, derived_x25519_pubkey))
       iproof.store(proof.pubkey, m_blockchain);
 
@@ -1851,7 +1852,12 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
       m_x25519_map_last_pruned = now;
     }
 
-    m_x25519_to_pub[derived_x25519_pubkey] = {proof.pubkey, now};
+    if (old_x25519 && old_x25519 != derived_x25519_pubkey)
+      m_x25519_to_pub.erase(old_x25519);
+
+    if (derived_x25519_pubkey)
+      m_x25519_to_pub[derived_x25519_pubkey] = {proof.pubkey, now};
+
     return true;
   }
   //---------------------------------------------------------------------------

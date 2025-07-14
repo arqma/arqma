@@ -63,7 +63,6 @@ namespace service_nodes
         buf_ptr += snprintf(buf_ptr, buf_end - buf_ptr, "Skipped voting in at least %d checkpoints. ", (int)(CHECKPOINT_NUM_QUORUMS_TO_PARTICIPATE_IN - CHECKPOINT_MAX_MISSABLE_VOTES));
       buf_ptr += snprintf(buf_ptr, buf_end - buf_ptr, "Nore: Storage server may not be reachable. This is only testable by an external Service Node.");
     }
-
     return buf;
   }
 
@@ -392,7 +391,8 @@ namespace service_nodes
             m_last_checkpointed_height = std::max(start_checkpointing_height, m_last_checkpointed_height);
             for (; m_last_checkpointed_height <= height; m_last_checkpointed_height += CHECKPOINT_INTERVAL)
             {
-              if (m_core.get_hard_fork_version(m_last_checkpointed_height) <= cryptonote::network_version_16)
+              uint8_t checkpointed_height_version = m_core.get_hard_fork_version(m_last_checkpointed_height);
+              if (checkpointed_height_version <= cryptonote::network_version_16)
                 continue;
 
               if (m_last_checkpointed_height < REORG_SAFETY_BUFFER_IN_BLOCKS)
@@ -412,7 +412,7 @@ namespace service_nodes
               // NOTE: I am in the quorum, handle checkpointing
               //
               crypto::hash block_hash = m_core.get_block_id_by_height(m_last_checkpointed_height);
-              quorum_vote_t vote = make_checkpointing_vote(block_hash, m_last_checkpointed_height, static_cast<uint16_t>(index_in_group), *my_keys);
+              quorum_vote_t vote = make_checkpointing_vote(checkpointed_height_version, block_hash, m_last_checkpointed_height, static_cast<uint16_t>(index_in_group), *my_keys);
               cryptonote::vote_verification_context vvc = {};
               if (!handle_vote(vote, vvc))
                 LOG_ERROR("Failed to add checkpoint vote reason: " << print_vote_verification_context(vvc, &vote));
@@ -427,7 +427,6 @@ namespace service_nodes
   bool quorum_cop::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const * /*checkpoint*/)
   {
     process_quorums(block);
-
     uint64_t const height = cryptonote::get_block_height(block) + 1; // chain height = new top block height + 1
 
     m_vote_pool.remove_expired_votes(height);

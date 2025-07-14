@@ -129,7 +129,7 @@ namespace service_nodes
   struct service_node_keys;
 
   quorum_vote_t make_state_change_vote(uint64_t block_height, uint16_t index_in_group, uint16_t worker_index, new_state state, const service_node_keys &keys);
-  quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
+  quorum_vote_t make_checkpointing_vote(uint8_t hard_fork_version, crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
   cryptonote::checkpoint_t make_empty_service_node_checkpoint(crypto::hash const &block_hash, uint64_t height);
 
   bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum);
