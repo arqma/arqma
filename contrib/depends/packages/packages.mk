@@ -1,4 +1,4 @@
-native_packages :=
+native_packages := native_ccache
 packages := boost openssl sodium zeromq
 
 ifneq ($(host_os),android)
@@ -19,7 +19,7 @@ endif
 ifneq ($(build_os), darwin)
 darwin_native_packages := darwin_sdk native_clang native_cctools native_libtapi
 endif
-darwin_packages :=
+darwin_packages := ncurses readline
 
 android_native_packages := android_ndk
-android_packages :=
+android_packages := ncurses readline
