@@ -71,7 +71,6 @@ else()
 endif()
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(UNBOUND libunbound IMPORTED_TARGET)
 statusinfo("Using in-tree miniupnpc")
 add_subdirectory(miniupnp/miniupnpc)
 if(MSVC)
@@ -85,7 +84,8 @@ endif()
 
 target_link_libraries(miniupnpc INTERFACE libminiupnpc-static)
 
-if(UNBOUND_FOUND)
+pkg_check_modules(UNBOUND libunbound IMPORTED_TARGET)
+if(UNBOUND_FOUND AND NOT DEPENDS)
   statusinfo("Found PkgConfig::libunbound")
   target_link_libraries(libunbound INTERFACE PkgConfig::UNBOUND)
   set_target_properties(libunbound PROPERTIES IMPORTED_TARGET_LOCATION ${UNBOUND_LIBRARIES})

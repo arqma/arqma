@@ -32,25 +32,24 @@ set(epee_include_dir "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 arqma_find_all_headers(epee_headers_public "${epee_include_dir}")
 
 add_library(epee
-  STATIC
-    abstract_http_client.cpp
-    buffer.cpp
     byte_slice.cpp
     byte_stream.cpp
+    hex.cpp
+    abstract_http_client.cpp
+    http_auth.cpp
+    mlog.cpp
+    buffer.cpp
+    net_helper.cpp
+    net_utils_base.cpp
     connection_basic.cpp
     file_io_utils.cpp
-    hex.cpp
-    http_auth.cpp
     http_base.cpp
     levin_base.cpp
     memwipe.c
     misc_language.cpp
     mlocker.cpp
-    mlog.cpp
-    net_helper.cpp
     net_parse_helpers.cpp
     net_ssl.cpp
-    net_utils_base.cpp
     network_throttle.cpp
     network_throttle-detail.cpp
     portable_storage.cpp
@@ -80,6 +79,7 @@ endif()
 target_link_libraries(epee
   PUBLIC
     easylogging
+    ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_CHRONO_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}

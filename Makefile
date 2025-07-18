@@ -78,7 +78,7 @@ debug-static-all:
 
 debug-static-win:
 	mkdir -p $(builddir)/debug
-	cd $(builddir)/debug && cmake -G "MSYS Makefiles" -D BUILD_TESTS=OFF -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Debug -D BUILD_TAG="win-x64" -D CMAKE_TOOLCHAIN_FILE=$(topdir)/cmake/64-bit-toolchain.cmake -D MSYS2_FOLDER=$(shell cd ${MINGW_PREFIX}/.. && pwd -W) $(topdir) && $(MAKE)
+	cd $(builddir)/debug && cmake -G "MSYS Makefiles" -D BUILD_TESTS=OFF -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Debug -D BUILD_TAG="win-x64" $(topdir) && $(MAKE)
 
 cmake-release:
 	mkdir -p $(builddir)/release
@@ -145,7 +145,7 @@ release-static-mac-arm64:
 
 release-static-win:
 	mkdir -p $(builddir)/release
-	cd $(builddir)/release && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="win-x64" -D CMAKE_TOOLCHAIN_FILE=$(topdir)/cmake/64-bit-toolchain.cmake -D MSYS2_FOLDER=$(shell cd ${MINGW_PREFIX}/.. && pwd -W) $(topdir) && $(MAKE)
+	cd $(builddir)/release && cmake -G "MSYS Makefiles" -D STATIC=ON -D ARCH="x86-64" -D BUILD_64=ON -D CMAKE_BUILD_TYPE=Release -D BUILD_TAG="win-x64" $(topdir) && $(MAKE)
 
 #fuzz:
 #	mkdir -p $(builddir)/fuzz

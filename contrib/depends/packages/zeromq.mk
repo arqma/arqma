@@ -1,23 +1,19 @@
 package=zeromq
-$(package)_version=4.3.2
+$(package)_version=4.3.5
 $(package)_download_path=https://github.com/zeromq/libzmq/releases/download/v$($(package)_version)/
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
-$(package)_sha256_hash=ebd7b5c830d6428956b67a0454a7f8cbed1de74b3b01e5c33c5378e22740f763
+$(package)_sha256_hash=6653ef5910f17954861fe72332e68b03ca6e4d9c7160eb3a8de5a5a913bfab43
 $(package)_dependencies=sodium
-$(package)_patches=b3123a2fd1e77cbdceb5ee7a70e796063b5ee5b9.patch 87b81926aaaea70c84d5a5ea6eda982b3425ceeb.patch
 
 define $(package)_set_vars
   $(package)_config_opts=--without-docs --disable-shared --with-libsodium
-  $(package)_config_opts_linux=--with-pic
   $(package)_cxxflags_linux=-std=c++17
   $(package)_cxxflags_mingw32=-std=c++17
   $(package)_cxxflags_darwin=-std=c++17
 endef
 
 define $(package)_preprocess_cmds
-  patch -p1 < $($(package)_patch_dir)/b3123a2fd1e77cbdceb5ee7a70e796063b5ee5b9.patch && \
-  patch -p1 < $($(package)_patch_dir)/87b81926aaaea70c84d5a5ea6eda982b3425ceeb.patch && \
-  ./autogen.sh
+  cp -f $(BASEDIR)/config.guess $(BASEDIR)/config.sub config
 endef
 
 define $(package)_config_cmds
@@ -33,4 +29,6 @@ define $(package)_stage_cmds
 endef
 
 define $(package)_postprocess_cmds
+  rm -rf bin share &&\
+  rm lib/*.la
 endef
