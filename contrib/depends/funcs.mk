@@ -135,7 +135,7 @@ $(1)_config_env+=$($(1)_config_env_$(host_arch)_$(host_os)) $($(1)_config_env_$(
 
 $(1)_config_env+=PKG_CONFIG_LIBDIR=$($($(1)_type)_prefix)/lib/pkgconfig
 $(1)_config_env+=PKG_CONFIG_PATH=$($($(1)_type)_prefix)/share/pkgconfig
-#$(1)_config_env+=CMAKE_MODULE_PATH=$($($(1)_type)_prefix)/lib/cmake
+$(1)_config_env+=CMAKE_MODULE_PATH=$($($(1)_type)_prefix)/lib/cmake
 $(1)_config_env+=PATH="$(build_prefix)/bin:$(PATH)"
 $(1)_build_env+=PATH="$(build_prefix)/bin:$(PATH)"
 $(1)_stage_env+=PATH="$(build_prefix)/bin:$(PATH)"
@@ -165,17 +165,23 @@ endif
 ifneq ($($(1)_ldflags),)
 $(1)_autoconf += LDFLAGS="$$($(1)_ldflags)"
 endif
-endef
 
-#$(1)_cmake=cmake -DCMAKE_INSTALL_PREFIX=$($($(1)_type)_prefix)
-#ifneq ($($(1)_type),build)
-#ifneq ($(host),$(build))
-#$(1)_cmake += -DCMAKE_SYSTEM_NAME=$($(host_os)_cmake_system) -DCMAKE_SYSROOT=$(host_prefix)
-#$(1)_cmake += -DCMAKE_C_COMPILER_TARGET=$(host) -DCMAKE_C_COMPILER=$(firstword $($($(1)_type)_CC)) -DCMAKE_C_FLAGS="$(wordlist 2,1000,$($($(1)_type)_CC))"
-#$(1)_cmake += -DCMAKE_CXX_COMPILER_TARGET=$(host) -DCMAKE_CXX_COMPILER=$(firstword $($($(1)_type)_CXX)) -DCMAKE_CXX_FLAGS="$(wordlist 2,1000,$($($(1)_type)_CXX))"
-#endif
-#endif
-#endef
+$(1)_cmake=env CC="$$($(1)_cc)" \
+               CFLAGS="$$($(1)_cppflags) $$($(1)_cflags)" \
+               CXX="$$($(1)_cxx)" \
+               CXXFLAGS="$$($(1)_cppflags) $$($(1)_cxxflags)" \
+               LDFLAGS="$$($(1)_ldflags)" \
+             cmake -DCMAKE_INSTALL_PREFIX:PATH="$$($($(1)_type)_prefix)" $$($(1))_config_opts)
+ifeq ($($(1)_type),build)
+$(1)_cmake += -DCMAKE_INSTALL_RPATH:PATH="$$($($(1)_type)_prefix)/lib"
+else
+ifneq ($(host),$(build))
+$(1)_cmake += -DCMAKE_SYSTEM_NAME=$($(host_os)_cmake_system)
+$(1)_cmake += -DCMAKE_C_COMPILER_TARGET=$(host)
+$(1)_cmake += -DCMAKE_CXX_COMPILER_TARGET=$(host)
+endif
+endif
+endef
 
 define int_add_cmds
 $($(1)_fetched):

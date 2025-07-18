@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include <boost/thread/thread.hpp>
+#include <thread>
 #include <zmq.hpp>
 #include <string>
 #include <memory>
@@ -71,7 +71,7 @@ class ZmqServer
 
     zmq::context_t context;
 
-    boost::thread run_thread;
+    std::thread run_thread;
 
     std::unique_ptr<zmq::socket_t> rep_socket;
 };

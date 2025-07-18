@@ -7,7 +7,7 @@ $(package)_dependencies=sodium
 $(package)_patches=b3123a2fd1e77cbdceb5ee7a70e796063b5ee5b9.patch 87b81926aaaea70c84d5a5ea6eda982b3425ceeb.patch
 
 define $(package)_set_vars
-  $(package)_config_opts=--without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking
+  $(package)_config_opts=--without-docs --disable-shared --with-libsodium
   $(package)_config_opts_linux=--with-pic
   $(package)_cxxflags_linux=-std=c++17
   $(package)_cxxflags_mingw32=-std=c++17
@@ -25,7 +25,7 @@ define $(package)_config_cmds
 endef
 
 define $(package)_build_cmds
-  $(MAKE)
+  $(MAKE) src/libzmq.la
 endef
 
 define $(package)_stage_cmds

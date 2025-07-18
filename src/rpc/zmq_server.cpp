@@ -27,6 +27,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "zmq_server.h"
+#include <thread>
 
 namespace cryptonote
 {
@@ -58,7 +59,7 @@ void ZmqServer::serve()
       {
         throw std::runtime_error("ZMQ RPC server reply socket is null");
       }
-      while (rep_socket->recv(&message, 0))
+      while (rep_socket->recv(message, zmq::recv_flags::none))
       {
         std::string message_string(reinterpret_cast<const char *>(message.data()), message.size());
 
@@ -69,20 +70,15 @@ void ZmqServer::serve()
         zmq::message_t reply(response.size());
         memcpy((void *) reply.data(), response.c_str(), response.size());
 
-        rep_socket->send(reply);
+        rep_socket->send(reply, zmq::send_flags::none);
         MDEBUG(std::string("Sent RPC reply: \"") + response + "\"");
 
       }
-    }
-    catch (const boost::thread_interrupted& e)
-    {
-      MDEBUG("ZMQ Server thread interrupted.");
     }
     catch (const zmq::error_t& e)
     {
       MERROR(std::string("ZMQ error: ") + e.what());
     }
-    boost::this_thread::interruption_point();
   }
 }
 
@@ -118,7 +114,7 @@ bool ZmqServer::addTCPSocket(std::string address, std::string port)
 void ZmqServer::run()
 {
   running = true;
-  run_thread = boost::thread(boost::bind(&ZmqServer::serve, this));
+  run_thread = std::thread([this] { serve(); });
 }
 
 void ZmqServer::stop()
@@ -128,7 +124,6 @@ void ZmqServer::stop()
 
   stop_signal = true;
 
-  run_thread.interrupt();
   run_thread.join();
 
   running = false;

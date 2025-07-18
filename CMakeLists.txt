@@ -646,6 +646,19 @@ pkg_check_modules(SODIUM libsodium>=1.0.16 REQUIRED IMPORTED_TARGET)
 add_library(sodium INTERFACE)
 target_link_libraries(sodium INTERFACE PkgConfig::SODIUM)
 
+add_library(systemd INTERFACE)
+option(WITH_SYSTEMD "Attempts to link against and enable systemd daemon notification support" ON)
+if (WITH_SYSTEMD)
+  pkg_check_modules(SYSTEMD libsystemd IMPORTED_TARGET)
+
+  if (SYSTEMD_FOUND)
+    target_compile_definitions(systemd INTERFACE ENABLE_SYSTEMD)
+    target_link_libraries(systemd INTERFACE PkgConfig::SYSTEMD)
+  else()
+    warn("systemd not found. building without systemd support (use -DWITH_SYSTEMD=OFF to suppress this warning)")
+  endif()
+endif()
+
 add_subdirectory(external)
 
 target_link_libraries(libzmq INTERFACE libzmq_vendor sodium)
