@@ -35,9 +35,6 @@
  * \brief Source file that defines simple_wallet class.
  */
 
-#define BOOST_BIND_GLOBAL_PLACEHOLDERS 1 // It is just for now :)
-#include <boost/bind/bind.hpp>
-
 #include <thread>
 #include <iostream>
 #include <sstream>
