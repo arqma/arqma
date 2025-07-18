@@ -7,6 +7,7 @@ build_darwin_LIBTOOL: = $(shell xcrun -f libtool)
 build_darwin_OTOOL: = $(shell xcrun -f otool)
 build_darwin_NM: = $(shell xcrun -f nm)
 build_darwin_INSTALL_NAME_TOOL:=$(shell xcrun -f install_name_tool)
+build_darwin_DSYMUTIL:=$(shell xcrun -f dsymutil)
 build_darwin_SHA256SUM = shasum -a 256
 build_darwin_DOWNLOAD = curl --location --fail --connect-timeout $(DOWNLOAD_CONNECT_TIMEOUT) --retry $(DOWNLOAD_RETRIES) -o
 
@@ -20,4 +21,5 @@ darwin_LIBTOOL:=$(shell xcrun -f libtool)
 darwin_OTOOL:=$(shell xcrun -f otool)
 darwin_NM:=$(shell xcrun -f nm)
 darwin_INSTALL_NAME_TOOL:=$(shell xcrun -f install_name_tool)
+darwin_DSYMUTIL:=$(shell xcrun -f dsymutil)
 darwin_native_toolchain=

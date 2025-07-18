@@ -133,7 +133,7 @@ OAES_API OAES_RET oaes_free( OAES_CTX ** ctx );
 OAES_API OAES_RET oaes_key_import_data( OAES_CTX * ctx,
 		const uint8_t * data, size_t data_len );
 
-#ifdef __cplusplus
+#ifdef __cplusplus 
 }
 #endif
 

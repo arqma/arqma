@@ -40,6 +40,7 @@
 #include <memory>
 #include <string>
 #include <chrono>
+#include <mutex>
 
 #ifdef _WIN32
 #include "windows.h"

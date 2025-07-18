@@ -88,6 +88,7 @@ using namespace epee;
 #include <boost/format.hpp>
 #include <openssl/evp.h>
 #include "i18n.h"
+#include <mutex>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "util"
