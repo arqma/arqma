@@ -46,16 +46,16 @@
   include(ProcessorCount)
 
   set(zmq_prefix ${CMAKE_BINARY_DIR}/external/libzmq)
-  set(zmq_patch git stash && patch -p1 < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
+#  set(zmq_patch git stash && patch -p1 < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
   set(zmq_autogen ./autogen.sh)
   set(zmq_configure ./configure --prefix=${zmq_prefix})
 
-  set(zmq_configure ${zmq_configure} --without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking --enable-libunwind=no)
+  set(zmq_configure ${zmq_configure} --without-docs --enable-static --disable-shared --with-libsodium --without-pgm --without-norm --disable-perf --disable-Werror --disable-drafts --enable-option-checking --disable-libunwind)
 
   ExternalProject_add(libzmq_external
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libzmq
     PREFIX ${zmq_prefix}
-    PATCH_COMMAND ${zmq_patch}
+#    PATCH_COMMAND ${zmq_patch}
     CONFIGURE_COMMAND ${zmq_autogen} && ${zmq_configure}
     BUILD_COMMAND make -j${PROCESSOR_COUNT}
     INSTALL_COMMAND ${MAKE}
