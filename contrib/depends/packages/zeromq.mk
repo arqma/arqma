@@ -10,7 +10,7 @@ define $(package)_set_vars
   $(package)_config_opts=--without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking
   $(package)_config_opts_linux=--with-pic
   $(package)_cxxflags_linux=-std=c++17
-  $(package)_cxxflags_mingw32=-std=c++17
+  $(package)_cxxflags_mingw32=-std=c++17 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
   $(package)_cxxflags_darwin=-std=c++17
 endef
 
