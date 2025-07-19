@@ -635,8 +635,13 @@ add_library(miniupnpc INTERFACE)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SODIUM libsodium>=1.0.18 REQUIRED IMPORTED_TARGET)
+
 if(SODIUM_FOUND)
   statusinfo("Found libsodium at ${SODIUM_LIBRARIES} with headers at ${SODIUM_INCLUDE_DIRS}")
+else()
+  die("libsodium not found while is REQUIRED!!! Install libsodium and re-configure them")
+endif()
+
 add_library(sodium INTERFACE)
 target_link_libraries(sodium INTERFACE PkgConfig::SODIUM)
 set_target_properties(sodium PROPERTIES IMPORTED_TARGET_LOCATION ${SODIUM_LIBRARIES})
