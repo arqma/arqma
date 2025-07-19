@@ -10,14 +10,14 @@ define $(package)_set_vars
   $(package)_config_opts=--without-docs --enable-static=yes --enable-shared=no --with-libsodium=yes --with-pgm=no --with-norm=no --disable-perf --disable-Werror --disable-drafts --enable-option-checking
   $(package)_config_opts_linux=--with-pic
   $(package)_cxxflags_linux=-std=c++17
-  $(package)_cxxflags_mingw32=-std=c++17 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
+  $(package)_cxxflags_mingw32=-std=c++17 -D_FORTIFY_SOURCE=0 -lssp
   $(package)_cxxflags_darwin=-std=c++17
 endef
 
 define $(package)_preprocess_cmds
   patch -p1 < $($(package)_patch_dir)/b3123a2fd1e77cbdceb5ee7a70e796063b5ee5b9.patch && \
   patch -p1 < $($(package)_patch_dir)/87b81926aaaea70c84d5a5ea6eda982b3425ceeb.patch && \
-  ./autogen.sh
+  cp -f $(BASEDIR)/config.guess $(BASEDIR)/config.sub config
 endef
 
 define $(package)_config_cmds
@@ -25,7 +25,7 @@ define $(package)_config_cmds
 endef
 
 define $(package)_build_cmds
-  $(MAKE)
+  $(MAKE) src/libzmq.la
 endef
 
 define $(package)_stage_cmds

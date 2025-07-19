@@ -3,7 +3,6 @@ mingw32_CXXFLAGS=$(mingw32_CFLAGS)
 mingw32_ARFLAGS=cr
 
 mingw32_release_CFLAGS=-O2
-# -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
 mingw32_release_CXXFLAGS=$(mingw32_release_CFLAGS)
 
 mingw32_debug_CFLAGS=-O1
