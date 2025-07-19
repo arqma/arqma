@@ -6,7 +6,9 @@ $(package)_sha256_hash=5d84dec684c27b97b921d2f3b73218cb773cf4ea915caee317ac8fc73
 $(package)_linux_dependencies=libusb
 
 define $(package)_set_vars
-  $(package)_config_opts+=-DBUILD_SHARED_LIBS=FALSE -DHIDAPI_WITH_HIDRAW=FALSE
+  $(package)_config_opts := -DBUILD_SHARED_LIBS=OFF
+  $(package)_config_opts += -DHIDAPI_WITH_HIDRAW=OFF
+  $(package)_config_opts += -DHIDAPI_NO_ICONV=ON
 endef
 
 define $(package)_preprocess_cmds
