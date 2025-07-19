@@ -30,6 +30,10 @@ SET(ZMQ_INCLUDE_DIRS @prefix@/include)
 SET(ZMQ_LIBRARIES @prefix@/lib/libzmq.a)
 SET(ZMQ_LIBRARY_DIRS @prefix@/lib)
 
+SET(SODIUM_INCLUDE_DIRS @prefix@/include)
+SET(SODIUM_LIBRARIES @prefix@/lib/libsodium.a)
+SET(SODIUM_LIBRARY_DIRS @prefix@/lib)
+
 SET(Boost_IGNORE_SYSTEM_PATH ON)
 SET(Boost_ROOT @prefix@)
 SET(Boost_INCLUDE_DIRS @prefix@/include)

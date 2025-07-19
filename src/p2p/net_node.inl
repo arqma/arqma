@@ -66,6 +66,8 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.p2p"
 
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+
 using namespace boost::placeholders;
 
 namespace nodetool

@@ -32,7 +32,9 @@
 
 #pragma once
 
-#include <boost/bind.hpp>
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+
+#include <boost/bind/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/utility/value_init.hpp>

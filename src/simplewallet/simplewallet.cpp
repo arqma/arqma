@@ -8605,7 +8605,7 @@ bool simple_wallet::show_transfer(const std::vector<std::string> &args)
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::process_command(const std::vector<std::string> &args)
 {
-  return m_cmd_binder.process_command_vec(args);
+  return m_cmd_binder.process_command(args);
 }
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::interrupt()
