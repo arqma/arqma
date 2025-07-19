@@ -402,11 +402,9 @@ std::string t_command_server::get_commands_str()
 {
   std::stringstream ss;
   ss << "ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << std::endl;
-  ss << "Commands: " << std::endl;
-  std::string usage = m_command_lookup.get_usage();
-  boost::replace_all(usage, "\n", "\n  ");
-  usage.insert(0, "  ");
-  ss << usage << std::endl;
+  ss << "Commands:\n";
+  m_command_lookup.for_each([&ss] (const std::string&, const std::string& usage, const std::string&) {
+    ss << " " << usage << "\n"; });
   return ss.str();
 }
 

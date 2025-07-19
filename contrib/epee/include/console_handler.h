@@ -83,7 +83,7 @@ namespace epee
         return false;
 
       std::unique_lock<std::mutex> lock(m_response_mutex);
-      m_response_cv.wait(lock. [this] { return m_read_status != state_init; });
+      m_response_cv.wait(lock, [this] { return m_read_status != state_init; });
 
       bool res = false;
       if (state_success == m_read_status)

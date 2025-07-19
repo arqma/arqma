@@ -29,47 +29,6 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#if(DEPENDS)
-# add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
-# set_target_properties(libzmq_vendor PROPERTIES IMPORTED_LOCATION ${ZMQ_LIBRARIES})
-# target_include_directories(libzmq_vendor INTERFACE ${ZMQ_INCLUDE_DIRS})
-# statusinfo("${ZMQ_INCLUDE_DIRS} ${ZMQ_LIBRARIES}")
-#elseif(APPLE)
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(ZMQ libzmq>=4.3.2 REQUIRED IMPORTED_TARGET)
-# add_library(libzmq_vendor INTERFACE)
-# target_link_libraries(libzmq_vendor INTERFACE PkgConfig::ZMQ)
-# set_target_properties(libzmq_vendor PROPERTIES IMPORTED_TARGET_LOCATION ${ZMQ_LIBRARIES})
-# target_include_directories(libzmq_vendor INTERFACE ${ZMQ_INCLUDE_DIRS})
-#else()
-  include(ExternalProject)
-  include(ProcessorCount)
-
-  set(zmq_prefix ${CMAKE_BINARY_DIR}/external/libzmq)
-#  set(zmq_patch git stash && patch -p1 < ${PROJECT_SOURCE_DIR}/utils/patches/zmq.patch)
-  set(zmq_autogen ./autogen.sh)
-  set(zmq_configure ./configure --prefix=${zmq_prefix})
-
-  set(zmq_configure ${zmq_configure} --without-docs --enable-static --disable-shared --with-libsodium --without-pgm --without-norm --disable-perf --disable-Werror --disable-drafts --enable-option-checking --disable-libunwind)
-
-  ExternalProject_add(libzmq_external
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libzmq
-    PREFIX ${zmq_prefix}
-#    PATCH_COMMAND ${zmq_patch}
-    CONFIGURE_COMMAND ${zmq_autogen} && ${zmq_configure}
-    BUILD_COMMAND make -j${PROCESSOR_COUNT}
-    INSTALL_COMMAND ${MAKE}
-    BUILD_IN_SOURCE ON
-    BUILD_BY_PRODUCTS ${zmq_prefix}/lib/libzmq.a ${zmq_prefix}/include
-  )
-  add_library(libzmq_vendor STATIC IMPORTED GLOBAL)
-  add_dependencies(libzmq_vendor libzmq_external)
-  set_property(TARGET libzmq_vendor PROPERTY IMPORTED_LOCATION ${zmq_prefix}/lib/libzmq.a)
-  target_include_directories(libzmq_vendor INTERFACE ${zmq_prefix}/include)
-
-  set(ZMQ_INCLUDE_DIRS ${zmq_prefix}/include CACHE STRING "ZMQ Include path")
-#endif()
-
 find_package(PkgConfig REQUIRED)
 statusinfo("Using in-tree miniupnpc")
 add_subdirectory(miniupnp/miniupnpc)

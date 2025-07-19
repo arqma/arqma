@@ -343,7 +343,6 @@ if(NOT MANUAL_SUBMODULES)
     check_submodule(external/unbound)
     check_submodule(external/rapidjson)
     check_submodule(external/randomarq)
-    check_submodule(external/libzmq)
   endif()
 endif()
 
@@ -629,22 +628,34 @@ if(POLICY CMP0079)
   cmake_policy(SET CMP0079 NEW)
 endif()
 
-add_library(libzmq INTERFACE)
+if(STATIC)
+  set(sodium_USE_STATIC_LIBS ON)
+endif()
+find_package(PkgConfig REQUIRED)
+
 add_library(libunbound INTERFACE)
 add_library(miniupnpc INTERFACE)
 
-find_package(PkgConfig REQUIRED)
+pkg_check_modules(ZMQ libzmq>=4.3.2 REQUIRED IMPORTED_TARGET)
 pkg_check_modules(SODIUM libsodium>=1.0.18 REQUIRED IMPORTED_TARGET)
 
 if(SODIUM_FOUND)
   statusinfo("Found libsodium at ${SODIUM_LIBRARIES} with headers at ${SODIUM_INCLUDE_DIRS}")
+  add_library(sodium INTERFACE)
+  target_link_libraries(sodium INTERFACE PkgConfig::SODIUM)
+  target_include_directories(sodium INTERFACE ${SODIUM_INCLUDE_DIRS})
 else()
   die("libsodium not found while is REQUIRED!!! Install libsodium and re-configure them")
 endif()
 
-add_library(sodium STATIC IMPORTED GLOBAL)
-set_target_properties(sodium PROPERTIES IMPORTED_LOCATION ${SODIUM_LIBRARIES})
-target_include_directories(sodium INTERFACE ${SODIUM_INCLUDE_DIRS})
+if(NOT ZMQ_FOUND)
+  die("libzmq not found")
+elseif(ZMQ_FOUND)
+  statusinfo("Found libzmq at ${ZMQ_INCLUDE_DIRS}")
+  add_library(libzmq INTERFACE)
+  target_link_libraries(libzmq INTERFACE PkgConfig::ZMQ sodium)
+  target_link_directories(libzmq INTERFACE ${ZMQ_INCLUDE_DIRS} ${SODIUM_INCLUDE_DIRS})
+endif()
 
 add_library(systemd INTERFACE)
 option(WITH_SYSTEMD "Attempts to link against and enable systemd daemon notification support" ON)
@@ -660,9 +671,6 @@ if (WITH_SYSTEMD)
 endif()
 
 add_subdirectory(external)
-
-target_link_libraries(libzmq INTERFACE libzmq_vendor sodium)
-include_directories(${ZMQ_INCLUDE_DIRS})
 
 include_directories(${UNBOUND_INCLUDE_DIRS})
 
