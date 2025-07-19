@@ -1,5 +1,5 @@
 native_packages :=
-packages := boost openssl sodium zeromq
+packages := boost openssl sodium
 
 ifneq ($(host_os),android)
 packages += libusb hidapi
