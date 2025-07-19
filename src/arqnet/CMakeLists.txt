@@ -15,5 +15,5 @@ arqma_add_library(arqnet
   ${arqnet_private_headers})
 
 target_link_libraries(arqnet
-  PRIVATE
+  PUBLIC
     libzmq)
