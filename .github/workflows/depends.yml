@@ -40,7 +40,7 @@ jobs:
           - name: "Cross-Mac x86_64"
             host: "x86_64-apple-darwin"
             packages: "clang"
-          - name: "Cross-Max Apple Silicon arm64"
+          - name: "Cross-Mac Apple Silicon arm64"
             host: "arm64-apple-darwin"
             packages: "clang"
     name: ${{ matrix.toolchain.name }}
@@ -55,14 +55,12 @@ jobs:
       with:
         fetch-depth: 0
         submodules: recursive
-
     - name: ccache
       uses: actions/cache@v4
       with:
         path: ~/.ccache
         key: ccache-${{ matrix.toolchain.host }}-${{ github.sha }}
         restore-keys: ccache-${{ matrix.toolchain.host }}-
-
     - name: depends cache
       uses: actions/cache@v4
       with:
@@ -71,7 +69,6 @@ jobs:
         restore-keys: |
           depends-${{ matrix.toolchain.host }}-${{ hashFiles('contrib/depends/packages/*') }}
           depends-${{ matrix.toolchain.host }}-
-
     - name: prepare w64-mingw32
       if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' }}
       run: |

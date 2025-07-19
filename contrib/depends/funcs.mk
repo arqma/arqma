@@ -37,6 +37,7 @@ endef
 
 define int_get_build_recipe_hash
 $(eval $(1)_all_file_checksums:=$(shell $(build_SHA256SUM) $(meta_depends) packages/$(1).mk $(addprefix $(PATCHES_PATH)/$(1)/,$($(1)_patches)) | cut -d" " -f1))
+final_build_id_long+=:[$(1)_all_file_checksums]$(foreach checksum,$($(1)_all_file_checksums),$(shell echo ":$(checksum)")):
 $(eval $(1)_recipe_hash:=$(shell echo -n "$($(1)_all_file_checksums)" | $(build_SHA256SUM) | cut -d" " -f1))
 endef
 
@@ -46,7 +47,7 @@ $(eval $(1)_all_dependencies:=$(call int_get_all_dependencies,$(1),$($($(1)_type
 $(foreach dep,$($(1)_all_dependencies),$(eval $(1)_build_id_deps+=$(dep)-$($(dep)_version)-$($(dep)_recipe_hash)))
 $(eval $(1)_build_id_long:=$(1)-$($(1)_version)-$($(1)_recipe_hash)-$(release_type) $($(1)_build_id_deps) $($($(1)_type)_id_string))
 $(eval $(1)_build_id:=$(shell echo -n "$($(1)_build_id_long)" | $(build_SHA256SUM) | cut -c-$(HASH_LENGTH)))
-final_build_id_long+=$($(package)_build_id_long)
+final_build_id_long+=:[recipe]:$(1)-$($(1)_version)-$($(1)_recipe_hash)-$(release_type):[deps]$(foreach dep,$($(1)_build_id_deps),$(shell echo ":$(dep)")):[$($(1)_type)_id]:$($($(1)_type)_id_string):
 
 #compute package-specific paths
 $(1)_build_subdir?=.
@@ -151,7 +152,7 @@ $(1)_build_env+=PATH="$(build_prefix)/bin:$(PATH)"
 $(1)_stage_env+=PATH="$(build_prefix)/bin:$(PATH)"
 $(1)_autoconf=./configure --host=$($($(1)_type)_host) --prefix=$($($(1)_type)_prefix) --with-pic $$($(1)_config_opts) CC="$$($(1)_cc)" CXX="$$($(1)_cxx)"
 
-ifeq ($(filter $(1),libusb unbound),)
+ifeq ($(filter $(1),libusb),)
 $(1)_autoconf += --disable-dependency-tracking
 endif
 ifneq ($($(1)_nm),)

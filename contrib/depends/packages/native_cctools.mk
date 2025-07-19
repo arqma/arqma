@@ -5,6 +5,7 @@ $(package)_download_file=$($(package)_version).tar.gz
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=70a7189418c2086d20c299c5d59250cf5940782c778892ccc899c66516ed240e
 $(package)_build_subdir=cctools
+$(package)_patches=no-build-date.patch
 $(package)_dependencies=native_libtapi
 
 define $(package)_set_vars
@@ -15,7 +16,8 @@ $(package)_cxx=$(clangxx_prog)
 endef
 
 define $(package)_preprocess_cmds
-  cp -f $(BASEDIR)/config.guess $(BASEDIR)/config.sub cctools
+  cp -f $(BASEDIR)/config.guess $(BASEDIR)/config.sub cctools && \
+  patch -p1 < $($(package)_patch_dir)/no-build-date.patch
 endef
 
 define $(package)_config_cmds

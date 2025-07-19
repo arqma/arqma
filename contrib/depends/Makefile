@@ -112,7 +112,7 @@ $(host_arch)_$(host_os)_native_toolchain?=$($(host_os)_native_toolchain)
 include funcs.mk
 
 toolchain_path=$($($(host_arch)_$(host_os)_native_toolchain)_prefixbin)
-final_build_id_long+=$(shell $(build_SHA256SUM) toolchain.cmake.in)
+final_build_id_long+=:[sha256sum]:$(shell $(build_SHA256SUM) toolchain.cmake.in)
 final_build_id+=$(shell echo -n "$(final_build_id_long)" | $(build_SHA256SUM) | cut -c-$(HASH_LENGTH))
 $(host_prefix)/.stamp_$(final_build_id): $(native_packages) $(packages)
 	$(AT)rm -rf $(@D)
@@ -131,9 +131,6 @@ $(host_prefix)/share/toolchain.cmake : toolchain.cmake.in $(host_prefix)/.stamp_
             -e 's|@RANLIB@|$(toolchain_path)$(host_RANLIB)|' \
             -e 's|@NM@|$(toolchain_path)$(host_NM)|' \
             -e 's|@STRIP@|$(toolchain_path)$(host_STRIP)|' \
-            -e 's|@OTOOL@|$(toolchain_path)$(host_OTOOL)|' \
-            -e 's|@INSTALL_NAME_TOOL@|$(toolchain_path)$(host_INSTALL_NAME_TOOL)|' \
-            -e 's|@DSYMUTIL@|$(toolchain_path)$(host_DSYMUTIL)|' \
             -e 's|@build_os@|$(build_os)|' \
             -e 's|@host_os@|$(host_os)|' \
             -e 's|@CFLAGS@|$(strip $(host_CFLAGS) $(host_$(release_type)_CFLAGS))|' \

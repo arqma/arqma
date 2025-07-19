@@ -5,7 +5,7 @@ $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=6653ef5910f17954861fe72332e68b03ca6e4d9c7160eb3a8de5a5a913bfab43
 
 define $(package)_set_vars
-  $(package)_config_opts=--without-docs --disable-shared --enable-static --with-libsodium
+  $(package)_config_opts=--without-docs --disable-shared --with-libsodium
   $(package)_cxxflags_linux=-std=c++17
   $(package)_cxxflags_mingw32=-std=c++17
   $(package)_cxxflags_darwin=-std=c++17
@@ -20,7 +20,7 @@ define $(package)_config_cmds
 endef
 
 define $(package)_build_cmds
-  $(MAKE)
+  $(MAKE) src/libzmq.la
 endef
 
 define $(package)_stage_cmds
