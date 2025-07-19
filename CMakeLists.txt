@@ -642,9 +642,8 @@ else()
   die("libsodium not found while is REQUIRED!!! Install libsodium and re-configure them")
 endif()
 
-add_library(sodium INTERFACE)
-target_link_libraries(sodium INTERFACE PkgConfig::SODIUM)
-set_target_properties(sodium PROPERTIES IMPORTED_TARGET_LOCATION ${SODIUM_LIBRARIES})
+add_library(sodium STATIC IMPORTED GLOBAL)
+set_target_properties(sodium PROPERTIES IMPORTED_LOCATION ${SODIUM_LIBRARIES})
 target_include_directories(sodium INTERFACE ${SODIUM_INCLUDE_DIRS})
 
 add_library(systemd INTERFACE)
