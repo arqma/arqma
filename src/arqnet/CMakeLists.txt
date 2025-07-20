@@ -16,4 +16,6 @@ arqma_add_library(arqnet
 
 target_link_libraries(arqnet
   PUBLIC
-    libzmq)
+    libzmq
+  PRIVATE
+    ${EXTRA_LIBRARIES})

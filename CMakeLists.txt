@@ -340,7 +340,6 @@ if(NOT MANUAL_SUBMODULES)
 
     statusinfo("Checking submodules")
     check_submodule(external/miniupnp)
-    check_submodule(external/unbound)
     check_submodule(external/rapidjson)
     check_submodule(external/randomarq)
   endif()
@@ -431,9 +430,8 @@ if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif()
 
-if(MSVC OR MINGW)
+if(MINGW)
   set(DEFAULT_STATIC true)
-  add_definitions(-D__STDC_FORMAT_MACROS)
 else()
   set(DEFAULT_STATIC false)
 endif()
@@ -475,13 +473,9 @@ endif()
 
 option(SANITIZE "Use ASAN memory sanitizer" OFF)
 if(SANITIZE)
-  if (MSVC)
-    die("Cannot sanitize with MSVC")
-  else()
-    statusinfo("Using ASAN")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-  endif()
+  statusinfo("Using ASAN")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 endif()
 
 set(DATABASE lmdb)
@@ -574,7 +568,7 @@ function(set_default_arch)
   set(ARCH ${ARCH} CACHE STRING "CPU to build for: -march value or 'default' to not pass -march at all")
 endfunction()
 
-if(NOT (MSVC OR ARCH))
+if(NOT ARCH)
   set_default_arch()
 endif()
 
@@ -633,9 +627,6 @@ if(STATIC)
 endif()
 find_package(PkgConfig REQUIRED)
 
-add_library(libunbound INTERFACE)
-add_library(miniupnpc INTERFACE)
-
 pkg_check_modules(ZMQ libzmq>=4.3.2 REQUIRED IMPORTED_TARGET)
 pkg_check_modules(SODIUM libsodium>=1.0.18 REQUIRED IMPORTED_TARGET)
 
@@ -672,7 +663,7 @@ endif()
 
 add_subdirectory(external)
 
-include_directories(${UNBOUND_INCLUDE_DIRS})
+include_directories(${UNBOUND_INCLUDE_DIR})
 
 include_directories(${EASYLOGGING_INCLUDE})
 link_directories(${EASYLOGGING_LIBRARY_DIRS})

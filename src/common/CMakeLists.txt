@@ -75,8 +75,9 @@ arqma_add_library(common
   DEPENDS generate_translations_header)
 target_link_libraries(common
   PUBLIC
+    epee
     cncrypto
-    libunbound
+    ${UNBOUND_LIBRARIES}
     ${LIBUNWIND_LIBRARIES}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
@@ -85,6 +86,8 @@ target_link_libraries(common
     ${Boost_REGEX_LIBRARY}
     ${Boost_CHRONO_LIBRARY}
   PRIVATE
-    epee
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})
+target_include_directories(common
+  PRIVATE
+    ${Boost_INCLUDE_DIRS})
