@@ -1,4 +1,4 @@
-mingw32_CFLAGS=-pipe
+mingw32_CFLAGS=-pipe -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
 mingw32_CXXFLAGS=$(mingw32_CFLAGS)
 mingw32_ARFLAGS=cr
 

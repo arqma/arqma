@@ -9,7 +9,7 @@ define $(package)_set_vars
   $(package)_config_opts=--enable-static --disable-shared --disable-curve-keygen --enable-curve --disable-drafts --disable-libunwind --with-libsodium --without-pgm --without-norm --without-vmci --without-docs --disable-Werror
   $(package)_cxxflags_linux=-std=c++17
   $(package)_cxxflags_darwin=-std=c++17
-  $(package)_cxxflags_mingw32=-std=c++17 -D_FORTIFY_SOURCE=0 -lssp
+  $(package)_cxxflags_mingw32=-std=c++17
   $(package)_build_opts_mingw32=LDFLAGS="$($(package)_ldflags) -lsodium -liphlpapi"
 endef
 
