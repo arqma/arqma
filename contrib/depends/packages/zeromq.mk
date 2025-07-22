@@ -7,9 +7,10 @@ $(package)_dependencies=sodium
 
 define $(package)_set_vars
   $(package)_config_opts=--enable-static --disable-shared --disable-curve-keygen --enable-curve --disable-drafts --disable-libunwind --with-libsodium --without-pgm --without-norm --without-vmci --without-docs --disable-Werror
-  $(package)_cxxflags=-std=c++17
-  $(package)_cxxflags_mingw32+="-D_FORTIFY_SOURCE=0"
-  $(package)_build_opts_mingw32=LDFLAGS="$($(package)_ldflags) -liphlpapi -lssp"
+  $(package)_cxxflags_linux=-std=c++17
+  $(package)_cxxflags_darwin=-std=c++17
+  $(package)_cxxflags_mingw32=-std=c++17 -D_FORTIFY_SOURCE=0 -lssp
+  $(package)_build_opts_mingw32=LDFLAGS="$($(package)_ldflags) -lsodium -liphlpapi"
 endef
 
 define $(package)_preprocess_cmds
@@ -21,7 +22,7 @@ define $(package)_config_cmds
 endef
 
 define $(package)_build_cmds
-  $(MAKE) $($(package)_build_opts)
+  $(MAKE) $($(package)_build_opts) src/libzmq.la
 endef
 
 define $(package)_stage_cmds

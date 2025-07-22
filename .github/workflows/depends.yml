@@ -48,7 +48,7 @@ jobs:
     - name: set apt conf
       run: ${{env.APT_SET_CONF}}
     - name: install dependencies
-      run: apt update; apt -y install build-essential libtool cmake autotools-dev automake pkg-config libzmq3-dev libsodium-dev python3 gperf bsdmainutils curl git ca-certificates unzip ccache ${{ matrix.toolchain.packages }}
+      run: apt update; apt -y install build-essential libtool cmake autotools-dev automake pkg-config python3 gperf bsdmainutils curl git ca-certificates unzip ccache ${{ matrix.toolchain.packages }}
     - name: configure git
       run: git config --global --add safe.directory '*'
     - uses: actions/checkout@v4
