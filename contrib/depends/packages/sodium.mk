@@ -7,7 +7,7 @@ $(package)_sha256_hash=6f504490b342a4f8a4c4a02fc9b866cbef8622d5df4e5452b46be121e
 define $(package)_set_vars
 $(package)_config_opts=--enable-static --disable-shared
 $(package)_config_opts+=--prefix=$(host_prefix)
-$(package)_cxxflags_mingw32=-D_FORTIFY_SOURCE=0
+$(package)_cxxflags_mingw32+="-D_FORTIFY_SOURCE=0"
 endef
 
 define $(package)_preprocess_cmds
