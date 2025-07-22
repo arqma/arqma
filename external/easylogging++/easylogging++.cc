@@ -17,6 +17,7 @@
 #define EASYLOGGING_CC
 #include "easylogging++.h"
 
+#include <atomic>
 #include <unistd.h>
 
 #if defined(AUTO_INITIALIZE_EASYLOGGINGPP)
@@ -713,9 +714,8 @@ Logger::Logger(const std::string& id, const Configurations& configurations,
 }
 
 Logger::Logger(const Logger& logger) {
-  base::utils::safeDelete(m_typedConfigurations);
   m_id = logger.m_id;
-  m_typedConfigurations = logger.m_typedConfigurations;
+  m_typedConfigurations = logger.m_typedConfigurations ? new base::TypedConfigurations(*logger.m_typedConfigurations) : nullptr;
   m_parentApplicationName = logger.m_parentApplicationName;
   m_isConfigured = logger.m_isConfigured;
   m_configurations = logger.m_configurations;
@@ -727,7 +727,7 @@ Logger& Logger::operator=(const Logger& logger) {
   if (&logger != this) {
     base::utils::safeDelete(m_typedConfigurations);
     m_id = logger.m_id;
-    m_typedConfigurations = logger.m_typedConfigurations;
+    m_typedConfigurations = logger.m_typedConfigurations ? new base::TypedConfigurations(*logger.m_typedConfigurations) : nullptr;
     m_parentApplicationName = logger.m_parentApplicationName;
     m_isConfigured = logger.m_isConfigured;
     m_configurations = logger.m_configurations;
@@ -2036,7 +2036,7 @@ void RegisteredLoggers::unsafeFlushAll(void) {
 
 // VRegistry
 
-VRegistry::VRegistry(base::type::VerboseLevel level, base::type::EnumType* pFlags) : m_level(level), m_pFlags(pFlags), m_lowest_priority(INT_MAX) {
+VRegistry::VRegistry(base::type::VerboseLevel level, base::type::EnumType* pFlags) : m_level(level), m_pFlags(pFlags) {
 }
 
 /// @brief Sets verbose level. Accepted range is 0-9
@@ -2132,18 +2132,30 @@ static int priority(Level level) {
   return 7;
 }
 
+namespace {
+  std::atomic<int> s_lowest_priority{INT_MAX};
+}
+
+void VRegistry::clearCategories(void)
+{
+  const base::threading::ScopedLock scopedLock(lock());
+  m_categories.clear();
+  m_cached_allowed_categories.clear();
+  s_lowest_priority = INT_MAX;
+}
+
 void VRegistry::setCategories(const char* categories, bool clear) {
   base::threading::ScopedLock scopedLock(lock());
   auto insert = [&](std::stringstream& ss, Level level) {
     m_categories.push_back(std::make_pair(ss.str(), level));
     m_cached_allowed_categories.clear();
     int pri = priority(level);
-    if (pri > m_lowest_priority)
-      m_lowest_priority = pri;
+    if (pri > s_lowest_priority)
+      s_lowest_priority = pri;
   };
 
   if (clear) {
-    m_lowest_priority = 0;
+    s_lowest_priority = 0;
     m_categories.clear();
     m_cached_allowed_categories.clear();
     m_categoriesString.clear();
@@ -2201,9 +2213,9 @@ std::string VRegistry::getCategories() {
 }
 
 bool VRegistry::allowed(Level level, const std::string &category) {
-  const int pri = priority(level);
-  if (pri > m_lowest_priority)
-    return false;
+  return priority_allowed(priority(level), category);
+}
+bool VRegistry::priority_allowed(const int pri, const std::string &category) {
   base::threading::ScopedLock scopedLock(lock());
   const std::map<std::string, int>::const_iterator it = m_cached_allowed_categories.find(category);
   if (it != m_cached_allowed_categories.end())
@@ -3228,6 +3240,14 @@ void Helpers::logCrashReason(int sig, bool stackTraceIfAvailable, Level level, c
 #endif // defined(ELPP_FEATURE_ALL) || defined(ELPP_FEATURE_CRASH_LOG)
 
 // Loggers
+
+bool Loggers::allowed(Level level, const char* cat)
+{
+  const int pri = base::priority(level);
+  if (pri > base::s_lowest_priority)
+    return false;
+  return ELPP->vRegistry()->priority_allowed(pri, std::string{cat});
+}
 
 Logger* Loggers::getLogger(const std::string& identity, bool registerIfNotAvailable) {
   return ELPP->registeredLoggers()->get(identity, registerIfNotAvailable);

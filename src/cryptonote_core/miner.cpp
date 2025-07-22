@@ -288,22 +288,21 @@ namespace cryptonote
     }
   }
   //-----------------------------------------------------------------------------------------------------
-  void miner::send_stop_signal()
-  {
-    m_stop = true;
-  }
-  //-----------------------------------------------------------------------------------------------------
   bool miner::stop()
   {
     MTRACE("Miner has received stop signal");
 
+    CRITICAL_REGION_LOCAL(m_threads_lock);
     if (!is_mining())
     {
       MDEBUG("Not mining - nothing to stop" );
       return true;
     }
 
-    send_stop_signal();
+    m_stop = true;
+    for (auto& th : m_threads)
+      if (th.joinable())
+        th.join();
 
     MINFO("Mining has been stopped, " << m_threads.size() << " finished" );
     m_threads.clear();

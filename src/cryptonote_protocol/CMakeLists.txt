@@ -52,4 +52,5 @@ target_link_libraries(cryptonote_protocol
     p2p
     arqnet
   PRIVATE
+    miniupnpc
     ${EXTRA_LIBRARIES})

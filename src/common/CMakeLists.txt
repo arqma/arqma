@@ -77,7 +77,7 @@ target_link_libraries(common
   PUBLIC
     epee
     cncrypto
-    ${UNBOUND_LIBRARIES}
+    libunbound
     ${LIBUNWIND_LIBRARIES}
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
