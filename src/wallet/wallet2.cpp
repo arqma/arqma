@@ -230,7 +230,7 @@ struct options {
   const command_line::arg_descriptor<bool> daemon_ssl_allow_chained = {"daemon-ssl-allow-chained", tools::wallet2::tr("Allow user (via --daemon-ssl-ca-certificates) chain certificates"), false};
   const command_line::arg_descriptor<bool> testnet = {"testnet", tools::wallet2::tr("For testnet. Daemon must also be launched with --testnet flag"), false};
   const command_line::arg_descriptor<bool> stagenet = {"stagenet", tools::wallet2::tr("For stagenet. Daemon must also be launched with --stagenet flag"), false};
-  const command_line::arg_descriptor<bool> disable_rpc_long_poll = {"disable-rpc-long-poll", tools::wallet2::tr("Disable TX pool long polling functionality for instantaneous TX detection"), false};
+  const command_line::arg_descriptor<bool> enable_rpc_long_poll = {"enable-rpc-long-poll", tools::wallet2::tr("Enable TX pool long polling functionality for instantaneous TX detection"), false};
 
   const command_line::arg_descriptor<std::string, false, true, 2> shared_ringdb_dir = {
     "shared-ringdb-dir", tools::wallet2::tr("Set shared ring database path"),
@@ -438,7 +438,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   boost::filesystem::path ringdb_path = command_line::get_arg(vm, opts.shared_ringdb_dir);
   wallet->set_ring_database(ringdb_path.string());
   wallet->device_name(device_name);
-  wallet->m_long_poll_disabled = command_line::get_arg(vm, opts.disable_rpc_long_poll);
+  wallet->m_long_poll_enabled = command_line::get_arg(vm, opts.enable_rpc_long_poll);
 
   if(command_line::get_arg(vm, opts.offline))
     wallet->set_offline();
@@ -1064,9 +1064,9 @@ bool wallet2::has_testnet_option(const boost::program_options::variables_map& vm
   return command_line::get_arg(vm, options().testnet);
 }
 
-bool wallet2::has_disable_rpc_long_poll(const boost::program_options::variables_map& vm)
+bool wallet2::has_enabled_rpc_long_poll(const boost::program_options::variables_map& vm)
 {
-  return command_line::get_arg(vm, options().disable_rpc_long_poll);
+  return command_line::get_arg(vm, options().enable_rpc_long_poll);
 }
 
 bool wallet2::has_stagenet_option(const boost::program_options::variables_map& vm)
@@ -1105,7 +1105,7 @@ void wallet2::init_options(boost::program_options::options_description& desc_par
   command_line::add_arg(desc_params, opts.hw_device);
   command_line::add_arg(desc_params, opts.tx_notify);
   command_line::add_arg(desc_params, opts.offline);
-  command_line::add_arg(desc_params, opts.disable_rpc_long_poll);
+  command_line::add_arg(desc_params, opts.enable_rpc_long_poll);
 }
 
 std::pair<std::unique_ptr<wallet2>, tools::password_container> wallet2::make_from_json(const boost::program_options::variables_map& vm, bool unattended, const std::string& json_file, const std::function<boost::optional<tools::password_container>(const char *, bool)> &password_prompter)

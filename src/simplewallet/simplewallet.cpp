@@ -2691,7 +2691,7 @@ simple_wallet::simple_wallet()
 simple_wallet::~simple_wallet()
 {
   if (m_wallet)
-    m_wallet->m_long_poll_disabled = true;
+    m_wallet->m_long_poll_enabled = false;
   if (m_long_poll_thread.joinable())
     m_long_poll_thread.join();
 }
@@ -7588,7 +7588,7 @@ bool simple_wallet::run()
   m_long_poll_thread = std::thread([&] {
     for (;;)
     {
-      if (m_wallet->m_long_poll_disabled)
+      if (!m_wallet->m_long_poll_enabled)
         return true;
       try
       {

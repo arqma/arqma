@@ -93,7 +93,7 @@ namespace tools
   }
 
   //------------------------------------------------------------------------------------------------------------------------------
-  wallet_rpc_server::wallet_rpc_server():m_wallet(NULL), rpc_login_file(), m_stop(false), m_restricted(false), m_vm(NULL), m_long_poll_disabled(true)
+  wallet_rpc_server::wallet_rpc_server():m_wallet(NULL), rpc_login_file(), m_stop(false), m_restricted(false), m_vm(NULL), m_long_poll_enabled(false)
   {
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -142,7 +142,7 @@ namespace tools
     m_long_poll_thread = std::thread([&] {
       for (;;)
       {
-        if (m_long_poll_disabled)
+        if (!m_long_poll_enabled)
           return true;
         if (m_auto_refresh_period == 0s)
         {
@@ -167,7 +167,7 @@ namespace tools
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::stop()
   {
-    m_long_poll_disabled = true;
+    m_long_poll_enabled = false;
     if (m_long_poll_thread.joinable())
       m_long_poll_thread.join();
 
@@ -4318,7 +4318,7 @@ public:
       return false;
     }
   just_dir:
-    wrpc->m_long_poll_disabled = tools::wallet2::has_disable_rpc_long_poll(vm);
+    wrpc->m_long_poll_enabled = tools::wallet2::has_enabled_rpc_long_poll(vm);
     if (wal) wrpc->set_wallet(wal.release());
     bool r = wrpc->init(&vm);
     CHECK_AND_ASSERT_MES(r, false, tools::wallet_rpc_server::tr("Failed to initialize wallet RPC server"));
