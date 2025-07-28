@@ -93,7 +93,7 @@ namespace tools
   }
 
   //------------------------------------------------------------------------------------------------------------------------------
-  wallet_rpc_server::wallet_rpc_server():m_wallet(NULL), rpc_login_file(), m_stop(false), m_restricted(false), m_vm(NULL), m_long_poll_enabled(false)
+  wallet_rpc_server::wallet_rpc_server():m_wallet(NULL), rpc_login_file(), m_stop(false), m_restricted(false), m_vm(NULL)
   {
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -115,12 +115,8 @@ namespace tools
         return true;
 
       const auto now = std::chrono::steady_clock::now();
-      if (!m_long_poll_new_changes)
-      {
-        if (now < m_last_auto_refresh_time + m_auto_refresh_period)
-          return true;
-      }
-      m_long_poll_new_changes = false;
+      if (now < m_last_auto_refresh_time + m_auto_refresh_period)
+        return true;
 
       try {
         if (m_wallet) m_wallet->refresh(m_wallet->is_trusted_daemon());
@@ -139,38 +135,12 @@ namespace tools
       return true;
     }, 500ms);
 
-    m_long_poll_thread = std::thread([&] {
-      for (;;)
-      {
-        if (!m_long_poll_enabled)
-          return true;
-        if (m_auto_refresh_period == 0s)
-        {
-          std::this_thread::sleep_for(std::chrono::seconds(1));
-          continue;
-        }
-
-        try
-        {
-          if (m_wallet && m_wallet->long_poll_pool_state())
-            m_long_poll_new_changes = true;
-        }
-        catch (...)
-        {
-        }
-      }
-    });
-
     //DO NOT START THIS SERVER IN MORE THEN 1 THREADS WITHOUT REFACTORING
     return epee::http_server_impl_base<wallet_rpc_server, connection_context>::run(1, true);
   }
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::stop()
   {
-    m_long_poll_enabled = false;
-    if (m_long_poll_thread.joinable())
-      m_long_poll_thread.join();
-
     if (m_wallet)
     {
       m_wallet->store();
@@ -2409,6 +2379,8 @@ namespace tools
       }
     }
 
+    m_wallet->update_pool_state();
+
     std::list<std::pair<crypto::hash, tools::wallet2::pool_payment_details>> pool_payments;
     m_wallet->get_unconfirmed_payments(pool_payments, req.account_index);
     for (std::list<std::pair<crypto::hash, tools::wallet2::pool_payment_details>>::const_iterator i = pool_payments.begin(); i != pool_payments.end(); ++i) {
@@ -4318,7 +4290,6 @@ public:
       return false;
     }
   just_dir:
-    wrpc->m_long_poll_enabled = tools::wallet2::has_enabled_rpc_long_poll(vm);
     if (wal) wrpc->set_wallet(wal.release());
     bool r = wrpc->init(&vm);
     CHECK_AND_ASSERT_MES(r, false, tools::wallet_rpc_server::tr("Failed to initialize wallet RPC server"));

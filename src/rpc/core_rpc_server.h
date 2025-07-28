@@ -45,7 +45,6 @@ using namespace epee;
 
 namespace cryptonote
 {
-  static constexpr auto rpc_long_poll_timeout = 15s;
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
@@ -65,7 +64,6 @@ namespace cryptonote
     static const command_line::arg_descriptor<bool> arg_rpc_ssl_allow_any_cert;
     static const command_line::arg_descriptor<std::string> arg_bootstrap_daemon_address;
     static const command_line::arg_descriptor<std::string> arg_bootstrap_daemon_login;
-    static const command_line::arg_descriptor<int> arg_rpc_long_poll_connections;
 
     typedef epee::net_utils::connection_context_base connection_context;
 
@@ -267,10 +265,7 @@ namespace cryptonote
     bool on_report_peer_storage_server_status(const COMMAND_RPC_REPORT_PEER_SS_STATUS::request& req, COMMAND_RPC_REPORT_PEER_SS_STATUS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     //------------------------------
 
-    int m_max_long_poll_connections;
 private:
-    std::atomic<int> m_long_poll_active_connections;
-
     bool check_core_busy();
     bool check_core_ready();
 

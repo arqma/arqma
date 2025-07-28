@@ -29,41 +29,20 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-set(DEFAULT_WITH_MINIUPNPC ON)
-if(ANDROID OR IOS)
-  set(DEFAULT_WITH_MINIUPNPC OFF)
-endif()
-
-option(WITH_MINIUPNPC "Enable miniupnpc support for IGD NAT hole punching" ${DEFAULT_WITH_MINIUPNPC})
-
 find_package(PkgConfig REQUIRED)
-
-if(WITH_MINIUPNPC)
-  pkg_check_modules(MINIUPNPC miniupnpc>=2.1)
-endif()
 pkg_check_modules(UNBOUND libunbound)
 
-if(NOT WITH_MINIUPNPC)
-  message(STATUS "miniupnpc support disabled")
-  target_compile_definitions(miniupnpc INTERFACE WITHOUT_MINIUPNPC)
-elseif(MINIUPNPC_FOUND)
-  message(STATUS "Found miniupnpc")
-  link_dep_libs(miniupnpc INTERFACE "${MINIUPNPC_LIBRARY_DIRS}" ${MINIUPNPC_LIBRARIES})
-  target_include_directories(miniupnpc INTERFACE ${MINIUPNPC_INCLUDE_DIRS})
+message(STATUS "Using in-tree miniupnpc")
+add_subdirectory(miniupnp/miniupnpc)
+if(MSVC)
+  target_compile_options(libminiupnpc-static PRIVATE -wd4244 -wd4267)
 else()
-  message(STATUS "Using in-tree miniupnpc")
-  add_subdirectory(miniupnp/miniupnpc)
-  if(MSVC)
-    target_compile_options(libminiupnpc-static PRIVATE -wd4244 -wd4267)
-  else()
-    target_compile_options(libminiupnpc-static PRIVATE -Wno-undef -Wno-unused-result -Wno-unused-value)
-  endif()
-  if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-    target_compile_definitions(libminiupnpc-static PRIVATE _NETBSD_SOURCE)
-  endif()
-
-  target_link_libraries(miniupnpc INTERFACE libminiupnpc-static)
+  target_compile_options(libminiupnpc-static PRIVATE -Wno-undef -Wno-unused-result -Wno-unused-value)
 endif()
+if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+  target_compile_definitions(libminiupnpc-static PRIVATE _NETBSD_SOURCE)
+endif()
+target_link_libraries(miniupnpc INTERFACE libminiupnpc-static)
 
 add_subdirectory(easylogging++)
 add_subdirectory(qrcodegen)

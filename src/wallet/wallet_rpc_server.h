@@ -61,7 +61,6 @@ namespace tools
     bool run();
     void stop();
     void set_wallet(wallet2 *cr);
-    std::atomic<bool> m_long_poll_enabled;
 
   private:
 
@@ -273,7 +272,5 @@ namespace tools
       const boost::program_options::variables_map *m_vm;
       std::chrono::milliseconds m_auto_refresh_period;
       std::chrono::steady_clock::time_point m_last_auto_refresh_time;
-      std::thread m_long_poll_thread;
-      std::atomic<bool> m_long_poll_new_changes;
   };
 }

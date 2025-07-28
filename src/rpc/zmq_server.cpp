@@ -27,7 +27,6 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "zmq_server.h"
-#include <thread>
 
 namespace cryptonote
 {
@@ -75,10 +74,15 @@ void ZmqServer::serve()
 
       }
     }
+    catch (const boost::thread_interrupted& e)
+    {
+      MDEBUG("ZMQ Server thread interrupted.");
+    }
     catch (const zmq::error_t& e)
     {
       MERROR(std::string("ZMQ error: ") + e.what());
     }
+    boost::this_thread::interruption_point();
   }
 }
 
@@ -114,7 +118,7 @@ bool ZmqServer::addTCPSocket(std::string address, std::string port)
 void ZmqServer::run()
 {
   running = true;
-  run_thread = std::thread([this] { serve(); });
+  run_thread = boost::thread([this] { serve(); });
 }
 
 void ZmqServer::stop()
@@ -124,6 +128,7 @@ void ZmqServer::stop()
 
   stop_signal = true;
 
+  run_thread.interrupt();
   run_thread.join();
 
   running = false;

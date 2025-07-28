@@ -77,7 +77,6 @@ namespace cryptonote
     typedef std::vector<std::string> command_type;
 
     simple_wallet();
-    ~simple_wallet();
     bool init(const boost::program_options::variables_map& vm);
     bool deinit();
     bool run();
@@ -390,7 +389,6 @@ namespace cryptonote
 
     std::atomic<bool> m_idle_run;
     std::thread m_idle_thread;
-    std::thread m_long_poll_thread;
     std::mutex m_idle_mutex;
     std::condition_variable m_idle_cond;
 
@@ -400,8 +398,5 @@ namespace cryptonote
     uint32_t m_current_subaddress_account;
 
     tools::periodic_task m_refresh_checker{std::chrono::seconds(0), true, {90 * 1000000, 110 * 1000000}};
-
-    std::atomic<uint64_t> m_password_asked_on_height;
-    crypto::hash m_password_asked_on_checksum;
   };
 }

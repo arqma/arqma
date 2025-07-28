@@ -75,7 +75,7 @@ public:
   void run()
   {
     MGINFO("Starting " << m_description << " RPC server...");
-    if (!m_server.run(m_server.m_max_long_poll_connections + cryptonote::core_rpc_server::DEFAULT_RPC_THREADS, false))
+    if (!m_server.run(cryptonote::core_rpc_server::DEFAULT_RPC_THREADS, false))
     {
       throw std::runtime_error("Failed to start " + m_description + " RPC server.");
     }

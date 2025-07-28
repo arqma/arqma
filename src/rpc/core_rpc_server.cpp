@@ -82,7 +82,6 @@ namespace cryptonote
     command_line::add_arg(desc, arg_restricted_rpc);
     command_line::add_arg(desc, arg_bootstrap_daemon_address);
     command_line::add_arg(desc, arg_bootstrap_daemon_login);
-    command_line::add_arg(desc, arg_rpc_long_poll_connections);
     cryptonote::rpc_args::init_options(desc, true);
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -102,7 +101,6 @@ namespace cryptonote
   {
     m_restricted = restricted;
     m_net_server.set_threads_prefix("RPC");
-    m_max_long_poll_connections = command_line::get_arg(vm, arg_rpc_long_poll_connections);
 
     auto rpc_config = cryptonote::rpc_args::process(vm, true);
     if (!rpc_config)
@@ -1135,49 +1133,9 @@ namespace cryptonote
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_TRANSACTION_POOL_HASHES_BIN>(invoke_http_mode::JON, "/get_transaction_pool_hashes.bin", req, res, r))
       return r;
 
-    std::vector<crypto::hash> tx_pool_hashes;
     const bool restricted = m_restricted && ctx;
     const bool request_has_rpc_origin = ctx != NULL;
-    m_core.get_pool().get_transaction_hashes(tx_pool_hashes, !request_has_rpc_origin || !restricted);
-
-    if (req.long_poll)
-    {
-      if (m_max_long_poll_connections <= 0)
-      {
-        res.status = CORE_RPC_STATUS_TX_LONG_POLL_MAX_CONNECTIONS;
-        return true;
-      }
-
-      crypto::hash checksum = {};
-      for (crypto::hash const &hash : tx_pool_hashes) crypto::hash_xor(checksum, hash);
-
-      if (req.tx_pool_checksum == checksum)
-      {
-        size_t tx_count_before = tx_pool_hashes.size();
-        time_t before = time(nullptr);
-        std::unique_lock<std::mutex> lock(m_core.m_long_poll_mutex);
-        if ((m_long_poll_active_connections + 1) > m_max_long_poll_connections)
-        {
-          res.status = CORE_RPC_STATUS_TX_LONG_POLL_MAX_CONNECTIONS;
-          return true;
-        }
-
-        m_long_poll_active_connections++;
-        bool condition_activated = m_core.m_long_poll_wake_up_clients.wait_for(lock, rpc_long_poll_timeout, [this, tx_count_before]() {
-          size_t tx_count_after = m_core.get_pool().get_transactions_count();
-          return tx_count_before != tx_count_after;
-        });
-        m_long_poll_active_connections--;
-
-        if (!condition_activated)
-        {
-          res.status = CORE_RPC_STATUS_TX_LONG_POLL_TIMED_OUT;
-          return true;
-        }
-      }
-    }
-
-    res.tx_hashes = std::move(tx_pool_hashes);
+    m_core.get_pool().get_transaction_hashes(res.tx_hashes, !request_has_rpc_origin || !restricted);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -3369,11 +3327,5 @@ namespace cryptonote
       "bootstrap-daemon-login"
     , "Specify username:password for the bootstrap daemon login"
     , ""
-  };
-
-  const command_line::arg_descriptor<int> core_rpc_server::arg_rpc_long_poll_connections = {
-      "rpc-long-poll-connections"
-    , "Number of RPC connections allocated for long polling wallet queries to the TX pool"
-    , 30
   };
 }  // namespace cryptonote

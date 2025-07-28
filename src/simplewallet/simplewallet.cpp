@@ -2687,14 +2687,6 @@ simple_wallet::simple_wallet()
                            tr(command_helper::USAGE_HELP),
                            tr(command_helper::HELP));
 }
-
-simple_wallet::~simple_wallet()
-{
-  if (m_wallet)
-    m_wallet->m_long_poll_enabled = false;
-  if (m_long_poll_thread.joinable())
-    m_long_poll_thread.join();
-}
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::set_variable(const std::vector<std::string> &args)
 {
@@ -4302,23 +4294,15 @@ boost::optional<epee::wipeable_string> simple_wallet::on_get_password(const char
   // can't ask for password from a background thread
   if (!m_in_manual_refresh.load(std::memory_order_relaxed))
   {
-    crypto::hash tx_pool_checksum = m_wallet->get_long_poll_tx_pool_checksum();
-    if (m_password_asked_on_height != m_wallet->get_blockchain_current_height() ||
-        m_password_asked_on_checksum != tx_pool_checksum)
-    {
-      m_password_asked_on_height = m_wallet->get_blockchain_current_height();
-      m_password_asked_on_checksum = tx_pool_checksum;
-
-      message_writer(console_color_red, false) << boost::format(tr("Password needed %s")) % reason;
-      m_cmd_binder.print_prompt();
-    }
+    message_writer(console_color_red, false) << boost::format(tr("Password needed (%s) - use the refresh command")) % reason;
+    m_cmd_binder.print_prompt();
     return boost::none;
   }
 
   rdln::suspend_readline pause_readline;
-  std::string msg = tr("Enter password ");
+  std::string msg = tr("Enter password");
   if (reason && *reason)
-    msg += reason;
+    msg += std::string(" (") + reason + ")";
   auto pwd_container = tools::password_container::prompt(false, msg.c_str());
   if (!pwd_container)
   {
@@ -7543,7 +7527,7 @@ bool simple_wallet::check_refresh()
       uint64_t fetched_blocks;
       bool received_money;
       if (try_connect_to_daemon(true))
-        m_wallet->refresh(m_wallet->is_trusted_daemon(), 0, fetched_blocks, received_money, false);
+        m_wallet->refresh(m_wallet->is_trusted_daemon(), 0, fetched_blocks, received_money);
     }
     catch(...) {}
     m_auto_refresh_refreshing = false;
@@ -7584,22 +7568,6 @@ bool simple_wallet::run()
 
   m_auto_refresh_enabled = m_wallet->auto_refresh();
   m_idle_thread = std::thread([&] { wallet_idle_thread(); });
-
-  m_long_poll_thread = std::thread([&] {
-    for (;;)
-    {
-      if (!m_wallet->m_long_poll_enabled)
-        return true;
-      try
-      {
-        if (m_auto_refresh_enabled && m_wallet->long_poll_pool_state())
-          m_idle_cond.notify_one();
-      }
-      catch (...)
-      {
-      }
-    }
-  });
 
   message_writer(console_color_green, false) << "Background refresh thread started";
   return m_cmd_binder.run_handling([this](){return get_prompt();}, "");
@@ -8544,6 +8512,7 @@ bool simple_wallet::show_transfer(const std::vector<std::string> &args)
 
   try
   {
+    m_wallet->update_pool_state();
     std::list<std::pair<crypto::hash, tools::wallet2::pool_payment_details>> pool_payments;
     m_wallet->get_unconfirmed_payments(pool_payments, m_current_subaddress_account);
     for (std::list<std::pair<crypto::hash, tools::wallet2::pool_payment_details>>::const_iterator i = pool_payments.begin(); i != pool_payments.end(); ++i) {

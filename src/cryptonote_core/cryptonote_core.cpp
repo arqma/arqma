@@ -911,7 +911,6 @@ namespace cryptonote
 #endif
     if (m_arqnet_obj)
       arqnet_delete(m_arqnet_obj);
-    m_long_poll_wake_up_clients.notify_all();
     m_service_node_list.store();
     m_miner.stop();
     m_mempool.deinit();
@@ -1165,7 +1164,6 @@ namespace cryptonote
   {
     uint8_t hard_fork_version = m_blockchain_storage.get_current_hard_fork_version();
     bool ok = true;
-    bool tx_pool_changed = false;
     tx_pool_options tx_opts;
     for (size_t i = 0; i < parsed_txs.size(); i++)
     {
@@ -1183,10 +1181,7 @@ namespace cryptonote
       const size_t weight = get_transaction_weight(info.tx, info.blob->size());
       const tx_pool_options *local_opts = &opts;
       if (m_mempool.add_tx(info.tx, info.tx_hash, *info.blob, weight, info.tvc, *local_opts, hard_fork_version))
-      {
-        tx_pool_changed |= info.tvc.m_added_to_pool;
         MDEBUG("tx added: " << info.tx_hash);
-      }
       else
       {
         ok = false;
@@ -1196,10 +1191,6 @@ namespace cryptonote
           MERROR_VER("Transaction verification impossible: " << info.tx_hash);
       }
     }
-
-    if (tx_pool_changed)
-      m_long_poll_wake_up_clients.notify_all();
-
     return ok;
   }
   //-----------------------------------------------------------------------------------------------

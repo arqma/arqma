@@ -6,4 +6,4 @@
 	url = https://github.com/arqma/randomarq
 [submodule "external/miniupnp"]
 	path = external/miniupnp
-	url = https://github.com/miniupnp/miniupnp
+	url = https://github.com/arqma/miniupnp
