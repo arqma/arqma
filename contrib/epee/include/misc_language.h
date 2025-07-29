@@ -30,6 +30,8 @@
 
 #include <boost/shared_ptr.hpp>
 #include <vector>
+#include <memory>
+
 namespace epee
 {
 namespace misc_utils
@@ -42,7 +44,7 @@ namespace misc_utils
       return it;
     }
 
-	bool sleep_no_w(long ms );
+	void sleep_no_w(long ms);
 
   template<typename T>
   T get_mid(const T &a, const T &b)
@@ -80,7 +82,7 @@ namespace misc_utils
     virtual ~call_before_die_base() = default;
   };
 
-  typedef std::shared_ptr<call_before_die_base> auto_scope_leave_caller;
+  using auto_scope_leave_caller = std::shared_ptr<call_before_die_base>;
 
 
   template<class t_scope_leave_handler>

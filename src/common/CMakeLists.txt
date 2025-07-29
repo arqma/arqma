@@ -44,6 +44,7 @@ set(common_sources
   notify.cpp
   password.cpp
   perf_timer.cpp
+  random.cpp
   rules.cpp
   pruning.cpp
   spawn.cpp
@@ -74,6 +75,7 @@ arqma_add_library(common
   DEPENDS generate_translations_header)
 target_link_libraries(common
   PUBLIC
+    epee
     cncrypto
     libunbound
     ${LIBUNWIND_LIBRARIES}
@@ -84,6 +86,8 @@ target_link_libraries(common
     ${Boost_REGEX_LIBRARY}
     ${Boost_CHRONO_LIBRARY}
   PRIVATE
-    epee
     ${OPENSSL_LIBRARIES}
     ${EXTRA_LIBRARIES})
+target_include_directories(common
+  PRIVATE
+    ${Boost_INCLUDE_DIRS})

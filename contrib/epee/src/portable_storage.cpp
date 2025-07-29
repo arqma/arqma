@@ -42,18 +42,17 @@ namespace epee
 {
 namespace serialization
 {
-  bool portable_storage::store_to_binary(byte_slice& target, const std::size_t initial_buffer_size)
+  bool portable_storage::store_to_binary(binarybuffer& target)
   {
     TRY_ENTRY();
-    byte_stream ss;
-    ss.reserve(initial_buffer_size);
+    std::stringstream ss;
     storage_block_header sbh{};
     sbh.m_signature_a = SWAP32LE(PORTABLE_STORAGE_SIGNATUREA);
     sbh.m_signature_b = SWAP32LE(PORTABLE_STORAGE_SIGNATUREB);
     sbh.m_ver = PORTABLE_STORAGE_FORMAT_VER;
-    ss.write(epee::as_byte_span(sbh));
+    ss.write((const char*)&sbh, sizeof(storage_block_header));
     pack_entry_to_buff(ss, m_root);
-    target = epee::byte_slice{std::move(ss)};
+    target = ss.str();
     return true;
     CATCH_ENTRY("portable_storage::store_to_binary", false);
   }

@@ -1,28 +1,25 @@
-packages:=boost openssl zeromq libiconv
-
 native_packages :=
+packages := boost openssl sodium zeromq unbound
 
-hardware_packages := hidapi libusb
-hardware_native_packages :=
+ifneq ($(host_os),android)
+packages += libusb hidapi
+endif
 
-android_native_packages = android_ndk
-android_packages = ncurses readline sodium
+ifneq ($(host_os),mingw32)
+packages += ncurses readline
+endif
 
-darwin_native_packages = $(hardware_native_packages)
-darwin_packages = ncurses readline sodium $(hardware_packages)
-
-linux_packages = unwind eudev ncurses readline sodium $(hardware_packages)
-linux_native_packages = $(hardware_native_packages)
+linux_native_packages :=
+linux_packages :=
 
 ifeq ($(build_tests),ON)
 packages += gtest
 endif
 
-mingw32_packages = icu4c sodium $(hardware_packages)
-mingw32_native_packages = $(hardware_native_packages)
-
-$(host_arch)_$(host_os)_native_packages += native_b2
-
 ifneq ($(build_os), darwin)
-darwin_native_packages += darwin_sdk native_clang native_cctools native_libtapi
+darwin_native_packages := darwin_sdk native_cctools native_libtapi
 endif
+darwin_packages := ncurses readline
+
+android_native_packages := android_ndk
+android_packages := ncurses readline

@@ -32,7 +32,6 @@
 #include <boost/variant.hpp>
 #include <mutex>
 #include <shared_mutex>
-#include <boost/thread/shared_mutex.hpp>
 #include "serialization/serialization.h"
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "cryptonote_core/service_node_rules.h"
@@ -72,13 +71,14 @@ namespace service_nodes
     uint64_t storage_server_reachable_timestamp = 0;
     proof_info() { votes.fill({}); }
 
-    uint32_t public_ip;
-    uint16_t storage_port;
+    uint32_t public_ip = 0;
+    uint16_t storage_port = 0;
+    uint16_t arqnet_port = 0;
     std::array<uint16_t, 3> version{{0,0,0}};
     crypto::ed25519_public_key pubkey_ed25519 = crypto::ed25519_public_key::null();
     crypto::x25519_public_key pubkey_x25519 = crypto::x25519_public_key::null();
     void update_pubkey(const crypto::ed25519_public_key &pk);
-    bool update(uint64_t ts, uint32_t ip, uint16_t s_port, std::array<uint16_t, 3> ver, const crypto::ed25519_public_key &pk_ed, const crypto::x25519_public_key &pk_x2);
+    bool update(uint64_t ts, uint32_t ip, uint16_t s_port, uint16_t a_port, std::array<uint16_t, 3> ver, const crypto::ed25519_public_key &pk_ed, const crypto::x25519_public_key &pk_x2);
     void store(const crypto::public_key &pubkey, cryptonote::Blockchain &blockchain);
   };
 
@@ -87,6 +87,7 @@ namespace service_nodes
     enum class version_t : uint8_t
     {
       v0,
+      v1,
 
       _count
     };
@@ -185,10 +186,24 @@ namespace service_nodes
       VARINT_FIELD(portions_for_operator)
       FIELD(operator_address)
       VARINT_FIELD(swarm_id)
-      VARINT_FIELD_N("public_ip", proof->public_ip)
-      VARINT_FIELD_N("storage_port", proof->storage_port)
+      if (version < version_t::v1)
+      {
+        uint32_t fake_ip = 0;
+        uint16_t fake_port = 0;
+        VARINT_FIELD_N("public_ip", fake_ip)
+        VARINT_FIELD_N("storage_port", fake_port)
+      }
       VARINT_FIELD(last_ip_change_height)
-      FIELD_N("pubkey_ed25519", proof->pubkey_ed25519)
+      if (version < version_t::v1)
+      {
+        crypto::ed25519_public_key fake_pk = crypto::ed25519_public_key::null();
+        FIELD_N("pubkey_ed25519", fake_pk)
+      }
+      if (version >= version_t::v1)
+      {
+        uint16_t fake_port = 0;
+        VARINT_FIELD_N("arqnet_port", fake_port)
+      }
     END_SERIALIZE()
   };
 
@@ -246,20 +261,6 @@ namespace service_nodes
     std::vector<payout_entry> payouts;
   };
 
-  template<typename RandomIt>
-  void arqma_shuffle(RandomIt begin, RandomIt end, uint64_t seed)
-  {
-    if (end <= begin + 1) return;
-    const size_t size = std::distance(begin, end);
-    std::mt19937_64 mersenne_twister(seed);
-    for(size_t i = 1; i < size; i++)
-    {
-      size_t j = (size_t)uniform_distribution_portable(mersenne_twister, i+1);
-      using std::swap;
-      swap(begin[i], begin[j]);
-    }
-  }
-
   struct service_node_keys {
     crypto::secret_key key;
     crypto::public_key pub;
@@ -289,7 +290,7 @@ namespace service_nodes
     void init() override;
     bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &base_reward) const override;
     bool alt_block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const *checkpoint) override;
-    block_winner get_block_winner() const { std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex); return m_state.get_block_winner(); }
+    block_winner get_block_winner() const { std::lock_guard lock{m_sn_mutex}; return m_state.get_block_winner(); }
 
     bool is_service_node(const crypto::public_key& pubkey, bool require_cative = true) const;
     bool is_key_image_locked(crypto::key_image const &check_image, uint64_t *unlock_height = nullptr, service_node_info::contribution_t *the_locked_contribution = nullptr) const;
@@ -304,7 +305,7 @@ namespace service_nodes
     template <typename Func>
     void access_proof(const crypto::public_key &pubkey, Func f) const
     {
-      std::unique_lock<boost::recursive_mutex> lock;
+      std::unique_lock lock{m_sn_mutex};
       auto it = m_proofs.find(pubkey);
       if (it != m_proofs.end())
         f(it->second);
@@ -318,7 +319,7 @@ namespace service_nodes
     void for_each_service_node_info_and_proof(It begin, It end, Func f) const
     {
       static const proof_info empty_proof{};
-      std::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+      std::lock_guard lock{m_sn_mutex};
       for (auto sni_end = m_state.service_nodes_infos.end(); begin != end; ++begin)
       {
         auto it = m_state.service_nodes_infos.find(*begin);
@@ -334,7 +335,7 @@ namespace service_nodes
     void set_quorum_history_storage(uint64_t hist_size); // 0 = none (default), 1 = unlimited, N = # of blocks
     bool store();
 
-    cryptonote::NOTIFY_UPTIME_PROOF::request generate_uptime_proof(const service_node_keys &keys, uint32_t public_ip, uint16_t storage_port) const;
+    cryptonote::NOTIFY_UPTIME_PROOF::request generate_uptime_proof(const service_node_keys &keys, uint32_t public_ip, uint16_t storage_port, uint16_t arqnet_port) const;
     bool handle_uptime_proof(cryptonote::NOTIFY_UPTIME_PROOF::request const &proof, bool &my_uptime_proof_confirmation);
 
     void record_checkpoint_vote(crypto::public_key const &pubkey, uint64_t height, bool voted);
@@ -444,14 +445,14 @@ namespace service_nodes
     void reset(bool delete_db_entry = false);
     bool load(uint64_t current_height);
 
-    mutable boost::recursive_mutex m_sn_mutex;
+    mutable std::recursive_mutex m_sn_mutex;
     cryptonote::Blockchain& m_blockchain;
     const service_node_keys *m_service_node_keys;
     uint64_t m_store_quorum_history = 0;
 
     std::unordered_map<crypto::x25519_public_key, std::pair<crypto::public_key, time_t>> m_x25519_to_pub;
     time_t m_x25519_map_last_pruned = 0;
-    mutable boost::shared_mutex m_x25519_map_mutex;
+    mutable std::shared_mutex m_x25519_map_mutex;
 
     struct quorums_by_height
     {

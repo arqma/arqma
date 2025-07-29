@@ -125,7 +125,7 @@ build the library binary manually. This can be done with the following command:
 
 Debian / Ubuntu one liner for all dependencies
 
-`$ sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
+`$ sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev qttools5-dev-tools doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
 
 Install all dependencies at once on OSX:
 
@@ -139,7 +139,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`$ cd arqma && git checkout release-v7.2.0`
+`$ cd arqma && git checkout release-v8.0.0`
 `$ git submodule init && git submodule update`
 
 ### Build instructions
@@ -277,7 +277,7 @@ application.
 
     To build for 64-bit Windows:
 
-    `$ pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi automake autoconf binutils patch`
+    `$ pacman -S git mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-unbound automake autoconf binutils patch`
 
 **Building**
 
@@ -287,7 +287,7 @@ application.
 
 * Change branch to last Release:
 
-	`$ cd arqma && git checkout release-v7.2.0`
+	`$ cd arqma && git checkout release-v8.0.0`
 
 * Activate and update submodules:
 
@@ -407,9 +407,9 @@ By default, in either dynamically or statically linked builds, binaries target t
 
 You can also cross-compile Arqma static binaries on Linux for Windows and macOS with the `depends` system.
 * `make depends target=x86_64-linux-gnu` for 64-bit linux binaries.
-* `make depends target=x86_64-w64-mingw32` for 64-bit windows binaries. Requires: python3 g++-mingw-w64-x86-64 wine1.6 bc
+* `make depends target=x86_64-w64-mingw32` for 64-bit windows binaries. Requires: g++-mingw-w64-x86-64
 * `make depends target=x86_64-apple-darwin` for macOS-x64 binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools
-* `make depends target=aarch64-apple-darwin` for macOS-arm64 Apple Silicon. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools
+* `make depends target=arm64-apple-darwin` for macOS-arm64 Apple Silicon. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools
 * `make depends target=arm-linux-gnueabihf` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
 * `make depends target=aarch64-linux-gnu` for armv8 binaries. Requires: g++-aarch64-linux-gnu
 * `make depends-noaes target=aarch64-linux-gnu` for Raspberry Pi systems. Requires: g++-aarch64-linux-gnu

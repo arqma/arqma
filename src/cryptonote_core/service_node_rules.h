@@ -8,9 +8,9 @@
 namespace service_nodes
 {
   constexpr int64_t DECOMMISSION_CREDIT_PER_DAY = BLOCKS_EXPECTED_IN_HOURS(24) / 30;
-  constexpr int64_t DECOMMISSION_INITIAL_CREDIT = BLOCKS_EXPECTED_IN_HOURS(0);
-  constexpr int64_t DECOMMISSION_MAX_CREDIT     = BLOCKS_EXPECTED_IN_HOURS(24);
-  constexpr int64_t DECOMMISSION_MINIMUM        = BLOCKS_EXPECTED_IN_HOURS(8);
+  constexpr int64_t DECOMMISSION_INITIAL_CREDIT = BLOCKS_EXPECTED_IN_HOURS(2);
+  constexpr int64_t DECOMMISSION_MAX_CREDIT     = BLOCKS_EXPECTED_IN_HOURS(48);
+  constexpr int64_t DECOMMISSION_MINIMUM        = BLOCKS_EXPECTED_IN_HOURS(2);
 
   static_assert(DECOMMISSION_INITIAL_CREDIT <= DECOMMISSION_MAX_CREDIT, "Initial registration decommission credit cannot be larger than the maximum decommission credit");
 
@@ -27,7 +27,7 @@ namespace service_nodes
 
   constexpr size_t STATE_CHANGE_NTH_OF_THE_NETWORK_TO_TEST         = 100;
   constexpr size_t STATE_CHANGE_MIN_NODES_TO_TEST                  = 50;
-  constexpr uint64_t VOTE_LIFETIME                                 = 15; //BLOCKS_EXPECTED_IN_HOURS(1);
+  constexpr uint64_t VOTE_LIFETIME                                 = BLOCKS_EXPECTED_IN_HOURS(2);
 
   constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
   constexpr size_t STATE_CHANGE_QUORUM_SIZE                        = 10;
@@ -68,7 +68,8 @@ namespace service_nodes
 
   constexpr uint64_t VOTE_OR_TX_VERIFY_HEIGHT_BUFFER                = 5;
 
-  constexpr std::array<int, 3> MIN_STORAGE_SERVER_VERSION           = {1, 0, 0};
+  constexpr std::array<int, 3> MIN_STORAGE_SERVER_VERSION{{1, 0, 0}};
+//  constexpr std::array<int, 3> MIN_ARQNET_VERSION{{1, 0, 0}};
 
   struct proof_version
   {
@@ -77,18 +78,26 @@ namespace service_nodes
   };
 
   constexpr proof_version MIN_UPTIME_PROOF_VERSIONS[] = {
+    {cryptonote::network_version_17, {8,0,0}},
     {cryptonote::network_version_16, {7,2,0}},
   };
 
   using swarm_id_t = uint64_t;
   constexpr swarm_id_t UNASSIGNED_SWARM_ID                          = UINT64_MAX;
 
+  constexpr size_t min_votes_for_quorum_type(quorum_type q)
+  {
+    return q == quorum_type::obligations ? STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE :
+           q == quorum_type::checkpointing ? CHECKPOINT_MIN_VOTES :
+           std::numeric_limits<size_t>::max();
+  };
+
   constexpr quorum_type max_quorum_type_for_hf(uint8_t hard_fork_version)
   {
-    return quorum_type::checkpointing;
+    return hard_fork_version <= cryptonote::network_version_16 ? quorum_type::obligations : quorum_type::checkpointing;
   }
 
-  inline uint64_t staking_num_lock_blocks(cryptonote::network_type nettype)
+  constexpr uint64_t staking_num_lock_blocks(cryptonote::network_type nettype)
   {
     switch(nettype)
     {
@@ -118,6 +127,4 @@ namespace service_nodes
   bool get_portions_from_percent_str(std::string cut_str, uint64_t& portions);
 
   bool validate_unstake_tx(uint64_t blockchain_height, cryptonote::transaction const &tx, cryptonote::tx_extra_field &extra, std::string *reason);
-
-  uint64_t uniform_distribution_portable(std::mt19937_64& mersenne_twister, uint64_t n);
 }

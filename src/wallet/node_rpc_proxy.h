@@ -30,7 +30,7 @@
 #pragma once
 
 #include <string>
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 #include <boost/thread/recursive_mutex.hpp>
 #include "include_base_utils.h"
 #include "net/abstract_http_client.h"
@@ -42,7 +42,7 @@ namespace tools
 class NodeRPCProxy
 {
 public:
-  NodeRPCProxy(epee::net_utils::http::abstract_http_client &http_client, boost::recursive_mutex &mutex);
+  NodeRPCProxy(epee::net_utils::http::abstract_http_client &http_client, std::recursive_mutex &mutex);
 
   void invalidate();
   void set_offline(bool offline) { m_offline = offline; }
@@ -67,7 +67,7 @@ private:
   boost::optional<std::string> get_info() const;
 
   epee::net_utils::http::abstract_http_client &m_http_client;
-  boost::recursive_mutex &m_daemon_rpc_mutex;
+  std::recursive_mutex &m_daemon_rpc_mutex;
   bool m_offline;
 
   mutable uint64_t m_service_node_blacklisted_key_images_cached_height;

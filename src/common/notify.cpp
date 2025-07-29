@@ -60,7 +60,7 @@ static void replace(std::vector<std::string> &v, const char *tag, const char *s)
     boost::replace_all(str, tag, s);
 }
 
-int Notify::notify(const char *tag, const char *s, ...) const
+int Notify::notify(const char *tag, const char *s, ...)
 {
   std::vector<std::string> margs = args;
 

@@ -4,53 +4,63 @@ on: [push, pull_request]
 
 env:
   APT_SET_CONF: |
-        echo "Acquire::Retries \"3\";"         | sudo tee -a /etc/apt/apt.conf.d/80-custom
-        echo "Acquire::http::Timeout \"120\";" | sudo tee -a /etc/apt/apt.conf.d/80-custom
-        echo "Acquire::ftp::Timeout \"120\";"  | sudo tee -a /etc/apt/apt.conf.d/80-custom
+    tee -a /etc/apt/apt.conf.d/80-custom << EOF
+    Acquire::Retries "3";
+    Acquire::http::Timeout "120";
+    Acquire::ftp::Timeout "120";
+    EOF
   CCACHE_SETTINGS: |
-        ccache --max-size=150M
-        ccache --set-config=compression=true
+    ccache --max-size=150M
+    ccache --set-config=compression=true
+
 jobs:
-  build-macos:
-    runs-on: self-hosted
-    env:
-      CCACHE_TEMPDIR: /tmp/.ccache-temp
+  build-cross:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        CCACHE_TEMPDIR: /tmp/.ccache-temp
     strategy:
       fail-fast: false
       matrix:
         toolchain:
-          - name: "build-depends-armv8"
+          - name: "ARM v8"
             host: "aarch64-linux-gnu"
-            packages: "python3 gperf g++-aarch64-linux-gnu"
-          - name: "build-depends-armv8 RPi"
+            packages: "g++-aarch64-linux-gnu"
+          - name: "ARM v8 RPi"
             host: "aarch64-linux-gnu"
-            packages: "python3 gperf g++-aarch64-linux-gnu"
+            packages: "g++-aarch64-linux-gnu"
             cmake_opts: "-DNO_AES=ON"
-          - name: "build-depends-windows-x64"
+          - name: "Win64"
             host: "x86_64-w64-mingw32"
-            packages: "cmake python3 g++-mingw-w64-x86-64 qttools5-dev-tools"
-          - name: "build-depends-x86_64-linux"
+            packages: "g++-mingw-w64-x86-64"
+          - name: "x86_64 Linux"
             host: "x86_64-unknown-linux-gnu"
-            packages: "gperf cmake python3-zmq libdbus-1-dev libharfbuzz-dev"
-          - name: "build-depends-macOS-x64"
+          - name: "Cross-Mac x86_64"
             host: "x86_64-apple-darwin"
-            packages: "cmake ccache imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo6 curl bsdmainutils python3-dev python3-setuptools"
-          - name: "build-depends-macOS-arm64"
-            host: "aarch64-apple-darwin"
-            packages: "cmake ccache imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo6 curl bsdmainutils python3-dev python3-setuptools"
+            packages: "clang"
+          - name: "Cross-Mac Apple Silicon arm64"
+            host: "arm64-apple-darwin"
+            packages: "clang"
     name: ${{ matrix.toolchain.name }}
     steps:
+    - name: set apt conf
+      run: ${{env.APT_SET_CONF}}
+    - name: install dependencies
+      run: apt update; apt -y install build-essential libtool cmake autotools-dev automake pkg-config python3 gperf bsdmainutils curl git ca-certificates unzip ccache ${{ matrix.toolchain.packages }}
+    - name: configure git
+      run: git config --global --add safe.directory '*'
     - uses: actions/checkout@v4
       with:
+        fetch-depth: 0
         submodules: recursive
-# Most volatile cache
     - name: ccache
       uses: actions/cache@v4
       with:
         path: ~/.ccache
         key: ccache-${{ matrix.toolchain.host }}-${{ github.sha }}
         restore-keys: ccache-${{ matrix.toolchain.host }}-
-# Less volatile cache
     - name: depends cache
       uses: actions/cache@v4
       with:
@@ -59,40 +69,19 @@ jobs:
         restore-keys: |
           depends-${{ matrix.toolchain.host }}-${{ hashFiles('contrib/depends/packages/*') }}
           depends-${{ matrix.toolchain.host }}-
-# Static cache
-    - name: set apt conf
-      run: ${{env.APT_SET_CONF}}
-    - name: install dependencies
-      run: sudo apt update; sudo apt -y install build-essential libtool cmake autotools-dev automake pkg-config bsdmainutils curl git ca-certificates ccache ${{ matrix.toolchain.packages }}
     - name: prepare w64-mingw32
       if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' }}
       run: |
-        sudo update-alternatives --set ${{ matrix.toolchain.host }}-g++ $(which ${{ matrix.toolchain.host }}-g++-posix)
-        sudo update-alternatives --set ${{ matrix.toolchain.host }}-gcc $(which ${{ matrix.toolchain.host }}-gcc-posix)
+        update-alternatives --set ${{ matrix.toolchain.host }}-g++ $(which ${{ matrix.toolchain.host }}-g++-posix)
+        update-alternatives --set ${{ matrix.toolchain.host }}-gcc $(which ${{ matrix.toolchain.host }}-gcc-posix)
+    - uses: ./.github/actions/set-make-job-count
     - name: build
       run: |
         ${{env.CCACHE_SETTINGS}}
-        make depends target=${{ matrix.toolchain.host }} cmake_opts=${{ matrix.toolchain.cmake_opts }}
+        make depends target=${{ matrix.toolchain.host }} -j${{env.MAKE_JOB_COUNT}}
     - uses: actions/upload-artifact@v4
-      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' || matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'aarch64-apple-darwin' || matrix.toolchain.host == 'aarch64-linux-gnu' || matrix.toolchain.host == 'aarch64-linux-gnu-RPi' }}
+      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'arm64-apple-darwin' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' }}
       with:
         name: ${{ matrix.toolchain.name }}
         path: |
-          ${{ github.workspace }}/build/${{ matrix.toolchain.host }}/release/bin/arqma*
-    - uses: actions/download-artifact@v4
-      with:
-        name: ${{ matrix.toolchain.name }}
-        path: distfiles/${{ matrix.toolchain.name }}
-
-#Upload artifacts
-    - name: Copy files via ssh
-      uses: appleboy/scp-action@v0.1.7
-      if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' || matrix.toolchain.host == 'x86_64-unknown-linux-gnu' || matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'aarch64-apple-darwin' || matrix.toolchain.host == 'aarch64-linux-gnu' || matrix.toolchain.host == 'aarch64-linux-gnu-RPi' }}
-      with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.PRIVATE_KEY }}
-          port: ${{ secrets.PORT }}
-#          source: ${{ github.workspace }}/build/${{ matrix.toolchain.host }}/release/bin/arqma*
-          source: distfiles
-          target: downloads/CLI
+          build/${{ matrix.toolchain.host }}/release/bin/arqma*

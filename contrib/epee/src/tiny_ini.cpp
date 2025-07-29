@@ -28,6 +28,10 @@
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace epee
 {
 

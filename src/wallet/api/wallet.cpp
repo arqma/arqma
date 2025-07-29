@@ -49,8 +49,12 @@
 #include <sstream>
 #include <unordered_map>
 
+#ifdef WIN32
 #include <boost/locale.hpp>
+#endif
+
 #include <boost/filesystem.hpp>
+#include <thread>
 
 using namespace std;
 using namespace cryptonote;
@@ -371,8 +375,27 @@ WalletImpl::WalletImpl(NetworkType nettype, uint64_t kdf_rounds)
 
     m_refreshIntervalMillis = DEFAULT_REFRESH_INTERVAL_MILLIS;
 
-    m_refreshThread = boost::thread([this] () {
-        this->refreshThreadFunc();
+    m_refreshThread = std::thread([this] () { this->refreshThreadFunc(); });
+
+    m_longPollThread = std::thread([this]() {
+      for(;;)
+      {
+        if (!m_refreshEnabled)
+        {
+          std::this_thread::sleep_for(std::chrono::seconds(10));
+          continue;
+        }
+
+        try
+        {
+          if (m_wallet->long_poll_pool_state())
+            m_refreshCV.notify_one();
+        }
+        catch (...)
+        {
+
+        }
+      }
     });
 
 }
@@ -745,18 +768,18 @@ void WalletImpl::setSeedLanguage(const std::string &arg)
 
 int WalletImpl::status() const
 {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     return m_status;
 }
 
 std::string WalletImpl::errorString() const
 {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     return m_errorString;
 }
 
 void WalletImpl::statusWithErrorString(int& status, std::string& errorString) const {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     status = m_status;
     errorString = m_errorString;
 }
@@ -1922,7 +1945,7 @@ bool WalletImpl::watchOnly() const
 
 void WalletImpl::clearStatus() const
 {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     m_status = Status_Ok;
     m_errorString.clear();
 }
@@ -1939,7 +1962,7 @@ void WalletImpl::setStatusCritical(const std::string& message) const
 
 void WalletImpl::setStatus(int status, const std::string& message) const
 {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     m_status = status;
     m_errorString = message;
 }
@@ -1949,7 +1972,7 @@ void WalletImpl::refreshThreadFunc()
     LOG_PRINT_L3(__FUNCTION__ << ": starting refresh thread");
 
     while (true) {
-        boost::mutex::scoped_lock lock(m_refreshMutex);
+        std::unique_lock lock{m_refreshMutex};
         if (m_refreshThreadDone) {
             break;
         }
@@ -1957,8 +1980,8 @@ void WalletImpl::refreshThreadFunc()
         // if auto refresh enabled, we wait for the "m_refreshIntervalSeconds" interval.
         // if not - we wait forever
         if (m_refreshIntervalMillis > 0) {
-            boost::posix_time::milliseconds wait_for_ms(static_cast<boost::int64_t>(m_refreshIntervalMillis.load()));
-            m_refreshCV.timed_wait(lock, wait_for_ms);
+            std::chrono::milliseconds wait_for_ms{m_refreshIntervalMillis.load()};
+            m_refreshCV.wait_for(lock, wait_for_ms);
         } else {
             m_refreshCV.wait(lock);
         }
@@ -1979,7 +2002,7 @@ void WalletImpl::doRefresh()
 {
     bool rescan = m_refreshShouldRescan.exchange(false);
     // synchronizing async and sync refresh calls
-    boost::lock_guard<boost::mutex> guarg(m_refreshMutex2);
+    std::lock_guard guard{m_refreshMutex2};
     do try {
         LOG_PRINT_L3(__FUNCTION__ << ": doRefresh, rescan = "<<rescan);
         if (daemonSynced()) {

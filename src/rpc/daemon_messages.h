@@ -29,11 +29,9 @@
 
 #pragma once
 
-#include <rapidjson/writer.h>
 #include <unordered_map>
 #include <vector>
 
-#include "byte_stream.h"
 #include "message.h"
 #include "cryptonote_protocol/cryptonote_protocol_defs.h"
 #include "rpc/message_data_structs.h"
@@ -43,25 +41,26 @@
 #define BEGIN_RPC_MESSAGE_CLASS(classname) \
 class classname \
 { \
-  public:
+  public: \
+    static const char* const name;
 
 #define BEGIN_RPC_MESSAGE_REQUEST \
-    class Request final : public Message \
+    class Request : public Message \
     { \
       public: \
         Request() { } \
         ~Request() { } \
-        void doToJson(rapidjson::Writer<epee::byte_stream>& dest) const override final; \
-        void fromJson(const rapidjson::Value& val) override final;
+        rapidjson::Value toJson(rapidjson::Document& doc) const; \
+        void fromJson(rapidjson::Value& val);
 
 #define BEGIN_RPC_MESSAGE_RESPONSE \
-    class Response final : public Message \
+    class Response : public Message \
     { \
       public: \
         Response() { } \
         ~Response() { } \
-        void doToJson(rapidjson::Writer<epee::byte_stream>& dest) const override final; \
-        void fromJson(const rapidjson::Value& val) override final;
+        rapidjson::Value toJson(rapidjson::Document& doc) const; \
+        void fromJson(rapidjson::Value& val);
 
 #define END_RPC_MESSAGE_REQUEST };
 #define END_RPC_MESSAGE_RESPONSE };

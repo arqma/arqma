@@ -406,7 +406,6 @@ ELPP_INTERNAL_DEBUGGING_OUT_INFO << ELPP_INTERNAL_DEBUGGING_MSG(internalInfoStre
 #include <sstream>
 #include <memory>
 #include <type_traits>
-#include <atomic>
 #if ELPP_THREADING_ENABLED
 #  if ELPP_USE_STD_THREADING
 #      include <mutex>
@@ -2459,12 +2458,7 @@ class VRegistry : base::NoCopy, public base::threading::ThreadSafe {
     return m_level;
   }
 
-  inline void clearCategories(void) {
-    base::threading::ScopedLock scopedLock(lock());
-    m_categories.clear();
-    m_cached_allowed_categories.clear();
-    m_lowest_priority = INT_MAX;
-  }
+  void clearCategories(void);
 
   inline void clearModules(void) {
     base::threading::ScopedLock scopedLock(lock());
@@ -2477,6 +2471,7 @@ class VRegistry : base::NoCopy, public base::threading::ThreadSafe {
 
   void setModules(const char* modules);
 
+  bool priority_allowed(int priority, const std::string &category);
   bool allowed(Level level, const std::string &category);
 
   bool allowed(base::type::VerboseLevel vlevel, const char* file);
@@ -2508,7 +2503,6 @@ class VRegistry : base::NoCopy, public base::threading::ThreadSafe {
   std::map<std::string, int> m_cached_allowed_categories;
   std::string m_categoriesString;
   std::string m_filenameCommonPrefix;
-  std::atomic<int> m_lowest_priority;
 };
 }  // namespace base
 class LogMessage {
@@ -3863,6 +3857,8 @@ class Helpers : base::StaticClass {
 /// @brief Static helpers to deal with loggers and their configurations
 class Loggers : base::StaticClass {
  public:
+  /// @brief Determines whether logging will occur at this level and category
+  static bool allowed(Level level, const char* cat);
   /// @brief Gets existing or registers new logger
   static Logger* getLogger(const std::string& identity, bool registerIfNotAvailable = true);
   /// @brief Changes default log builder for future loggers

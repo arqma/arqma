@@ -27,16 +27,13 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_minimum_required(VERSION 3.5)
-project(arqma CXX)
-
 set(cryptonote_protocol_sources
   block_queue.cpp
-  cryptonote_protocol_handler-base.cpp
   cryptonote_protocol_handler.inl
+  arqnet.cpp
+  levin_notify.cpp
   core_protocol_instantiation.cpp
-  p2p_net_node_instantiation.cpp
-  levin_notify.cpp)
+  p2p_net_node_instantiation.cpp)
 
 set(cryptonote_protocol_headers)
 
@@ -53,6 +50,7 @@ arqma_add_library(cryptonote_protocol
 target_link_libraries(cryptonote_protocol
   PUBLIC
     p2p
+    arqnet
   PRIVATE
-    easylogging
+    miniupnpc
     ${EXTRA_LIBRARIES})

@@ -132,11 +132,14 @@ namespace epee
     return {src.data(), src.size()};
   }
 
+  template<typename T>
+  constexpr bool is_byte_spannable = std::has_unique_object_representations<T>::value;
+
   //! \return Cast data from `src` as `span<const std::uint8_t>`.
   template<typename T>
   span<const std::uint8_t> to_byte_span(const span<const T> src) noexcept
   {
-    static_assert(!std::is_empty<T>(), "empty value types will not work -> sizeof == 1");
+    static_assert(is_byte_spannable<T>, "source type may have padding");
     static_assert(std::is_standard_layout_v<T>, "type must have standard layout");
     static_assert(std::has_unique_object_representations_v<T>, "type must be trivially copyable with no padding");
     return {reinterpret_cast<const std::uint8_t*>(src.data()), src.size_bytes()};
@@ -146,7 +149,8 @@ namespace epee
   template<typename T>
   span<const std::uint8_t> as_byte_span(const T& src) noexcept
   {
-    static_assert(!std::is_empty<T>(), "empty types will not work -> sizeof == 1");
+    static_assert(!std::is_empty<T>(), "empty types cannot be converted to a byte span");
+    static_assert(is_byte_spannable<T>, "source type may have padding");
     static_assert(std::is_standard_layout_v<T>, "type must have standard layout");
     static_assert(std::has_unique_object_representations_v<T>, "type must be trivially copyable with no padding");
     return {reinterpret_cast<const std::uint8_t*>(std::addressof(src)), sizeof(T)};
@@ -156,17 +160,18 @@ namespace epee
   template<typename T>
   span<std::uint8_t> as_mut_byte_span(T& src) noexcept
   {
-    static_assert(!std::is_empty<T>(), "empty types will not work -> sizeof == 1");
+    static_assert(!std::is_empty<T>(), "empty types cannot be converted to a byte span");
+    static_assert(is_byte_spannable<T>, "source type may have padding");
     static_assert(std::is_standard_layout_v<T>, "type must have standard layout");
     static_assert(std::has_unique_object_representations_v<T>, "type must be trivially copyable with no padding");
     return {reinterpret_cast<std::uint8_t*>(std::addressof(src)), sizeof(T)};
   }
 
-  //! make a span from a std::string
-  template<typename T>
-  span<const T> strspan(const std::string &s) noexcept
+  template<typename T, std::enable_if_t<
+      std::is_same_v<T, char> || std::is_same_v<T, unsigned char> ||
+      std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t> || std::is_same_v<T, std::byte>, int> = 0>
+  span<const T> strspan(std::string_view s) noexcept
   {
-    static_assert(std::is_same<T, char>() || std::is_same<T, unsigned char>() || std::is_same<T, int8_t>() || std::is_same<T, uint8_t>(), "Unexpected type");
     return {reinterpret_cast<const T*>(s.data()), s.size()};
   }
 }

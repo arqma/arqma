@@ -40,18 +40,13 @@
 
 #include "string_tools.h"
 #include "syncobj.h"
-#include "math_helper.h"
+#include "common/periodic_task.h"
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "cryptonote_basic/verification_context.h"
 #include "blockchain_db/blockchain_db.h"
 #include "crypto/hash.h"
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "rpc/message_data_structs.h"
-
-namespace service_nodes
-{
-  class service_node_list;
-};
 
 namespace cryptonote
 {
@@ -69,16 +64,25 @@ namespace cryptonote
   public:
     bool operator()(const tx_by_fee_and_receive_time_entry& a, const tx_by_fee_and_receive_time_entry& b) const
     {
-      std::string ahash(a.second.data, sizeof(a.second.data));
-      std::string bhash(b.second.data, sizeof(b.second.data));
-      //      prioritize      deregister             fee                    arrival time          hash
-      return std::make_tuple(!std::get<0>(a.first), -std::get<1>(a.first), std::get<2>(a.first), ahash)
-           < std::make_tuple(!std::get<0>(b.first), -std::get<1>(b.first), std::get<2>(b.first), bhash);
+      // Sort order:         non-standard txes,     fee                    arrival time          hash
+      return std::make_tuple(!std::get<0>(a.first), -std::get<1>(a.first), std::get<2>(a.first), a.second)
+           < std::make_tuple(!std::get<0>(b.first), -std::get<1>(b.first), std::get<2>(b.first), b.second);
     }
   };
 
   //! container for sorting transactions by fee per unit size
   typedef std::set<tx_by_fee_and_receive_time_entry, txCompare> sorted_tx_container;
+
+  struct tx_pool_options
+  {
+    bool kept_by_block = false;
+    bool relayed = false;
+    bool do_not_relay = false;
+
+    static tx_pool_options from_block() { tx_pool_options o; o.kept_by_block = true; o.relayed = true; return o; }
+    static tx_pool_options from_peer() { tx_pool_options o; o.relayed = true; return o; }
+    static tx_pool_options new_tx(bool do_not_relay = false) { tx_pool_options o; o.do_not_relay = do_not_relay; return o; }
+  };
 
   /**
    * @brief Transaction pool, handles transactions which are not part of a block
@@ -94,7 +98,7 @@ namespace cryptonote
    *   helping create a new block template by choosing transactions for it
    *
    */
-  class tx_memory_pool: boost::noncopyable
+  class tx_memory_pool
   {
   public:
     /**
@@ -104,14 +108,17 @@ namespace cryptonote
      */
     tx_memory_pool(Blockchain& bchs);
 
+    tx_memory_pool(const tx_memory_pool &) = delete;
+    tx_memory_pool &operator=(const tx_memory_pool &) = delete;
+
 
     /**
-     * @copydoc add_tx(transaction&, tx_verification_context&, bool, bool, uint8_t)
+     * @copydoc add_tx(transaction&, tx_verification_context&, const tx_pool_options &, uint8_t)
      *
      * @param id the transaction's hash
      * @param tx_weight the transaction's weight
      */
-    bool add_tx(transaction &tx, const crypto::hash &id, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version);
+    bool add_tx(transaction &tx, const crypto::hash &id, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, const tx_pool_options &opts, uint8_t hard_fork_version);
 
     /**
      * @brief add a transaction to the transaction pool
@@ -130,7 +137,7 @@ namespace cryptonote
      *
      * @return true if the transaction passes validations, otherwise false
      */
-    bool add_tx(transaction &tx, tx_verification_context& tvc, bool kept_by_block, bool relayed, bool do_not_relay, uint8_t version);
+    bool add_tx(transaction &tx, tx_verification_context& tvc, const tx_pool_options &opts, uint8_t hard_fork_version);
 
     /**
      * @brief takes a transaction with the given hash from the pool
@@ -157,6 +164,8 @@ namespace cryptonote
      * @return true if the transaction is in the pool, otherwise false
      */
     bool have_tx(const crypto::hash &id) const;
+
+    std::vector<uint8_t> have_txs(const std::vector<crypto::hash> &hashes) const;
 
     /**
      * @brief action to take when notified of a block added to the blockchain
@@ -196,10 +205,6 @@ namespace cryptonote
     void unlock() const { m_transactions_lock.unlock(); }
 
     bool try_lock() const { return m_transactions_lock.try_lock(); }
-
-    void lock() { m_transactions_lock.lock(); }
-    void unlock() { m_transactions_lock.unlock(); }
-    bool try_lock() { return m_transactions_lock.try_lock(); }
 
     // load/store operations
 
@@ -319,6 +324,8 @@ namespace cryptonote
      */
     bool get_transaction(const crypto::hash& h, cryptonote::blobdata& txblob) const;
 
+    int find_transactions(const std::vector<crypto::hash> &tx_hashes, std::vector<cryptonote::blobdata> &txblobs) const;
+
     /**
      * @brief get a list of all relayable transactions and their hashes
      *
@@ -333,6 +340,8 @@ namespace cryptonote
      * @return true
      */
     bool get_relayable_transactions(std::vector<std::pair<crypto::hash, cryptonote::blobdata>>& txs) const;
+
+    int set_relayable(const std::vector<crypto::hash> &tx_hashes);
 
     /**
      * @brief tell the pool that certain transactions were just relayed
@@ -484,14 +493,14 @@ namespace cryptonote
      */
     void mark_double_spend(const transaction &tx);
 
-//    bool remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta = nullptr, const sorted_tx_container::iterator *stc_it = nullptr);
+    bool remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta = nullptr, const sorted_tx_container::iterator *stc_it = nullptr);
 
     /**
      * @brief prune lowest fee/byte txes till we're not above bytes
      *
      * if bytes is 0, use m_txpool_max_weight
      */
-    void prune(size_t bytes = 0);
+    void prune(const crypto::hash &skip);
 
     //TODO: confirm the below comments and investigate whether or not this
     //      is the desired behavior
@@ -504,14 +513,14 @@ namespace cryptonote
      */
     typedef std::unordered_map<crypto::key_image, std::unordered_set<crypto::hash>> key_images_container;
 
-    mutable boost::recursive_mutex m_transactions_lock;  //!< mutex for the pool
+    mutable std::recursive_mutex m_transactions_lock;  //!< mutex for the pool
 
     //! container for spent key images from the transactions in the pool
     key_images_container m_spent_key_images;
 
     //TODO: this time should be a named constant somewhere, not hard-coded
     //! interval on which to check for stale/"stuck" transactions
-    epee::math_helper::periodic_task m_remove_stuck_tx_interval{30s};
+    tools::periodic_task m_remove_stuck_tx_interval{30s};
 
     //TODO: look into doing this better
     //!< container for transactions organized by fee per size and receive time

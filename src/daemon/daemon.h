@@ -45,6 +45,8 @@ private:
 private:
   std::unique_ptr<t_internals> mp_internals;
   uint16_t public_rpc_port;
+  std::string zmq_rpc_bind_address;
+  std::string zmq_rpc_bind_port;
 public:
   t_daemon(
       boost::program_options::variables_map const & vm, uint16_t public_rpc_port = 0

@@ -40,6 +40,9 @@ using namespace epee;
 
 extern "C" {
 #include <sodium.h>
+#ifdef ENABLE_SYSTEMD
+  #include <systemd/sd-daemon.h>
+#endif
 }
 
 #include "cryptonote_core.h"
@@ -48,7 +51,6 @@ extern "C" {
 #include "common/download.h"
 #include "common/threadpool.h"
 #include "common/command_line.h"
-#include "cryptonote_basic/events.h"
 #include "daemon/command_line_args.h"
 #include "warnings.h"
 #include "crypto/crypto.h"
@@ -60,13 +62,13 @@ extern "C" {
 #include "ringct/rctTypes.h"
 #include "blockchain_db/blockchain_db.h"
 #include "ringct/rctSigs.h"
-#include "rpc/zmq_pub.h"
 #include "common/notify.h"
 #include "version.h"
 #include "memwipe.h"
 #include "common/i18n.h"
 #include "net/local_ip.h"
 #include <boost/filesystem.hpp>
+#include "cryptonote_protocol/arqnet.h"
 
 #include "config/ascii.h"
 
@@ -148,7 +150,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<uint64_t> arg_prep_blocks_threads = {
     "prep-blocks-threads"
   , "Max number of threads to use when preparing block hashes in groups."
-  , 4
+  , 8
   };
   static const command_line::arg_descriptor<uint64_t> arg_show_time_stats = {
     "show-time-stats"
@@ -223,11 +225,41 @@ namespace cryptonote
   , "The port on which this service node's storage server is accessible. A listening "
     "storage server is required for service nodes."
   , 0};
+  static const command_line::arg_descriptor<uint16_t, false, true, 2> arg_arqnet_port = {
+    "arqnet-port"
+  , "The port on which this service node listen to direct connections from other "
+    "service nodes for quorum messages. Port must be publicly reachable on the "
+    "'--sn-ip' address and binds to the p2p IP address. Only applies when "
+    "running as a service node."
+  , config::ANET_DEFAULT_PORT
+  , {{ &cryptonote::arg_testnet_on, &cryptonote::arg_stagenet_on }}
+  , [](std::array<bool, 2> testnet_stagenet, bool defaulted, uint16_t val) -> uint16_t {
+    return defaulted && testnet_stagenet[0] ? config::testnet::ANET_DEFAULT_PORT :
+           defaulted && testnet_stagenet[1] ? config::stagenet::ANET_DEFAULT_PORT :
+           val;
+    }
+  };
   static const command_line::arg_descriptor<uint64_t> arg_store_quorum_history = {
     "store-quorum-history"
   , "Store the Service Node Quorum history for the last N blocks. "
     "Specify the number of blocks or 1 to store the entire history."
   , 0};
+  //-----------------------------------------------------------------------------------------------
+  [[noreturn]] static void need_core_init()
+  {
+    throw std::logic_error("Internal error: arqnet::init_core_callbacks() should have been called");
+  }
+  void *(*arqnet_new)(core &, const std::string &bind);
+  void (*arqnet_delete)(void *&self);
+  void (*arqnet_relay_obligation_votes)(void *self, const std::vector<service_nodes::quorum_vote_t> &);
+  static bool init_core_callback_stubs()
+  {
+    arqnet_new = [](core &, const std::string &) -> void * { need_core_init(); };
+    arqnet_delete = [](void *&) { need_core_init(); };
+    arqnet_relay_obligation_votes = [](void *, const std::vector<service_nodes::quorum_vote_t> &) { need_core_init(); };
+    return false;
+  }
+  bool init_core_callback_complete = init_core_callback_stubs();
   //-----------------------------------------------------------------------------------------------
   core::core(i_cryptonote_protocol* pprotocol):
               m_mempool(m_blockchain_storage),
@@ -246,6 +278,7 @@ namespace cryptonote
               m_nettype(UNDEFINED),
               m_update_available(false),
               m_last_storage_server_ping(0),
+              /*m_last_arqnet_ping(0),*/
               m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
@@ -280,19 +313,14 @@ namespace cryptonote
     return res;
   }
   //-----------------------------------------------------------------------------------
-  void core::set_txpool_listener(boost::function<void(std::vector<txpool_event>)> zmq_pub)
-  {
-    CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
-    m_zmq_pub = std::move(zmq_pub);
-  }
-  //-----------------------------------------------------------------------------------
   void core::stop()
   {
+    m_miner.stop();
     m_blockchain_storage.cancel();
 
     tools::download_async_handle handle;
     {
-      boost::lock_guard<boost::mutex> lock(m_update_mutex);
+      std::lock_guard lock{m_update_mutex};
       handle = m_update_download;
       m_update_download = 0;
     }
@@ -332,6 +360,7 @@ namespace cryptonote
     command_line::add_arg(desc, arg_service_node);
     command_line::add_arg(desc, arg_public_ip);
     command_line::add_arg(desc, arg_sn_bind_port);
+    command_line::add_arg(desc, arg_arqnet_port);
     command_line::add_arg(desc, arg_store_quorum_history);
 
     miner::init_options(desc);
@@ -365,10 +394,16 @@ namespace cryptonote
       m_service_node_keys = std::make_unique<service_node_keys>();
 
       m_storage_port = command_line::get_arg(vm, arg_sn_bind_port);
+      m_arqnet_port = command_line::get_arg(vm, arg_arqnet_port);
 
       bool storage_ok = true;
       if (m_storage_port == 0) {
         MERROR("Please specify the port on which the storage server is listening with: '--" << arg_sn_bind_port.name << " <port>'");
+        storage_ok = false;
+      }
+
+      if (m_arqnet_port == 0) {
+        MERROR("Arq-Net port cannot be 0; Please specify a valid port to listen on with: '--" << arg_arqnet_port.name << " <port>'");
         storage_ok = false;
       }
 
@@ -394,7 +429,7 @@ namespace cryptonote
 
       if (!storage_ok)
       {
-        MERROR("IMPORTANT: All service node operators are now required to run arqma storage " << "server and provide the public ip and port on which it can be accessed on the internet.");
+        MERROR("IMPORTANT: All service node operators are now required to run arqma storage\nserver and provide the public ip and ports on which it can be accessed on the internet.");
         return false;
       }
 
@@ -446,12 +481,6 @@ namespace cryptonote
     return m_blockchain_storage.get_split_transactions_blobs(txs_ids, txs, missed_txs);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_txpool_backlog(std::vector<tx_backlog_entry>& backlog) const
-  {
-    m_mempool.get_transaction_backlog(backlog);
-    return true;
-  }
-  //-----------------------------------------------------------------------------------------------
   bool core::get_transactions(const std::vector<crypto::hash>& txs_ids, std::vector<transaction>& txs, std::vector<crypto::hash>& missed_txs) const
   {
     return m_blockchain_storage.get_transactions(txs_ids, txs, missed_txs);
@@ -466,6 +495,58 @@ namespace cryptonote
   {
     return m_blockchain_storage.get_alternative_blocks_count();
   }
+  //-----------------------------------------------------------------------------------------------
+#ifdef ENABLE_SYSTEMD
+  static std::string time_ago_str(time_t now, time_t then)
+  {
+    if (then >= now)
+      return "now"s;
+    if (then == 0)
+      return "never"s;
+    int seconds = now - then;
+    if (seconds >= 60)
+      return std::to_string(seconds / 60) + "m" + std::to_string(seconds % 60) + "s";
+    return std::to_string(seconds % 60) + "s";
+  }
+
+  static std::string get_systemd_status_string(const core &c)
+  {
+    std::string s;
+    s.reserve(128);
+    s += "Height: ";
+    s += std::to_string(c.get_blockchain_storage().get_current_blockchain_height());
+    s += ", SN: ";
+    auto keys = c.get_service_node_keys();
+    if (!keys)
+      s += "no";
+    else
+    {
+      auto &snl = c.get_service_node_list();
+      auto states = snl.get_service_node_list_state({ keys->pub });
+      if (states.empty())
+        s += "not registered";
+      else
+      {
+        auto &info = *states[0].info;
+        if (!info.is_fully_funded())
+          s += "awaiting contr.";
+        else if (info.is_active())
+          s += "active";
+        else if (info.is_decommissioned())
+          s += "decomm.";
+
+        uint64_t last_proof = 0;
+        snl.access_proof(keys->pub, [&](auto &proof) { last_proof = proof.timestamp; });
+        s += ", proof: ";
+        time_t now = std::time(nullptr);
+        s += time_ago_str(now, last_proof);
+        s += ", storage: ";
+        s += time_ago_str(now, c.m_last_storage_server_ping);
+      }
+    }
+    return s;
+  }
+#endif
   //-----------------------------------------------------------------------------------------------
   bool core::init(const boost::program_options::variables_map& vm, const cryptonote::test_options *test_options, const GetCheckpointsCallback& get_checkpoints/* = nullptr */)
   {
@@ -637,20 +718,7 @@ namespace cryptonote
     try
     {
       if(!command_line::is_arg_defaulted(vm, arg_block_notify))
-      {
-        struct hash_notify
-        {
-          tools::Notify cmdline;
-
-          void operator()(std::uint64_t, epee::span<const block> blocks) const
-          {
-            for (const block bl : blocks)
-              cmdline.notify("%s", epee::string_tools::pod_to_hex(get_block_hash(bl)).c_str(), NULL);
-          }
-        };
-
-        m_blockchain_storage.add_block_notify(hash_notify{{command_line::get_arg(vm, arg_block_notify).c_str()}});
-      }
+        m_blockchain_storage.set_block_notify(std::shared_ptr<tools::Notify>(new tools::Notify(command_line::get_arg(vm, arg_block_notify).c_str())));
     }
     catch (const std::exception& e)
     {
@@ -745,6 +813,20 @@ namespace cryptonote
       CHECK_AND_ASSERT_MES(m_blockchain_storage.prune_blockchain(), false, "Failed to prune blockchain");
     }
 
+    if (m_service_node_keys)
+    {
+      std::lock_guard<std::mutex> lock{m_arqnet_init_mutex};
+      std::string listen_ip = vm["p2p-bind-ip"].as<std::string>();
+      if (listen_ip.empty())
+        listen_ip = "0.0.0.0";
+      std::string arqnet_listen = "tcp://" + listen_ip + ":" + std::to_string(m_arqnet_port);
+      m_arqnet_obj = arqnet_new(*this, arqnet_listen);
+    }
+
+#ifdef ENABLE_SYSTEMD
+    sd_notify(0, ("READY=1\nSTATUS=" + get_systemd_status_string(*this)).c_str());
+#endif
+
     return true;
   }
   //-----------------------------------------------------------------------------------------------
@@ -825,6 +907,11 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::deinit()
   {
+#ifdef ENABLE_SYSTEMD
+    sd_notify(0, "STOPPING=1\nSTATUS=Shutting down");
+#endif
+    if (m_arqnet_obj)
+      arqnet_delete(m_arqnet_obj);
     m_service_node_list.store();
     m_miner.stop();
     m_mempool.deinit();
@@ -858,10 +945,8 @@ namespace cryptonote
     return false;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
+  void core::parse_incoming_tx_pre(tx_verification_batch_info &tx_info)
   {
-    tvc = {};
-
     uint8_t hf = m_blockchain_storage.get_current_hard_fork_version();
     uint64_t max_tx_size;
 
@@ -874,84 +959,34 @@ namespace cryptonote
       max_tx_size = get_max_tx_size();
     }
 
-    if(tx_blob.size() > max_tx_size)
+    if(tx_info.blob->size() > max_tx_size)
     {
-      LOG_PRINT_L1("WRONG TRANSACTION BLOB, too big size " << tx_blob.size() << ", rejected");
-      tvc.m_verification_failed = true;
-      tvc.m_too_big = true;
-      return false;
+      LOG_PRINT_L1("WRONG TRANSACTION BLOB, too big size " << tx_info.blob->size() << ", rejected");
+      tx_info.tvc.m_verification_failed = true;
+      tx_info.tvc.m_too_big = true;
+      return;
     }
 
-    tx_hash = crypto::null_hash;
-
-    bool r;
-    if(!parse_tx_from_blob(tx, tx_hash, tx_blob))
+    tx_info.parsed = parse_tx_from_blob(tx_info.tx, tx_info.tx_hash, *tx_info.blob);
+    if(!tx_info.parsed)
     {
       LOG_PRINT_L1("WRONG TRANSACTION BLOB, Failed to parse, rejected");
-      tvc.m_verification_failed = true;
-      return false;
+      tx_info.tvc.m_verification_failed = true;
+      return;
     }
     //std::cout << "!"<< tx.vin.size() << std::endl;
 
-    bad_semantics_txes_lock.lock();
+    std::lock_guard lock{bad_semantics_txes_lock};
     for (int idx = 0; idx < 2; ++idx)
     {
-      if (bad_semantics_txes[idx].find(tx_hash) != bad_semantics_txes[idx].end())
+      if (bad_semantics_txes[idx].find(tx_info.tx_hash) != bad_semantics_txes[idx].end())
       {
-        bad_semantics_txes_lock.unlock();
         LOG_PRINT_L1("Transaction already seen with bad semantics, rejected");
-        tvc.m_verification_failed = true;
-        return false;
+        tx_info.tvc.m_verification_failed = true;
+        return;
       }
     }
-    bad_semantics_txes_lock.unlock();
-    return true;
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_post(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, bool keeped_by_block, bool relayed, bool do_not_relay)
-  {
-    if(!check_tx_syntax(tx))
-    {
-      LOG_PRINT_L1("WRONG TRANSACTION BLOB, Failed to check tx " << tx_hash << " syntax, rejected");
-      tvc.m_verification_failed = true;
-      return false;
-    }
-    // resolve outPk references in rct txes
-    // outPk aren't the only thing that need resolving for a fully resolved tx,
-    // but outPk (1) are needed now to check range proof semantics, and
-    // (2) do not need access to the blockchain to find data
-    if(tx.version >= txversion::v2)
-    {
-      rct::rctSig &rv = tx.rct_signatures;
-      if(rv.type != rct::RCTTypeBulletproof && rv.type != rct::RCTTypeBulletproof2)
-      {
-        if(rv.outPk.size() != tx.vout.size())
-        {
-          LOG_PRINT_L1("WRONG TRANSACTION BLOB, Bad outPk size in tx " << tx_hash << ", rejected");
-          tvc.m_verification_failed = true;
-          return false;
-        }
-        for (size_t n = 0; n < tx.rct_signatures.outPk.size(); ++n)
-          rv.outPk[n].dest = rct::pk2rct(boost::get<txout_to_key>(tx.vout[n].target).key);
-        const bool bulletproof = rct::is_rct_bulletproof(rv.type);
-        if((bulletproof && rv.type != rct::RCTTypeBulletproof) || (bulletproof && rv.type != rct::RCTTypeBulletproof2))
-        {
-          if(rv.p.bulletproofs.size() != tx.vout.size())
-          {
-            LOG_PRINT_L1("WRONG TRANSACTION BLOB, Bad bulletproofs size in tx " << tx_hash << ", rejected");
-            tvc.m_verification_failed = true;
-            return false;
-          }
-          for (size_t n = 0; n < rv.p.bulletproofs.size(); ++n)
-          {
-            rv.p.bulletproofs[n].V.resize(1);
-            rv.p.bulletproofs[n].V[0] = rv.outPk[n].mask;
-          }
-        }
-      }
-    }
-
-    return true;
+    tx_info.result = true;
   }
   //-----------------------------------------------------------------------------------------------
   void core::set_semantics_failed(const crypto::hash &tx_hash)
@@ -977,20 +1012,21 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool keeped_by_block)
+  void core::parse_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool kept_by_block)
   {
-    bool ret = true;
-
-    if(keeped_by_block && get_blockchain_storage().is_within_compiled_block_hash_area())
+    if(kept_by_block && get_blockchain_storage().is_within_compiled_block_hash_area())
     {
       MTRACE("Skipping semantics check for tx kept by block in embedded hash area");
-      return true;
+      return;
     }
 
     std::vector<const rct::rctSig*> rvv;
     for(size_t n = 0; n < tx_info.size(); ++n)
     {
-      if(!check_tx_semantic(*tx_info[n].tx, keeped_by_block))
+      if (!tx_info[n].result || tx_info[n].already_have)
+        continue;
+
+      if(!check_tx_semantic(tx_info[n].tx, kept_by_block))
       {
         set_semantics_failed(tx_info[n].tx_hash);
         tx_info[n].tvc.m_verification_failed = true;
@@ -998,9 +1034,9 @@ namespace cryptonote
         continue;
       }
 
-      if(!tx_info[n].tx->is_transfer() || tx_info[n].tx->version < txversion::v2)
+      if(!tx_info[n].tx.is_transfer() || tx_info[n].tx.version < txversion::v2)
         continue;
-      const rct::rctSig &rv = tx_info[n].tx->rct_signatures;
+      const rct::rctSig &rv = tx_info[n].tx.rct_signatures;
       switch(rv.type) {
         case rct::RCTTypeNull:
           // coinbase should not come here, so we reject for all other types
@@ -1063,15 +1099,14 @@ namespace cryptonote
     if(!rvv.empty() && !rct::verRctSemanticsSimple(rvv))
     {
       LOG_PRINT_L1("One transaction among this group has bad semantics, verifying one at a time");
-      ret = false;
       const bool assumed_bad = rvv.size() == 1; // if there's only one tx, it must be the bad one
       for(size_t n = 0; n < tx_info.size(); ++n)
       {
-        if(!tx_info[n].result)
+        if(!tx_info[n].result || tx_info[n].already_have)
           continue;
-        if(tx_info[n].tx->rct_signatures.type != rct::RCTTypeBulletproof && tx_info[n].tx->rct_signatures.type != rct::RCTTypeBulletproof2)
+        if(tx_info[n].tx.rct_signatures.type != rct::RCTTypeBulletproof && tx_info[n].tx.rct_signatures.type != rct::RCTTypeBulletproof2)
           continue;
-        if(assumed_bad || !rct::verRctSemanticsSimple(tx_info[n].tx->rct_signatures))
+        if(assumed_bad || !rct::verRctSemanticsSimple(tx_info[n].tx.rct_signatures))
         {
           set_semantics_failed(tx_info[n].tx_hash);
           tx_info[n].tvc.m_verification_failed = true;
@@ -1079,130 +1114,102 @@ namespace cryptonote
         }
       }
     }
-
-    return ret;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_txs(const std::vector<blobdata>& tx_blobs, std::vector<tx_verification_context>& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
+  std::vector<core::tx_verification_batch_info> core::parse_incoming_txs(const std::vector<blobdata>& tx_blobs, const tx_pool_options &opts)
   {
-    TRY_ENTRY();
-    CRITICAL_REGION_LOCAL(m_incoming_tx_lock);
+    std::vector<tx_verification_batch_info> tx_info(tx_blobs.size());
 
-    std::vector<txpool_event> results(tx_blobs.size());
-
-    tvc.resize(tx_blobs.size());
     tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
     tools::threadpool::waiter waiter(tpool);
-    std::vector<blobdata>::const_iterator it = tx_blobs.begin();
-    for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
-      tpool.submit(&waiter, [&, i, it] {
+    for (size_t i = 0; i < tx_blobs.size(); i++)
+    {
+      tx_info[i].blob = &tx_blobs[i];
+      tpool.submit(&waiter, [this, &info = tx_info[i]] {
         try
         {
-          results[i].res = handle_incoming_tx_pre(*it, tvc[i], results[i].tx, results[i].hash, keeped_by_block, relayed, do_not_relay);
+          parse_incoming_tx_pre(info);
         }
         catch (const std::exception& e)
         {
           MERROR_VER("Exception in handle_incoming_tx_pre: " << e.what());
-          tvc[i].m_verification_failed = true;
-          results[i].res = false;
+          info.tvc.m_verification_failed = true;
         }
       });
     }
-    if (!waiter.wait())
-      return false;
-    it = tx_blobs.begin();
-    std::vector<bool> already_have(tx_blobs.size(), false);
-    for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
-      if (!results[i].res)
+    waiter.wait();
+
+    for (auto &info : tx_info)
+    {
+      if (!info.result)
         continue;
-      if(m_mempool.have_tx(results[i].hash))
+
+      if (m_mempool.have_tx(info.tx_hash))
       {
-        LOG_PRINT_L2("tx " << results[i].hash << "already have transaction in tx_pool");
-        already_have[i] = true;
+        LOG_PRINT_L2("tx " << info.tx_hash << " already have transaction in tx_pool");
+        info.already_have = true;
       }
-      else if(m_blockchain_storage.have_tx(results[i].hash))
+      else if(m_blockchain_storage.have_tx(info.tx_hash))
       {
-        LOG_PRINT_L2("tx " << results[i].hash << " already have transaction in blockchain");
-        already_have[i] = true;
-      }
-      else
-      {
-        tpool.submit(&waiter, [&, i, it] {
-          try
-          {
-            results[i].res = handle_incoming_tx_post(*it, tvc[i], results[i].tx, results[i].hash, keeped_by_block, relayed, do_not_relay);
-          }
-          catch (const std::exception& e)
-          {
-            MERROR_VER("Exception in handle_incoming_tx_post: " << e.what());
-            tvc[i].m_verification_failed = true;
-            results[i].res = false;
-          }
-        });
+        LOG_PRINT_L2("tx " << info.tx_hash << " already have transaction in blockchain");
+        info.already_have = true;
       }
     }
-    if (!waiter.wait())
-      return false;
 
-    std::vector<tx_verification_batch_info> tx_info;
-    tx_info.reserve(tx_blobs.size());
-    for (size_t i = 0; i < tx_blobs.size(); i++) {
-      if (!results[i].res)
-        continue;
-      tx_info.push_back({&results[i].tx, results[i].hash, tvc[i], results[i].res});
-    }
-    if (!tx_info.empty())
-      handle_incoming_tx_accumulated_batch(tx_info, keeped_by_block);
+    parse_incoming_tx_accumulated_batch(tx_info, opts.kept_by_block);
 
-    bool valid_events = false;
+    return tx_info;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::handle_parsed_txs(std::vector<tx_verification_batch_info> &parsed_txs, const tx_pool_options &opts)
+  {
+    uint8_t hard_fork_version = m_blockchain_storage.get_current_hard_fork_version();
     bool ok = true;
-    it = tx_blobs.begin();
-    for (size_t i = 0; i < tx_blobs.size(); i++, ++it) {
-      if (!results[i].res)
+    tx_pool_options tx_opts;
+    for (size_t i = 0; i < parsed_txs.size(); i++)
+    {
+      auto &info = parsed_txs[i];
+      if (!info.result)
       {
         ok = false;
         continue;
       }
-      if (keeped_by_block)
-        get_blockchain_storage().on_new_tx_from_block(results[i].tx);
-      if (already_have[i])
+      if (opts.kept_by_block)
+        get_blockchain_storage().on_new_tx_from_block(info.tx);
+      if (info.already_have)
         continue;
 
-      // if it's a pruned tx from an incoming block, we'll get a weight that's technically
-      // different from the actual transaction weight, but it's OK for our use. Those txes
-      // will be ignored when mining, and using that "pruned" weight seems appropriate for
-      // keeping the txpool size constrained
-      const uint64_t weight = get_transaction_weight(results[i].tx, it->size());
-      ok &= add_new_tx(results[i].tx, results[i].hash, tx_blobs[i], weight, tvc[i], keeped_by_block, relayed, do_not_relay);
-      if(tvc[i].m_verification_failed)
-        MERROR_VER("Transaction verification failed: " << results[i].hash);
-      else if(tvc[i].m_verification_impossible)
-        MERROR_VER("Transaction verification impossible: " << results[i].hash);
-
-      if(tvc[i].m_added_to_pool)
-      {
-        MDEBUG("tx added: " << results[i].hash);
-        valid_events = true;
-      }
+      const size_t weight = get_transaction_weight(info.tx, info.blob->size());
+      const tx_pool_options *local_opts = &opts;
+      if (m_mempool.add_tx(info.tx, info.tx_hash, *info.blob, weight, info.tvc, *local_opts, hard_fork_version))
+        MDEBUG("tx added: " << info.tx_hash);
       else
-        results[i].res = false;
+      {
+        ok = false;
+        if (info.tvc.m_verification_failed)
+          MERROR_VER("Transaction verification failed: " << info.tx_hash);
+        else if (info.tvc.m_verification_impossible)
+          MERROR_VER("Transaction verification impossible: " << info.tx_hash);
+      }
     }
-
-    if (valid_events && m_zmq_pub)
-      m_zmq_pub(std::move(results));
-
     return ok;
-    CATCH_ENTRY_L0("core::handle_incoming_txs()", false);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_incoming_tx(const blobdata& tx_blob, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
+  std::vector<core::tx_verification_batch_info> core::handle_incoming_txs(const std::vector<blobdata>& tx_blobs, const tx_pool_options &opts)
   {
-    std::vector<blobdata> tx_blobs;
-    tx_blobs.push_back(tx_blob);
-    std::vector<tx_verification_context> tvcv(1);
-    bool r = handle_incoming_txs(tx_blobs, tvcv, keeped_by_block, relayed, do_not_relay);
-    tvc = tvcv[0];
-    return r;
+    auto lock = incoming_tx_lock();
+    auto parsed = parse_incoming_txs(tx_blobs, opts);
+    handle_parsed_txs(parsed, opts);
+    return parsed;
+  }
+  //-----------------------------------------------------------------------------------------------
+  bool core::handle_incoming_tx(const blobdata& tx_blob, tx_verification_context& tvc, const tx_pool_options &opts)
+  {
+    const std::vector<cryptonote::blobdata> tx_blobs{{tx_blob}};
+    auto parsed = handle_incoming_txs(tx_blobs, opts);
+    parsed[0].blob = &tx_blob;
+    tvc = parsed[0].tvc;
+    return parsed[0].result && (parsed[0].already_have || tvc.m_added_to_pool);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::check_tx_semantic(const transaction& tx, bool keeped_by_block) const
@@ -1307,7 +1314,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = m_nettype == MAINNET ? 1700000 : m_nettype == STAGENET ? 0 : 0;
+    static const uint64_t quick_height = m_nettype == MAINNET ? 1720000 : m_nettype == STAGENET ? 0 : 0;
     size_t res = 0;
     if(block_sync_size > 0)
       res = block_sync_size;
@@ -1422,36 +1429,9 @@ namespace cryptonote
     return true;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::add_new_tx(transaction& tx, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
-  {
-    crypto::hash tx_hash = get_transaction_hash(tx);
-    blobdata bl;
-    t_serializable_object_to_blob(tx, bl);
-    size_t tx_weight = get_transaction_weight(tx, bl.size());
-    return add_new_tx(tx, tx_hash, bl, tx_weight, tvc, keeped_by_block, relayed, do_not_relay);
-  }
-  //-----------------------------------------------------------------------------------------------
   size_t core::get_blockchain_total_transactions() const
   {
     return m_blockchain_storage.get_total_transactions();
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, bool keeped_by_block, bool relayed, bool do_not_relay)
-  {
-    if(m_mempool.have_tx(tx_hash))
-    {
-      LOG_PRINT_L2("tx " << tx_hash << "already have transaction in tx_pool");
-      return true;
-    }
-
-    if(m_blockchain_storage.have_tx(tx_hash))
-    {
-      LOG_PRINT_L2("tx " << tx_hash << " already have transaction in blockchain");
-      return true;
-    }
-
-    uint8_t version = m_blockchain_storage.get_current_hard_fork_version();
-    return m_mempool.add_tx(tx, tx_hash, blob, tx_weight, tvc, keeped_by_block, relayed, do_not_relay, version);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::relay_txpool_transactions()
@@ -1460,7 +1440,7 @@ namespace cryptonote
     std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
     if (m_mempool.get_relayable_transactions(txs) && !txs.empty())
     {
-      cryptonote_connection_context fake_context{};
+      cryptonote_connection_context fake_context;
       tx_verification_context tvc{};
       NOTIFY_NEW_TRANSACTIONS::request r;
       for (auto it = txs.begin(); it != txs.end(); ++it)
@@ -1478,10 +1458,10 @@ namespace cryptonote
     if (!m_service_node_keys)
       return true;
 
-    NOTIFY_UPTIME_PROOF::request req = m_service_node_list.generate_uptime_proof(*m_service_node_keys, m_sn_public_ip, m_storage_port);
+    NOTIFY_UPTIME_PROOF::request req = m_service_node_list.generate_uptime_proof(*m_service_node_keys, m_sn_public_ip, m_storage_port, m_arqnet_port);
 
     cryptonote_connection_context fake_context{};
-    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context);
+    bool relayed = get_protocol()->relay_uptime_proof(req, fake_context, true);
     if (relayed)
       MGINFO("Submitted uptime-proof for service node (yours): " << m_service_node_keys->pub);
 
@@ -1493,7 +1473,7 @@ namespace cryptonote
     return m_service_node_list.handle_uptime_proof(proof, my_uptime_proof_confirmation);
   }
   //-----------------------------------------------------------------------------------------------
-  void core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
+  crypto::hash core::on_transaction_relayed(const cryptonote::blobdata& tx_blob)
   {
     std::vector<std::pair<crypto::hash, cryptonote::blobdata>> txs;
     cryptonote::transaction tx;
@@ -1501,27 +1481,36 @@ namespace cryptonote
     if (!parse_and_validate_tx_from_blob(tx_blob, tx, tx_hash))
     {
       LOG_ERROR("Failed to parse relayed transaction");
-      return;
+      return crypto::null_hash;
     }
     txs.push_back(std::make_pair(tx_hash, std::move(tx_blob)));
     m_mempool.set_relayed(txs);
+    return tx_hash;
   }
   //-----------------------------------------------------------------------------------------------
   bool core::relay_service_node_votes()
   {
     auto height = get_current_blockchain_height();
-    auto votes = m_quorum_cop.get_relayable_votes(height);
+    auto hard_fork_version = get_hard_fork_version(height);
 
-    if (votes.empty())
-      return true;
+    auto quorum_votes = m_quorum_cop.get_relayable_votes(height, hard_fork_version, true);
+    auto p2p_votes = m_quorum_cop.get_relayable_votes(height, hard_fork_version, false);
+    if (!quorum_votes.empty() && m_arqnet_obj && m_service_node_keys)
+      arqnet_relay_obligation_votes(m_arqnet_obj, quorum_votes);
 
-    NOTIFY_NEW_SERVICE_NODE_VOTE::request req = {};
-    req.votes = std::move(votes);
-    cryptonote_connection_context fake_context{};
-    if (get_protocol()->relay_service_node_votes(req, fake_context))
-      m_quorum_cop.set_votes_relayed(req.votes);
+    if (!p2p_votes.empty())
+    {
+      NOTIFY_NEW_SERVICE_NODE_VOTE::request req{};
+      req.votes = std::move(p2p_votes);
+      cryptonote_connection_context fake_context{};
+      get_protocol()->relay_service_node_votes(req, fake_context);
+    }
 
     return true;
+  }
+  void core::set_service_node_votes_relayed(const std::vector<service_nodes::quorum_vote_t> &votes)
+  {
+    m_quorum_cop.set_votes_relayed(votes);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_block_template(block& b, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash)
@@ -1747,11 +1736,6 @@ namespace cryptonote
     return m_blockchain_storage.get_db().get_block_cumulative_difficulty(height);
   }
   //-----------------------------------------------------------------------------------------------
-  size_t core::get_pool_transactions_count() const
-  {
-    return m_mempool.get_transactions_count();
-  }
-  //-----------------------------------------------------------------------------------------------
   bool core::have_block(const crypto::hash& id) const
   {
     return m_blockchain_storage.have_block(id);
@@ -1760,54 +1744,6 @@ namespace cryptonote
   bool core::parse_tx_from_blob(transaction& tx, crypto::hash& tx_hash, const blobdata& blob) const
   {
     return parse_and_validate_tx_from_blob(blob, tx, tx_hash);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::check_tx_syntax(const transaction& tx) const
-  {
-    return true;
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_pool_transactions(std::vector<transaction>& txs, bool include_sensitive_data) const
-  {
-    m_mempool.get_transactions(txs, include_sensitive_data);
-    return true;
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_pool_transaction_hashes(std::vector<crypto::hash>& txs, bool include_sensitive_data) const
-  {
-    m_mempool.get_transaction_hashes(txs, include_sensitive_data);
-    return true;
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_pool_transaction_stats(struct txpool_stats& stats, bool include_sensitive_data) const
-  {
-    m_mempool.get_transaction_stats(stats, include_sensitive_data);
-    return true;
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_pool_transaction(const crypto::hash &id, cryptonote::blobdata& tx) const
-  {
-    return m_mempool.get_transaction(id, tx);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::pool_has_tx(const crypto::hash &id) const
-  {
-    return m_mempool.have_tx(id);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_sensitive_data) const
-  {
-    return m_mempool.get_transactions_and_spent_keys_info(tx_infos, key_image_infos, include_sensitive_data);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_pool_for_rpc(std::vector<cryptonote::rpc::tx_in_pool>& tx_infos, cryptonote::rpc::key_images_with_tx_hashes& key_image_infos) const
-  {
-    return m_mempool.get_pool_for_rpc(tx_infos, key_image_infos);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_short_chain_history(std::list<crypto::hash>& ids) const
-  {
-    return m_blockchain_storage.get_short_chain_history(ids);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NOTIFY_RESPONSE_GET_OBJECTS::request& rsp, cryptonote_connection_context& context)
@@ -1825,12 +1761,12 @@ namespace cryptonote
     return m_blockchain_storage.get_block_by_hash(h, blk, orphan);
   }
   //-----------------------------------------------------------------------------------------------
-  static bool check_storage_server_ping(time_t last_time_storage_server_pinged)
+  static bool check_external_ping(time_t last_ping, time_t lifetime, const char *what)
   {
-    const auto elapsed = std::time(nullptr) - last_time_storage_server_pinged;
-    if (elapsed > STORAGE_SERVER_PING_LIFETIME)
+    const auto elapsed = std::time(nullptr) - last_ping;
+    if (elapsed > lifetime)
     {
-      MWARNING("Have not heard from the storage server " << (!last_time_storage_server_pinged ? "since starting" :
+      MWARNING("Have not heard from " << what << " " << (!last_ping ? "since starting" :
                "for more than " + tools::get_human_readable_timespan(std::chrono::seconds(elapsed))));
       return false;
     }
@@ -1857,12 +1793,27 @@ namespace cryptonote
         if ((uint64_t) std::time(nullptr) < next_proof_time)
           return;
 
-        if (!check_storage_server_ping(m_last_storage_server_ping))
+        if (!check_external_ping(m_last_storage_server_ping, STORAGE_SERVER_PING_LIFETIME, "the storage server"))
         {
           MGINFO_RED("Failed to submit uptime proof: have not heard from the storage server recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon");
           return;
         }
 
+/*
+        uint8_t hard_fork_version = get_blockchain_storage().get_current_hard_fork_version();
+        if (!check_external_ping(m_last_arqnet_ping, ARQNET_PING_LIFETIME, "Arq-Net"))
+        {
+          if (hard_fork_version >= cryptonote::network_version_17)
+          {
+            MGINFO_RED("Failed to submit uptime proof: have not heard from the Arq-Net recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon");
+            return;
+          }
+          else
+          {
+            MGINFO_RED("Have not heard from the Arq-Net recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon after Hard Fork 17");
+          }
+        }
+*/
         submit_uptime_proof();
       });
     }
@@ -1903,6 +1854,11 @@ namespace cryptonote
 
     m_miner.on_idle();
     m_mempool.on_idle();
+
+#ifdef ENABLE_SYSTEMD
+    m_systemd_notify_interval.do_call([this] { sd_notify(0, ("WATCHDOG=1\nSTATUS=" + get_systemd_status_string(*this)).c_str()); });
+#endif
+
     return true;
   }
 
@@ -1972,7 +1928,7 @@ namespace cryptonote
     boost::filesystem::path path(epee::string_tools::get_current_module_folder());
     path /= filename;
 
-    boost::unique_lock<boost::mutex> lock(m_update_mutex);
+    std::unique_lock lock{m_update_mutex};
 
     if (m_update_download != 0)
     {
@@ -2013,7 +1969,7 @@ namespace cryptonote
           MCERROR("updates", "Failed to download " << uri);
           good = false;
         }
-        boost::unique_lock<boost::mutex> lock(m_update_mutex);
+        std::unique_lock lock{m_update_mutex};
         m_update_download = 0;
         if (success && !remove)
         {

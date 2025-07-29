@@ -32,6 +32,7 @@
 #include "blockchain_db/blockchain_db.h"
 #include "cryptonote_basic/blobdatatype.h" // for type blobdata
 #include "ringct/rctTypes.h"
+#include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
 
 #include "lmdb/liblmdb/lmdb.h"
@@ -433,6 +434,8 @@ private:
 
   // migrate from DB version 4 to 5
   void migrate_4_5(cryptonote::network_type nettype);
+
+  void migrate_5_6();
 
   void cleanup_batch();
 

@@ -147,8 +147,8 @@ t_command_server::t_command_server(
   m_command_lookup.set_handler(
       "start_mining"
     , std::bind(&t_command_parser_executor::start_mining, &m_parser, p::_1)
-    , "start_mining <addr> [<threads>] [do_background_mining] [ignore_battery]"
-    , "Start mining for specified address. Defaults to 1 thread and no background mining."
+    , "start_mining <addr> [<threads>]"
+    , "Start mining for specified address. Defaults to 1 thread."
     );
   m_command_lookup.set_handler(
       "stop_mining"
@@ -354,14 +354,14 @@ t_command_server::t_command_server(
     );
 }
 
-bool t_command_server::process_command_str(const std::string& cmd)
+bool t_command_server::process_command(const std::string& cmd)
 {
-  return m_command_lookup.process_command_str(cmd);
+  return m_command_lookup.process_command(cmd);
 }
 
-bool t_command_server::process_command_vec(const std::vector<std::string>& cmd)
+bool t_command_server::process_command(const std::vector<std::string>& cmd)
 {
-  bool result = m_command_lookup.process_command_vec(cmd);
+  bool result = m_command_lookup.process_command(cmd);
   if (!result)
   {
     help(std::vector<std::string>());
@@ -402,11 +402,9 @@ std::string t_command_server::get_commands_str()
 {
   std::stringstream ss;
   ss << "ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << std::endl;
-  ss << "Commands: " << std::endl;
-  std::string usage = m_command_lookup.get_usage();
-  boost::replace_all(usage, "\n", "\n  ");
-  usage.insert(0, "  ");
-  ss << usage << std::endl;
+  ss << "Commands:\n";
+  m_command_lookup.for_each([&ss] (const std::string&, const std::string& usage, const std::string&) {
+    ss << " " << usage << "\n"; });
   return ss.str();
 }
 

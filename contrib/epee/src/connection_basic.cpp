@@ -36,15 +36,22 @@
 
 #include "net/net_utils_base.h"
 #include "misc_log_ex.h"
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/thread/thread.hpp>
+#include <thread>
+#include <chrono>
 #include "misc_language.h"
 #include <iomanip>
+#include <memory>
 
 #include <boost/asio/basic_socket.hpp>
 
 // TODO:
 #include "net/network_throttle-detail.hpp"
+
+#if BOOST_VERSION >= 107000
+#define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
+#else
+#define GET_IO_SERVICE(s) ((s).get_io_service())
+#endif
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.conn"
@@ -121,12 +128,12 @@ connection_basic_pimpl::connection_basic_pimpl(const std::string &name) : m_thro
 int connection_basic_pimpl::m_default_tos;
 
 // methods:
-connection_basic::connection_basic(boost::asio::io_context &io_context, boost::asio::ip::tcp::socket&& sock, std::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support)
+connection_basic::connection_basic(boost::asio::ip::tcp::socket&& sock, std::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support)
 	:
 	m_state(std::move(state)),
   mI( new connection_basic_pimpl("peer") ),
-  strand_(io_context),
-  socket_(io_context, get_context(m_state.get())),
+  strand_(GET_IO_SERVICE(sock)),
+	socket_(GET_IO_SERVICE(sock), get_context(m_state.get())),
   m_want_close_connection(false),
   m_was_shutdown(false),
   m_is_multithreaded(false),
@@ -146,12 +153,12 @@ connection_basic::connection_basic(boost::asio::io_context &io_context, boost::a
 	_note("Spawned connection #" << mI->m_peer_number << " to " << remote_addr_str << " currently we have sockets count:" << m_state->sock_count);
 }
 
-connection_basic::connection_basic(boost::asio::io_context &io_context, std::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support)
+connection_basic::connection_basic(boost::asio::io_service &io_service, std::shared_ptr<connection_basic_shared_state> state, ssl_support_t ssl_support)
   :
   m_state(std::move(state)),
 	mI( new connection_basic_pimpl("peer") ),
-	strand_(io_context),
-	socket_(io_context, get_context(m_state.get())),
+	strand_(io_service),
+	socket_(io_service, get_context(m_state.get())),
   m_want_close_connection(false),
   m_was_shutdown(false),
   m_is_multithreaded(false),
@@ -245,7 +252,7 @@ void connection_basic::sleep_before_packet(size_t packet_size, int phase, int q_
 		if (delay > 0) {
             long int ms = (long int)(delay * 1000);
 			MTRACE("Sleeping in " << __FUNCTION__ << " for " << ms << " ms before packet_size=" << packet_size); // debug sleep
-			boost::this_thread::sleep(boost::posix_time::milliseconds( ms ) );
+			std::this_thread::sleep_for(std::chrono::milliseconds{ms});
 		}
 	} while(delay > 0);
 

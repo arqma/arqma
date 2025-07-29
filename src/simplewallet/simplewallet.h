@@ -37,6 +37,9 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
 
 #include <boost/optional/optional.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -49,6 +52,7 @@
 #include "common/i18n.h"
 #include "common/password.h"
 #include "crypto/crypto.h"  // for definition of crypto::secret_key
+#include "common/periodic_task.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "wallet.simplewallet"
@@ -288,6 +292,8 @@ namespace cryptonote
      */
     void commit_or_save(std::vector<tools::wallet2::pending_tx>& ptx_vector, bool do_not_relay);
 
+    bool check_refresh();
+
     //----------------- i_wallet2_callback ---------------------
     virtual void on_new_block(uint64_t height, const cryptonote::block& block);
     virtual void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, uint64_t unlock_time);
@@ -382,13 +388,15 @@ namespace cryptonote
     refresh_progress_reporter_t m_refresh_progress_reporter;
 
     std::atomic<bool> m_idle_run;
-    boost::thread m_idle_thread;
-    boost::mutex m_idle_mutex;
-    boost::condition_variable m_idle_cond;
+    std::thread m_idle_thread;
+    std::mutex m_idle_mutex;
+    std::condition_variable m_idle_cond;
 
     std::atomic<bool> m_auto_refresh_enabled;
     bool m_auto_refresh_refreshing;
     std::atomic<bool> m_in_manual_refresh;
     uint32_t m_current_subaddress_account;
+
+    tools::periodic_task m_refresh_checker{std::chrono::seconds(0), true, {90 * 1000000, 110 * 1000000}};
   };
 }

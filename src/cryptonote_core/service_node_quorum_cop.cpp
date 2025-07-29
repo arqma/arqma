@@ -63,7 +63,6 @@ namespace service_nodes
         buf_ptr += snprintf(buf_ptr, buf_end - buf_ptr, "Skipped voting in at least %d checkpoints. ", (int)(CHECKPOINT_NUM_QUORUMS_TO_PARTICIPATE_IN - CHECKPOINT_MAX_MISSABLE_VOTES));
       buf_ptr += snprintf(buf_ptr, buf_end - buf_ptr, "Nore: Storage server may not be reachable. This is only testable by an external Service Node.");
     }
-
     return buf;
   }
 
@@ -166,12 +165,12 @@ namespace service_nodes
     m_vote_pool.set_relayed(relayed_votes);
   }
 
-  std::vector<quorum_vote_t> quorum_cop::get_relayable_votes(uint64_t current_height)
+  std::vector<quorum_vote_t> quorum_cop::get_relayable_votes(uint64_t current_height, uint8_t hard_fork_version, bool quorum_relay)
   {
-    return m_vote_pool.get_relayable_votes(current_height);
+    return m_vote_pool.get_relayable_votes(current_height, hard_fork_version, quorum_relay);
   }
 
-  static int find_index_in_quorum_group(std::vector<crypto::public_key> const &group, crypto::public_key const &my_pubkey)
+  int find_index_in_quorum_group(std::vector<crypto::public_key> const &group, crypto::public_key const &my_pubkey)
   {
     int result = -1;
     auto it = std::find(group.begin(), group.end(), my_pubkey);
@@ -340,7 +339,7 @@ namespace service_nodes
               if (good > 0)
                 LOG_PRINT_L2(good << " of " << total << " service nodes are active and passing checks; no state change votes required");
             }
-            else if (!tested_myself_once_per_block && find_index_in_quorum_group(quorum->workers, my_keys->pub))
+            else if (!tested_myself_once_per_block && (find_index_in_quorum_group(quorum->workers, my_keys->pub) >= 0))
             {
               // NOTE: Not in validating quorum , check if we're the ones
               // being tested. If so, check if we would be decommissioned
@@ -392,7 +391,8 @@ namespace service_nodes
             m_last_checkpointed_height = std::max(start_checkpointing_height, m_last_checkpointed_height);
             for (; m_last_checkpointed_height <= height; m_last_checkpointed_height += CHECKPOINT_INTERVAL)
             {
-              if (m_core.get_hard_fork_version(m_last_checkpointed_height) <= cryptonote::network_version_16)
+              uint8_t checkpointed_height_version = m_core.get_hard_fork_version(m_last_checkpointed_height);
+              if (checkpointed_height_version <= cryptonote::network_version_16)
                 continue;
 
               if (m_last_checkpointed_height < REORG_SAFETY_BUFFER_IN_BLOCKS)
@@ -412,7 +412,7 @@ namespace service_nodes
               // NOTE: I am in the quorum, handle checkpointing
               //
               crypto::hash block_hash = m_core.get_block_id_by_height(m_last_checkpointed_height);
-              quorum_vote_t vote = make_checkpointing_vote(block_hash, m_last_checkpointed_height, static_cast<uint16_t>(index_in_group), *my_keys);
+              quorum_vote_t vote = make_checkpointing_vote(checkpointed_height_version, block_hash, m_last_checkpointed_height, static_cast<uint16_t>(index_in_group), *my_keys);
               cryptonote::vote_verification_context vvc = {};
               if (!handle_vote(vote, vvc))
                 LOG_ERROR("Failed to add checkpoint vote reason: " << print_vote_verification_context(vvc, &vote));
@@ -427,7 +427,6 @@ namespace service_nodes
   bool quorum_cop::block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const * /*checkpoint*/)
   {
     process_quorums(block);
-
     uint64_t const height = cryptonote::get_block_height(block) + 1; // chain height = new top block height + 1
 
     m_vote_pool.remove_expired_votes(height);
@@ -471,7 +470,7 @@ namespace service_nodes
       cryptonote::tx_verification_context tvc{};
       cryptonote::blobdata const tx_blob = cryptonote::tx_to_blob(state_change_tx);
 
-      bool result = core.handle_incoming_tx(tx_blob, tvc, false, false, false);
+      bool result = core.handle_incoming_tx(tx_blob, tvc, cryptonote::tx_pool_options::new_tx());
       if (!result || tvc.m_verification_failed)
       {
         LOG_PRINT_L1("A full state change tx for height: " << vote.block_height <<
@@ -488,7 +487,7 @@ namespace service_nodes
     return true;
   }
 
-  static bool handle_checkpoint_vote(cryptonote::core &core, const quorum_vote_t& vote, const std::vector<pool_vote_entry>& votes, const quorum& quorum)
+  static bool handle_checkpoint_vote(cryptonote::core& core, const quorum_vote_t& vote, const std::vector<pool_vote_entry>& votes, const quorum& quorum)
   {
     if (votes.size() < CHECKPOINT_MIN_VOTES)
     {
@@ -633,4 +632,29 @@ namespace service_nodes
 
     return credit;
   }
+
+  uint64_t quorum_checksum(const std::vector<crypto::public_key> &pubkeys, size_t offset)
+  {
+    constexpr size_t KEY_BYTES = sizeof(crypto::public_key);
+
+    uint64_t sum = 0;
+    alignas(uint64_t) std::array<char, sizeof(uint64_t)> local;
+    for (auto &pk : pubkeys)
+    {
+      offset %= KEY_BYTES;
+      auto *pkdata = reinterpret_cast<const char *>(&pk);
+      if (offset <= KEY_BYTES - sizeof(uint64_t))
+        std::memcpy(local.data(), pkdata + offset, sizeof(uint64_t));
+      else
+      {
+        size_t prewrap = KEY_BYTES - offset;
+        std::memcpy(local.data(), pkdata + offset, prewrap);
+        std::memcpy(local.data() + prewrap, pkdata, sizeof(uint64_t) - prewrap);
+      }
+      sum += boost::endian::little_to_native(*reinterpret_cast<uint64_t *>(local.data()));
+      ++offset;
+    }
+    return sum;
+  }
+
 }

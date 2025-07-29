@@ -30,7 +30,7 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #include "wallet/api/wallet2_api.h"
-#include <boost/thread/shared_mutex.hpp>
+#include <shared_mutex>
 
 namespace Monero {
 
@@ -52,7 +52,7 @@ private:
     // TransactionHistory is responsible of memory management
     std::vector<TransactionInfo*> m_history;
     WalletImpl *m_wallet;
-    mutable boost::shared_mutex   m_historyMutex;
+    mutable std::shared_mutex m_historyMutex;
 };
 
 }

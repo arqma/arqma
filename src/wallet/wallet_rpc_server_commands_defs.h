@@ -1937,13 +1937,9 @@ namespace wallet_rpc
     struct request_t
     {
       uint64_t    threads_count;
-      bool        do_background_mining;
-      bool        ignore_battery;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(threads_count)
-        KV_SERIALIZE(do_background_mining)
-        KV_SERIALIZE(ignore_battery)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;

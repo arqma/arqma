@@ -89,7 +89,7 @@ public:
     double miningHashRate() override;
     uint64_t blockTarget() override;
     bool isMining() override;
-    bool startMining(const std::string &address, uint32_t threads = 1, bool background_mining = false, bool ignore_battery = true) override;
+    bool startMining(const std::string &address, uint32_t threads = 1) override;
     bool stopMining() override;
     std::string resolveOpenAlias(const std::string &address, bool &dnssec_valid) const override;
 

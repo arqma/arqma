@@ -39,7 +39,7 @@
 #include "cryptonote_basic/tx_extra.h"
 
 #include "string_tools.h"
-#include "math_helper.h"
+#include "common/periodic_task.h"
 #include "syncobj.h"
 
 #include <boost/serialization/base_object.hpp>
@@ -129,7 +129,7 @@ namespace service_nodes
   struct service_node_keys;
 
   quorum_vote_t make_state_change_vote(uint64_t block_height, uint16_t index_in_group, uint16_t worker_index, new_state state, const service_node_keys &keys);
-  quorum_vote_t make_checkpointing_vote(crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
+  quorum_vote_t make_checkpointing_vote(uint8_t hard_fork_version, crypto::hash const &block_hash, uint64_t block_height, uint16_t index_in_quorum, const service_node_keys &keys);
   cryptonote::checkpoint_t make_empty_service_node_checkpoint(crypto::hash const &block_hash, uint64_t height);
 
   bool verify_checkpoint(uint8_t hard_fork_version, cryptonote::checkpoint_t const &checkpoint, service_nodes::quorum const &quorum);
@@ -164,7 +164,7 @@ namespace service_nodes
     void                         set_relayed         (const std::vector<quorum_vote_t>& votes);
     void                         remove_expired_votes(uint64_t height);
     void                         remove_used_votes   (std::vector<cryptonote::transaction> const &txs);
-    std::vector<quorum_vote_t>   get_relayable_votes (uint64_t height) const;
+    std::vector<quorum_vote_t>   get_relayable_votes (uint64_t height, uint8_t hard_fork_version, bool quorum_relay) const;
     bool received_checkpoint_vote(uint64_t height, size_t index_in_quorum) const;
 
   private:

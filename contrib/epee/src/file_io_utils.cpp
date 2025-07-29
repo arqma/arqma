@@ -29,7 +29,7 @@
 #include <fstream>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #include "string_tools.h"
 #endif
@@ -70,7 +70,7 @@ namespace file_io_utils
 
 	bool save_string_to_file(const std::string& path_to_file, const std::string& str)
 	{
-#ifdef WIN32
+#ifdef _WIN32
                 std::wstring wide_path;
                 try { wide_path = string_tools::utf8_to_utf16(path_to_file); } catch (...) { return false; }
                 HANDLE file_handle = CreateFileW(wide_path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -103,7 +103,7 @@ namespace file_io_utils
 
 	bool load_file_to_string(const std::string& path_to_file, std::string& target_str, size_t max_size)
 	{
-#ifdef WIN32
+#ifdef _WIN32
                 std::wstring wide_path;
                 try { wide_path = string_tools::utf8_to_utf16(path_to_file); } catch (...) { return false; }
                 HANDLE file_handle = CreateFileW(wide_path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -138,39 +138,6 @@ namespace file_io_utils
 
 			fstream.seekg (0, std::ios::beg);
 			fstream.read((char*)target_str.data(), target_str.size());
-			fstream.close();
-			return true;
-		}
-
-		catch(...)
-		{
-			return false;
-		}
-#endif
-	}
-
-	bool get_file_size(const std::string& path_to_file, uint64_t &size)
-	{
-#ifdef WIN32
-                std::wstring wide_path;
-                try { wide_path = string_tools::utf8_to_utf16(path_to_file); } catch (...) { return false; }
-                HANDLE file_handle = CreateFileW(wide_path.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-                if (file_handle == INVALID_HANDLE_VALUE)
-                    return false;
-                LARGE_INTEGER file_size;
-                BOOL result = GetFileSizeEx(file_handle, &file_size);
-                CloseHandle(file_handle);
-                if (result) {
-                    size = file_size.QuadPart;
-                }
-                return size;
-#else
-		try
-		{
-			std::ifstream fstream;
-			fstream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-			fstream.open(path_to_file, std::ios_base::binary | std::ios_base::in | std::ios::ate);
-			size = fstream.tellg();
 			fstream.close();
 			return true;
 		}

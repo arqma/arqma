@@ -75,7 +75,7 @@ public:
   void run()
   {
     MGINFO("Starting " << m_description << " RPC server...");
-    if (!m_server.run(2, false))
+    if (!m_server.run(cryptonote::core_rpc_server::DEFAULT_RPC_THREADS, false))
     {
       throw std::runtime_error("Failed to start " + m_description + " RPC server.");
     }
@@ -86,7 +86,7 @@ public:
   {
     MGINFO("Stopping " << m_description << " RPC server...");
     m_server.send_stop_signal();
-    m_server.timed_wait_server_stop(5000);
+    m_server.server_stop();
   }
 
   cryptonote::core_rpc_server* get_server()

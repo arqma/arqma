@@ -308,15 +308,13 @@ bool WalletManagerImpl::isMining()
     return mres.active;
 }
 
-bool WalletManagerImpl::startMining(const std::string &address, uint32_t threads, bool background_mining, bool ignore_battery)
+bool WalletManagerImpl::startMining(const std::string &address, uint32_t threads)
 {
     cryptonote::COMMAND_RPC_START_MINING::request mreq;
     cryptonote::COMMAND_RPC_START_MINING::response mres;
 
     mreq.miner_address = address;
     mreq.threads_count = threads;
-    mreq.ignore_battery = ignore_battery;
-    mreq.do_background_mining = background_mining;
 
     if (!epee::net_utils::invoke_http_json("/start_mining", mreq, mres, m_http_client))
       return false;

@@ -51,7 +51,7 @@ namespace crypto {
 #include "hash-ops.h"
   }
 
-  struct hash {
+  struct alignas(size_t) hash {
     char data[HASH_SIZE];
   };
   struct hash8 {

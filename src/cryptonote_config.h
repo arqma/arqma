@@ -136,16 +136,11 @@
 #define COMMAND_RPC_GET_CHECKPOINTS_MAX_COUNT           256
 #define COMMAND_RPC_GET_QUORUM_STATE_MAX_COUNT          256
 
-#define DEFAULT_RPC_MAX_CONNECTIONS_PER_PUBLIC_IP       25
-#define DEFAULT_RPC_MAX_CONNECTIONS_PER_PRIVATE_IP      50
-#define DEFAULT_RPC_MAX_CONNECTIONS                     250
-#define DEFAULT_RPC_SOFT_LIMIT_SIZE                     25 * 1024 * 1024 // 25 MiB
-
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT_OUT               8
-#define P2P_DEFAULT_CONNECTIONS_COUNT_IN                32
+#define P2P_DEFAULT_CONNECTIONS_COUNT_IN                24
 #define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_OUT          2
 #define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_IN           6
 
@@ -180,7 +175,7 @@
 #define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
 #define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
-#define THREAD_STACK_SIZE                               10 * 1024 * 1024
+#define THREAD_STACK_SIZE                               5 * 1024 * 1024
 
 #define HF_VERSION_MIN_MIXIN_10                         13
 
@@ -212,7 +207,7 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define STAKING_RELOCK_WINDOW_BLOCKS                    180
 #define STAKING_REQUIREMENT_LOCK_BLOCKS_EXCESS          20
 #define STAKING_SHARE_PARTS                             UINT64_C(0xfffffffffffffffc) // Use a multiple of four, so that it divides easily by max number of contributors.
-#define MAX_NUMBER_OF_CONTRIBUTORS                      4
+#define MAX_NUMBER_OF_CONTRIBUTORS                      12
 #define MIN_STAKE_SHARE                                 (STAKING_SHARE_PARTS / MAX_NUMBER_OF_CONTRIBUTORS)
 
 #define STAKING_AUTHORIZATION_EXPIRATION_WINDOW         (3600 * 24 * 14) // 2 weeks
@@ -222,15 +217,14 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 #define BLOCKS_EXPECTED_IN_DAYS(val)                    (BLOCKS_EXPECTED_IN_HOURS(24) * (val))
 #define BLOCKS_EXPECTED_IN_YEARS(val)                   (BLOCKS_EXPECTED_IN_DAYS(365) * (val))
 
-// testing constants
-// TODO: To be removed after successful tests.
-
-
 static_assert(STAKING_SHARE_PARTS % MAX_NUMBER_OF_CONTRIBUTORS == 0, "Use a multiple of four, so that it divides easily by max number of contributors.");
 static_assert(STAKING_SHARE_PARTS % 2 == 0, "Use a multiple of two, so that it divides easily by two contributors.");
 static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it divides easily by three contributors.");
 
+#ifndef UPTIME_PROOF_BASE_MINUTE
 #define UPTIME_PROOF_BASE_MINUTE                        60
+#endif
+
 #define UPTIME_PROOF_BUFFER_IN_SECONDS                  (300)
 #define UPTIME_PROOF_INITIAL_DELAY_SECONDS              (2 * UPTIME_PROOF_BASE_MINUTE)
 #define UPTIME_PROOF_TIMER_SECONDS                      (5 * UPTIME_PROOF_BASE_MINUTE)
@@ -238,6 +232,7 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 #define UPTIME_PROOF_MAX_TIME_IN_SECONDS                (UPTIME_PROOF_FREQUENCY_IN_SECONDS * 2 + UPTIME_PROOF_BUFFER_IN_SECONDS)
 
 #define STORAGE_SERVER_PING_LIFETIME                    UPTIME_PROOF_FREQUENCY_IN_SECONDS
+//#define ARQNET_PING_LIFETIME                            UPTIME_PROOF_FREQUENCY_IN_SECONDS
 
 namespace config
 {
@@ -256,6 +251,7 @@ namespace config
   const uint16_t P2P_DEFAULT_PORT = 19993;
   const uint16_t RPC_DEFAULT_PORT = 19994;
   const uint16_t ZMQ_DEFAULT_PORT = 19995;
+  const uint16_t ANET_DEFAULT_PORT = 19996;
   boost::uuids::uuid const NETWORK_ID = { {
       0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
     } }; // Bender's nightmare
@@ -273,6 +269,7 @@ namespace config
     const uint16_t P2P_DEFAULT_PORT = 29993;
     const uint16_t RPC_DEFAULT_PORT = 29994;
     const uint16_t ZMQ_DEFAULT_PORT = 29995;
+    const uint16_t ANET_DEFAULT_PORT = 29996;
     boost::uuids::uuid const NETWORK_ID = { {
         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
       } }; // Bender's daydream
@@ -289,6 +286,7 @@ namespace config
     const uint16_t P2P_DEFAULT_PORT = 39993;
     const uint16_t RPC_DEFAULT_PORT = 39994;
     const uint16_t ZMQ_DEFAULT_PORT = 39995;
+    const uint16_t ANET_DEFAULT_PORT = 39996;
     boost::uuids::uuid const NETWORK_ID = { {
         0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
       } }; // Bender's daydream
@@ -391,6 +389,7 @@ namespace cryptonote
     network_version_14,
     network_version_15,
     network_version_16,
+    network_version_17,
 
     network_version_count,
   };
@@ -411,6 +410,7 @@ namespace cryptonote
     uint16_t P2P_DEFAULT_PORT;
     uint16_t RPC_DEFAULT_PORT;
     uint16_t ZMQ_DEFAULT_PORT;
+    uint16_t ANET_DEFAULT_PORT;
     boost::uuids::uuid NETWORK_ID;
     std::string GENESIS_TX;
     uint32_t GENESIS_NONCE;
@@ -427,6 +427,7 @@ namespace cryptonote
       ::config::P2P_DEFAULT_PORT,
       ::config::RPC_DEFAULT_PORT,
       ::config::ZMQ_DEFAULT_PORT,
+      ::config::ANET_DEFAULT_PORT,
       ::config::NETWORK_ID,
       ::config::GENESIS_TX,
       ::config::GENESIS_NONCE,
@@ -442,6 +443,7 @@ namespace cryptonote
       ::config::testnet::P2P_DEFAULT_PORT,
       ::config::testnet::RPC_DEFAULT_PORT,
       ::config::testnet::ZMQ_DEFAULT_PORT,
+      ::config::testnet::ANET_DEFAULT_PORT,
       ::config::testnet::NETWORK_ID,
       ::config::GENESIS_TX,
       ::config::GENESIS_NONCE,
@@ -457,6 +459,7 @@ namespace cryptonote
       ::config::stagenet::P2P_DEFAULT_PORT,
       ::config::stagenet::RPC_DEFAULT_PORT,
       ::config::stagenet::ZMQ_DEFAULT_PORT,
+      ::config::stagenet::ANET_DEFAULT_PORT,
       ::config::stagenet::NETWORK_ID,
       ::config::GENESIS_TX,
       ::config::GENESIS_NONCE,

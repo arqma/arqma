@@ -64,9 +64,9 @@ public:
     , cryptonote::core_rpc_server* rpc_server = NULL
     );
 
-  bool process_command_str(const std::string& cmd);
+  bool process_command(const std::string& cmd);
 
-  bool process_command_vec(const std::vector<std::string>& cmd);
+  bool process_command(const std::vector<std::string>& cmd);
 
   bool start_handling(std::function<void(void)> exit_handler = NULL);
 

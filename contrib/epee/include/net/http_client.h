@@ -28,7 +28,6 @@
 
 #pragma once
 #include <ctype.h>
-#include <boost/shared_ptr.hpp>
 #include <boost/regex.hpp>
 #include <boost/optional/optional.hpp>
 #include <boost/utility/string_ref.hpp>
@@ -36,6 +35,7 @@
 #include <algorithm>
 #include <cctype>
 #include <functional>
+#include <memory>
 
 #include "net_helper.h"
 #include "http_client_base.h"
@@ -136,7 +136,7 @@ namespace net_utils
 			size_t m_len_in_summary;
 			size_t m_len_in_remain;
 			//std::string* m_ptarget_buffer;
-			boost::shared_ptr<i_sub_handler> m_pcontent_encoding_handler;
+			std::shared_ptr<i_sub_handler> m_pcontent_encoding_handler;
 			reciev_machine_state m_state;
 			chunked_state m_chunked_state;
 			std::string m_chunked_cache;
@@ -228,7 +228,7 @@ namespace net_utils
 			}
 
 			//---------------------------------------------------------------------------
-			inline bool invoke(const boost::string_ref uri, const boost::string_ref method, const boost::string_ref body, std::chrono::milliseconds timeout, const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) override
+			inline bool invoke(const boost::string_ref uri, const boost::string_ref method, const std::string& body, std::chrono::milliseconds timeout, const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) override
 			{
 				CRITICAL_REGION_LOCAL(m_lock);
 				if(!is_connected())

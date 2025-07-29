@@ -38,6 +38,7 @@ target_link_libraries(arqma_bc_utils_std_libs INTERFACE
   ${Boost_SYSTEM_LIBRARY}
   ${Boost_THREAD_LIBRARY}
   ${CMAKE_THREAD_LIBS_INIT}
+  ${Boost_ASIO_LIBRARY}
   ${EXTRA_LIBRARIES})
 
 
@@ -135,7 +136,11 @@ arqma_add_executable(blockchain_import
 target_link_libraries(blockchain_import
   PRIVATE
     arqma_bc_utils_std_libs
-    blocks)
+    cryptonote_protocol
+    p2p
+    arqnet
+    blocks
+    ${UPNP_LIBRARIES})
 
 if(ARCH_WIDTH)
   target_compile_definitions(blockchain_import

@@ -26,19 +26,16 @@
 
 #include "misc_language.h"
 
-#include <boost/thread.hpp>
+#include <thread>
+#include <chrono>
 
 namespace epee
 {
 namespace misc_utils
 {
-	bool sleep_no_w(long ms )
+	void sleep_no_w(long ms)
 	{
-		boost::this_thread::sleep( 
-			boost::get_system_time() + 
-			boost::posix_time::milliseconds( std::max<long>(ms,0) ) );
-		
-		return true;
+	  std::this_thread::sleep_for(std::chrono::milliseconds{ms});
 	}
 }
 }

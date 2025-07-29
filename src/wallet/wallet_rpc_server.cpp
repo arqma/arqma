@@ -35,6 +35,7 @@
 #include <boost/preprocessor/stringize.hpp>
 #include <cstdint>
 #include "include_base_utils.h"
+#include <chrono>
 using namespace epee;
 
 #include "version.h"
@@ -54,24 +55,22 @@ using namespace epee;
 #include "mnemonics/electrum-words.h"
 #include "rpc/rpc_args.h"
 #include "rpc/core_rpc_server_commands_defs.h"
+#include "rpc/core_rpc_server.h"
 #include "daemonizer/daemonizer.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "wallet.rpc"
 
-#define DEFAULT_AUTO_REFRESH_PERIOD 20 // seconds
-
 namespace
 {
+  using namespace std::literals;
+  constexpr auto DEFAULT_AUTO_REFRESH_PERIOD = 20s;
+
   const command_line::arg_descriptor<std::string, true> arg_rpc_bind_port = {"rpc-bind-port", "Sets bind port for server"};
   const command_line::arg_descriptor<bool> arg_disable_rpc_login = {"disable-rpc-login", "Disable HTTP authentication for RPC connections served by this process"};
   const command_line::arg_descriptor<bool> arg_restricted = {"restricted-rpc", "Restricts to view-only commands", false};
   const command_line::arg_descriptor<std::string> arg_wallet_dir = {"wallet-dir", "Directory for newly created wallets"};
   const command_line::arg_descriptor<bool> arg_prompt_for_password = {"prompt-for-password", "Prompts for password when not provided", false};
-  const command_line::arg_descriptor<std::size_t> arg_rpc_max_connections_per_public_ip = {"rpc-max-connections-per-public-ip", "Max RPC connections per public IP permitted", DEFAULT_RPC_MAX_CONNECTIONS_PER_PUBLIC_IP};
-  const command_line::arg_descriptor<std::size_t> arg_rpc_max_connections_per_private_ip = {"rpc-max-connections-per-private-ip", "Max RPC connections per private and localhost IP permitted", DEFAULT_RPC_MAX_CONNECTIONS_PER_PRIVATE_IP};
-  const command_line::arg_descriptor<std::size_t> arg_rpc_max_connections = {"rpc-max-connections", "Max RPC connections permitted", DEFAULT_RPC_MAX_CONNECTIONS};
-  const command_line::arg_descriptor<std::size_t> arg_rpc_response_soft_limit = {"rpc-response-soft-limit", "Max response bytes that can be queued, enforced at next response attempt", DEFAULT_RPC_SOFT_LIMIT_SIZE};
 
   constexpr const char default_rpc_username[] = "arqma";
 
@@ -100,8 +99,7 @@ namespace tools
   //------------------------------------------------------------------------------------------------------------------------------
   wallet_rpc_server::~wallet_rpc_server()
   {
-    if (m_wallet)
-      delete m_wallet;
+    stop();
   }
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::set_wallet(wallet2 *cr)
@@ -113,18 +111,21 @@ namespace tools
   {
     m_stop = false;
     m_net_server.add_idle_handler([this](){
-      if (m_auto_refresh_period == 0) // disabled
+      if (m_auto_refresh_period == 0s) // disabled
         return true;
-      if (boost::posix_time::microsec_clock::universal_time() < m_last_auto_refresh_time + boost::posix_time::seconds(m_auto_refresh_period))
+
+      const auto now = std::chrono::steady_clock::now();
+      if (now < m_last_auto_refresh_time + m_auto_refresh_period)
         return true;
+
       try {
         if (m_wallet) m_wallet->refresh(m_wallet->is_trusted_daemon());
       } catch (const std::exception& ex) {
         LOG_ERROR("Exception at while refreshing, what=" << ex.what());
       }
-      m_last_auto_refresh_time = boost::posix_time::microsec_clock::universal_time();
+      m_last_auto_refresh_time = now;
       return true;
-    }, 1000);
+    }, 1s);
     m_net_server.add_idle_handler([this](){
       if (m_stop.load(std::memory_order_relaxed))
       {
@@ -132,7 +133,7 @@ namespace tools
         return false;
       }
       return true;
-    }, 500);
+    }, 500ms);
 
     //DO NOT START THIS SERVER IN MORE THEN 1 THREADS WITHOUT REFACTORING
     return epee::http_server_impl_base<wallet_rpc_server, connection_context>::run(1, true);
@@ -233,22 +234,7 @@ namespace tools
     } // end auth enabled
 
     m_auto_refresh_period = DEFAULT_AUTO_REFRESH_PERIOD;
-    m_last_auto_refresh_time = boost::posix_time::min_date_time;
-
-    const auto max_connections_public = command_line::get_arg(vm, arg_rpc_max_connections_per_public_ip);
-    const auto max_connections_private = command_line::get_arg(vm, arg_rpc_max_connections_per_private_ip);
-    const auto max_connections = command_line::get_arg(vm, arg_rpc_max_connections);
-
-    if (max_connections < max_connections_public)
-    {
-      MFATAL(arg_rpc_max_connections_per_public_ip.name << " is bigger than " << arg_rpc_max_connections.name);
-      return false;
-    }
-    if (max_connections < max_connections_private)
-    {
-      MFATAL(arg_rpc_max_connections_per_private_ip.name << " is bigger than " << arg_rpc_max_connections.name);
-      return false;
-    }
+    m_last_auto_refresh_time = std::chrono::steady_clock::time_point::min();
 
     m_net_server.set_threads_prefix("RPC");
     auto rng = [](size_t len, uint8_t *ptr) { return crypto::rand(len, ptr); };
@@ -261,11 +247,7 @@ namespace tools
       std::move(rpc_config->require_ipv4),
       std::move(rpc_config->access_control_origins),
       std::move(http_login),
-      std::move(rpc_config->ssl_options),
-      max_connections_public,
-      max_connections_private,
-      max_connections,
-      command_line::get_arg(vm, arg_rpc_response_soft_limit)
+      std::move(rpc_config->ssl_options)
     );
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -2753,8 +2735,8 @@ namespace tools
     }
     try
     {
-      m_auto_refresh_period = req.enable ? req.period ? req.period : DEFAULT_AUTO_REFRESH_PERIOD : 0;
-      MINFO("Auto refresh now " << (m_auto_refresh_period ? std::to_string(m_auto_refresh_period) + " seconds" : std::string("disabled")));
+      m_auto_refresh_period = req.enable ? req.period ? std::chrono::seconds{req.period} : DEFAULT_AUTO_REFRESH_PERIOD : 0s;
+      MINFO("Auto refresh now " << (m_auto_refresh_period != 0s ? std::to_string(std::chrono::duration<float>(m_auto_refresh_period).count()) + " seconds" : std::string("disabled")));
       return true;
     }
     catch (const std::exception& e)
@@ -2808,8 +2790,6 @@ namespace tools
     cryptonote::COMMAND_RPC_START_MINING::request daemon_req{};
     daemon_req.miner_address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
     daemon_req.threads_count        = req.threads_count;
-    daemon_req.do_background_mining = req.do_background_mining;
-    daemon_req.ignore_battery       = req.ignore_battery;
 
     cryptonote::COMMAND_RPC_START_MINING::response daemon_res;
     bool r = m_wallet->invoke_http_json("/start_mining", daemon_req, daemon_res);
@@ -4397,10 +4377,6 @@ int main(int argc, char** argv) {
   command_line::add_arg(desc_params, arg_from_json);
   command_line::add_arg(desc_params, arg_wallet_dir);
   command_line::add_arg(desc_params, arg_prompt_for_password);
-  command_line::add_arg(desc_params, arg_rpc_max_connections_per_public_ip);
-  command_line::add_arg(desc_params, arg_rpc_max_connections_per_private_ip);
-  command_line::add_arg(desc_params, arg_rpc_max_connections);
-  command_line::add_arg(desc_params, arg_rpc_response_soft_limit);
 
   daemonizer::init_options(hidden_options, desc_params);
   desc_params.add(hidden_options);

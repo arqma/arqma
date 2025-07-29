@@ -31,8 +31,6 @@
 
 #pragma once
 
-#include <boost/thread/locks.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/optional.hpp>
 #include <boost/endian/conversion.hpp>
 #include <system_error>
@@ -42,6 +40,7 @@
 #include <memory>
 #include <string>
 #include <chrono>
+#include <mutex>
 
 #ifdef _WIN32
 #include "windows.h"
@@ -216,8 +215,8 @@ namespace tools
     /*! \brief calles m_handler */
     static void handle_signal(int type)
     {
-      static boost::mutex m_mutex;
-      boost::unique_lock<boost::mutex> lock(m_mutex);
+      static std::mutex m_mutex;
+      std::unique_lock lock{m_mutex};
       m_handler(type);
     }
 
@@ -257,34 +256,40 @@ namespace tools
 
   uint64_t cumulative_block_sync_weight(cryptonote::network_type nettype, uint64_t start_block, uint64_t num_blocks);
 
-  template<typename Enum>
-  constexpr auto enum_count = static_cast<std::underlying_type_t<Enum>>(Enum::_count);
-
-  template<typename Enum>
-  constexpr Enum enum_top = static_cast<Enum>(enum_count<Enum> - 1);
+  template <typename... T> constexpr size_t constexpr_sum(T... ns) { return (0 + ... + size_t{ns}); }
 
   namespace detail {
     // Copy an integer type, swapping to little-endian if needed
-    template <typename T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
-    void memcpy_one(char*& dest, T t) {
+    template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
+    void memcpy_one(char *dest, T t) {
       boost::endian::native_to_little_inplace(t);
       std::memcpy(dest, &t, sizeof(T));
-      dest += sizeof(T);
     }
 
     // Copy a class byte-for-byte (but only if it is standard layout and has byte alignment)
-    template <typename T, typename std::enable_if<std::is_class<T>::value, int>::type = 0>
-    void memcpy_one(char*& dest, const T& t) {
-      static_assert(std::is_standard_layout<T>::value && alignof(T) == 1, "memcpy_le() may only be used on simple (1-byte alignment) struct types");
+    template <typename T, std::enable_if_t<std::is_class<T>::value, int> = 0>
+    void memcpy_one(char *dest, const T &t) {
+      static_assert(std::is_trivially_copyable<T>::value && alignof(T) == 1, "memcpy_le() may only be used on simple (1-byte alignment) struct types");
       std::memcpy(dest, &t, sizeof(T));
-      dest += sizeof(T);
     }
 
     // Copy a string literal
     template <typename T, size_t N>
-    void memcpy_one(char*& dest, const T (&arr)[N]) {
-      for (const T &t : arr)
+    void memcpy_one(char *dest, const T (&arr)[N]) {
+      for (const T &t : arr) {
         memcpy_one(dest, t);
+        dest += sizeof(T);
+      }
+    }
+
+    // Recursion terminator
+    inline void memcpy_le_impl(char *) {}
+
+    // Helper function for public memcpy_le
+    template <typename T, typename... Tmore>
+    void memcpy_le_impl(char *dest, const T &t, const Tmore &...more) {
+      memcpy_one(dest, t);
+      memcpy_le_impl(dest + sizeof(T), more...);
     }
   }
 
@@ -296,12 +301,17 @@ namespace tools
   //
   // The 1-byte alignment is here to protect you: if you have a larger alignment that usually means
   // you have a contained type with a larger alignment, which is probably an integer.
-  template <typename... T>
-  auto memcpy_le(const T &...t) {
-    std::array<char, (0 + ... + sizeof(T))> r;
-    char* dest = r.data();
-    (..., detail::memcpy_one(dest, t));
+  template <typename... T, size_t N = constexpr_sum(sizeof(T)...)>
+  std::array<char, N> memcpy_le(const T &...t) {
+    std::array<char, N> r;
+    detail::memcpy_le_impl(r.data(), t...);
     return r;
   }
+
+  template <typename Enum>
+  constexpr auto enum_count = static_cast<std::underlying_type_t<Enum>>(Enum::_count);
+
+  template <typename Enum>
+  constexpr Enum enum_top = static_cast<Enum>(enum_count<Enum> - 1);
 
 }

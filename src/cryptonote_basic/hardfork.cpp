@@ -69,6 +69,7 @@ static constexpr HardFork::Params mainnet_hard_forks[] =
   { network_version_14,  248920, 0, 1566598080 },
   { network_version_15,  303666, 0, 1573257000 },
   { network_version_16, 1731480, 0, 1749313836 },
+  { network_version_17, 1760751, 0, 1754410575 },
 };
 
 static constexpr HardFork::Params testnet_hard_forks[] =
@@ -84,6 +85,7 @@ static constexpr HardFork::Params testnet_hard_forks[] =
   { network_version_14,    700, 0, 1566598080 },
   { network_version_15,    800, 0, 1566598080 },
   { network_version_16,    900, 0, 1566598280 },
+  { network_version_17,   1000, 0, 1566598281 },
 };
 
 static constexpr HardFork::Params stagenet_hard_forks[] =
@@ -99,6 +101,7 @@ static constexpr HardFork::Params stagenet_hard_forks[] =
   { network_version_14,    120, 0, 1560351600 },
   { network_version_15,    140, 0, 1570414500 },
   { network_version_16,    160, 0, 1570414510 },
+  { network_version_17,    180, 0, 1570414511 },
 };
 
 uint64_t HardFork::get_hardcoded_hard_fork_height(network_type nettype, cryptonote::network_version version)

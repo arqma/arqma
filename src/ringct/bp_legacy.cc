@@ -31,8 +31,6 @@
 
 #include <stdlib.h>
 #include <openssl/ssl.h>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/lock_guard.hpp>
 #include "misc_log_ex.h"
 #include "common/perf_timer.h"
 #include "cryptonote_config.h"
@@ -69,7 +67,7 @@ static const rct::key TWO = { {0x02, 0x00, 0x00,0x00 , 0x00, 0x00, 0x00,0x00 , 0
 static const rct::keyV oneN = vector_dup(rct::identity(), maxN);
 static const rct::keyV twoN = vector_powers(TWO, maxN);
 static const rct::key ip12 = inner_product(oneN, twoN);
-static boost::mutex init_mutex;
+static std::mutex init_mutex;
 
 static inline rct::key multiexp(const std::vector<MultiexpData> &data, bool HiGi)
 {
@@ -122,7 +120,7 @@ static rct::key get_exponent(const rct::key &base, size_t idx)
 
 static void init_exponents()
 {
-  boost::lock_guard<boost::mutex> lock(init_mutex);
+  std::lock_guard lock{init_mutex};
 
   static bool init_done = false;
   if (init_done)
