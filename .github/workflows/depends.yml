@@ -15,7 +15,7 @@ env:
 
 jobs:
   build-cross:
-    runs-on: ubuntu-latest
+    runs-on: selfhosted
     container:
       image: ubuntu:20.04
       env:
