@@ -2655,7 +2655,7 @@ void wallet2::update_pool_state(bool refreshed)
     cryptonote::COMMAND_RPC_GET_TRANSACTION_POOL_HASHES_BIN::request req;
     cryptonote::COMMAND_RPC_GET_TRANSACTION_POOL_HASHES_BIN::response res;
     m_daemon_rpc_mutex.lock();
-    bool r = invoke_http_bin("/get_transaction_pool_hashes.bin", req, res, rpc_timeout);
+    bool r = epee::net_utils::invoke_http_json("/get_transaction_pool_hashes.bin", req, res, *m_http_client, rpc_timeout);
     m_daemon_rpc_mutex.unlock();
     THROW_WALLET_EXCEPTION_IF(!r, error::no_connection_to_daemon, "get_transaction_pool_hashes.bin");
     THROW_WALLET_EXCEPTION_IF(res.status == CORE_RPC_STATUS_BUSY, error::daemon_busy, "get_transaction_pool_hashes.bin");
