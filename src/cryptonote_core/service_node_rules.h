@@ -8,9 +8,9 @@
 namespace service_nodes
 {
   constexpr int64_t DECOMMISSION_CREDIT_PER_DAY = BLOCKS_EXPECTED_IN_HOURS(24) / 30;
-  constexpr int64_t DECOMMISSION_INITIAL_CREDIT = BLOCKS_EXPECTED_IN_HOURS(0);
-  constexpr int64_t DECOMMISSION_MAX_CREDIT     = BLOCKS_EXPECTED_IN_HOURS(24);
-  constexpr int64_t DECOMMISSION_MINIMUM        = BLOCKS_EXPECTED_IN_HOURS(8);
+  constexpr int64_t DECOMMISSION_INITIAL_CREDIT = BLOCKS_EXPECTED_IN_HOURS(2);
+  constexpr int64_t DECOMMISSION_MAX_CREDIT     = BLOCKS_EXPECTED_IN_HOURS(48);
+  constexpr int64_t DECOMMISSION_MINIMUM        = BLOCKS_EXPECTED_IN_HOURS(2);
 
   static_assert(DECOMMISSION_INITIAL_CREDIT <= DECOMMISSION_MAX_CREDIT, "Initial registration decommission credit cannot be larger than the maximum decommission credit");
 
@@ -27,7 +27,7 @@ namespace service_nodes
 
   constexpr size_t STATE_CHANGE_NTH_OF_THE_NETWORK_TO_TEST         = 100;
   constexpr size_t STATE_CHANGE_MIN_NODES_TO_TEST                  = 50;
-  constexpr uint64_t VOTE_LIFETIME                                 = 15; //BLOCKS_EXPECTED_IN_HOURS(1);
+  constexpr uint64_t VOTE_LIFETIME                                 = BLOCKS_EXPECTED_IN_HOURS(2);
 
   constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
   constexpr size_t STATE_CHANGE_QUORUM_SIZE                        = 10;

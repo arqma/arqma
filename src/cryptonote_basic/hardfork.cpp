@@ -69,7 +69,7 @@ static constexpr HardFork::Params mainnet_hard_forks[] =
   { network_version_14,  248920, 0, 1566598080 },
   { network_version_15,  303666, 0, 1573257000 },
   { network_version_16, 1731480, 0, 1749313836 },
-  { network_version_17, 9999999, 0, 1749313837 },
+  { network_version_17, 1760751, 0, 1754410575 },
 };
 
 static constexpr HardFork::Params testnet_hard_forks[] =
