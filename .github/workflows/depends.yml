@@ -92,6 +92,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PRIVATE_KEY }}
+          passphrase: ${{ secrets:PASSPHRASE }}
           port: ${{ secrets.PORT }}
           source: build/${{ matrix.toolchain.host }}/release/bin/arqma*
           target: downloads/CLI
