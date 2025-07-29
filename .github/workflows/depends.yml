@@ -86,7 +86,7 @@ jobs:
           path: |
             build/${{ matrix.toolchain.host }}/release/bin/arqma*
       - name: Copy files via ssh
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         if: ${{ contains(fromJson('["x86_64-w64-mingw32","x86_64-apple-darwin","arm64-apple-darwin","x86_64-unknown-linux-gnu","aarch64-linux-gnu"]'), matrix.toolchain.host) }}
         with:
           host: ${{ secrets.HOST }}
