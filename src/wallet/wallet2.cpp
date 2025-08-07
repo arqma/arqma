@@ -7215,14 +7215,6 @@ bool wallet2::get_ring(const crypto::chacha_key &key, const crypto::key_image &k
   catch (const std::exception& e) { return false; }
 }
 
-bool wallet2::get_rings(const crypto::chacha_key &key, const std::vector<crypto::key_image> &key_images, std::vector<std::vector<uint64_t>> &outs)
-{
-  if (!m_ringdb)
-    return false;
-  try { return m_ringdb->get_rings(key, key_images, outs); }
-  catch (const std::exception &e) { return false; }
-}
-
 bool wallet2::get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> &outs)
 {
   for (auto i: m_confirmed_txs)
@@ -7259,15 +7251,6 @@ bool wallet2::set_ring(const crypto::key_image &key_image, const std::vector<uin
 
   try { return m_ringdb->set_ring(get_ringdb_key(), key_image, outs, relative); }
   catch (const std::exception& e) { return false; }
-}
-
-bool wallet2::set_rings(const std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> &rings, bool relative)
-{
-  if (!m_ringdb)
-    return false;
-
-  try { return m_ringdb->set_rings(get_ringdb_key(), rings, relative); }
-  catch (const std::exception &e) { return false; }
 }
 
 bool wallet2::unset_ring(const std::vector<crypto::key_image> &key_images)
@@ -8015,7 +7998,7 @@ bool wallet2::is_keys_file_locked() const
   return m_keys_file_locker->locked();
 }
 
-bool wallet2::tx_add_fake_output(std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs, uint64_t global_index, const crypto::public_key& output_public_key, const rct::key& mask, uint64_t real_index, bool unlocked, std::unordered_set<crypto::public_key> &valid_public_keys_cache) const
+bool wallet2::tx_add_fake_output(std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs, uint64_t global_index, const crypto::public_key& output_public_key, const rct::key& mask, uint64_t real_index, bool unlocked) const
 {
   if (!unlocked) // don't add locked outs
     return false;
@@ -8026,7 +8009,7 @@ bool wallet2::tx_add_fake_output(std::vector<std::vector<tools::wallet2::get_out
   if (std::find(outs.back().begin(), outs.back().end(), item) != outs.back().end()) // don't add duplicates
     return false;
   // check the keys are valid
-  if(valid_public_keys_cache.find(output_public_key) == valid_public_keys_cache.end() && !rct::isInMainSubgroup(rct::pk2rct(output_public_key)))
+  if(!rct::isInMainSubgroup(rct::pk2rct(output_public_key)))
   {
     if(nettype() == cryptonote::MAINNET)
     {
@@ -8034,20 +8017,18 @@ bool wallet2::tx_add_fake_output(std::vector<std::vector<tools::wallet2::get_out
       return false;
     }
   }
-  valid_public_keys_cache.insert(output_public_key);
-  if (valid_public_keys_cache.find(rct::rct2pk(mask)) == valid_public_keys_cache.end() && !rct::isInMainSubgroup(mask))
+  if (!rct::isInMainSubgroup(mask))
   {
     MWARNING("Commitment " << mask << " at index " << global_index << " is not in the main subgroup");
     return false;
   }
-  valid_public_keys_cache.insert(rct::rct2pk(mask));
 //  if (is_output_blackballed(output_public_key)) // don't add blackballed outputs
 //    return false;
   outs.back().push_back(item);
   return true;
 }
 
-void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs, const std::vector<size_t> &selected_transfers, size_t fake_outputs_count, bool has_rct, std::unordered_set<crypto::public_key> &valid_public_keys_cache)
+void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs, const std::vector<size_t> &selected_transfers, size_t fake_outputs_count, bool has_rct)
 {
   LOG_PRINT_L2("fake_outputs_count: " << fake_outputs_count);
   outs.clear();
@@ -8075,7 +8056,6 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     cryptonote::COMMAND_RPC_GET_OUTPUT_HISTOGRAM::response resp_t{};
     {
       uint64_t max_rct_index = 0;
-      req_t.amounts.reserve(selected_transfers.size());
       for (size_t idx: selected_transfers)
       {
         if (m_transfers[idx].is_rct())
@@ -8129,7 +8109,6 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     {
       cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::request req_t{};
       cryptonote::COMMAND_RPC_GET_OUTPUT_DISTRIBUTION::response resp_t{};
-      req_t.amounts.reserve(req_t.amounts.size() + selected_transfers.size());
       for(size_t idx: selected_transfers)
         req_t.amounts.push_back(m_transfers[idx].is_rct() ? 0 : m_transfers[idx].amount());
       std::sort(req_t.amounts.begin(), req_t.amounts.end());
@@ -8171,25 +8150,6 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       }
     }
 
-    std::vector<crypto::key_image> ring_key_images;
-    ring_key_images.reserve(selected_transfers.size());
-    std::unordered_map<crypto::key_image, std::vector<uint64_t>> existing_rings;
-    for (size_t idx : selected_transfers)
-    {
-      const transfer_details &td = m_transfers[idx];
-      if (td.m_key_image_known && !td.m_key_image_partial)
-        ring_key_images.push_back(td.m_key_image);
-    }
-    if (!ring_key_images.empty())
-    {
-      std::vector<std::vector<uint64_t>> all_outs;
-      if (get_rings(get_ringdb_key(), ring_key_images, all_outs))
-      {
-        for (size_t i = 0; i < ring_key_images.size(); ++i)
-          existing_rings[ring_key_images[i]] = std::move(all_outs[i]);
-      }
-    }
-
     // we ask for more, to have spares if some outputs are still locked
     size_t base_requested_outputs_count = (size_t)((fake_outputs_count + 1) * 1.5 + 1);
     LOG_PRINT_L2("base_requested_outputs_count: " << base_requested_outputs_count);
@@ -8203,8 +8163,6 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       gamma.reset(new gamma_picker(rct_offsets));
 
     size_t num_selected_transfers = 0;
-    req.outputs.reserve(selected_transfers.size() * (base_requested_outputs_count + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS));
-    daemon_resp.outs.reserve(selected_transfers.size() * (base_requested_outputs_count + config::blockchain_settings::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS));
     for(size_t idx: selected_transfers)
     {
       ++num_selected_transfers;
@@ -8314,11 +8272,9 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       // if we have a known ring, use it
       if (td.m_key_image_known && !td.m_key_image_partial)
       {
-        const auto it = existing_rings.find(td.m_key_image);
-        const bool has_ring = it != existing_rings.end();
-        if (has_ring)
+        std::vector<uint64_t> ring;
+        if (get_ring(get_ringdb_key(), td.m_key_image, ring))
         {
-          const std::vector<uint64_t> &ring = it->second;
           MINFO("This output has a known ring, reusing (size " << ring.size() << ")");
           THROW_WALLET_EXCEPTION_IF(ring.size() > fake_outputs_count + 1, error::wallet_internal_error,
               "An output in this transaction was previously spent on another chain with ring size " +
@@ -8575,10 +8531,9 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       // then pick outs from an existing ring, if any
       if (td.m_key_image_known && !td.m_key_image_partial)
       {
-        const auto it = existing_rings.find(td.m_key_image);
-        if (it != existing_rings.end())
+        std::vector<uint64_t> ring;
+        if (get_ring(get_ringdb_key(), td.m_key_image, ring))
         {
-          const std::vector<uint64_t> &ring = it->second;
           for (uint64_t out: ring)
           {
             if (out < num_outs)
@@ -8592,7 +8547,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
                   if (req.outputs[i].index == out)
                   {
                     LOG_PRINT_L2("Index " << i << "/" << requested_outputs_count << ": idx " << req.outputs[i].index << " (real " << td.m_global_output_index << "), unlocked " << daemon_resp.outs[i].unlocked << ", key " << daemon_resp.outs[i].key << " (from existing ring)");
-                    tx_add_fake_output(outs, req.outputs[i].index, daemon_resp.outs[i].key, daemon_resp.outs[i].mask, td.m_global_output_index, daemon_resp.outs[i].unlocked, valid_public_keys_cache);
+                    tx_add_fake_output(outs, req.outputs[i].index, daemon_resp.outs[i].key, daemon_resp.outs[i].mask, td.m_global_output_index, daemon_resp.outs[i].unlocked);
                     found = true;
                     break;
                   }
@@ -8617,7 +8572,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
       {
         size_t i = base + order[o];
         LOG_PRINT_L2("Index " << i << "/" << requested_outputs_count << ": idx " << req.outputs[i].index << " (real " << td.m_global_output_index << "), unlocked " << daemon_resp.outs[i].unlocked << ", key " << daemon_resp.outs[i].key);
-        tx_add_fake_output(outs, req.outputs[i].index, daemon_resp.outs[i].key, daemon_resp.outs[i].mask, td.m_global_output_index, daemon_resp.outs[i].unlocked, valid_public_keys_cache);
+        tx_add_fake_output(outs, req.outputs[i].index, daemon_resp.outs[i].key, daemon_resp.outs[i].mask, td.m_global_output_index, daemon_resp.outs[i].unlocked);
       }
       if (outs.back().size() < fake_outputs_count + 1)
       {
@@ -8645,8 +8600,6 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
   }
 
   // save those outs in the ringdb for reuse
-  std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> rings;
-  rings.reserve(selected_transfers.size());
   for (size_t i = 0; i < selected_transfers.size(); ++i)
   {
     const size_t idx = selected_transfers[i];
@@ -8656,17 +8609,15 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
     ring.reserve(outs[i].size());
     for (const auto &e: outs[i])
       ring.push_back(std::get<0>(e));
-    rings.push_back(std::make_pair(td.m_key_image, std::move(ring)));
+    if (!set_ring(td.m_key_image, ring, false))
+      MERROR("Failed to set ring for " << td.m_key_image);
   }
-  if (!set_rings(rings, false))
-    MERROR("Failed to set rings");
 }
 
 void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry> dsts,
                                     const std::vector<size_t>& selected_transfers,
                                     size_t fake_outputs_count,
                                     std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs,
-                                    std::unordered_set<crypto::public_key> &valid_public_keys_cache,
                                     uint64_t unlock_time,
                                     uint64_t fee,
                                     const std::vector<uint8_t>& extra,
@@ -8770,7 +8721,7 @@ void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry
   THROW_WALLET_EXCEPTION_IF(found_money < needed_money, error::not_enough_unlocked_money, found_money, needed_money - fee, fee);
 
   if (outs.empty())
-    get_outs(outs, selected_transfers, fake_outputs_count, has_rct, valid_public_keys_cache); // may throw
+    get_outs(outs, selected_transfers, fake_outputs_count, has_rct); // may throw
 
   //prepare inputs
   LOG_PRINT_L2("preparing outputs");
@@ -9230,7 +9181,6 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   const uint8_t hf_ver = *hard_fork_version;
 
   const rct::RCTConfig rct_config = { hf_ver < 13 ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofPaddedBulletproof, use_fork_rules(HF_VERSION_SERVICE_NODES, 0) ? 2 : 1 };
-  std::unordered_set<crypto::public_key> valid_public_keys_cache;
 
   const uint64_t base_fee = get_base_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
@@ -9557,7 +9507,6 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
                             tx.selected_transfers,
                             fake_outs_count,
                             outs,
-                            valid_public_keys_cache,
                             unlock_time,
                             needed_fee,
                             extra,
@@ -9608,7 +9557,6 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
                                 tx.selected_transfers,
                                 fake_outs_count,
                                 outs,
-                                valid_public_keys_cache,
                                 unlock_time,
                                 needed_fee,
                                 extra,
@@ -9680,7 +9628,6 @@ skip_tx:
                           tx.selected_transfers,      /* const std::list<size_t> selected_transfers */
                           fake_outs_count,            /* CONST size_t fake_outputs_count, */
                           tx.outs,                    /* MOD   std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs, */
-                          valid_public_keys_cache,
                           unlock_time,                /* CONST uint64_t unlock_time,  */
                           tx.needed_fee,              /* CONST uint64_t fee, */
                           extra,                      /* const std::vector<uint8_t>& extra, */
@@ -9782,7 +9729,6 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_all(uint64_t below
 {
   std::vector<size_t> unused_transfers_indices;
   std::vector<size_t> unused_dust_indices;
-  std::unordered_set<crypto::public_key> valid_public_keys_cache;
 
   THROW_WALLET_EXCEPTION_IF(unlocked_balance(subaddr_account, false) == 0, error::wallet_internal_error, "No unlocked balance in the entire wallet");
 
@@ -9858,7 +9804,6 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
   hw::device &hwdev = m_account.get_device();
   std::unique_lock hwdev_lock{hwdev};
   hw::reset_mode rst(hwdev);
-  std::unordered_set<crypto::public_key> valid_public_keys_cache;
 
   uint64_t accumulated_fee, accumulated_outputs, accumulated_change;
   struct TX {
@@ -9950,7 +9895,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
 
       LOG_PRINT_L2("Trying to create a tx now, with " << tx.dsts.size() << " destinations and " << tx.selected_transfers.size() << " outputs");
 
-      transfer_selected_rct(tx.dsts, tx.selected_transfers, fake_outs_count, outs, valid_public_keys_cache, unlock_time, needed_fee, extra, test_tx, test_ptx, rct_config, arqma_tx_params);
+      transfer_selected_rct(tx.dsts, tx.selected_transfers, fake_outs_count, outs, unlock_time, needed_fee, extra, test_tx, test_ptx, rct_config, arqma_tx_params);
 
       auto txBlob = t_serializable_object_to_blob(test_ptx.tx);
       needed_fee = calculate_fee(test_ptx.tx, txBlob.size(), base_fee, fee_multiplier, fee_quantization_mask);
@@ -9983,7 +9928,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
           dt.amount = dt_amount + dt_residue;
         }
 
-        transfer_selected_rct(tx.dsts, tx.selected_transfers, fake_outs_count, outs, valid_public_keys_cache, unlock_time, needed_fee, extra, test_tx, test_ptx, rct_config, arqma_tx_params);
+        transfer_selected_rct(tx.dsts, tx.selected_transfers, fake_outs_count, outs, unlock_time, needed_fee, extra, test_tx, test_ptx, rct_config, arqma_tx_params);
 
         txBlob = t_serializable_object_to_blob(test_ptx.tx);
         needed_fee = calculate_fee(test_ptx.tx, txBlob.size(), base_fee, fee_multiplier, fee_quantization_mask);
@@ -10018,7 +9963,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
     cryptonote::transaction test_tx;
     pending_tx test_ptx;
 
-    transfer_selected_rct(tx.dsts, tx.selected_transfers, fake_outs_count, tx.outs, valid_public_keys_cache, unlock_time, tx.needed_fee, extra, test_tx, test_ptx, rct_config, arqma_tx_params);
+    transfer_selected_rct(tx.dsts, tx.selected_transfers, fake_outs_count, tx.outs, unlock_time, tx.needed_fee, extra, test_tx, test_ptx, rct_config, arqma_tx_params);
 
     auto txBlob = t_serializable_object_to_blob(test_ptx.tx);
     tx.tx = test_tx;
