@@ -1130,8 +1130,6 @@ private:
     void print_ring_members(bool value) { m_print_ring_members = value; }
     bool store_tx_info() const { return m_store_tx_info; }
     void store_tx_info(bool store) { m_store_tx_info = store; }
-    uint32_t default_mixin() const { return m_default_mixin; }
-    void default_mixin(uint32_t m) { m_default_mixin = m; }
     uint32_t get_default_priority() const { return m_default_priority; }
     void set_default_priority(uint32_t p) { m_default_priority = p; }
     bool auto_refresh() const { return m_auto_refresh; }
@@ -1321,7 +1319,6 @@ private:
     uint64_t get_fee_quantization_mask();
     uint64_t get_min_ring_size();
     uint64_t get_max_ring_size();
-    uint64_t adjust_mixin(uint64_t mixin);
     uint32_t adjust_priority(uint32_t priority);
 
     static cryptonote::arqma_construct_tx_params construct_params(uint8_t hard_fork_version, cryptonote::txtype tx_type);
@@ -1615,7 +1612,6 @@ private:
     bool m_always_confirm_transfers;
     bool m_print_ring_members;
     bool m_store_tx_info; /*!< request txkey to be returned in RPC, and store in the wallet cache file */
-    uint32_t m_default_mixin;
     uint32_t m_default_priority;
     RefreshType m_refresh_type;
     bool m_auto_refresh;
@@ -1654,7 +1650,7 @@ private:
     std::unique_ptr<tools::file_locker> m_keys_file_locker;
 
     crypto::chacha_key m_cache_key;
-    boost::optional<epee::wipeable_string> m_encrypt_keys_after_refresh;
+    std::shared_ptr<wallet_keys_unlocker> m_encrypt_keys_after_refresh;
 
     bool m_unattended;
 
