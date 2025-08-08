@@ -67,7 +67,7 @@ namespace cryptonote
   height_to_hash const HARDCODED_MAINNET_CHECKPOINTS[] = {
     {0,       "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328"},
     {1731481, "94b47df7c0895399f85dff9f7a1d7c2e67f8809e2a2b5fb14bc9714a2bb1490d"},
-    {1731482, "942d66af0c7fd6f366e35f18dbb1ca668693a4ad37a6058d61bc920550fe10b7"}
+    {1731482, "942d66af0c7fd6f366e35f18dbb1ca668693a4ad37a6058d61bc920550fe10b7"},
   };
   //---------------------------------------------------------------------------
   crypto::hash get_newest_hardcoded_checkpoint(cryptonote::network_type nettype, uint64_t *height)
@@ -289,7 +289,7 @@ namespace cryptonote
     return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::init(network_type nettype, BlockchainDB *db)
+  bool checkpoints::init(network_type nettype, struct BlockchainDB *db)
   {
     *this = {};
     m_db = db;
