@@ -427,7 +427,7 @@ namespace cryptonote
 
     MINFO("Transaction added to pool: txid " << id << " weight: " << tx_weight << " fee/byte: " << (fee / (double)tx_weight));
 
-    prune(id);
+    prune(m_txpool_max_weight);
 
     return true;
   }
@@ -454,109 +454,112 @@ namespace cryptonote
     m_txpool_max_weight = bytes;
   }
   //---------------------------------------------------------------------------------
-  bool tx_memory_pool::remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta, const sorted_tx_container::iterator *stc_it)
-  {
-    const auto it = stc_it ? *stc_it : find_tx_in_sorted_container(txid);
-    if (it == m_txs_by_fee_and_receive_time.end())
-    {
-      MERROR("Failed to find tx in txpool sorted list");
-      return false;
-    }
-
-    cryptonote::blobdata tx_blob = m_blockchain.get_txpool_tx_blob(txid);
-    cryptonote::transaction_prefix tx;
-    if (!parse_and_validate_tx_prefix_from_blob(tx_blob, tx))
-    {
-      MERROR("Failed to parse tx from txpool");
-      return false;
-    }
-
-    txpool_tx_meta_t lookup_meta;
-    if (!meta)
-    {
-      if (m_blockchain.get_txpool_tx_meta(txid, lookup_meta))
-        meta = &lookup_meta;
-      else
-      {
-        MERROR("Failed to find tx in txpool");
-        return false;
-      }
-    }
-
-    const uint64_t tx_fee = std::get<1>(it->first);
-    MINFO("Removing tx " << txid << " from txpool: weight: " << meta->weight << ", fee/byte: " << tx_fee);
-    m_blockchain.remove_txpool_tx(txid);
-    m_txpool_weight -= meta->weight;
-    remove_transaction_keyimages(tx, txid);
-    MINFO("Removing tx " << txid << " from txpool: weight: " << meta->weight << ", fee/byte: " << tx_fee);
-    m_txs_by_fee_and_receive_time.erase(it);
-
-    return true;
-  }
-  //---------------------------------------------------------------------------------
-  void tx_memory_pool::prune(const crypto::hash &skip)
+  void tx_memory_pool::prune(size_t bytes)
   {
     auto locks = tools::unique_locks(m_transactions_lock, m_blockchain);
+    if (bytes == 0)
+      bytes = m_txpool_max_weight;
     LockedTXN lock(m_blockchain);
     bool changed = false;
 
-    auto try_pruning = [this, &skip, &changed](auto &it, bool forward) -> bool {
-      try
+    auto prune_tx = [this](sorted_tx_container::iterator &it, crypto::hash const &txid, txpool_tx_meta_t const &meta, bool &changed)
+    {
+      cryptonote::blobdata tx_blob = m_blockchain.get_txpool_tx_blob(txid);
+      cryptonote::transaction_prefix tx;
+      if (!parse_and_validate_tx_prefix_from_blob(tx_blob, tx))
       {
-        const crypto::hash &txid = it->second;
-        txpool_tx_meta_t meta;
-        if(!m_blockchain.get_txpool_tx_meta(txid, meta))
-        {
-          MERROR("Failed to find tx in pool");
-          return false;
-        }
-        auto del_it = forward ? it++ : it--;
-
-        // do not prune the kept_by_block ones, they are likely added cus we are adding a block with those
-        if (meta.kept_by_block || txid == skip)
-          return true;
-
-        if (this->remove_tx(txid, &meta, &del_it))
-        {
-          changed = true;
-          return true;
-        }
         return false;
       }
-      catch(const std::exception &e)
-      {
-        MERROR("Error while pruning txpool: " << e.what());
-        return false;
-      }
+
+      const uint64_t tx_fee = std::get<1>(it->first);
+      MINFO("Pruning tx " << txid << " from txpool: weight: " << meta.weight << ", fee/byte: " << tx_fee);
+      m_blockchain.remove_txpool_tx(txid);
+      m_txpool_weight -= meta.weight;
+      remove_transaction_keyimages(tx, txid);
+      MINFO("Pruned tx " << txid << " from txpool: weight: " << meta.weight << ", fee/byte: " << tx_fee);
+      it = m_txs_by_fee_and_receive_time.erase(it);
+      changed = true;
+
+      return true;
     };
 
-    const auto unexpired = std::time(nullptr) - MEMPOOL_PRUNE_NON_STANDARD_TX_LIFETIME;
     for (auto it = m_txs_by_fee_and_receive_time.begin(); it != m_txs_by_fee_and_receive_time.end(); )
     {
       const bool is_standard_tx = !std::get<0>(it->first);
       const time_t receive_time = std::get<2>(it->first);
 
-      if (is_standard_tx || receive_time >= unexpired)
+      if (is_standard_tx || receive_time >= time(nullptr) - MEMPOOL_PRUNE_NON_STANDARD_TX_LIFETIME)
         break;
 
-      if (!try_pruning(it, true))
+      try
+      {
+        const crypto::hash &txid = it->second;
+        txpool_tx_meta_t meta;
+        if (!m_blockchain.get_txpool_tx_meta(txid, meta))
+        {
+          MERROR("Failed to find tx in txpool");
+          return;
+        }
+
+        if (meta.kept_by_block)
+        {
+          it++;
+          continue;
+        }
+
+        if (!prune_tx(it, txid, meta, changed))
+        {
+          MERROR("Failed to parse tx from txpool");
+          return;
+        }
+      }
+      catch (const std::exception &e)
+      {
+        MERROR("Error while pruning txpool: " << e.what());
         return;
+      }
     }
 
-    // this will never remove the first one, but we don't care
     auto it = m_txs_by_fee_and_receive_time.end();
     if (it != m_txs_by_fee_and_receive_time.begin())
       it = std::prev(it);
-    while(m_txpool_weight > m_txpool_max_weight && it != m_txs_by_fee_and_receive_time.begin())
+    while (it != m_txs_by_fee_and_receive_time.begin())
     {
-      if (!try_pruning(it, false))
+      if (m_txpool_weight <= bytes)
+        break;
+      try
+      {
+        const crypto::hash &txid = it->second;
+        txpool_tx_meta_t meta;
+        if (!m_blockchain.get_txpool_tx_meta(txid, meta))
+        {
+          MERROR("Failed to find tx in txpool");
+          return;
+        }
+
+        if (meta.kept_by_block)
+        {
+          --it;
+          continue;
+        }
+
+        if (!prune_tx(it, txid, meta, changed))
+        {
+          MERROR("Failed to parse tx from txpool");
+          return;
+        }
+      }
+      catch (const std::exception &e)
+      {
+        MERROR("Error while pruning txpool: " << e.what());
         return;
+      }
     }
     lock.commit();
     if(changed)
       ++m_cookie;
-    if(m_txpool_weight > m_txpool_max_weight)
-      MINFO("Pool weight after pruning is still larger than limit: " << m_txpool_weight << "/" << m_txpool_max_weight);
+    if(m_txpool_weight > bytes)
+      MINFO("Pool weight after pruning is still larger than limit: " << m_txpool_weight << "/" << bytes);
   }
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::insert_key_images(const transaction_prefix &tx, const crypto::hash &id, bool kept_by_block)

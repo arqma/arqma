@@ -178,7 +178,7 @@ namespace service_nodes
     int validator_index_tracker = -1;
     for (const auto &vote : state_change.votes)
     {
-      if (hard_fork_version >= cryptonote::network_version_16)
+      if (hard_fork_version > cryptonote::network_version_16)
       {
         if (validator_index_tracker >= static_cast<int>(vote.validator_index))
         {
@@ -237,7 +237,7 @@ namespace service_nodes
       for (size_t i = 0; i < checkpoint.signatures.size(); i++)
       {
         service_nodes::voter_to_signature const &voter_to_signature = checkpoint.signatures[i];
-        if (hard_fork_version >= cryptonote::network_version_16 && i < (checkpoint.signatures.size() - 1))
+        if (hard_fork_version > cryptonote::network_version_16 && i < (checkpoint.signatures.size() - 1))
         {
           auto curr = checkpoint.signatures[i].voter_index;
           auto next = checkpoint.signatures[i + 1].voter_index;

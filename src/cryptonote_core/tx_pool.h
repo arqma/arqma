@@ -493,14 +493,12 @@ namespace cryptonote
      */
     void mark_double_spend(const transaction &tx);
 
-    bool remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta = nullptr, const sorted_tx_container::iterator *stc_it = nullptr);
-
     /**
      * @brief prune lowest fee/byte txes till we're not above bytes
      *
      * if bytes is 0, use m_txpool_max_weight
      */
-    void prune(const crypto::hash &skip);
+    void prune(size_t bytes = 0);
 
     //TODO: confirm the below comments and investigate whether or not this
     //      is the desired behavior

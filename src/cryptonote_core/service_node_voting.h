@@ -61,7 +61,7 @@ namespace service_nodes
   enum struct quorum_type : uint8_t
   {
     obligations = 0,
-    checkpointing,
+    checkpointing = 1,
     _count
   };
 

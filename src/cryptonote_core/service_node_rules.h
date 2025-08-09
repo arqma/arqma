@@ -94,7 +94,9 @@ namespace service_nodes
 
   constexpr quorum_type max_quorum_type_for_hf(uint8_t hard_fork_version)
   {
-    return hard_fork_version <= cryptonote::network_version_16 ? quorum_type::obligations : quorum_type::checkpointing;
+    if(hard_fork_version < cryptonote::network_version_17)
+      return quorum_type::obligations;
+    return quorum_type::checkpointing;
   }
 
   constexpr uint64_t staking_num_lock_blocks(cryptonote::network_type nettype)
