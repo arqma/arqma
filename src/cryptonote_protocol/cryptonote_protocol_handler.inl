@@ -805,7 +805,7 @@ namespace cryptonote
       if (!my_uptime_proof_confirmation)
       {
         cryptonote_connection_context empty_context = {};
-        relay_uptime_proof(arg, empty_context, false);
+        relay_uptime_proof(arg, empty_context);
       }
     }
     return 1;
@@ -2410,11 +2410,8 @@ skip:
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
-  bool t_cryptonote_protocol_handler<t_core>::relay_uptime_proof(NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& exclude_context, bool force_relay)
+  bool t_cryptonote_protocol_handler<t_core>::relay_uptime_proof(NOTIFY_UPTIME_PROOF::request& arg, cryptonote_connection_context& exclude_context)
   {
-    if (!is_synchronized() && !force_relay)
-      return false;
-
     bool result = relay_to_synchronized_peers<NOTIFY_UPTIME_PROOF>(arg, exclude_context);
     return result;
   }

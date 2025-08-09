@@ -140,7 +140,7 @@
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
 #define P2P_DEFAULT_CONNECTIONS_COUNT_OUT               8
-#define P2P_DEFAULT_CONNECTIONS_COUNT_IN                24
+#define P2P_DEFAULT_CONNECTIONS_COUNT_IN                32
 #define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_OUT          2
 #define P2P_DEFAULT_CONNECTIONS_COUNT_TEST_IN           6
 
@@ -148,17 +148,17 @@
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
-#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               60         // seconds
-#define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             5000       // 5 seconds
+#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               45         // seconds
+#define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       // 2 seconds
 #define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  // 2 minutes
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
-#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            6
+#define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST       1
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 
-#define P2P_DEFAULT_LIMIT_RATE_UP                       8192       // kbps
-#define P2P_DEFAULT_LIMIT_RATE_DOWN                     32768      // kbps
+#define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // kbps
+#define P2P_DEFAULT_LIMIT_RATE_DOWN                     16384      // kbps
 
 #define P2P_FAILED_ADDR_FORGET_SECONDS                  (24*60*60)    // 1 day
 #define P2P_IP_BLOCKTIME                                (2*60*60*24) // 2 days
