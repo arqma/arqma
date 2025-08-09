@@ -1018,7 +1018,7 @@ namespace net_utils
       MDEBUG("start accept (IPv4)");
       new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, m_state->ssl_options().support));
       acceptor_.async_accept(new_connection_->socket(),
-        std::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept_ipv4, this,
+        boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept_ipv4, this,
         boost::asio::placeholders::error));
     }
     catch (const std::exception &e)
@@ -1055,7 +1055,7 @@ namespace net_utils
         MDEBUG("start accept (IPv6)");
         new_connection_ipv6.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, m_state->ssl_options().support));
         acceptor_ipv6.async_accept(new_connection_ipv6->socket(),
-          std::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept_ipv6, this,
+          boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept_ipv6, this,
           boost::asio::placeholders::error));
       }
       catch (const std::exception &e)
@@ -1294,7 +1294,7 @@ namespace net_utils
       connection_ptr conn(std::move((*current_new_connection)));
       (*current_new_connection).reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, conn->get_ssl_support()));
       current_acceptor->async_accept((*current_new_connection)->socket(),
-        std::bind(accept_function_pointer, this,
+        boost::bind(accept_function_pointer, this,
         boost::asio::placeholders::error));
       accept_started = true;
 
@@ -1332,7 +1332,7 @@ namespace net_utils
     misc_utils::sleep_no_w(100);
     (*current_new_connection).reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, (*current_new_connection)->get_ssl_support()));
     current_acceptor->async_accept((*current_new_connection)->socket(),
-      std::bind(accept_function_pointer, this,
+      boost::bind(accept_function_pointer, this,
       boost::asio::placeholders::error));
   }
   //---------------------------------------------------------------------------------
@@ -1398,7 +1398,7 @@ namespace net_utils
       shared_context->connect_mut.lock(); shared_context->ec = ec_; shared_context->cond.notify_one(); shared_context->connect_mut.unlock();
     };
 
-    sock_.async_connect(remote_endpoint, std::bind<void>(connect_callback, std::placeholders::_1, local_shared_context));
+    sock_.async_connect(remote_endpoint, boost::bind<void>(connect_callback, boost::placeholders::_1, local_shared_context));
     while(local_shared_context->ec == boost::asio::error::would_block)
     {
       auto wait_stat = local_shared_context->cond.wait_for(lock, std::chrono::milliseconds{conn_timeout});
