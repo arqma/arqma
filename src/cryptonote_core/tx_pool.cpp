@@ -454,6 +454,19 @@ namespace cryptonote
     m_txpool_max_weight = bytes;
   }
   //---------------------------------------------------------------------------------
+  void tx_memory_pool::prune_weight(size_t weight)
+  {
+    if (weight > m_txpool_weight)
+    {
+      MERROR("Underflow in txpool weight");
+      m_txpool_weight = 0;
+    }
+    else
+    {
+      m_txpool_weight -= weight;
+    }
+  }
+  //---------------------------------------------------------------------------------
   void tx_memory_pool::prune(size_t bytes)
   {
     auto locks = tools::unique_locks(m_transactions_lock, m_blockchain);
@@ -474,7 +487,7 @@ namespace cryptonote
       const uint64_t tx_fee = std::get<1>(it->first);
       MINFO("Pruning tx " << txid << " from txpool: weight: " << meta.weight << ", fee/byte: " << tx_fee);
       m_blockchain.remove_txpool_tx(txid);
-      m_txpool_weight -= meta.weight;
+      prune_weight(meta.weight);
       remove_transaction_keyimages(tx, txid);
       MINFO("Pruned tx " << txid << " from txpool: weight: " << meta.weight << ", fee/byte: " << tx_fee);
       it = m_txs_by_fee_and_receive_time.erase(it);
@@ -644,7 +657,7 @@ namespace cryptonote
 
       // remove first, in case this throws, so key images aren't removed
       m_blockchain.remove_txpool_tx(id);
-      m_txpool_weight -= tx_weight;
+      prune_weight(tx_weight);
       remove_transaction_keyimages(tx, id);
       lock.commit();
     }
@@ -719,7 +732,7 @@ namespace cryptonote
           {
             // remove first, so we only remove key images if the tx removal succeeds
             m_blockchain.remove_txpool_tx(txid);
-            m_txpool_weight -= entry.second;
+            prune_weight(entry.second);
             remove_transaction_keyimages(tx, txid);
           }
         }

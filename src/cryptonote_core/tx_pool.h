@@ -392,6 +392,8 @@ namespace cryptonote
      */
     void set_txpool_max_weight(size_t bytes);
 
+    void prune_weight(size_t weight);
+
   private:
 
     /**
@@ -486,7 +488,7 @@ namespace cryptonote
      *
      * @return true if the transaction is good to go, otherwise false
      */
-    bool is_transaction_ready_to_go(txpool_tx_meta_t& txd, const crypto::hash &txid, const cryptonote::blobdata &txblob, transaction&tx) const;
+    bool is_transaction_ready_to_go(txpool_tx_meta_t& txd, const crypto::hash &txid, const cryptonote::blobdata &txblob, transaction &tx) const;
 
     /**
      * @brief mark all transactions double spending the one passed
