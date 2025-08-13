@@ -1026,7 +1026,7 @@ namespace service_nodes
     std::lock_guard lock(m_sn_mutex);
     process_block(block, txs);
 
-    if (block.major_version >+ cryptonote::network_version_16 && checkpoint)
+    if (block.major_version >= cryptonote::network_version_16 && checkpoint)
     {
       std::shared_ptr<const service_nodes::quorum> quorum = get_quorum(quorum_type::checkpointing, checkpoint->height);
       if (!quorum)

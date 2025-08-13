@@ -32,7 +32,6 @@
 // IP blocking adapted from Boolberry
 
 #include <algorithm>
-#include <boost/bind/bind.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/optional/optional.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -450,7 +449,14 @@ namespace nodetool
 
     std::string host;
     std::string port = std::to_string(default_port);
-    net::get_network_address_host_and_port(addr, host, port);
+    size_t colon_pos = addr.find_last_of(':');
+    size_t dot_pos = addr.find_last_of('.');
+    size_t square_brace_pos = addr.find('[');
+
+    if ((std::string::npos != colon_pos && std::string::npos != dot_pos) || std::string::npos != square_brace_pos)
+    {
+      net::get_network_address_host_and_port(addr, host, port);
+    }
     MINFO("Resolving node address: host=" << host << ", port=" << port);
 
     io_service io_srv;
@@ -1570,11 +1576,11 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::idle_worker()
   {
-    m_peer_handshake_idle_maker_interval.do_call(std::bind(&node_server<t_payload_net_handler>::peer_sync_idle_maker, this));
-    m_connections_maker_interval.do_call(std::bind(&node_server<t_payload_net_handler>::connections_maker, this));
-    m_gray_peerlist_housekeeping_interval.do_call(std::bind(&node_server<t_payload_net_handler>::gray_peerlist_housekeeping, this));
-    m_peerlist_store_interval.do_call(std::bind(&node_server<t_payload_net_handler>::store_config, this));
-    m_incoming_connections_interval.do_call(std::bind(&node_server<t_payload_net_handler>::check_incoming_connections, this));
+    m_peer_handshake_idle_maker_interval.do_call([this] { return peer_sync_idle_maker(); });
+    m_connections_maker_interval.do_call([this] { return connections_maker(); });
+    m_gray_peerlist_housekeeping_interval.do_call([this] { return gray_peerlist_housekeeping(); });
+    m_peerlist_store_interval.do_call([this] { return store_config(); });
+    m_incoming_connections_interval.do_call([this] { return check_incoming_connections(); });
     return true;
   }
   //-----------------------------------------------------------------------------------

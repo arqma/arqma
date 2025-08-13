@@ -18,12 +18,10 @@ namespace cryptonote
         return 4096;
       case nodetool::COMMAND_REQUEST_SUPPORT_FLAGS::ID:
         return 4096;
-      case cryptonote::NOTIFY_NEW_BLOCK::ID:
-        return 1024 * 1024 * 128; // 128 MB (max packet is a bit less than 100 MB though)
       case cryptonote::NOTIFY_NEW_TRANSACTIONS::ID:
         return 1024 * 1024 * 128; // 128 MB (max packet is a bit less than 100 MB though)
       case cryptonote::NOTIFY_REQUEST_GET_OBJECTS::ID:
-        return 1024 * 1024 * 2; // 2 MB
+        return 1024 * 1024 * 4; // 4 MB
       case cryptonote::NOTIFY_RESPONSE_GET_OBJECTS::ID:
         return 1024 * 1024 * 128; // 128 MB (max packet is a bit less than 100 MB though)
       case cryptonote::NOTIFY_REQUEST_CHAIN::ID:
