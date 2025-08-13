@@ -392,8 +392,6 @@ namespace cryptonote
      */
     void set_txpool_max_weight(size_t bytes);
 
-    void prune_weight(size_t weight);
-
   private:
 
     /**

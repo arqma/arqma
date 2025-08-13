@@ -315,11 +315,11 @@ int main(int argc, char const * argv[])
         }
 
         auto ssl_options = cryptonote::rpc_args::process_ssl(vm, true);
-	if (!ssl_options)
+        if (!ssl_options)
           return 1;
 
         daemonize::t_command_server rpc_commands{rpc_ip, rpc_port, std::move(login), std::move(*ssl_options)};
-        if (rpc_commands.process_command(command))
+        if (rpc_commands.process_command_vec(command))
         {
           return 0;
         }

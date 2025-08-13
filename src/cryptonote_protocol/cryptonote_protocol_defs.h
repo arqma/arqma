@@ -41,8 +41,6 @@ namespace service_nodes
 {
   struct legacy_deregister_vote;
   struct quorum_vote_t;
-  void vote_to_blob(const quorum_vote_t& vote, unsigned char blob[]);
-  void blob_to_vote(const unsigned char blob[], quorum_vote_t& vote);
 };
 
 namespace cryptonote
@@ -355,10 +353,10 @@ namespace cryptonote
   struct NOTIFY_NEW_SERVICE_NODE_VOTE
   {
     const static int ID = BC_COMMANDS_POOL_BASE + 12;
-
     struct request
     {
       std::vector<service_nodes::quorum_vote_t> votes;
+
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(votes)
       END_KV_SERIALIZE_MAP()

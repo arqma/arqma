@@ -122,8 +122,8 @@ t_command_server::t_command_server(
     );
   m_command_lookup.set_handler(
       "prepare_registration"
-    , std::bind(&t_command_parser_executor::prepare_registration, &m_parser)
-    , "prepare_registration"
+    , std::bind(&t_command_parser_executor::prepare_registration, &m_parser, p::_1)
+    , "prepare_registration [+force]"
     , "Interactive prompt to prepare Service Node registration command, Resulting registration command can be run in command-line wallet to send the registration to the blockchain."
     );
   m_command_lookup.set_handler(
@@ -354,14 +354,14 @@ t_command_server::t_command_server(
     );
 }
 
-bool t_command_server::process_command(const std::string& cmd)
+bool t_command_server::process_command_str(const std::string& cmd)
 {
-  return m_command_lookup.process_command(cmd);
+  return m_command_lookup.process_command_str(cmd);
 }
 
-bool t_command_server::process_command(const std::vector<std::string>& cmd)
+bool t_command_server::process_command_vec(const std::vector<std::string>& cmd)
 {
-  bool result = m_command_lookup.process_command(cmd);
+  bool result = m_command_lookup.process_command_vec(cmd);
   if (!result)
   {
     help(std::vector<std::string>());
@@ -403,8 +403,10 @@ std::string t_command_server::get_commands_str()
   std::stringstream ss;
   ss << "ArQmA '" << ARQMA_RELEASE_NAME << "' (v" << ARQMA_VERSION_FULL << ")" << std::endl;
   ss << "Commands:\n";
-  m_command_lookup.for_each([&ss] (const std::string&, const std::string& usage, const std::string&) {
-    ss << " " << usage << "\n"; });
+  std::string usage = m_command_lookup.get_usage();
+  boost::replace_all(usage, "\n", "\n ");
+  usage.insert(0, " ");
+  ss << usage << std::endl;
   return ss.str();
 }
 

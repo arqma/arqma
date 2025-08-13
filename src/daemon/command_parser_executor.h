@@ -86,7 +86,7 @@ public:
 
   bool print_stake_requirement(const std::vector<std::string>& args);
 
-  bool prepare_registration();
+  bool prepare_registration(const std::vector<std::string>& args);
 
   bool print_sn(const std::vector<std::string>& args);
 
