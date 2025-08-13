@@ -190,7 +190,7 @@
 
 #define HASH_OF_HASHES_STEP                             256
 
-#define DEFAULT_TXPOOL_MAX_WEIGHT                       648000000ull // 3 days at 300000, in bytes
+#define DEFAULT_TXPOOL_MAX_WEIGHT                       2592000000ull
 
 #define BULLETPROOF_MAX_OUTPUTS                         16
 
