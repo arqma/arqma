@@ -178,7 +178,7 @@ namespace service_nodes
     int validator_index_tracker = -1;
     for (const auto &vote : state_change.votes)
     {
-      if (hard_fork_version > cryptonote::network_version_16)
+      if (hard_fork_version >= cryptonote::network_version_17)
       {
         if (validator_index_tracker >= static_cast<int>(vote.validator_index))
         {
@@ -237,7 +237,7 @@ namespace service_nodes
       for (size_t i = 0; i < checkpoint.signatures.size(); i++)
       {
         service_nodes::voter_to_signature const &voter_to_signature = checkpoint.signatures[i];
-        if (hard_fork_version > cryptonote::network_version_16 && i < (checkpoint.signatures.size() - 1))
+        if (hard_fork_version >= cryptonote::network_version_17 && i < (checkpoint.signatures.size() - 1))
         {
           auto curr = checkpoint.signatures[i].voter_index;
           auto next = checkpoint.signatures[i + 1].voter_index;
@@ -268,7 +268,7 @@ namespace service_nodes
     {
       if (checkpoint.signatures.size() != 0)
       {
-        LOG_PRINT_L1("Non service-node checkpoints should have no signature");
+        LOG_PRINT_L1("Non service-node checkpoints should have no signature. Checkpoint failed at height: " << checkpoint.height);
         return false;
       }
     }
@@ -339,7 +339,7 @@ namespace service_nodes
   bool verify_vote_signature(uint8_t hard_fork_version, const quorum_vote_t &vote, cryptonote::vote_verification_context &vvc, const service_nodes::quorum &quorum)
   {
     bool result = true;
-    if (vote.type >= tools::enum_top<quorum_type>)
+    if (vote.type > tools::enum_top<quorum_type>)
     {
       vvc.m_invalid_vote_type = true;
       result = false;
@@ -531,7 +531,7 @@ namespace service_nodes
     return *votes;
   }
 
-  void voting_pool::remove_used_votes(std::vector<cryptonote::transaction> const &txs)
+  void voting_pool::remove_used_votes(std::vector<cryptonote::transaction> const &txs, uint8_t hard_fork_version)
   {
     CRITICAL_REGION_LOCAL(m_lock);
     if (m_obligations_pool.empty())
