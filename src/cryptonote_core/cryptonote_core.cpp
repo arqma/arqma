@@ -1299,7 +1299,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   size_t core::get_block_sync_size(uint64_t height) const
   {
-    static const uint64_t quick_height = m_nettype == MAINNET ? 1720000 : m_nettype == STAGENET ? 0 : 0;
+    static const uint64_t quick_height = m_nettype == MAINNET ? config::blockchain_settings::sync_height : m_nettype == STAGENET ? 0 : 0;
     size_t res = 0;
     if(block_sync_size > 0)
       res = block_sync_size;

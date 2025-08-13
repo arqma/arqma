@@ -686,7 +686,7 @@ namespace cryptonote
         if(bvc.m_added_to_main_chain)
         {
           //TODO: Add here announce protocol usage
-          NOTIFY_NEW_FLUFFY_BLOCK::request reg_arg;
+          NOTIFY_NEW_FLUFFY_BLOCK::request reg_arg{};
           reg_arg.current_blockchain_height = arg.current_blockchain_height;
           reg_arg.b = b;
           relay_block(reg_arg, context);
@@ -2294,7 +2294,7 @@ skip:
   bool t_cryptonote_protocol_handler<t_core>::relay_block(NOTIFY_NEW_FLUFFY_BLOCK::request& arg, cryptonote_connection_context& exclude_context)
   {
     std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> fluffyConnections;
-    m_p2p->for_each_connection([this, &exclude_context, &fluffyConnections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
+    m_p2p->for_each_connection([&exclude_context, &fluffyConnections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
     {
       if (peer_id && exclude_context.m_connection_id != context.m_connection_id && context.m_remote_address.get_zone() == epee::net_utils::zone::public_)
       {

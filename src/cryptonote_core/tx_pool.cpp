@@ -489,7 +489,6 @@ namespace cryptonote
     m_blockchain.remove_txpool_tx(txid);
     m_txpool_weight -= meta->weight;
     remove_transaction_keyimages(tx, txid);
-    MINFO("Removing tx " << txid << " from txpool: weight: " << meta->weight << ", fee/byte: " << tx_fee);
     m_txs_by_fee_and_receive_time.erase(it);
 
     return true;
@@ -497,9 +496,9 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   void tx_memory_pool::prune(size_t bytes)
   {
-    auto locks = tools::unique_locks(m_transactions_lock, m_blockchain);
-    if (bytes == 0)
-      bytes = m_txpool_max_weight;
+    //auto locks = tools::unique_locks(m_transactions_lock, m_blockchain);
+    CRITICAL_REGION_LOCAL(m_transactions_lock);
+    CRITICAL_REGION_LOCAL1(m_blockchain);
     LockedTXN lock(m_blockchain);
     bool changed = false;
 
@@ -549,7 +548,7 @@ namespace cryptonote
     auto it = m_txs_by_fee_and_receive_time.end();
     if (it != m_txs_by_fee_and_receive_time.begin())
       it = std::prev(it);
-    while (m_txpool_weight <= bytes && it != m_txs_by_fee_and_receive_time.begin())
+    while (m_txpool_weight > m_txpool_max_weight && it != m_txs_by_fee_and_receive_time.begin())
     {
       if (!try_pruning(it, false /*forward*/))
         return;
@@ -557,8 +556,8 @@ namespace cryptonote
     lock.commit();
     if(changed)
       ++m_cookie;
-    if(m_txpool_weight > bytes)
-      MINFO("Pool weight after pruning is still larger than limit: " << m_txpool_weight << "/" << bytes);
+    if(m_txpool_weight > m_txpool_max_weight)
+      MINFO("Pool weight after pruning is still larger than limit: " << m_txpool_weight << "/" << m_txpool_max_weight);
   }
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::insert_key_images(const transaction_prefix &tx, const crypto::hash &id, bool kept_by_block)
