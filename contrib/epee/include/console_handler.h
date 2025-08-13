@@ -377,8 +377,8 @@ eof:
 #ifdef HAVE_READLINE
             rdln::suspend_readline pause_readline;
 #endif
-            std::cout << "unknown command: " << command << std::endl;
-            std::cout << usage;
+            std::cout << "To see available commands type 'help' and press ENTER" << std::endl;
+//            std::cout << usage;
           }
         }
         catch (const std::exception& ex)
@@ -452,40 +452,42 @@ eof:
 
   class command_handler {
   public:
-    typedef std::function<bool (const std::vector<std::string> &)> callback;
+    typedef std::function<bool(const std::vector<std::string> &)> callback;
     typedef std::map<std::string, std::pair<callback, std::pair<std::string, std::string> > > lookup;
 
-    template <typename Function>
-    void for_each(Function f)
+    std::string get_usage()
     {
-      for (const auto& x : m_command_handlers)
-        f(x.first, x.second.second.first, x.second.second.second);
+      std::stringstream ss;
+
+      for (auto& x : m_command_handlers)
+      {
+        ss << x.second.second.first << ENDL;
+      }
+      return ss.str();
     }
 
     std::pair<std::string, std::string> get_documentation(const std::vector<std::string>& cmd)
     {
       if(cmd.empty())
-        return {"", ""};
+        return std::make_pair("", "");
       auto it = m_command_handlers.find(cmd.front());
       if(it == m_command_handlers.end())
-        return {"", ""};
+        return std::make_pair("", "");
       return it->second.second;
     }
 
-    void set_handler(const std::string& cmd, callback hndlr, std::string usage = "", std::string description = "")
+    void set_handler(const std::string& cmd, const callback& hndlr, const std::string& usage = "", const std::string& description = "")
     {
       lookup::mapped_type & vt = m_command_handlers[cmd];
-      vt.first = std::move(hndlr);
-      if (description.empty())
-        vt.second = {cmd, std::move(usage)};
-      else
-        vt.second = {std::move(usage), std::move(description)};
+      vt.first = hndlr;
+      vt.second.first = description.empty() ? cmd : usage;
+      vt.second.second = description.empty() ? usage : description;
 #ifdef HAVE_READLINE
       rdln::readline_buffer::add_completion(cmd);
 #endif
     }
 
-    bool process_command(const std::vector<std::string>& cmd)
+    bool process_command_vec(const std::vector<std::string>& cmd)
     {
       if(!cmd.size())
         return false;
@@ -496,11 +498,11 @@ eof:
       return it->second.first(cmd_local);
     }
 
-    bool process_command(const std::string& cmd)
+    bool process_command_str(const std::string& cmd)
     {
       std::vector<std::string> cmd_v;
       boost::split(cmd_v,cmd,boost::is_any_of(" "), boost::token_compress_on);
-      return process_command(cmd_v);
+      return process_command_vec(cmd_v);
     }
   private:
     lookup m_command_handlers;
@@ -534,7 +536,7 @@ eof:
 
     bool run_handling(std::function<std::string(void)> prompt, const std::string& usage_string, std::function<void(void)> exit_handler = NULL)
     {
-      return m_console_handler.run([this](const auto& arg) { return process_command(arg); }, prompt, usage_string, exit_handler);
+      return m_console_handler.run([this](const auto& arg) { return process_command_str(arg); }, prompt, usage_string, exit_handler);
     }
 
     void print_prompt()

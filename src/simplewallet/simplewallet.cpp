@@ -535,8 +535,11 @@ std::string join_priority_strings(const char *delimiter)
 std::string simple_wallet::get_commands_str()
 {
   std::stringstream ss;
-  ss << tr("Commands: ") << "\n";
-  m_cmd_binder.for_each([&ss](auto&, const std::string& usage, auto&) { ss << " " << usage << "\n"; });
+  ss << tr("Commands: ") << ENDL;
+  std::string usage = m_cmd_binder.get_usage();
+  boost::replace_all(usage, "\n", "\n ");
+  usage.insert(0, " ");
+  ss << usage << ENDL;
   return ss.str();
 }
 
@@ -8571,7 +8574,7 @@ bool simple_wallet::show_transfer(const std::vector<std::string> &args)
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::process_command(const std::vector<std::string> &args)
 {
-  return m_cmd_binder.process_command(args);
+  return m_cmd_binder.process_command_vec(args);
 }
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::interrupt()

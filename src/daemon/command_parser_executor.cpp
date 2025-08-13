@@ -288,9 +288,16 @@ bool t_command_parser_executor::print_stake_requirement(const std::vector<std::s
   return result;
 }
 
-bool t_command_parser_executor::prepare_registration()
+bool t_command_parser_executor::prepare_registration(const std::vector<std::string>& args)
 {
-  bool result = m_executor.prepare_registration();
+  bool force_registration = false;
+  for (auto& arg : args)
+  {
+    if (arg == "+force")
+      force_registration = true;
+  }
+
+  bool result = m_executor.prepare_registration(force_registration);
   return result;
 }
 
@@ -832,17 +839,25 @@ bool t_command_parser_executor::update(const std::vector<std::string>& args)
 
 bool t_command_parser_executor::relay_tx(const std::vector<std::string>& args)
 {
-  if (args.size() != 1) return false;
+  if (args.size() != 1)
+  {
+    std::cout << "expected: relay_tx <txid>" << std::endl;
+    return true;
+  }
 
-  std::string txid;
-  crypto::hash hash;
-  if (!parse_hash256(args[0], hash))
+  const std::string& txid_str = args[0];
+  crypto::hash tx_hash;
+  if (parse_hash256(txid_str, tx_hash))
+  {
+    m_executor.relay_tx(txid_str);
+  }
+  else
   {
     std::cout << "failed to parse tx id" << std::endl;
     return true;
   }
-  txid = args[0];
-  return m_executor.relay_tx(txid);
+
+  return true;
 }
 
 bool t_command_parser_executor::sync_info(const std::vector<std::string>& args)

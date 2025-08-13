@@ -136,24 +136,4 @@ namespace service_nodes
     return get_portions_from_percent(cut_percent, portions);
   }
 
-  template<typename... Args>
-  static bool check_condition(bool condition, std::string* reason, Args&&... args)
-  {
-    if(condition && reason)
-    {
-      std::ostringstream os;
-      (os << ... << std::forward<Args>(args));
-      *reason = os.str();
-    }
-    return condition;
-  }
-
-  bool validate_unstake_tx(uint64_t blockchain_height, cryptonote::transaction const &tx, cryptonote::tx_extra_field &extra, std::string *reason)
-  {
-    if(check_condition(tx.tx_type != cryptonote::txtype::key_image_unlock, reason, tx, ", uses wrong transaction type, expected: ", cryptonote::txtype::key_image_unlock))
-      return false;
-
-    return true;
-  }
-
 }

@@ -2885,7 +2885,7 @@ static uint64_t get_actual_amount(uint64_t amount, uint64_t portions)
   return resultlo;
 }
 
-bool t_rpc_command_executor::prepare_registration()
+bool t_rpc_command_executor::prepare_registration(bool force_registration)
 {
   struct clear_log_categories
   {
@@ -2895,6 +2895,11 @@ bool t_rpc_command_executor::prepare_registration()
   };
   auto scoped_log_cats = std::unique_ptr<clear_log_categories>(new clear_log_categories());
 
+  cryptonote::COMMAND_RPC_GET_INFO::request req{};
+  cryptonote::COMMAND_RPC_GET_INFO::response res{};
+  cryptonote::COMMAND_RPC_HARD_FORK_INFO::request hf_req{};
+  cryptonote::COMMAND_RPC_HARD_FORK_INFO::response hf_res{};
+
   {
     cryptonote::COMMAND_RPC_GET_SERVICE_NODE_KEY::request keyreq = {};
     cryptonote::COMMAND_RPC_GET_SERVICE_NODE_KEY::response keyres = {};
@@ -2903,7 +2908,16 @@ bool t_rpc_command_executor::prepare_registration()
     if(m_is_rpc)
     {
       if(!m_rpc_client->json_rpc_request(keyreq, keyres, "get_service_node_key", fail_msg))
+      {
         return true;
+      }
+    }
+    else if (auto last_storage_server_ping = static_cast<time_t>(res.last_storage_server_ping);
+        last_storage_server_ping < (time(nullptr) - 60) && !force_registration)
+    {
+      tools::fail_msg_writer() << "Unable to prepare registration: this daemon has not received a ping from the storage server "
+                               << (res.last_storage_server_ping == 0 ? "yet" : "since " + get_human_time_ago(last_storage_server_ping, std::time(nullptr)));
+      return false;
     }
     else
     {
@@ -2920,10 +2934,6 @@ bool t_rpc_command_executor::prepare_registration()
   uint8_t hard_fork_version = cryptonote::network_version_16;
   cryptonote::network_type nettype = cryptonote::UNDEFINED;
   {
-    cryptonote::COMMAND_RPC_GET_INFO::request req;
-    cryptonote::COMMAND_RPC_GET_INFO::response res;
-    cryptonote::COMMAND_RPC_HARD_FORK_INFO::request hf_req;
-    cryptonote::COMMAND_RPC_HARD_FORK_INFO::response hf_res;
     std::string const info_fail_message = "Could not get current blockchain info";
 
     if(m_is_rpc)
@@ -3445,16 +3455,16 @@ bool t_rpc_command_executor::prepare_registration()
   scoped_log_cats.reset();
 
   {
-    cryptonote::COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW::request req;
-    cryptonote::COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW::response res;
+    cryptonote::COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW::request cmd_req;
+    cryptonote::COMMAND_RPC_GET_SERVICE_NODE_REGISTRATION_CMD_RAW::response cmd_res;
     std::string fail_message = "Unsuccessful";
 
-    req.args = args;
-    req.make_friendly = true;
-    req.staking_requirement = staking_requirement;
+    cmd_req.args = args;
+    cmd_req.make_friendly = true;
+    cmd_req.staking_requirement = staking_requirement;
     if(m_is_rpc)
     {
-      if(!m_rpc_client->json_rpc_request(req, res, "get_service_node_registration_cmd_raw", fail_message))
+      if(!m_rpc_client->json_rpc_request(cmd_req, cmd_res, "get_service_node_registration_cmd_raw", fail_message))
       {
         tools::fail_msg_writer() << "Failed to validate registration arguments; check the addresses and registration parameters and that the Daemon is running with the '--service-node' flag";
         return true;
@@ -3463,14 +3473,14 @@ bool t_rpc_command_executor::prepare_registration()
     else
     {
       epee::json_rpc::error error_resp;
-      if(!m_rpc_server->on_get_service_node_registration_cmd_raw(req, res, error_resp) || res.status != CORE_RPC_STATUS_OK)
+      if(!m_rpc_server->on_get_service_node_registration_cmd_raw(cmd_req, cmd_res, error_resp) || cmd_res.status != CORE_RPC_STATUS_OK)
       {
         tools::fail_msg_writer() << make_error(fail_message, error_resp.message);
         return true;
       }
     }
 
-    tools::success_msg_writer() << res.registration_cmd;
+    tools::success_msg_writer() << cmd_res.registration_cmd;
   }
 
   return true;

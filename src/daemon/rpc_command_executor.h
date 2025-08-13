@@ -172,7 +172,7 @@ public:
 
   bool print_stake_requirement(uint64_t height);
 
-  bool prepare_registration();
+  bool prepare_registration(bool force_registration = false);
 
   bool print_sn(const std::vector<std::string> &args);
 };

@@ -61,7 +61,7 @@ namespace service_nodes
   enum struct quorum_type : uint8_t
   {
     obligations = 0,
-    checkpointing = 1,
+    checkpointing,
     _count
   };
 
@@ -109,9 +109,6 @@ namespace service_nodes
       }
     END_KV_SERIALIZE_MAP()
   };
-
-  void vote_to_blob(const quorum_vote_t& vote, unsigned char blob[]);
-  void blob_to_vote(const unsigned char blob[], quorum_vote_t& vote);
 
   struct voter_to_signature
   {
