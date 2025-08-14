@@ -192,31 +192,21 @@ public:
     exclude.insert(my_pubkey);
 
     my_position_count = 0;
+    std::unordered_set<crypto::public_key> need_remotes;
     for (auto qit = qbegin; qit != qend; ++qit)
     {
       auto &v = (*qit)->validators;
-      auto found = std::find(v.begin(), v.end(), my_pubkey);
-      if (found == v.end())
-        my_position.push_back(-1);
-      else
+      int my_pos = -1;
+      for (int i = 0; i < v.size(); i++)
       {
-        my_position.push_back(std::distance(v.begin(), found));
-        my_position_count++;
+        if (v[i] == my_pubkey)
+          my_pos = 1;
+        else if (!exclude.count(v[i]))
+          need_remotes.insert(v[i]);
       }
-    }
-
-    std::unordered_set<crypto::public_key> need_remotes;
-    auto qit = qbegin;
-    for (size_t i = 0; qit != qend; ++i, ++qit)
-    {
-      const auto &v = (*qit)->validators;
-      for (int j : quorum_outgoing_conns(my_position[i], v.size()))
-        if (!exclude.count(v[j]))
-          need_remotes.insert(v[j]);
-      if (opportunistic)
-        for (int j : quorum_incoming_conns(my_position[i], v.size()))
-          if (!exclude.count(v[j]))
-            need_remotes.insert(v[j]);
+      my_position.push_back(my_pos);
+      if (my_pos >= 0)
+        my_position_count++;
     }
 
     snw.core.get_service_node_list().for_each_service_node_info_and_proof(need_remotes.begin(), need_remotes.end(),
