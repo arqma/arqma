@@ -68,8 +68,6 @@ namespace cryptonote
     {0,       "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328"},
     {1731481, "94b47df7c0895399f85dff9f7a1d7c2e67f8809e2a2b5fb14bc9714a2bb1490d"},
     {1731482, "942d66af0c7fd6f366e35f18dbb1ca668693a4ad37a6058d61bc920550fe10b7"},
-    {1764320, "3e2c5927f33f55e8760f50d02e4ad627ef0d82821ecbb3366b094d2404fe0542"},
-    {1764340, "5b819c6766c2dba861e36dd3297182c66c1010cc5b9c755b026660bf633ad195"},
   };
   //---------------------------------------------------------------------------
   crypto::hash get_newest_hardcoded_checkpoint(cryptonote::network_type nettype, uint64_t *height)
