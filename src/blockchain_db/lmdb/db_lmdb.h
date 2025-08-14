@@ -437,6 +437,8 @@ private:
 
   void migrate_5_6();
 
+  void migrate_6_7();
+
   void cleanup_batch();
 
   bool get_block_checkpoint_internal(uint64_t height, checkpoint_t &checkpoint, MDB_cursor_op op) const;

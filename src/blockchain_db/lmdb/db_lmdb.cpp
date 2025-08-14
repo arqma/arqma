@@ -71,6 +71,8 @@ enum struct lmdb_version
   v4,
   v5,
   v6,
+  v7,
+
   _count
 };
 
@@ -6020,7 +6022,6 @@ void BlockchainLMDB::migrate_5_6()
           unaligned_checkpoint = true;
           break;
         }
-
       }
     }
 
@@ -6052,6 +6053,15 @@ void BlockchainLMDB::migrate_5_6()
     if (ret) throw0(DB_ERROR(lmdb_error("Failed to update block checkpoint in db migration transaction: ", ret).c_str()));
   }
   txn.commit();
+
+  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v6))
+    throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
+}
+
+void BlockchainLMDB::migrate_6_7()
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  MGINFO_YELLOW("Migrating blockchain from DB version 6 to 7 - this may take a while");
 
   std::vector<checkpoint_t> checkpoints;
   checkpoints.reserve(1024);
@@ -6107,7 +6117,7 @@ void BlockchainLMDB::migrate_5_6()
     txn.commit();
   }
 
-  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v6))
+  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v7))
     throw0(DB_ERROR(lmdb_error("Failed to update version for thr db: ", result).c_str()));
 }
 
@@ -6116,17 +6126,19 @@ void BlockchainLMDB::migrate(const uint32_t oldversion, cryptonote::network_type
   switch(oldversion)
   {
     case 0:
-      migrate_0_1();
+      migrate_0_1(); /* FALLTHRU */
     case 1:
-      migrate_1_2();
+      migrate_1_2(); /* FALLTHRU */
     case 2:
-      migrate_2_3();
+      migrate_2_3(); /* FALLTHRU */
     case 3:
-      migrate_3_4();
+      migrate_3_4(); /* FALLTHRU */
     case 4:
-      migrate_4_5(nettype);
+      migrate_4_5(nettype); /* FALLTHRU */
     case 5:
-      migrate_5_6();
+      migrate_5_6(); /* FALLTHRU */
+    case 6:
+      migrate_6_7(); /* FALLTHRU */
     default:
       break;
   }
