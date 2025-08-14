@@ -197,7 +197,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<bool> arg_keep_alt_blocks = {
     "keep-alt-blocks"
   , "Keep Alternative Blocks on Restart"
-  , false
+  , true
   };
   static const command_line::arg_descriptor<bool> arg_service_node = {
     "service-node"
