@@ -449,14 +449,7 @@ namespace nodetool
 
     std::string host;
     std::string port = std::to_string(default_port);
-    size_t colon_pos = addr.find_last_of(':');
-    size_t dot_pos = addr.find_last_of('.');
-    size_t square_brace_pos = addr.find('[');
-
-    if ((std::string::npos != colon_pos && std::string::npos != dot_pos) || std::string::npos != square_brace_pos)
-    {
-      net::get_network_address_host_and_port(addr, host, port);
-    }
+    net::get_network_address_host_and_port(addr, host, port);
     MINFO("Resolving node address: host=" << host << ", port=" << port);
 
     io_service io_srv;

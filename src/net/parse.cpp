@@ -47,6 +47,10 @@ namespace net
         port = address.substr(address.rfind(':') + 1);
       }
     }
+    else if (std::count(address.begin(), address.end(), ':') >= 2)
+    {
+      host = address;
+    }
     else
     {
       host = address.substr(0, address.rfind(':'));
