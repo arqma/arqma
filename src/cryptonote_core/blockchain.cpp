@@ -82,8 +82,8 @@ using namespace crypto;
 namespace arqma_bc = config::blockchain_settings;
 using namespace cryptonote;
 using epee::string_tools::pod_to_hex;
-extern "C" void rx_slow_hash_allocate_state();
-extern "C" void rx_slow_hash_free_state();
+extern "C" void slow_hash_allocate_state();
+extern "C" void slow_hash_free_state();
 
 DISABLE_VS_WARNINGS(4267)
 
@@ -4416,7 +4416,7 @@ bool Blockchain::get_checkpoint(uint64_t height, checkpoint_t &checkpoint) const
 void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const
 {
   TIME_MEASURE_START(t);
-  rx_slow_hash_allocate_state();
+  slow_hash_allocate_state();
 
   for (const auto & block : blocks)
   {
@@ -4427,7 +4427,7 @@ void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const b
     map.emplace(id, pow);
   }
 
-  rx_slow_hash_free_state();
+  slow_hash_free_state();
   TIME_MEASURE_FINISH(t);
 }
 
