@@ -157,13 +157,13 @@
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST       1
 #define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 
-#define P2P_DEFAULT_LIMIT_RATE_UP                       4096       // kbps
-#define P2P_DEFAULT_LIMIT_RATE_DOWN                     16384      // kbps
+#define P2P_DEFAULT_LIMIT_RATE_UP                       8192       // kbps
+#define P2P_DEFAULT_LIMIT_RATE_DOWN                     32768      // kbps
 
-#define P2P_FAILED_ADDR_FORGET_SECONDS                  (24*60*60)    // 1 day
-#define P2P_IP_BLOCKTIME                                (2*60*60*24) // 2 days
+#define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)    // 1 day
+#define P2P_IP_BLOCKTIME                                (60*60*24) // 2 days
 #define P2P_IP_FAILS_BEFORE_BLOCK                       5
-#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (30)     // 30 seconds
+#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60)     // 30 seconds
 
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
@@ -308,6 +308,7 @@ namespace config
     static const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
     static const uint8_t min_output_age = 20;
     static const uint64_t HF16_BL_REWARD = 20 * ARQMA;
+    const uint64_t sync_height = 1764340;
   }
 
   namespace tx_settings

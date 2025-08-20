@@ -202,7 +202,7 @@ namespace service_nodes
 
     time_t start_time = m_core.get_start_time();
     time_t const now = time(nullptr);
-    uint64_t const live_time = (now - m_core.get_start_time());
+    int const live_time = (now - start_time);
     for (int i = 0; i <= (int)max_quorum_type; i++)
     {
       quorum_type const type = static_cast<quorum_type>(i);
@@ -391,8 +391,8 @@ namespace service_nodes
             m_last_checkpointed_height = std::max(start_checkpointing_height, m_last_checkpointed_height);
             for (; m_last_checkpointed_height <= height; m_last_checkpointed_height += CHECKPOINT_INTERVAL)
             {
-              uint8_t checkpointed_height_version = m_core.get_hard_fork_version(m_last_checkpointed_height);
-              if (checkpointed_height_version <= cryptonote::network_version_16)
+              uint8_t checkpointed_height_hf_version = m_core.get_hard_fork_version(m_last_checkpointed_height);
+              if (checkpointed_height_hf_version < cryptonote::network_version_16)
                 continue;
 
               if (m_last_checkpointed_height < REORG_SAFETY_BUFFER_IN_BLOCKS)
@@ -412,10 +412,10 @@ namespace service_nodes
               // NOTE: I am in the quorum, handle checkpointing
               //
               crypto::hash block_hash = m_core.get_block_id_by_height(m_last_checkpointed_height);
-              quorum_vote_t vote = make_checkpointing_vote(checkpointed_height_version, block_hash, m_last_checkpointed_height, static_cast<uint16_t>(index_in_group), *my_keys);
+              quorum_vote_t vote = make_checkpointing_vote(checkpointed_height_hf_version, block_hash, m_last_checkpointed_height, static_cast<uint16_t>(index_in_group), *my_keys);
               cryptonote::vote_verification_context vvc = {};
               if (!handle_vote(vote, vvc))
-                LOG_ERROR("Failed to add checkpoint vote reason: " << print_vote_verification_context(vvc, &vote));
+                LOG_ERROR("Failed to add checkpoint vote; reason: " << print_vote_verification_context(vvc, &vote));
             }
           }
         }
@@ -430,7 +430,7 @@ namespace service_nodes
     uint64_t const height = cryptonote::get_block_height(block) + 1; // chain height = new top block height + 1
 
     m_vote_pool.remove_expired_votes(height);
-    m_vote_pool.remove_used_votes(txs);
+    m_vote_pool.remove_used_votes(txs, block.major_version);
     return true;
   }
 

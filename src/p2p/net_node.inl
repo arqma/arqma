@@ -32,7 +32,6 @@
 // IP blocking adapted from Boolberry
 
 #include <algorithm>
-#include <boost/bind/bind.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/optional/optional.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -1122,6 +1121,7 @@ namespace nodetool
     {
       bool is_priority = is_priority_node(na);
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, *con, " Failed to HANDSHAKE with peer: " << na.str()/*<< ", try " << try_count*/);
+      zone.m_net_server.get_config_object().close(con->m_connection_id);
       return false;
     }
 
@@ -1168,6 +1168,7 @@ namespace nodetool
     {
       bool is_priority = is_priority_node(na);
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, p2p_connection_context{}, " Connect failed to " << na.str());
+      zone.m_net_server.get_config_object().close(con->m_connection_id);
       return false;
     }
 
@@ -1252,19 +1253,51 @@ namespace nodetool
       size_t random_index;
       const uint32_t next_needed_pruning_stripe = m_payload_handler.get_next_needed_pruning_stripe().second;
 
+      std::set<uint32_t> classB;
+      if (&zone == &m_network_zones.at(epee::net_utils::zone::public_))
+      {
+        zone.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
+        {
+          if (cntxt.m_remote_address.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
+          {
+            const epee::net_utils::network_address na = cntxt.m_remote_address;
+            const uint32_t actual_ip = na.as<const epee::net_utils::ipv4_network_address>().ip();
+            classB.insert(actual_ip & 0x0000ffff);
+          }
+          return true;
+        });
+      }
+
       std::deque<size_t> filtered;
       const size_t limit = use_white_list ? 20 : std::numeric_limits<size_t>::max();
-      size_t idx = 0;
-      zone.m_peerlist.foreach(use_white_list, [&filtered, &idx, limit, next_needed_pruning_stripe](const peerlist_entry &pe){
-        if (filtered.size() >= limit)
-          return false;
-        if (next_needed_pruning_stripe == 0 || pe.pruning_seed == 0)
-          filtered.push_back(idx);
-        else if (next_needed_pruning_stripe == tools::get_pruning_stripe(pe.pruning_seed))
-          filtered.push_front(idx);
-        ++idx;
-        return true;
-      });
+      size_t idx = 0, skipped = 0;
+      for (int step = 0; step < 2; ++step)
+      {
+        bool skip_duplicate_class_B = step == 0;
+        zone.m_peerlist.foreach (use_white_list, [&classB, &filtered, &idx, &skipped, skip_duplicate_class_B, limit, next_needed_pruning_stripe](const peerlist_entry &pe){
+          if (filtered.size() >= limit)
+            return false;
+          bool skip = false;
+          if (skip_duplicate_class_B && pe.adr.get_type_id() == epee::net_utils::ipv4_network_address::get_type_id())
+          {
+            const epee::net_utils::network_address na = pe.adr;
+            uint32_t actual_ip = na.as<const epee::net_utils::ipv4_network_address>().ip();
+            skip = classB.find(actual_ip & 0x0000ffff) != classB.end();
+          }
+          if (skip)
+            ++skipped;
+          else if (next_needed_pruning_stripe == 0 || pe.pruning_seed == 0)
+            filtered.push_back(idx);
+          else if (next_needed_pruning_stripe == tools::get_pruning_stripe(pe.pruning_seed))
+            filtered.push_front(idx);
+          ++idx;
+          return true;
+        });
+        if (skipped == 0 || !filtered.empty())
+          break;
+        if (skipped)
+          MGINFO("Skipping " << skipped << " possible peers as they share a class B with existing peers");
+      }
       if (filtered.empty())
       {
         MDEBUG("No available peer in " << (use_white_list ? "white" : "gray") << " list filtered by " << next_needed_pruning_stripe);
@@ -1570,11 +1603,11 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::idle_worker()
   {
-    m_peer_handshake_idle_maker_interval.do_call(std::bind(&node_server<t_payload_net_handler>::peer_sync_idle_maker, this));
-    m_connections_maker_interval.do_call(std::bind(&node_server<t_payload_net_handler>::connections_maker, this));
-    m_gray_peerlist_housekeeping_interval.do_call(std::bind(&node_server<t_payload_net_handler>::gray_peerlist_housekeeping, this));
-    m_peerlist_store_interval.do_call(std::bind(&node_server<t_payload_net_handler>::store_config, this));
-    m_incoming_connections_interval.do_call(std::bind(&node_server<t_payload_net_handler>::check_incoming_connections, this));
+    m_peer_handshake_idle_maker_interval.do_call([this] { return peer_sync_idle_maker(); });
+    m_connections_maker_interval.do_call([this] { return connections_maker(); });
+    m_gray_peerlist_housekeeping_interval.do_call([this] { return gray_peerlist_housekeeping(); });
+    m_peerlist_store_interval.do_call([this] { return store_config(); });
+    m_incoming_connections_interval.do_call([this] { return check_incoming_connections(); });
     return true;
   }
   //-----------------------------------------------------------------------------------

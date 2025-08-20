@@ -26,13 +26,6 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef _WIN32
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-#include <fcntl.h>
-#endif
-
 #include "db_lmdb.h"
 
 #include <boost/filesystem.hpp>
@@ -43,6 +36,7 @@
 #include <cstring>  // memcpy
 
 #include "string_tools.h"
+#include "file_io_utils.h"
 #include "common/arqma.h"
 #include "common/util.h"
 #include "common/pruning.h"
@@ -71,6 +65,8 @@ enum struct lmdb_version
   v4,
   v5,
   v6,
+  v7,
+
   _count
 };
 
@@ -413,14 +409,12 @@ struct mdb_block_info_2 : mdb_block_info_1
   uint64_t bi_cum_rct;
 };
 
-struct mdb_block_info_3 : mdb_block_info_2
+struct mdb_block_info : mdb_block_info_2
 {
   uint64_t bi_long_term_block_weight;
 };
 
-static_assert(sizeof(mdb_block_info_3) == sizeof(mdb_block_info_1) + 16, "Unexpected mdb_block_info struct sizes");
-
-using mdb_block_info = mdb_block_info_3;
+static_assert(sizeof(mdb_block_info) == sizeof(mdb_block_info_1) + 16, "Unexpected mdb_block_info struct sizes");
 
 struct blk_checkpoint_header
 {
@@ -1387,26 +1381,6 @@ BlockchainLMDB::BlockchainLMDB(bool batch_transactions): BlockchainDB()
   m_hardfork = nullptr;
 }
 
-void BlockchainLMDB::check_mmap_support()
-{
-#ifndef _WIN32
-  const boost::filesystem::path mmap_test_file = m_folder / boost::filesystem::unique_path();
-  int mmap_test_fd = ::open(mmap_test_file.string().c_str(), O_RDWR | O_CREAT, 0600);
-  if (mmap_test_fd < 0)
-    throw0(DB_ERROR((std::string("Failed to check for mmap support: open failed: ") + strerror(errno)).c_str()));
-  epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([mmap_test_fd, &mmap_test_file]() {
-    ::close(mmap_test_fd);
-    boost::filesystem::remove(mmap_test_file.string());
-  });
-  if (write(mmap_test_fd, "mmaptest", 8) != 8)
-    throw0(DB_ERROR((std::string("Failed to check for mmap support: write failed: ") + strerror(errno)).c_str()));
-  void *mmap_res = mmap(NULL, 8, PROT_READ, MAP_SHARED, mmap_test_fd, 0);
-  if (mmap_res == MAP_FAILED)
-    throw0(DB_ERROR("This filesystem does not support mmap: use --data-dir to place the blockchain on a filesystem which does"));
-  munmap(mmap_res, 8);
-#endif
-}
-
 void BlockchainLMDB::open(const std::string& filename, cryptonote::network_type nettype, const int db_flags)
 {
   int result;
@@ -1447,8 +1421,6 @@ void BlockchainLMDB::open(const std::string& filename, cryptonote::network_type 
   }
 
   m_folder = filename;
-
-  check_mmap_support();
 
 #ifdef __OpenBSD__
   if ((mdb_flags & MDB_WRITEMAP) == 0) {
@@ -2068,7 +2040,7 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
 
   TIME_MEASURE_START(t);
 
-  size_t n_total_records = 0, n_prunable_records = 0, n_pruned_records = 0, commit_counter = 0;
+  size_t n_total_records = 0, n_prunable_records = 0, n_pruned_records = 0;
   uint64_t n_bytes = 0;
 
   mdb_txn_safe txn;
@@ -2171,7 +2143,6 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
           {
             MDEBUG("Pruning at height " << block_height << "/" << blockchain_height);
             ++n_pruned_records;
-            ++commit_counter;
             n_bytes += k.mv_size + v.mv_size;
             result = mdb_cursor_del(c_txs_prunable, 0);
             if (result)
@@ -2182,24 +2153,6 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
         if (result)
           throw0(DB_ERROR(lmdb_error("Failed to delete transaction tip data: ", result).c_str()));
 
-        if(mode != prune_mode_check && commit_counter >= 4096)
-        {
-          MDEBUG("Commiting txn at checkpoint...");
-          txn.commit();
-          result = mdb_txn_begin(m_env, NULL, 0, txn);
-          if(result)
-            throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
-          result = mdb_cursor_open(txn, m_txs_pruned, &c_txs_pruned);
-          if (result)
-            throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_pruned: ", result).c_str()));
-          result = mdb_cursor_open(txn, m_txs_prunable, &c_txs_prunable);
-          if (result)
-            throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable: ", result).c_str()));
-          result = mdb_cursor_open(txn, m_txs_prunable_tip, &c_txs_prunable_tip);
-          if (result)
-            throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable_tip: ", result).c_str()));
-          commit_counter = 0;
-        }
       }
     }
   }
@@ -2269,7 +2222,6 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
             result = mdb_cursor_del(c_txs_prunable, 0);
             if (result)
               throw0(DB_ERROR(lmdb_error("Failed to delete transaction prunable data: ", result).c_str()));
-            ++commit_counter;
           }
         }
       }
@@ -2285,34 +2237,6 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
             MERROR("Prunable data not found for unpruned height " << block_height << "/" << blockchain_height <<
                 ", seed " << epee::string_tools::to_string_hex(pruning_seed));
         }
-      }
-
-      if (mode != prune_mode_check && commit_counter >= 4096)
-      {
-        MDEBUG("Committing txn at checkpoint...");
-        txn.commit();
-        result = mdb_txn_begin(m_env, NULL, 0, txn);
-        if (result)
-          throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
-        result = mdb_cursor_open(txn, m_txs_pruned, &c_txs_pruned);
-        if (result)
-          throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_pruned: ", result).c_str()));
-        result = mdb_cursor_open(txn, m_txs_prunable, &c_txs_prunable);
-        if (result)
-          throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable: ", result).c_str()));
-        result = mdb_cursor_open(txn, m_txs_prunable_tip, &c_txs_prunable_tip);
-        if (result)
-          throw0(DB_ERROR(lmdb_error("Failed to open a cursor for txs_prunable_tip: ", result).c_str()));
-        result = mdb_cursor_open(txn, m_tx_indices, &c_tx_indices);
-        if (result)
-          throw0(DB_ERROR(lmdb_error("Failed to open a cursor for tx_indices: ", result).c_str()));
-        MDB_val val;
-        val.mv_size = sizeof(ti);
-        val.mv_data = (void *)&ti;
-        result = mdb_cursor_get(c_tx_indices, (MDB_val*)&zerokval, &val, MDB_GET_BOTH);
-        if (result)
-          throw0(DB_ERROR(lmdb_error("Failed to restore cursor for tx_indices: ", result).c_str()));
-        commit_counter = 0;
       }
     }
     mdb_cursor_close(c_tx_indices);
@@ -2718,7 +2642,7 @@ size_t BlockchainLMDB::get_block_weight(const uint64_t& height) const
   return ret;
 }
 
-std::vector<uint64_t> BlockchainLMDB::get_block_info_64bit_fields(uint64_t start_height, size_t count, uint64_t (*extract)(const void* bi_data)) const
+std::vector<uint64_t> BlockchainLMDB::get_block_info_64bit_fields(uint64_t start_height, size_t count, uint64_t (*extract)(const mdb_block_info* bi_data)) const
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
@@ -2823,12 +2747,12 @@ void BlockchainLMDB::add_max_block_size(uint64_t sz)
 
 std::vector<uint64_t> BlockchainLMDB::get_block_weights(uint64_t start_height, size_t count) const
 {
-  return get_block_info_64bit_fields(start_height, count, [](const void* bi) { return static_cast<const mdb_block_info *>(bi)->bi_weight; });
+  return get_block_info_64bit_fields(start_height, count, [](const mdb_block_info* bi) { return bi->bi_weight; });
 }
 
 std::vector<uint64_t> BlockchainLMDB::get_long_term_block_weights(uint64_t start_height, size_t count) const
 {
-  return get_block_info_64bit_fields(start_height, count, [](const void* bi) { return static_cast<const mdb_block_info *>(bi)->bi_long_term_block_weight; });
+  return get_block_info_64bit_fields(start_height, count, [](const mdb_block_info* bi) { return bi->bi_long_term_block_weight; });
 }
 
 difficulty_type BlockchainLMDB::get_block_cumulative_difficulty(const uint64_t& height) const
@@ -4087,7 +4011,7 @@ uint64_t BlockchainLMDB::add_block(const std::pair<block, blobdata>& blk, size_t
 
 struct checkpoint_mdb_buffer
 {
-  char data[sizeof(blk_checkpoint_header) + (sizeof(service_nodes::voter_to_signature) * service_nodes::CHECKPOINT_QUORUM_SIZE)];
+  char data[sizeof(blk_checkpoint_header) + (sizeof(service_nodes::voter_to_signature) * (40 * service_nodes::CHECKPOINT_QUORUM_SIZE))];
   size_t len;
 };
 
@@ -5748,7 +5672,7 @@ void BlockchainLMDB::migrate_3_4()
       }
       else if (result)
         throw0(DB_ERROR(lmdb_error("Failed to get a record from block_info: ", result).c_str()));
-      mdb_block_info_3 bi;
+      mdb_block_info bi;
       static_cast<mdb_block_info_2 &>(bi) = *static_cast<const mdb_block_info_2*>(v.mv_data);
 
       // get block major version to determine which rule is in place
@@ -6020,7 +5944,6 @@ void BlockchainLMDB::migrate_5_6()
           unaligned_checkpoint = true;
           break;
         }
-
       }
     }
 
@@ -6052,6 +5975,15 @@ void BlockchainLMDB::migrate_5_6()
     if (ret) throw0(DB_ERROR(lmdb_error("Failed to update block checkpoint in db migration transaction: ", ret).c_str()));
   }
   txn.commit();
+
+  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v6))
+    throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
+}
+
+void BlockchainLMDB::migrate_6_7()
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  MGINFO_YELLOW("Migrating blockchain from DB version 6 to 7 - this may take a while");
 
   std::vector<checkpoint_t> checkpoints;
   checkpoints.reserve(1024);
@@ -6107,7 +6039,7 @@ void BlockchainLMDB::migrate_5_6()
     txn.commit();
   }
 
-  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v6))
+  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v7))
     throw0(DB_ERROR(lmdb_error("Failed to update version for thr db: ", result).c_str()));
 }
 
@@ -6116,17 +6048,19 @@ void BlockchainLMDB::migrate(const uint32_t oldversion, cryptonote::network_type
   switch(oldversion)
   {
     case 0:
-      migrate_0_1();
+      migrate_0_1(); /* FALLTHRU */
     case 1:
-      migrate_1_2();
+      migrate_1_2(); /* FALLTHRU */
     case 2:
-      migrate_2_3();
+      migrate_2_3(); /* FALLTHRU */
     case 3:
-      migrate_3_4();
+      migrate_3_4(); /* FALLTHRU */
     case 4:
-      migrate_4_5(nettype);
+      migrate_4_5(nettype); /* FALLTHRU */
     case 5:
-      migrate_5_6();
+      migrate_5_6(); /* FALLTHRU */
+    case 6:
+      migrate_6_7(); /* FALLTHRU */
     default:
       break;
   }

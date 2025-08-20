@@ -47,12 +47,11 @@
 
 namespace cryptonote
 {
-  class Blockchain;
   enum struct checkpoint_type
   {
     hardcoded,
     service_node,
-    count,
+    count
   };
 
   struct checkpoint_t
@@ -84,11 +83,6 @@ namespace cryptonote
       FIELD(signatures)
       FIELD(prev_height)
     END_SERIALIZE()
-
-  private:
-    friend class boost::serialization::access;
-    template <class Archive>
-    void serialize(Archive &ar, const unsigned int) { }
   };
 
 

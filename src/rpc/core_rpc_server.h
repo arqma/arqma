@@ -51,7 +51,7 @@ namespace cryptonote
   class core_rpc_server: public epee::http_server_impl_base<core_rpc_server>
   {
   public:
-    static constexpr int DEFAULT_RPC_THREADS = 4;
+    static constexpr int DEFAULT_RPC_THREADS = 6;
     static const command_line::arg_descriptor<bool> arg_public_node;
     static const command_line::arg_descriptor<std::string, false, true, 2> arg_rpc_bind_port;
     static const command_line::arg_descriptor<std::string> arg_rpc_restricted_bind_port;

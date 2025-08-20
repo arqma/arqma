@@ -1041,12 +1041,12 @@ if(DEPENDS)
   endif()
 endif()
 
-set(BOOST_LIBRARIES system filesystem thread date_time chrono regex serialization program_options)
-if(WIN32)
-  list(APPEND BOOST_LIBRARIES locale)
+if (NOT WIN32)
+  find_package(Boost 1.66.0 COMPONENTS system filesystem thread date_time chrono regex serialization program_options)
+elseif (WIN32)
+  find_package(Boost 1.66.0 COMPONENTS system filesystem thread date_time chrono regex serialization program_options locale)
 endif()
 
-find_package(Boost 1.66.0 QUIET REQUIRED COMPONENTS ${BOOST_LIBRARIES})
 add_definitions(-DBOOST_NO_AUTO_PTR)
 add_definitions(-DBOOST_UUID_DISABLE_ALIGNMENT)
 
