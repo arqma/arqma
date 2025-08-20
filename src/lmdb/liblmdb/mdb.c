@@ -772,7 +772,7 @@ typedef unsigned long long	mdb_hash_t;
 	 *	couple mutexes fit exactly into 8KB on my development machine.
 	 *	Applications should set the table size using #mdb_env_set_maxreaders().
 	 */
-#define DEFAULT_READERS	126
+#define DEFAULT_READERS	255
 
 	/**	The size of a CPU cache line in bytes. We want our lock structures
 	 *	aligned to this size to avoid false cache line sharing in the
