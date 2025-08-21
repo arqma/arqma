@@ -306,8 +306,8 @@ namespace service_nodes
     void access_proof(const crypto::public_key &pubkey, Func f) const
     {
       std::unique_lock lock{m_sn_mutex};
-      auto it = m_proofs.find(pubkey);
-      if (it != m_proofs.end())
+      auto it = proofs.find(pubkey);
+      if (it != proofs.end())
         f(it->second);
     }
 
@@ -325,8 +325,8 @@ namespace service_nodes
         auto it = m_state.service_nodes_infos.find(*begin);
         if (it != sni_end)
         {
-          auto pit = m_proofs.find(it->first);
-          f(it->first, *it->second, (pit != m_proofs.end() ? pit->second : empty_proof));
+          auto pit = proofs.find(it->first);
+          f(it->first, *it->second, (pit != proofs.end() ? pit->second : empty_proof));
         }
       }
     }
@@ -449,10 +449,11 @@ namespace service_nodes
     cryptonote::Blockchain& m_blockchain;
     const service_node_keys *m_service_node_keys;
     uint64_t m_store_quorum_history = 0;
+    mutable std::recursive_mutex m_x25519_map_mutex;
 
-    std::unordered_map<crypto::x25519_public_key, std::pair<crypto::public_key, time_t>> m_x25519_to_pub;
-    time_t m_x25519_map_last_pruned = 0;
-    mutable std::shared_mutex m_x25519_map_mutex;
+    std::unordered_map<crypto::x25519_public_key, std::pair<crypto::public_key, time_t>> x25519_to_pub;
+    time_t x25519_map_last_pruned = 0;
+    std::unordered_map<crypto::public_key, proof_info> proofs;
 
     struct quorums_by_height
     {
@@ -462,16 +463,19 @@ namespace service_nodes
       quorum_manager quorums;
     };
 
-    std::deque<quorums_by_height> m_old_quorum_states;
-    state_set m_state_history;
-    state_set m_state_archive;
+    struct
+    {
+      std::deque<quorums_by_height> old_quorum_states;
+      state_set state_history;
+      state_set state_archive;
+      std::unordered_map<crypto::hash, state_t> alt_state;
+      bool state_added_to_archive;
+      data_for_serialization cache_long_term_data;
+      data_for_serialization cache_short_term_data;
+      std::string cache_data_blob;
+    } m_transient = {};
+
     state_t m_state;
-    std::unordered_map<crypto::hash, state_t> m_alt_state;
-    std::unordered_map<crypto::public_key, proof_info> m_proofs;
-    bool m_state_added_to_archive;
-    data_for_serialization m_cache_long_term_data;
-    data_for_serialization m_cache_short_term_data;
-    std::string m_cache_data_blob;
   };
 
   bool is_registration_tx(cryptonote::network_type nettype, uint8_t hard_fork_version, const cryptonote::transaction& tx, uint64_t block_timestamp, uint64_t block_height, uint32_t index, crypto::public_key& key, service_node_info& info);

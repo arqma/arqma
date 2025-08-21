@@ -4017,7 +4017,7 @@ struct checkpoint_mdb_buffer
 
 static bool convert_checkpoint_into_buffer(checkpoint_t const &checkpoint, checkpoint_mdb_buffer &result)
 {
-  blk_checkpoint_header header = {};
+  blk_checkpoint_header header {};
   header.height = checkpoint.height;
   header.block_hash = checkpoint.block_hash;
   header.num_signatures = checkpoint.signatures.size();
@@ -4059,7 +4059,7 @@ void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
 
-  checkpoint_mdb_buffer buffer = {};
+  checkpoint_mdb_buffer buffer{};
   convert_checkpoint_into_buffer(checkpoint, buffer);
 
   check_open();
@@ -4067,7 +4067,7 @@ void BlockchainLMDB::update_block_checkpoint(checkpoint_t const &checkpoint)
   CURSOR(block_checkpoints);
 
   MDB_val_set(key, checkpoint.height);
-  MDB_val value = {};
+  MDB_val value{};
   value.mv_size = buffer.len;
   value.mv_data = buffer.data;
   int ret = mdb_cursor_put(m_cursors->block_checkpoints, &key, &value, 0);
@@ -4084,7 +4084,7 @@ void BlockchainLMDB::remove_block_checkpoint(uint64_t height)
   CURSOR(block_checkpoints);
 
   MDB_val_set(key, height);
-  MDB_val value = {};
+  MDB_val value{};
   int ret = mdb_cursor_get(m_cursors->block_checkpoints, &key, &value, MDB_SET_KEY);
   if (ret == MDB_SUCCESS)
   {
@@ -4101,14 +4101,13 @@ void BlockchainLMDB::remove_block_checkpoint(uint64_t height)
 
 static checkpoint_t convert_mdb_val_to_checkpoint(MDB_val const value)
 {
-  checkpoint_t result = {};
-  auto const *header  = static_cast<blk_checkpoint_header const *>(value.mv_data);
+  checkpoint_t result{};
+  auto const *header = static_cast<blk_checkpoint_header const *>(value.mv_data);
   auto const *signatures = reinterpret_cast<service_nodes::voter_to_signature *>(static_cast<uint8_t *>(value.mv_data) + sizeof(*header));
 
   auto num_sigs = little_to_native(header->num_signatures);
-
-  result.height     = little_to_native(header->height);
-  result.type       = (num_sigs > 0) ? checkpoint_type::service_node : checkpoint_type::hardcoded;
+  result.height = little_to_native(header->height);
+  result.type = (num_sigs > 0) ? checkpoint_type::service_node : checkpoint_type::hardcoded;
   result.block_hash = header->block_hash;
   result.signatures.insert(result.signatures.end(), signatures, signatures + num_sigs);
 
@@ -4122,10 +4121,12 @@ bool BlockchainLMDB::get_block_checkpoint_internal(uint64_t height, checkpoint_t
   RCURSOR(block_checkpoints);
 
   MDB_val_set(key, height);
-  MDB_val value = {};
+  MDB_val value{};
   int ret = mdb_cursor_get(m_cursors->block_checkpoints, &key, &value, op);
   if(ret == MDB_SUCCESS)
+  {
     checkpoint = convert_mdb_val_to_checkpoint(value);
+  }
 
   if(ret != MDB_SUCCESS && ret != MDB_NOTFOUND)
     throw0(DB_ERROR(lmdb_error("Failed to get block checkpoint: ", ret).c_str()));
@@ -4151,13 +4152,13 @@ bool BlockchainLMDB::get_top_checkpoint(checkpoint_t &checkpoint) const
 std::vector<checkpoint_t> BlockchainLMDB::get_checkpoints_range(uint64_t start, uint64_t end, size_t num_desired_checkpoints) const
 {
   std::vector<checkpoint_t> result;
-  checkpoint_t top_checkpoint    = {};
-  checkpoint_t bottom_checkpoint = {};
+  checkpoint_t top_checkpoint{};
+  checkpoint_t bottom_checkpoint{};
   if (!get_top_checkpoint(top_checkpoint)) return result;
   if (!get_block_checkpoint_internal(0, bottom_checkpoint, MDB_FIRST)) return result;
 
   start = arqma::clamp_u64(start, bottom_checkpoint.height, top_checkpoint.height);
-  end   = arqma::clamp_u64(end, bottom_checkpoint.height, top_checkpoint.height);
+  end = arqma::clamp_u64(end, bottom_checkpoint.height, top_checkpoint.height);
   if (start > end)
   {
     if (start < bottom_checkpoint.height) return result;
@@ -4174,7 +4175,7 @@ std::vector<checkpoint_t> BlockchainLMDB::get_checkpoints_range(uint64_t start, 
 
   // NOTE: Get the first checkpoint and then use LMDB's cursor as an iterator to
   // find subsequent checkpoints so we don't waste time querying every-single-height
-  checkpoint_t first_checkpoint = {};
+  checkpoint_t first_checkpoint{};
   bool found_a_checkpoint = false;
   for (uint64_t height = start; height != end && result.size() < num_desired_checkpoints;)
   {
@@ -4214,7 +4215,7 @@ std::vector<checkpoint_t> BlockchainLMDB::get_checkpoints_range(uint64_t start, 
 
     for (; result.size() < num_desired_checkpoints;)
     {
-      MDB_val value = {};
+      MDB_val value{};
       ret = mdb_cursor_get(m_cursors->block_checkpoints, nullptr, &value, op);
 
       if (ret == MDB_NOTFOUND) break;
