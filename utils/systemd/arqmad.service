@@ -4,6 +4,7 @@ Wants=network.target
 After=syslog.target network-online.target
 
 [Service]
+Environment="ARQMA_RANDOMARQ_FULL_MEM=1"
 User=arqma
 Group=arqma
 WorkingDirectory=/home/arqma/arqma/build/release/bin

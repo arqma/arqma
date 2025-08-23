@@ -6,6 +6,7 @@
 #include "arqnet/sn_network.h"
 #include "arqnet/conn_matrix.h"
 #include "cryptonote_config.h"
+#include "misc_log_ex.h"
 
 #include <shared_mutex>
 
