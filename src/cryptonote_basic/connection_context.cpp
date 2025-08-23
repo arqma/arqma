@@ -35,7 +35,7 @@ namespace cryptonote
       case cryptonote::NOTIFY_UPTIME_PROOF::ID:
         return 1024 * 1024; // 1 MB
       case cryptonote::NOTIFY_NEW_SERVICE_NODE_VOTE::ID:
-        return 1024 * 1024 * 25; // 25 MB
+        return 1024 * 1024 * 10; // 10 MB
       default:
         break;
     };
