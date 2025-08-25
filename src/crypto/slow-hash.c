@@ -48,6 +48,12 @@
 #define INIT_SIZE_BLK   8
 #define INIT_SIZE_BYTE (INIT_SIZE_BLK * AES_BLOCK_SIZE)
 
+#if defined(_MSC_VER)
+#define THREADV __declspec(thread)
+#else
+#define THREADV __thread
+#endif
+
 extern void aesb_single_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 
@@ -321,12 +327,6 @@ static inline int force_software_aes(void)
   VARIANT1_2(p + 1); \
   _b1 = _b; \
   _b = _c; \
-
-#if defined(_MSC_VER)
-#define THREADV __declspec(thread)
-#else
-#define THREADV __thread
-#endif
 
 #pragma pack(push, 1)
 union cn_slow_hash_state
