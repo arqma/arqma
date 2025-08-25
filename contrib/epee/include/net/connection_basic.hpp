@@ -55,7 +55,7 @@ namespace boost::asio {
 #endif
 #include <boost/asio/ssl.hpp>
 
-#include "byte_slice.h"
+#include "shared_sv.h"
 #include "net/net_utils_base.h"
 #include "net/net_ssl.h"
 #include "syncobj.h"
@@ -113,7 +113,7 @@ class connection_basic { // not-templated base class for rapid developmet of som
   std::atomic<bool> m_want_close_connection;
   std::atomic<bool> m_was_shutdown;
   critical_section m_send_que_lock;
-  std::deque<byte_slice> m_send_que;
+  std::deque<shared_sv> m_send_que;
   volatile bool m_is_multithreaded;
   /// Strand to ensure the connection's handlers are not called concurrently.
   boost::asio::io_service::strand strand_;

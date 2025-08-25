@@ -1682,3 +1682,15 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 }
 
 #endif
+
+void cn_slow_hash_allocate_state(uint32_t page_size)
+{
+  slow_hash_allocate_state(page_size);
+  rx_slow_hash_allocate_state();
+}
+
+void cn_slow_hash_free_state(uint32_t page_size)
+{
+  slow_hash_free_state(page_size);
+  rx_slow_hash_free_state();
+}

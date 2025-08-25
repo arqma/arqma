@@ -533,7 +533,7 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
     template<class t_protocol_handler>
-  bool connection<t_protocol_handler>::do_send(byte_slice message) {
+  bool connection<t_protocol_handler>::do_send(shared_sv message) {
     TRY_ENTRY();
 
     // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
@@ -541,9 +541,6 @@ namespace net_utils
     if (!self) return false;
     if (m_was_shutdown) return false;
 		// TODO avoid copy
-
-		std::uint8_t const* const message_data = message.data();
-		const std::size_t message_size = message.size();
 
 		const double factor = 32; // TODO config
 		typedef long long signed int t_safe; // my t_size to avoid any overunderflow in arithmetic
@@ -554,43 +551,26 @@ namespace net_utils
         CHECK_AND_ASSERT_MES(! (chunksize_max<0), false, "Negative chunksize_max" ); // make sure it is unsigned before removin sign with cast:
         long long unsigned int chunksize_max_unsigned = static_cast<long long unsigned int>( chunksize_max ) ;
 
-        if (allow_split && (message_size > chunksize_max_unsigned)) {
-			{ // LOCK: chunking
-    		boost::unique_lock send_guard(m_chunking_lock); // *** critical *** 
+        if (allow_split && (message.size() > chunksize_max_unsigned)) {
+          { // LOCK: chunking
+			      boost::unique_lock send_guard(m_chunking_lock); // *** critical *** 
 
-				MDEBUG("do_send() will SPLIT into small chunks, from packet="<<message_size<<" B for ptr="<<(const void*)message_data);
-				// 01234567890 
-				// ^^^^        (pos=0, len=4)     ;   pos:=pos+len, pos=4
-				//     ^^^^    (pos=4, len=4)     ;   pos:=pos+len, pos=8
-				//         ^^^ (pos=8, len=4)    ;   
+				    MDEBUG("do_send() will SPLIT into small chunks, from packet="<<message.size()<<" B for ptr="<<(void*)message.ptr.get());
 
-				// const size_t bufsize = chunksize_good; // TODO safecast
-				// char* buf = new char[ bufsize ];
+				    while (!message.view.empty()) {
+				      bool ok = do_send_chunk(message.extract_prefix(chunksize_good));
 
-				bool all_ok = true;
-				while (!message.empty()) {
-					byte_slice chunk = message.take_slice(chunksize_good);
+				      if (!ok) {
+				        MDEBUG("do_send() DONE ***FAILED***");
+				        MDEBUG("do_send() SEND was aborted in middle of big package - this is probably harmless");
+				        return false;
+				      }
+				    }
 
-					MDEBUG("chunk_start="<<(void*)chunk.data()<<" ptr="<<(const void*)message_data<<" pos="<<(chunk.data() - message_data));
-					MDEBUG("part of " << message.size() << ": pos="<<(chunk.data() - message_data) << " len="<<chunk.size());
-
-					bool ok = do_send_chunk(std::move(chunk)); // <====== ***
-
-					all_ok = all_ok && ok;
-					if (!all_ok) {
-						MDEBUG("do_send() DONE ***FAILED*** from packet="<<message_size<<" B for ptr="<<(const void*)message_data);
-						MDEBUG("do_send() SEND was aborted in middle of big package - this is mostly harmless "
-							<< " (e.g. peer closed connection) but if it causes trouble tell us at #monero-dev. " << message_size);
-						return false; // partial failure in sending
-					}
-					// (in catch block, or uniq pointer) delete buf;
-				} // each chunk
-
-				MDEBUG("do_send() DONE SPLIT from packet="<<message_size<<" B for ptr="<<(const void*)message_data);
-
+				MDEBUG("do_send() DONE SPLIT send");
                 MDEBUG("do_send() m_connection_type = " << m_connection_type);
 
-				return all_ok; // done - e.g. queued - all the chunks of current do_send call
+				return true; // done - e.g. queued - all the chunks of current do_send call
 			} // LOCK: chunking
 		} // a big block (to be chunked) - all chunks
 		else { // small block
@@ -602,7 +582,7 @@ namespace net_utils
 
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool connection<t_protocol_handler>::do_send_chunk(byte_slice chunk)
+  bool connection<t_protocol_handler>::do_send_chunk(shared_sv chunk)
   {
     TRY_ENTRY();
     // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted

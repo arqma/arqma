@@ -91,7 +91,7 @@ public:
   int invoke_async(int command, const epee::span<const uint8_t> in_buff, boost::uuids::uuid connection_id, const callback_t &cb, size_t timeout = LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED);
 
   int notify(int command, const epee::span<const uint8_t> in_buff, boost::uuids::uuid connection_id);
-  int send(epee::byte_slice message, const boost::uuids::uuid& connection_id);
+  int send(epee::shared_sv message, const boost::uuids::uuid& connection_id);
   bool close(boost::uuids::uuid connection_id);
   bool update_connection_context(const t_connection_context& contxt);
   bool request_callback(boost::uuids::uuid connection_id);
@@ -122,7 +122,11 @@ class async_protocol_handler
   bool send_message(uint32_t command, epee::span<const uint8_t> in_buff, uint32_t flags, bool expect_response)
   {
     const bucket_head2 head = make_header(command, in_buff.size(), flags, expect_response);
-    if (!m_pservice_endpoint->do_send(byte_slice{as_byte_span(head), in_buff}))
+    std::string data;
+    data.reserve(sizeof(head) + in_buff.size());
+    data.append(reinterpret_cast<const char*>(&head), sizeof(head));
+    data.append(reinterpret_cast<const char*>(in_buff.data()), in_buff.size());
+    if (!m_pservice_endpoint->do_send(shared_sv{std::move(data)}))
       return false;
 
     MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len=" << head.m_cb
@@ -528,7 +532,7 @@ public:
               head.m_return_code = SWAP32LE(return_code);
               return_buff.insert(0, reinterpret_cast<const char*>(&head), sizeof(head));
 
-              if (!m_pservice_endpoint->do_send(byte_slice{std::move(return_buff)}))
+              if (!m_pservice_endpoint->do_send(shared_sv{std::move(return_buff)}))
                 return false;
 
               MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len= " << head.m_cb
@@ -723,11 +727,11 @@ public:
       See additional instructions for `make_fragmented_notify`.
 
       \return 1 on success */
-  int send(byte_slice message)
+  int send(shared_sv message)
   {
     const misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
 
-    const std::size_t length = message.size();
+    const std::size_t length = message.view.size();
     if (!m_pservice_endpoint->do_send(std::move(message)))
     {
       LOG_ERROR_CC(m_connection_context, "Failed to send message, dropping it");
@@ -924,7 +928,7 @@ int async_protocol_handler_config<t_connection_context>::notify(int command, con
 }
 //------------------------------------------------------------------------------------------
 template<class t_connection_context>
-int async_protocol_handler_config<t_connection_context>::send(byte_slice message, const boost::uuids::uuid& connection_id)
+int async_protocol_handler_config<t_connection_context>::send(shared_sv message, const boost::uuids::uuid& connection_id)
 {
   async_protocol_handler<t_connection_context>* aph;
   int r = find_and_lock_connection(connection_id, aph);
