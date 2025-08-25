@@ -601,7 +601,7 @@ BOOL SetLockPagesPrivilege(HANDLE hProcess, BOOL bEnable)
  * the allocated buffer.
  */
 
-void slow_hash_allocate_state(uint32_t page_size)
+void cn_slow_hash_allocate_state(uint32_t page_size)
 {
     if(hp_state != NULL)
         return;
@@ -627,10 +627,10 @@ void slow_hash_allocate_state(uint32_t page_size)
 }
 
 /**
- *@brief frees the state allocated by slow_hash_allocate_state
+ *@brief frees the state allocated by cn_slow_hash_allocate_state
  */
 
-void slow_hash_free_state(uint32_t page_size)
+void cn_slow_hash_free_state(uint32_t page_size)
 {
     if(hp_state == NULL)
         return;
@@ -707,7 +707,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
       hash_extra_blake, hash_extra_groestl, hash_extra_jh, hash_extra_skein
   };
 
-  slow_hash_allocate_state(page_size);
+  cn_slow_hash_allocate_state(page_size);
 
   /* CryptoNight Step 1:  Use Keccak1600 to initialize the 'state' (and 'text') buffers from the data. */
   if (prehashed) {
@@ -825,7 +825,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 THREADV uint8_t *hp_state = NULL;
 THREADV int hp_malloced = 0;
 
-void slow_hash_allocate_state(uint32_t page_size)
+void cn_slow_hash_allocate_state(uint32_t page_size)
 {
   if(hp_state != NULL)
     return;
@@ -844,7 +844,7 @@ void slow_hash_allocate_state(uint32_t page_size)
   }
 }
 
-void slow_hash_free_state(uint32_t page_size)
+void cn_slow_hash_free_state(uint32_t page_size)
 {
   if(hp_state == NULL)
     return;
@@ -857,13 +857,13 @@ void slow_hash_free_state(uint32_t page_size)
   hp_malloced = 0;
 }
 #else
-void slow_hash_allocate_state(void)
+void cn_slow_hash_allocate_state(void)
 {
   // Do nothing, this is just to maintain compatibility with the upgraded slow-hash.c
   return;
 }
 
-void slow_hash_free_state(void)
+void cn_slow_hash_free_state(void)
 {
   // As above
   return;
@@ -1118,13 +1118,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 
   RDATA_ALIGN16 uint8_t expandedKey[240];
 
-#ifndef FORCE_USE_HEAP
-  RDATA_ALIGN16 uint8_t hp_state[page_size];
-#else
-#warning "ACTIVATING FORCE_USE_HEAP IN aarch64 + crypto in slow-hash.c"
-  uint8_t *hp_state = (uint8_t *)aligned_malloc(page_size,16);
-#endif
-
+  uint8_t *local_hp_state;
   uint8_t text[INIT_SIZE_BYTE];
   RDATA_ALIGN16 uint64_t a[2];
   RDATA_ALIGN16 uint64_t b[4];
@@ -1142,6 +1136,11 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
   {
       hash_extra_blake, hash_extra_groestl, hash_extra_jh, hash_extra_skein
   };
+
+  if (hp_state == NULL)
+    cn_slow_hash_allocate_state(page_size);
+
+  local_hp_state = hp_state;
 
   /* CryptoNight Step 1:  Use Keccak1600 to initialize the 'state' (and 'text') buffers from the data. */
 
@@ -1254,10 +1253,6 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
   memcpy(state.init, text, INIT_SIZE_BYTE);
   hash_permutation(&state.hs);
   extra_hashes[state.hs.b[0] & 3](&state, 200, hash);
-
-#ifdef FORCE_USE_HEAP
-  aligned_free(hp_state);
-#endif
 }
 #else /* aarch64 && crypto */
 
@@ -1495,13 +1490,13 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 #else
 // Portable implementation as a fallback
 
-void slow_hash_allocate_state(void)
+void cn_slow_hash_allocate_state(void)
 {
   // Do nothing, this is just to maintain compatibility with the upgraded slow-hash.c
   return;
 }
 
-void slow_hash_free_state(void)
+void cn_slow_hash_free_state(void)
 {
   // As above
   return;
@@ -1683,14 +1678,14 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 
 #endif
 
-void cn_slow_hash_allocate_state(uint32_t page_size)
+void slow_hash_allocate_state(uint32_t page_size)
 {
-  slow_hash_allocate_state(page_size);
+  cn_slow_hash_allocate_state(page_size);
   rx_slow_hash_allocate_state();
 }
 
-void cn_slow_hash_free_state(uint32_t page_size)
+void slow_hash_free_state(uint32_t page_size)
 {
-  slow_hash_free_state(page_size);
+  cn_slow_hash_free_state(page_size);
   rx_slow_hash_free_state();
 }
