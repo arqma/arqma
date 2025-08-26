@@ -42,6 +42,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/thread/thread.hpp>
 #include "net_utils_base.h"
 #include "syncobj.h"
 #include "connection_basic.hpp"
@@ -214,7 +215,7 @@ namespace net_utils
                      ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);
 
     // Run the server's io_service loop.
-    bool run_server(size_t threads_count, bool wait = true);
+    bool run_server(size_t threads_count, bool wait = true, const boost::thread::attributes& attrs = boost::thread::attributes());
 
     // wait for service workers stop
     bool server_stop();

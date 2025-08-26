@@ -37,7 +37,6 @@ set(cryptonote_core_sources
   service_node_swarm.cpp
   tx_pool.cpp
   tx_sanity_check.cpp
-  miner.cpp
   cryptonote_tx_utils.cpp)
 
 set(cryptonote_core_headers)
