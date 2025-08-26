@@ -52,6 +52,7 @@
 using namespace epee;
 
 #include "miner.h"
+#include "crypto/hash.h"
 
 extern "C" void rx_slow_hash_allocate_state();
 extern "C" void rx_slow_hash_free_state();

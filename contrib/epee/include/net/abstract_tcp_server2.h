@@ -42,7 +42,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include "byte_slice.h"
 #include "net_utils_base.h"
 #include "syncobj.h"
 #include "connection_basic.hpp"
@@ -126,7 +125,7 @@ namespace net_utils
 
   private:
     //----------------- i_service_endpoint ---------------------
-    virtual bool do_send(byte_slice message);
+    virtual bool do_send(shared_sv message);
     virtual bool send_done();
     virtual bool close();
     virtual bool call_run_once_service_io();
@@ -135,7 +134,7 @@ namespace net_utils
     virtual bool add_ref();
     virtual bool release();
     //------------------------------------------------------
-    bool do_send_chunk(byte_slice chunk);
+    bool do_send_chunk(shared_sv chunk);
 
     std::shared_ptr<connection<t_protocol_handler> > safe_shared_from_this();
     bool shutdown();

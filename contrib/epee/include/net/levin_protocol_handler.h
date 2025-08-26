@@ -159,7 +159,7 @@ namespace levin
 						m_current_head.m_have_to_return_data = false;
 
 						return_buff.insert(0, (const char*)&m_current_head, sizeof(m_current_head));
-						if (!m_psnd_hndlr->do_send(byte_slice{std::move(return_buff)}))
+						if (!m_psnd_hndlr->do_send(shared_sv{std::move(return_buff)}))
 							return false;
 
 					}

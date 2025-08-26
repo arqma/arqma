@@ -1,6 +1,6 @@
 package=ncurses
 $(package)_version=6.1
-$(package)_download_path=https://ftp.gnu.org/gnu/ncurses
+$(package)_download_path=https://mirrors.xmission.com/gnu/ncurses
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=aa057eeeb4a14d470101eff4597d5833dcef5965331be3528c08d99cebaa0d17
 $(package)_patches=fallback.c

@@ -48,6 +48,12 @@
 #define INIT_SIZE_BLK   8
 #define INIT_SIZE_BYTE (INIT_SIZE_BLK * AES_BLOCK_SIZE)
 
+#if defined(_MSC_VER)
+#define THREADV __declspec(thread)
+#else
+#define THREADV __thread
+#endif
+
 extern void aesb_single_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 
@@ -321,12 +327,6 @@ static inline int force_software_aes(void)
   VARIANT1_2(p + 1); \
   _b1 = _b; \
   _b = _c; \
-
-#if defined(_MSC_VER)
-#define THREADV __declspec(thread)
-#else
-#define THREADV __thread
-#endif
 
 #pragma pack(push, 1)
 union cn_slow_hash_state
@@ -627,7 +627,7 @@ void slow_hash_allocate_state(uint32_t page_size)
 }
 
 /**
- *@brief frees the state allocated by slow_hash_allocate_state
+ *@brief frees the state allocated by cn_slow_hash_allocate_state
  */
 
 void slow_hash_free_state(uint32_t page_size)
@@ -706,8 +706,6 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
   {
       hash_extra_blake, hash_extra_groestl, hash_extra_jh, hash_extra_skein
   };
-
-  slow_hash_allocate_state(page_size);
 
   /* CryptoNight Step 1:  Use Keccak1600 to initialize the 'state' (and 'text') buffers from the data. */
   if (prehashed) {
@@ -1122,7 +1120,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
   RDATA_ALIGN16 uint8_t hp_state[page_size];
 #else
 #warning "ACTIVATING FORCE_USE_HEAP IN aarch64 + crypto in slow-hash.c"
-  uint8_t *hp_state = (uint8_t *)aligned_malloc(page_size,16);
+  uint8_t *hp_state = (uint8_t *)aligned_malloc(page_size, 16);
 #endif
 
   uint8_t text[INIT_SIZE_BYTE];
