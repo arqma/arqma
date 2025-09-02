@@ -104,3 +104,8 @@ local.properties
 .idea/
 
 /testnet
+
+src/lmdb/liblmdb/mdb_drop
+src/lmdb/liblmdb/mdb_stat
+src/lmdb/liblmdb/mdb_copy
+src/lmdb/liblmdb/mdb_dump

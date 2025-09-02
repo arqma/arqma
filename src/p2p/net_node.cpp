@@ -143,6 +143,8 @@ namespace nodetool
     const command_line::arg_descriptor<std::vector<std::string>> arg_proxy = {"proxy", "<network-type>,<socks-ip:port>[,max_connections][,disable_noise] i.e. \"tor,127.0.0.1:9050,100,disable_noise\""};
     const command_line::arg_descriptor<std::vector<std::string>> arg_anonymous_inbound = {"anonymous-inbound", "<hidden-service-address>,<[bind-ip:]port>[,max_connections] i.e. \"x.onion,127.0.0.1:19996,100\""};
     const command_line::arg_descriptor<bool> arg_p2p_hide_my_port   =    {"hide-my-port", "Do not announce yourself as peerlist candidate", false, true};
+    const command_line::arg_descriptor<std::string> arg_ban_list = {"ban-list", "Specify ban list file, one IP address per line"};
+    const command_line::arg_descriptor<bool> arg_enable_dns_blocklist = {"enable-dns-blocklist", "Apply realtime blocklist from DNS", false};
 
     const command_line::arg_descriptor<bool>        arg_no_igd  = {"no-igd", "Disable UPnP port mapping"};
     const command_line::arg_descriptor<std::string> arg_igd = {"igd", "UPnP port mapping (disabled, enabled, delayed)", "delayed"};
@@ -155,8 +157,6 @@ namespace nodetool
     const command_line::arg_descriptor<int64_t> arg_limit_rate_up = {"limit-rate-up", "set limit-rate-up [kB/s]", P2P_DEFAULT_LIMIT_RATE_UP};
     const command_line::arg_descriptor<int64_t> arg_limit_rate_down = {"limit-rate-down", "set limit-rate-down [kB/s]", P2P_DEFAULT_LIMIT_RATE_DOWN};
     const command_line::arg_descriptor<int64_t> arg_limit_rate = {"limit-rate", "set limit-rate [kB/s]", -1};
-
-    const command_line::arg_descriptor<uint32_t> arg_max_connections_per_ip = {"max-connections-per-ip", "Maximum number of connections allowed from the same IP address", 1};
 
     boost::optional<std::vector<proxy>> get_proxies(boost::program_options::variables_map const& vm)
     {
@@ -329,6 +329,7 @@ namespace nodetool
             }
         };
 
+        net::socks::client::close_on_exit close_client{};
         std::future<client_result> socks_result{};
         {
             std::promise<client_result> socks_promise{};
@@ -336,7 +337,8 @@ namespace nodetool
 
             auto client = net::socks::make_connect_client(
                 boost::asio::ip::tcp::socket{service}, net::socks::version::v4a, notify{std::move(socks_promise)}
-             );
+            );
+            close_client.self = client;
             if (!start_socks(std::move(client), proxy, remote))
                 return boost::none;
         }
@@ -358,7 +360,10 @@ namespace nodetool
         {
             auto result = socks_result.get();
             if (!result.first)
+            {
+                close_client.self.reset();
                 return {std::move(result.second)};
+            }
 
             MERROR("Failed to make socks connection to " << remote.str() << " (via " << proxy << "): " << result.first.message());
         }

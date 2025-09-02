@@ -107,7 +107,8 @@ namespace service_nodes
     if (!ss_reachable)
     {
       LOG_PRINT_L1("Service Node is not reachable for node: " << pubkey);
-      result.storage_server_reachable = false;
+      if (hard_fork_version >= cryptonote::network_version_17)
+        result.storage_server_reachable = false;
     }
 
     if (ips[0].first && ips[1].first) {
@@ -134,26 +135,33 @@ namespace service_nodes
                                       << missed_votes << " checkpoint votes from: "
                                       << CHECKPOINT_NUM_QUORUMS_TO_PARTICIPATE_IN
                                       << " quorums that they were required to participate in.");
-        result.voted_in_checkpoints = false;
+        if (hard_fork_version >= cryptonote::network_version_17)
+          result.voted_in_checkpoints = false;
       }
     }
 
     return result;
   }
 
-  void quorum_cop::blockchain_detached(uint64_t height)
+  void quorum_cop::blockchain_detached(uint64_t height, bool by_pop_blocks)
   {
     if (m_obligations_height >= height)
     {
-      LOG_ERROR("The blockchain was detached to height: " << height << ", but quorum cop has already processed votes up to " << m_obligations_height);
-      LOG_ERROR("This implies a reorg occured that was over " << REORG_SAFETY_BUFFER_IN_BLOCKS << ". This should never happen! Please report this to the devs.");
+      if (!by_pop_blocks)
+      {
+        LOG_ERROR("The blockchain was detached to height: " << height << ", but quorum cop has already processed votes up to " << m_obligations_height);
+        LOG_ERROR("This implies a reorg occured that was over " << REORG_SAFETY_BUFFER_IN_BLOCKS << ". This should never happen! Please report this to the devs.");
+      }
       m_obligations_height = height;
     }
 
     if (m_last_checkpointed_height >= height + REORG_SAFETY_BUFFER_IN_BLOCKS)
     {
-      LOG_ERROR("The blockchain was detached to height: " << height << ", but quorum cop has already processed votes for checkpointing up to " << m_last_checkpointed_height);
-      LOG_ERROR("This implies a reorg occured that was over " << REORG_SAFETY_BUFFER_IN_BLOCKS << ". This should rarely happen! Please report this to the devs.");
+      if (!by_pop_blocks)
+      {
+        LOG_ERROR("The blockchain was detached to height: " << height << ", but quorum cop has already processed votes for checkpointing up to " << m_last_checkpointed_height);
+        LOG_ERROR("This implies a reorg occured that was over " << REORG_SAFETY_BUFFER_IN_BLOCKS << ". This should rarely happen! Please report this to the devs.");
+      }
       m_last_checkpointed_height = height - (height % CHECKPOINT_INTERVAL);
     }
 
@@ -258,7 +266,6 @@ namespace service_nodes
             }
 
             if (quorum->workers.empty()) continue;
-
             int index_in_group = voting_enabled ? find_index_in_quorum_group(quorum->validators, my_keys->pub) : -1;
             if (index_in_group >= 0)
             {
@@ -428,7 +435,6 @@ namespace service_nodes
   {
     process_quorums(block);
     uint64_t const height = cryptonote::get_block_height(block) + 1; // chain height = new top block height + 1
-
     m_vote_pool.remove_expired_votes(height);
     m_vote_pool.remove_used_votes(txs, block.major_version);
     return true;

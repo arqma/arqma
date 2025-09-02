@@ -918,7 +918,7 @@ namespace net_utils
     acceptor_(io_service_),
     acceptor_ipv6(io_service_),
     default_remote(),
-    m_stop_signal_sent(false), m_port(0), 
+    m_stop_signal_sent(false), m_port(0),
     m_threads_count(0),
     m_thread_index(0),
 		m_connection_type( connection_type ),
@@ -1135,7 +1135,7 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::run_server(size_t threads_count, bool wait, const boost::thread::attributes& attrs)
+  bool boosted_tcp_server<t_protocol_handler>::run_server(size_t threads_count, bool wait)
   {
     TRY_ENTRY();
     m_threads_count = threads_count;

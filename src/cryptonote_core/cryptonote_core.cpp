@@ -175,7 +175,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<size_t> arg_max_txpool_weight = {
     "max-txpool-weight"
   , "Set maximum txpool weight in bytes."
-  , DEFAULT_TXPOOL_MAX_WEIGHT
+  , config::blockchain_settings::DEFAULT_TXPOOL_MAX_WEIGHT
   };
   static const command_line::arg_descriptor<std::string> arg_block_notify = {
     "block-notify"
@@ -197,7 +197,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<bool> arg_keep_alt_blocks = {
     "keep-alt-blocks"
   , "Keep Alternative Blocks on Restart"
-  , true
+  , false
   };
   static const command_line::arg_descriptor<bool> arg_service_node = {
     "service-node"
@@ -1727,11 +1727,6 @@ namespace cryptonote
   bool core::parse_tx_from_blob(transaction& tx, crypto::hash& tx_hash, const blobdata& blob) const
   {
     return parse_and_validate_tx_from_blob(blob, tx, tx_hash);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NOTIFY_RESPONSE_GET_OBJECTS::request& rsp, cryptonote_connection_context& context)
-  {
-    return m_blockchain_storage.handle_get_objects(arg, rsp);
   }
   //-----------------------------------------------------------------------------------------------
   crypto::hash core::get_block_id_by_height(uint64_t height) const

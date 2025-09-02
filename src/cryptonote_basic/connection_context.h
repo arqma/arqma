@@ -35,7 +35,6 @@
 #include <algorithm>
 #include <chrono>
 #include <optional>
-#include <boost/optional/optional_fwd.hpp>
 #include "net/net_utils_base.h"
 #include "copyable_atomic.h"
 #include "crypto/hash.h"
@@ -50,7 +49,6 @@ namespace cryptonote
       state_before_handshake = 0, //default state
       state_synchronizing,
       state_standby,
-      state_idle,
       state_normal
     };
 
@@ -59,24 +57,17 @@ namespace cryptonote
 
     static size_t get_max_bytes(int command) noexcept;
 
-    void set_state_normal();
-
-    boost::optional<crypto::hash> get_expected_hash(uint64_t height) const;
-
     state m_state{state_before_handshake};
     std::vector<crypto::hash> m_needed_objects;
-    std::vector<crypto::hash> m_expected_heights;
     std::unordered_set<crypto::hash> m_requested_objects;
     uint64_t m_remote_blockchain_height{0};
     uint64_t m_last_response_height{0};
-    uint64_t m_expected_heights_start{0};
     std::optional<std::chrono::steady_clock::time_point> m_last_request_time;
     epee::copyable_atomic m_callback_request_count{0}; //in debug purpose: problem with double callback rise
     crypto::hash m_last_known_hash{crypto::null_hash};
     uint32_t m_pruning_seed{0};
     uint16_t m_rpc_port{0};
     bool m_anchor{false};
-    uint64_t m_expect_height{0};
     //size_t m_score;  TODO: add score calculations
   };
 
@@ -90,8 +81,6 @@ namespace cryptonote
       return "synchronizing";
     case cryptonote_connection_context::state_standby:
       return "standby";
-    case cryptonote_connection_context::state_idle:
-      return "idle";
     case cryptonote_connection_context::state_normal:
       return "normal";
     default:
@@ -109,8 +98,6 @@ namespace cryptonote
       return 's';
     case cryptonote_connection_context::state_standby:
       return 'w';
-    case cryptonote_connection_context::state_idle:
-      return 'i';
     case cryptonote_connection_context::state_normal:
       return 'n';
     default:

@@ -52,10 +52,10 @@ void block_queue::add_blocks(uint64_t height, std::vector<cryptonote::block_comp
   blocks.emplace(height, std::move(bcel), connection_id, rate, size);
   if (has_hashes)
   {
-    for (std::size_t i = 0; i < hashes.size(); ++i)
+    for (const crypto::hash &h : hashes)
     {
-      requested_hashes.insert(hashes[i]);
-      have_blocks.emplace(hashes[i], height + i);
+      requested_hashes.insert(h);
+      have_blocks.insert(h);
     }
     set_span_hashes(height, connection_id, hashes);
   }
@@ -218,15 +218,6 @@ bool block_queue::have(const crypto::hash &hash) const
 {
   std::unique_lock lock{mutex};
   return have_blocks.find(hash) != have_blocks.end();
-}
-
-std::uint64_t block_queue::have_height(const crypto::hash &hash) const
-{
-  std::unique_lock lock{mutex};
-  const auto elem = have_blocks.find(hash);
-  if (elem == have_blocks.end())
-    return std::numeric_limits<std::uint64_t>::max();
-  return elem->second;
 }
 
 std::pair<uint64_t, uint64_t> block_queue::reserve_span(

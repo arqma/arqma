@@ -42,7 +42,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include <boost/thread/thread.hpp>
 #include "net_utils_base.h"
 #include "syncobj.h"
 #include "connection_basic.hpp"
@@ -61,7 +60,7 @@ namespace net_utils
 
   struct i_connection_filter
   {
-    virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address)=0;
+    virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address, time_t *t = NULL)=0;
   protected:
     virtual ~i_connection_filter(){}
   };
@@ -215,7 +214,7 @@ namespace net_utils
                      ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);
 
     // Run the server's io_service loop.
-    bool run_server(size_t threads_count, bool wait = true, const boost::thread::attributes& attrs = boost::thread::attributes());
+    bool run_server(size_t threads_count, bool wait = true);
 
     // wait for service workers stop
     bool server_stop();

@@ -1325,7 +1325,7 @@ namespace service_nodes
     m_state.update_from_block(m_blockchain.get_db(), nettype, m_transient.state_history, m_transient.state_archive, {} /*m_transient.alt_state*/, block, txs, m_service_node_keys);
   }
   //----------------------------------------------------------------------------
-  void service_node_list::blockchain_detached(uint64_t height)
+  void service_node_list::blockchain_detached(uint64_t height, bool)
   {
     std::lock_guard lock(m_sn_mutex);
 

@@ -780,8 +780,15 @@ bool t_rpc_command_executor::print_connections() {
     }
   }
 
+  auto longest_host = *std::max_element(res.connections.begin(), res.connections.end(),
+                                        [](const auto &info1, const auto &info2)
+                                        {
+                                          return info1.address.length() < info2.address.length();
+                                        });
+  int host_field_width = std::max(15, 8 + (int) longest_host.address.length());
+
   tools::msg_writer()
-      << std::setw(30) << std::left << "Remote Host"
+      << std::setw(host_field_width) << std::left << "Remote Host"
       << std::setw(6) << "SSL"
       << std::setw(20) << "Peer id"
       << std::setw(30) << "Recv/Sent (inactive,sec)"
@@ -796,11 +803,11 @@ bool t_rpc_command_executor::print_connections() {
   for (auto & info : res.connections)
   {
     std::string address = info.incoming ? "INC " : "OUT ";
-    address += info.ip + ":" + info.port;
+    address += info.address;
     //std::string in_out = info.incoming ? "INC " : "OUT ";
     tools::msg_writer()
      //<< std::setw(30) << std::left << in_out
-     << std::setw(30) << std::left << address
+     << std::setw(host_field_width) << std::left << address
      << std::setw(6) << (info.ssl ? "yes" : "no")
      << std::setw(20) << epee::string_tools::pad_string(info.peer_id, 16, '0', true)
      << std::setw(30) << std::to_string(info.recv_count) + "("  + std::to_string(count_seconds(info.recv_idle_time)) + ")/" + std::to_string(info.send_count) + "(" + std::to_string(count_seconds(info.send_idle_time)) + ")"
@@ -1804,14 +1811,13 @@ bool t_rpc_command_executor::print_bans()
 
     for (auto i = res.bans.begin(); i != res.bans.end(); ++i)
     {
-        tools::msg_writer() << epee::string_tools::get_ip_string_from_int32(i->ip) << " banned for " << i->seconds << " seconds";
+        tools::msg_writer() << i->host << " banned for " << i->seconds << " seconds";
     }
 
     return true;
 }
 
-
-bool t_rpc_command_executor::ban(const std::string &ip, time_t seconds)
+bool t_rpc_command_executor::ban(const std::string &address, time_t seconds)
 {
     cryptonote::COMMAND_RPC_SETBANS::request req;
     cryptonote::COMMAND_RPC_SETBANS::response res;
@@ -1819,11 +1825,8 @@ bool t_rpc_command_executor::ban(const std::string &ip, time_t seconds)
     epee::json_rpc::error error_resp;
 
     cryptonote::COMMAND_RPC_SETBANS::ban ban;
-    if (!epee::string_tools::get_ip_int32_from_string(ban.ip, ip))
-    {
-        tools::fail_msg_writer() << "Invalid IP";
-        return true;
-    }
+    ban.host = address;
+    ban.ip = 0;
     ban.ban = true;
     ban.seconds = seconds;
     req.bans.push_back(ban);
@@ -1847,7 +1850,7 @@ bool t_rpc_command_executor::ban(const std::string &ip, time_t seconds)
     return true;
 }
 
-bool t_rpc_command_executor::unban(const std::string &ip)
+bool t_rpc_command_executor::unban(const std::string &address)
 {
     cryptonote::COMMAND_RPC_SETBANS::request req;
     cryptonote::COMMAND_RPC_SETBANS::response res;
@@ -1855,11 +1858,8 @@ bool t_rpc_command_executor::unban(const std::string &ip)
     epee::json_rpc::error error_resp;
 
     cryptonote::COMMAND_RPC_SETBANS::ban ban;
-    if (!epee::string_tools::get_ip_int32_from_string(ban.ip, ip))
-    {
-        tools::fail_msg_writer() << "Invalid IP";
-        return true;
-    }
+    ban.host = address;
+    ban.ip = 0;
     ban.ban = false;
     ban.seconds = 0;
     req.bans.push_back(ban);
@@ -1879,6 +1879,39 @@ bool t_rpc_command_executor::unban(const std::string &ip)
             return true;
         }
     }
+
+    return true;
+}
+
+bool t_rpc_command_executor::banned(const std::string &address)
+{
+    cryptonote::COMMAND_RPC_BANNED::request req;
+    cryptonote::COMMAND_RPC_BANNED::response res;
+    std::string fail_message = "Unsuccessful";
+    epee::json_rpc::error error_resp;
+
+    req.address = address;
+
+    if (m_is_rpc)
+    {
+        if (!m_rpc_client->json_rpc_request(req, res, "banned", fail_message.c_str()))
+        {
+            return true;
+        }
+    }
+    else
+    {
+        if (!m_rpc_server->on_banned(req, res, error_resp) || res.status != CORE_RPC_STATUS_OK)
+        {
+            tools::fail_msg_writer() << make_error(fail_message, res.status);
+            return true;
+        }
+    }
+
+    if (res.banned)
+      tools::msg_writer() << address << " is banned for " << res.seconds << " seconds";
+    else
+      tools::msg_writer() << address << " is not banned";
 
     return true;
 }
