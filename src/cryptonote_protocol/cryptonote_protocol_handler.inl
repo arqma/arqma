@@ -1089,53 +1089,6 @@ namespace cryptonote
     return 1;
   }
 
-  // Get an estimate for the remaining sync time from given current to target blockchain height, in seconds
-  template<class t_core>
-  uint64_t t_cryptonote_protocol_handler<t_core>::get_estimated_remaining_sync_seconds(uint64_t current_blockchain_height, uint64_t target_blockchain_height)
-  {
-    // The average sync speed varies so much, even averaged over quite long time periods like 10 minutes,
-    // that using some sliding window would be difficult to implement without often leading to bad estimates.
-    // The simplest strategy - always average sync speed over the maximum available interval i.e. since sync
-    // started at all (from "m_sync_start_time" and "m_sync_start_height") - gives already useful results
-    // and seems to be quite robust. Some quite special cases like "Internet connection suddenly becoming
-    // much faster after syncing already a long time, and staying fast" are not well supported however.
-
-    if (target_blockchain_height <= current_blockchain_height)
-    {
-      // Syncing stuck, or other special circumstance: Avoid errors, simply give back 0
-      return 0;
-    }
-
-    const auto now = std::chrono::steady_clock::now();
-    seconds_f sync_time = now - m_sync_start_time;
-    cryptonote::network_type nettype = m_core.get_nettype();
-
-    // Don't simply use remaining number of blocks for the estimate but "sync weight" as provided by
-    // "cumulative_block_sync_weight" which knows about strongly varying Monero mainnet block sizes
-    uint64_t synced_weight = tools::cumulative_block_sync_weight(nettype, m_sync_start_height, current_blockchain_height - m_sync_start_height);
-    uint64_t remaining_weight = tools::cumulative_block_sync_weight(nettype, current_blockchain_height, target_blockchain_height - current_blockchain_height);
-    return (uint64_t)((sync_time.count() / synced_weight) * remaining_weight);
-  }
-
-  // Return a textual remaining sync time estimate, or the empty string if waiting period not yet over
-  template<class t_core>
-  std::string t_cryptonote_protocol_handler<t_core>::get_periodic_sync_estimate(uint64_t current_blockchain_height, uint64_t target_blockchain_height)
-  {
-    std::string text;
-    const auto now = std::chrono::steady_clock::now();
-    auto period_sync_time = now - m_period_start_time;
-    if (period_sync_time > 2min)
-    {
-      // Period is over, time to report another estimate
-      uint64_t remaining_seconds = get_estimated_remaining_sync_seconds(current_blockchain_height, target_blockchain_height);
-      text = tools::get_human_readable_timespan(std::chrono::seconds(remaining_seconds));
-
-      // Start the new period
-      m_period_start_time = now;
-    }
-    return text;
-  }
-
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::try_add_next_blocks(cryptonote_connection_context& context)
   {
@@ -1158,15 +1111,22 @@ namespace cryptonote
         m_core.pause_mine();
         m_add_timer.resume();
         bool starting = true;
+        ARQMA_DEFER
+        {
+          m_add_timer.pause();
+          m_core.resume_mine();
+          if (!starting)
+            m_last_add_end_time = epee::misc_utils::get_ns_count();
+        };
+
+        /*
         epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([this, &starting]() {
           m_add_timer.pause();
           m_core.resume_mine();
           if (!starting)
             m_last_add_end_time = epee::misc_utils::get_ns_count();
         });
-        m_sync_start_time = std::chrono::steady_clock::now();
-        m_sync_start_height = m_core.get_current_blockchain_height();
-        m_period_start_time = m_sync_start_time;
+        */
 
         while (1)
         {
@@ -1273,130 +1233,101 @@ namespace cryptonote
             LOG_ERROR_CCONTEXT("Failure in prepare_handle_incoming_blocks");
             return 1;
           }
-          if(!pblocks.empty() && pblocks.size() != blocks.size())
-          {
-            m_core.cleanup_handle_incoming_blocks();
-            LOG_ERROR_CCONTEXT("Internal error: blocks.size() != block_entry.txs.size()");
-            return 1;
-          }
 
-          uint64_t block_process_time_full = 0, transactions_process_time_full = 0;
-          size_t num_txs = 0, blockidx = 0;
-          for(const block_complete_entry& block_entry: blocks)
           {
-            if (m_stopping)
+            bool remove_spans = false;
+            ARQMA_DEFER
             {
-                m_core.cleanup_handle_incoming_blocks();
-                return 1;
+              if (!m_core.cleanup_handle_incoming_blocks())
+                LOG_PRINT_CCONTEXT_L0("Failure in cleanup_handle_incoming_blocks");
+
+              if (remove_spans)
+                m_block_queue.remove_spans(span_connection_id, start_height);
+            };
+
+            if(!pblocks.empty() && pblocks.size() != blocks.size())
+            {
+              LOG_ERROR_CCONTEXT("Internal error: blocks.size() != block_entry.txs.size()");
+              return 1;
             }
 
-            // process transactions
-            TIME_MEASURE_START(transactions_process_time);
-            num_txs += block_entry.txs.size();
-            auto parsed_txs = m_core.handle_incoming_txs(block_entry.txs, tx_pool_options::from_block());
-            for (size_t i = 0; i < parsed_txs.size(); ++i)
+            uint64_t block_process_time_full = 0, transactions_process_time_full = 0;
+            size_t num_txs = 0, blockidx = 0;
+            for(const block_complete_entry& block_entry: blocks)
             {
-              if (parsed_txs[i].tvc.m_verification_failed)
+              if (m_stopping)
+                return 1;
+
+              // process transactions
+              TIME_MEASURE_START(transactions_process_time);
+              num_txs += block_entry.txs.size();
+              auto parsed_txs = m_core.handle_incoming_txs(block_entry.txs, tx_pool_options::from_block());
+              for (size_t i = 0; i < parsed_txs.size(); ++i)
+              {
+                if (parsed_txs[i].tvc.m_verification_failed)
+                {
+                  if (!m_p2p->for_connection(span_connection_id, [&](cryptonote_connection_context& context, nodetool::peerid_type peer_id, uint32_t f)->bool{
+                    cryptonote::transaction tx;
+                    parse_and_validate_tx_from_blob(block_entry.txs[i], tx);
+                    LOG_ERROR_CCONTEXT("transaction verification failed on NOTIFY_RESPONSE_GET_BLOCKS, tx_id = "
+                      << epee::string_tools::pod_to_hex(cryptonote::get_transaction_hash(tx)) << ", dropping connection");
+                    drop_connection(context, false, true);
+                    return 1;
+                  }))
+                    LOG_ERROR_CCONTEXT("span connection id not found");
+
+                  remove_spans = true;
+                  return 1;
+                }
+              }
+              TIME_MEASURE_FINISH(transactions_process_time);
+              transactions_process_time_full += transactions_process_time;
+
+              //
+              // NOTE: Checkpoint parsing
+              //
+              checkpoint_t checkpoint_allocated_on_stack_;
+              checkpoint_t *checkpoint = nullptr;
+              if (block_entry.checkpoint.size())
+              {
+                if (!t_serializable_object_from_blob(checkpoint_allocated_on_stack_, block_entry.checkpoint))
+                {
+                  MERROR("Checkpoint blob available but failed to parse");
+                  return false;
+                }
+
+                checkpoint = &checkpoint_allocated_on_stack_;
+              }
+
+              // process block
+
+              TIME_MEASURE_START(block_process_time);
+              block_verification_context bvc{};
+
+              m_core.handle_incoming_block(block_entry.block, pblocks.empty() ? NULL : &pblocks[blockidx], bvc, checkpoint, false); // <--- process block
+
+              if(bvc.m_verification_failed || bvc.m_marked_as_orphaned)
               {
                 if (!m_p2p->for_connection(span_connection_id, [&](cryptonote_connection_context& context, nodetool::peerid_type peer_id, uint32_t f)->bool{
-                  cryptonote::transaction tx;
-                  parse_and_validate_tx_from_blob(block_entry.txs[i], tx);
-                  LOG_ERROR_CCONTEXT("transaction verification failed on NOTIFY_RESPONSE_GET_BLOCKS, tx_id = "
-                      << epee::string_tools::pod_to_hex(cryptonote::get_transaction_hash(tx)) << ", dropping connection");
-                  drop_connection(context, false, true);
+                  LOG_PRINT_CCONTEXT_L1("Block verification failed, dropping connection");
+                  drop_connection(context, true, true);
                   return 1;
                 }))
                   LOG_ERROR_CCONTEXT("span connection id not found");
 
-                if (!m_core.cleanup_handle_incoming_blocks())
-                {
-                  LOG_PRINT_CCONTEXT_L0("Failure in cleanup_handle_incoming_blocks");
-                  return 1;
-                }
-                // in case the peer had dropped beforehand, remove the span anyway so other threads can wake up and get it
-                m_block_queue.remove_spans(span_connection_id, start_height);
-                return 1;
-              }
-            }
-            TIME_MEASURE_FINISH(transactions_process_time);
-            transactions_process_time_full += transactions_process_time;
-
-            //
-            // NOTE: Checkpoint parsing
-            //
-            checkpoint_t checkpoint_allocated_on_stack_;
-            checkpoint_t *checkpoint = nullptr;
-            if (block_entry.checkpoint.size())
-            {
-              if (!t_serializable_object_from_blob(checkpoint_allocated_on_stack_, block_entry.checkpoint))
-              {
-                MERROR("Checkpoint blob available but failed to parse");
-                return false;
-              }
-              checkpoint = &checkpoint_allocated_on_stack_;
-            }
-
-            // process block
-
-            TIME_MEASURE_START(block_process_time);
-            block_verification_context bvc{};
-
-            m_core.handle_incoming_block(block_entry.block, pblocks.empty() ? NULL : &pblocks[blockidx], bvc, checkpoint, false); // <--- process block
-
-            if(bvc.m_verification_failed)
-            {
-              if (!m_p2p->for_connection(span_connection_id, [&](cryptonote_connection_context& context, nodetool::peerid_type peer_id, uint32_t f)->bool{
-                LOG_PRINT_CCONTEXT_L1("Block verification failed, dropping connection");
-                drop_connection(context, true, true);
-                return 1;
-              }))
-                LOG_ERROR_CCONTEXT("span connection id not found");
-
-              if (!m_core.cleanup_handle_incoming_blocks())
-              {
-                LOG_PRINT_CCONTEXT_L0("Failure in cleanup_handle_incoming_blocks");
+                remove_spans = true;
                 return 1;
               }
 
-              // in case the peer had dropped beforehand, remove the span anyway so other threads can wake up and get it
-              m_block_queue.remove_spans(span_connection_id, start_height);
-              return 1;
-            }
-            if(bvc.m_marked_as_orphaned)
-            {
-              if (!m_p2p->for_connection(span_connection_id, [&](cryptonote_connection_context& context, nodetool::peerid_type peer_id, uint32_t f)->bool{
-                LOG_PRINT_CCONTEXT_L1("Block received at sync phase was marked as orphaned, dropping connection");
-                drop_connection(context, true, true);
-                return 1;
-              }))
-                LOG_ERROR_CCONTEXT("span connection id not found");
+              TIME_MEASURE_FINISH(block_process_time);
+              block_process_time_full += block_process_time;
+              ++blockidx;
 
-              if (!m_core.cleanup_handle_incoming_blocks())
-              {
-                LOG_PRINT_CCONTEXT_L0("Failure in cleanup_handle_incoming_blocks");
-                return 1;
-              }
+            } // each download block
 
-              // in case the peer had dropped beforehand, remove the span anyway so other threads can wake up and get it
-              m_block_queue.remove_spans(span_connection_id, start_height);
-              return 1;
-            }
-
-            TIME_MEASURE_FINISH(block_process_time);
-            block_process_time_full += block_process_time;
-            ++blockidx;
-
-          } // each download block
-
-          MDEBUG(context << "Block process time (" << blocks.size() << " blocks, " << num_txs << " txs): " << block_process_time_full + transactions_process_time_full << " (" << transactions_process_time_full << "/" << block_process_time_full << ") ms");
-
-          if (!m_core.cleanup_handle_incoming_blocks())
-          {
-            LOG_PRINT_CCONTEXT_L0("Failure in cleanup_handle_incoming_blocks");
-            return 1;
+            remove_spans = true;
+            MDEBUG(context << "Block process time (" << blocks.size() << " blocks, " << num_txs << " txs): " << block_process_time_full + transactions_process_time_full << " (" << transactions_process_time_full << "/" << block_process_time_full << ") ms");
           }
-
-          m_block_queue.remove_spans(span_connection_id, start_height);
 
           const uint64_t current_blockchain_height = m_core.get_current_blockchain_height();
           if (current_blockchain_height > previous_height)
@@ -1410,16 +1341,7 @@ namespace cryptonote
               if (completion_percent == 100) // never show 100% if not actually up to date
                 completion_percent = 99;
               progress_message = " (" + std::to_string(completion_percent) + "%, "
-                  + std::to_string(target_blockchain_height - current_blockchain_height) + " left";
-              std::string time_message = get_periodic_sync_estimate(current_blockchain_height, target_blockchain_height);
-              if (!time_message.empty())
-              {
-                uint64_t total_blocks_to_sync = target_blockchain_height - m_sync_start_height;
-                uint64_t total_blocks_synced = current_blockchain_height - m_sync_start_height;
-                progress_message += ", " + std::to_string(total_blocks_synced * 100 / total_blocks_to_sync) + "% of total synced";
-                progress_message += ", estimated " + time_message + " left";
-              }
-              progress_message += ")";
+                  + std::to_string(target_blockchain_height - current_blockchain_height) + " left)";
             }
             const uint32_t previous_stripe = tools::get_pruning_stripe(previous_height, target_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES);
             const uint32_t current_stripe = tools::get_pruning_stripe(current_blockchain_height, target_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES);
@@ -2113,23 +2035,8 @@ skip:
   bool t_cryptonote_protocol_handler<t_core>::on_connection_synchronized()
   {
     bool val_expected = false;
-    uint64_t current_blockchain_height = m_core.get_current_blockchain_height();
     if(m_synchronized.compare_exchange_strong(val_expected, true))
     {
-      if ((current_blockchain_height > m_sync_start_height) && (m_sync_spans_downloaded > 0))
-      {
-        uint64_t synced_blocks = current_blockchain_height - m_sync_start_height;
-        // Report only after syncing an "interesting" number of blocks:
-        if (synced_blocks > 20)
-        {
-          auto synced_seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - m_sync_start_time);
-          if (synced_seconds == 0s)
-            synced_seconds = 1s;
-          float blocks_per_second = synced_blocks / (float)synced_seconds.count();
-          MGINFO_YELLOW("Synced " << synced_blocks << " blocks in "
-            << tools::get_human_readable_timespan(synced_seconds) << " (" << blocks_per_second << " blocks per second)");
-        }
-      }
       MGINFO_RED(ENDL << crypto_synced << ENDL);
       m_sync_timer.pause();
       if (ELPP->vRegistry()->allowed(el::Level::Info, "sync-info"))
