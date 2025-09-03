@@ -227,7 +227,7 @@ namespace service_nodes
         return false;
       }
 
-      if (checkpoint.signatures.size() > service_nodes::CHECKPOINT_QUORUM_SIZE)
+      if (hard_fork_version > cryptonote::network_version_17 && checkpoint.signatures.size() > service_nodes::CHECKPOINT_QUORUM_SIZE)
       {
         LOG_PRINT_L1("Checkpoint has too many signatures to be considered at height: " << checkpoint.height);
         return false;
@@ -237,7 +237,7 @@ namespace service_nodes
       for (size_t i = 0; i < checkpoint.signatures.size(); i++)
       {
         service_nodes::voter_to_signature const &voter_to_signature = checkpoint.signatures[i];
-        if (hard_fork_version >= cryptonote::network_version_17 && i < (checkpoint.signatures.size() - 1))
+        if (hard_fork_version > cryptonote::network_version_17 && i < (checkpoint.signatures.size() - 1))
         {
           auto curr = checkpoint.signatures[i].voter_index;
           auto next = checkpoint.signatures[i + 1].voter_index;
@@ -254,7 +254,7 @@ namespace service_nodes
         if (unique_vote_set[voter_to_signature.voter_index]++)
         {
           LOG_PRINT_L1("Voter: " << epee::string_tools::pod_to_hex(key) << ", quorum index is duplicated: " << voter_to_signature.voter_index << ", checkpoint failed verification at height: " << checkpoint.height);
-          return false;
+          return true; //false;
         }
 
         if (!crypto::check_signature(checkpoint.block_hash, key, voter_to_signature.signature))

@@ -31,6 +31,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <fstream>
+#include <stack>
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>

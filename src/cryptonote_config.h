@@ -36,8 +36,6 @@
 #include <stdexcept>
 #include <chrono>
 
-#define CRYPTONOTE_DNS_TIMEOUT_MS                       20000
-
 #define CRYPTONOTE_MAX_BLOCK_NUMBER                     500000000
 #define CRYPTONOTE_MAX_TX_SIZE                          1000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
@@ -175,8 +173,6 @@
 #define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
 #define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
-#define THREAD_STACK_SIZE                               10 * 1024 * 1024
-
 #define HF_VERSION_MIN_MIXIN_10                         13
 
 #define HF_VERSION_LOWER_FEE                            10
@@ -190,11 +186,9 @@
 
 #define HASH_OF_HASHES_STEP                             256
 
-#define DEFAULT_TXPOOL_MAX_WEIGHT                       2592000000ull
-
 #define BULLETPROOF_MAX_OUTPUTS                         16
 
-#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096         // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  1024         // the smaller, the smoother the increase
 #define CRYPTONOTE_PRUNING_LOG_STRIPES                  3            // the higher, the more space saved
 #define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500         // the smaller, the more space saved
 //#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
@@ -234,8 +228,14 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 #define STORAGE_SERVER_PING_LIFETIME                    UPTIME_PROOF_FREQUENCY_IN_SECONDS
 //#define ARQNET_PING_LIFETIME                            UPTIME_PROOF_FREQUENCY_IN_SECONDS
 
+#define DNS_BLOCKLIST_LIFETIME                          (86400 * 8) // 8 days
+
 namespace config
 {
+  using namespace std::literals;
+
+  constexpr auto DNS_TIMEOUT = 20s;
+
   const char HASH_KEY_BULLETPROOF_EXPONENT[] = "bulletproof";
   const char HASH_KEY_RINGDB[] = "ringdsb";
   const char HASH_KEY_SUBADDRESS[] = "SubAddr";
@@ -301,6 +301,7 @@ namespace config
     static const uint8_t ARQMA_DECIMALS = 9;
     const uint64_t PREMINE = 7500000000000000; // Premine Reward (already burned).
     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
+    const uint64_t DEFAULT_TXPOOL_MAX_WEIGHT = 10485760;
     const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2097152; // It is set to 2048kB (2MB)
     const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1048576; // It is set to 1024kB (1MB)
     static const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;

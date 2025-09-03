@@ -68,6 +68,17 @@ namespace cryptonote
     {0,       "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328"},
     {1731481, "94b47df7c0895399f85dff9f7a1d7c2e67f8809e2a2b5fb14bc9714a2bb1490d"},
     {1731482, "942d66af0c7fd6f366e35f18dbb1ca668693a4ad37a6058d61bc920550fe10b7"},
+    {1773359, "9c3aedb9eeace5a282d70507ac2ea1d26d61c907b80abd135e462371e3f99d82"},
+    {1773360, "c6e832846ec8cbdf3f8f34695a21b995c74a25e279289746c9c4e3a06b659bbc"},
+    {1773364, "839c5bb521bd9b28f313f8fb4cc84f6064c60db318468c234357a91af04c8774"},
+    {1773368, "51691e50f463b42740a683a84b6c795b548b2aee7d61211577db04d3f3f1998a"},
+    {1773372, "3e8f3cb068db474c2390e6650dfa6d7c60eaf69da9e79080a60cda46ebfb8a3e"},
+    {1773376, "c7fb0080b04ce76097c9b65f73580b60622818aa5ff23115402f500ef933ab3d"},
+    {1773380, "aded871574abcb5aec263582d733db61b5f6ac8fe2219d5238e2f77ee6b732b5"},
+    {1773384, "e590456ea57b1a880365c5a107cbdb2ff70fe740fde00638c920b7eb8fa75927"},
+    {1773388, "b53a8aa326bef07b7afccd31deb534e82e51fba08b0f2e7bd241e23bff644e32"},
+    {1773392, "c859e9132646f5f41f0bf8569c8e42701b93446a06d85c672807735adc684a2c"},
+    {1773396, "1a01e3ad21b6c5c2d20b367f055d73bf39743116241008601549a0bbd0b00d14"},
   };
   //---------------------------------------------------------------------------
   crypto::hash get_newest_hardcoded_checkpoint(cryptonote::network_type nettype, uint64_t *height)
@@ -201,7 +212,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------------------
-  void checkpoints::blockchain_detached(uint64_t height)
+  void checkpoints::blockchain_detached(uint64_t height, bool)
   {
     m_last_cull_height = std::min(m_last_cull_height, height);
 

@@ -153,6 +153,7 @@ namespace cryptonote
         MAP_JON_RPC_WE("hard_fork_info",                           on_hard_fork_info,                          COMMAND_RPC_HARD_FORK_INFO)
         MAP_JON_RPC_WE_IF("set_bans",                              on_set_bans,                                COMMAND_RPC_SETBANS, !m_restricted)
         MAP_JON_RPC_WE_IF("get_bans",                              on_get_bans,                                COMMAND_RPC_GETBANS, !m_restricted)
+        MAP_JON_RPC_WE_IF("banned",                                on_banned,                                  COMMAND_RPC_BANNED, !m_restricted)
         MAP_JON_RPC_WE_IF("flush_txpool",                          on_flush_txpool,                            COMMAND_RPC_FLUSH_TRANSACTION_POOL, !m_restricted)
         MAP_JON_RPC_WE("get_output_histogram",                     on_get_output_histogram,                    COMMAND_RPC_GET_OUTPUT_HISTOGRAM)
         MAP_JON_RPC_WE("get_version",                              on_get_version,                             COMMAND_RPC_GET_VERSION)
@@ -180,6 +181,7 @@ namespace cryptonote
 //        MAP_JON_RPC_WE_IF("arqnet_ping",                           on_arqnet_ping,                             COMMAND_RPC_ARQNET_PING, !m_restricted)
         MAP_JON_RPC_WE("get_service_nodes_states_changes",         on_get_service_nodes_state_changes,         COMMAND_RPC_GET_SN_STATE_CHANGES)
         MAP_JON_RPC_WE_IF("report_peer_storage_server_status",     on_report_peer_storage_server_status,       COMMAND_RPC_REPORT_PEER_SS_STATUS, !m_restricted)
+        MAP_JON_RPC_WE_IF("test_trigger_p2p_resync",               on_test_trigger_p2p_resync,                 COMMAND_RPC_TEST_TRIGGER_P2P_RESYNC, !m_restricted)
       END_JSON_RPC_MAP()
     END_URI_MAP2()
 
@@ -236,6 +238,7 @@ namespace cryptonote
     bool on_hard_fork_info(const COMMAND_RPC_HARD_FORK_INFO::request& req, COMMAND_RPC_HARD_FORK_INFO::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_set_bans(const COMMAND_RPC_SETBANS::request& req, COMMAND_RPC_SETBANS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_bans(const COMMAND_RPC_GETBANS::request& req, COMMAND_RPC_GETBANS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
+    bool on_banned(const COMMAND_RPC_BANNED::request& req, COMMAND_RPC_BANNED::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_flush_txpool(const COMMAND_RPC_FLUSH_TRANSACTION_POOL::request& req, COMMAND_RPC_FLUSH_TRANSACTION_POOL::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_output_histogram(const COMMAND_RPC_GET_OUTPUT_HISTOGRAM::request& req, COMMAND_RPC_GET_OUTPUT_HISTOGRAM::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_version(const COMMAND_RPC_GET_VERSION::request& req, COMMAND_RPC_GET_VERSION::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
@@ -263,6 +266,7 @@ namespace cryptonote
     bool on_get_checkpoints(const COMMAND_RPC_GET_CHECKPOINTS::request& req, COMMAND_RPC_GET_CHECKPOINTS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_service_nodes_state_changes(const COMMAND_RPC_GET_SN_STATE_CHANGES::request& req, COMMAND_RPC_GET_SN_STATE_CHANGES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_report_peer_storage_server_status(const COMMAND_RPC_REPORT_PEER_SS_STATUS::request& req, COMMAND_RPC_REPORT_PEER_SS_STATUS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
+    bool on_test_trigger_p2p_resync(const COMMAND_RPC_TEST_TRIGGER_P2P_RESYNC::request& req, COMMAND_RPC_TEST_TRIGGER_P2P_RESYNC::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     //------------------------------
 
 private:

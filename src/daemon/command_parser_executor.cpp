@@ -31,6 +31,7 @@
 
 #include "common/dns_utils.h"
 #include "common/command_line.h"
+#include "net/parse.h"
 #include "version.h"
 #include "daemon/command_parser_executor.h"
 #include <boost/filesystem.hpp>
@@ -669,8 +670,11 @@ bool t_command_parser_executor::show_bans(const std::vector<std::string>& args)
 
 bool t_command_parser_executor::ban(const std::vector<std::string>& args)
 {
-  if (args.size() != 1 && args.size() != 2) return false;
-  std::string ip = args[0];
+  if (args.size() != 1 && args.size() != 2)
+  {
+    std::cout << "Invalid syntax: Expects one or two parameters. For more details, use the help command." << std::endl;
+    return true;
+  }
   time_t seconds = P2P_IP_BLOCKTIME;
   if (args.size() > 1)
   {
@@ -680,14 +684,60 @@ bool t_command_parser_executor::ban(const std::vector<std::string>& args)
     }
     catch (const std::exception& e)
     {
-      return false;
+      std::cout << "Invalid syntax: Failed to parse seconds. For more details, use the help command." << std::endl;
+      return true;
     }
     if (seconds == 0)
     {
+      std::cout << "Seconds must be greater than 0." << std::endl;
+      return true;
+    }
+  }
+  if (boost::starts_with(args[0], "@"))
+  {
+    const std::string ban_list = args[0].substr(1);
+
+    try
+    {
+      const boost::filesystem::path ban_list_path(ban_list);
+      boost::system::error_code ec;
+      if (!boost::filesystem::exists(ban_list_path, ec))
+      {
+        std::cout << "Can't find ban list file " + ban_list + " - " + ec.message() << std::endl;
+        return true;
+      }
+
+      bool ret = true;
+      std::ifstream ifs(ban_list_path.string());
+      for (std::string line; std::getline(ifs, line); )
+      {
+        auto subnet = net::get_ipv4_subnet_address(line);
+        if (subnet)
+        {
+          ret &= m_executor.ban(subnet->str(), seconds);
+          continue;
+        }
+        const expect<epee::net_utils::network_address> parsed_addr = net::get_network_address(line, 0);
+        if (parsed_addr)
+        {
+          ret &= m_executor.ban(parsed_addr->host_str(), seconds);
+          continue;
+        }
+        std::cout << "Invalid IP address or IPv4 subnet: " << line << std::endl;
+      }
+      return ret;
+    }
+    catch (const std::exception &e)
+    {
+      std::cout << "Error loading ban list: " << e.what() << std::endl;
       return false;
     }
   }
-  return m_executor.ban(ip, seconds);
+  else
+  {
+    const std::string ip = args[0];
+    return m_executor.ban(ip, seconds);
+  }
 }
 
 bool t_command_parser_executor::unban(const std::vector<std::string>& args)
@@ -695,6 +745,13 @@ bool t_command_parser_executor::unban(const std::vector<std::string>& args)
   if (args.size() != 1) return false;
   std::string ip = args[0];
   return m_executor.unban(ip);
+}
+
+bool t_command_parser_executor::banned(const std::vector<std::string>& args)
+{
+  if (args.size() != 1) return false;
+  std::string address = args[0];
+  return m_executor.banned(address);
 }
 
 bool t_command_parser_executor::flush_txpool(const std::vector<std::string>& args)
