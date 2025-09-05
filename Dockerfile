@@ -1,58 +1,63 @@
-# Multistage docker build, requires docker 17.05
+# syntax=docker/dockerfile:1.7
 
-# builder stage
-FROM ubuntu:20.04 AS builder
+# ---------- builder ----------
+FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS builder
 
-RUN set -ex && \
-    apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends --yes install \
-        build-essential \
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TZ=Etc/UTC
+ARG TARGETARCH
+ENV TZ=${TZ}
+
+RUN set -eux; \
+    rm -rf /var/lib/apt/lists/*; \
+    apt-get -o Acquire::Retries=5 update; \
+    apt-get -o Dpkg::Use-Pty=0 -y --no-install-recommends install \
         ca-certificates \
-        cmake \
         curl \
         git \
-        pkg-config
+        pkg-config \
+        build-essential \
+        cmake \
+        make; \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
 COPY . .
 
-ARG NPROC
-RUN set -ex && \
-    git submodule init && git submodule update && \
-    rm -rf build && \
-    if [ -z "$NPROC" ] ; \
-    then make -j$(nproc) depends target=x86_64-linux-gnu ; \
-    else make -j$NPROC depends target=x86_64-linux-gnu ; \
-    fi
+RUN set -eux; \
+    git submodule update --init; \
+    rm -rf build; \
+    case "${TARGETARCH}" in \
+      amd64)  HOST_TRIPLET=x86_64-linux-gnu ;; \
+      arm64)  HOST_TRIPLET=aarch64-linux-gnu ;; \
+      *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+    esac; \
+    make -j"$(nproc)" depends target="${HOST_TRIPLET}"; \
+    mkdir -p /out/bin; \
+    cp -a "build/${HOST_TRIPLET}/release/bin/." /out/bin/
 
-# runtime stage
-FROM ubuntu:20.04
+# ---------- runtime ----------
+FROM --platform=$TARGETPLATFORM ubuntu:22.04
 
-RUN set -ex && \
-    apt-get update && \
-    apt-get --no-install-recommends --yes install ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt
-COPY --from=builder /src/build/x86_64-linux-gnu/release/bin /usr/local/bin/
+ARG DEBIAN_FRONTEND=noninteractive
 
-# Below command is creating Arqma user to do not run daemon as a root
+RUN set -eux; \
+    rm -rf /var/lib/apt/lists/*; \
+    apt-get -o Acquire::Retries=5 update; \
+    apt-get -y --no-install-recommends install ca-certificates; \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /out/bin/ /usr/local/bin/
+
 RUN adduser --system --group --disabled-password arqma && \
-	mkdir -p /wallet /home/arqma/.arqma && \
-	chown -R arqma:arqma /home/arqma/.arqma && \
-	chown -R arqma:arqma /wallet
+    mkdir -p /wallet /home/arqma/.arqma && \
+    chown -R arqma:arqma /home/arqma/.arqma /wallet
 
-# Contains the blockchain
 VOLUME /home/arqma/.arqma
-
-# Generate your wallet via accessing the container and run:
-# cd /wallet
-# arqma-wallet-cli
 VOLUME /wallet
 
-EXPOSE 19993
-EXPOSE 19994
+EXPOSE 19993 19994
 
-# switch to user arqma
 USER arqma
 
 ENTRYPOINT ["arqmad", "--p2p-bind-ip=0.0.0.0", "--p2p-bind-port=19993", "--rpc-bind-ip=0.0.0.0", "--rpc-bind-port=19994", "--non-interactive", "--confirm-external-bind"]
