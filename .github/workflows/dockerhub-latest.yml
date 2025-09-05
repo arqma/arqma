@@ -1,4 +1,4 @@
-name: name: Build & Push arqtras/arqma:latest
+name: Build & Push arqtras/arqma:latest
 
 on:
   push:
