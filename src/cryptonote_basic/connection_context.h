@@ -52,10 +52,7 @@ namespace cryptonote
       state_normal
     };
 
-    static constexpr int handshake_command() noexcept { return 1001; }
     bool handshake_complete() const noexcept { return m_state != state_before_handshake; }
-
-    static size_t get_max_bytes(int command) noexcept;
 
     state m_state{state_before_handshake};
     std::vector<crypto::hash> m_needed_objects;

@@ -116,6 +116,8 @@ namespace nodetool
   {
     p2p_connection_context_t(): peer_id(0), support_flags(0), m_in_timedsync(false) {}
 
+    static constexpr int handshake_command() noexcept { return 1001; }
+
     peerid_type peer_id;
     uint32_t support_flags;
     bool m_in_timedsync;
@@ -305,6 +307,8 @@ namespace nodetool
       HANDLE_INVOKE_T2(COMMAND_HANDSHAKE, handle_handshake)
       HANDLE_INVOKE_T2(COMMAND_TIMED_SYNC, handle_timed_sync)
       HANDLE_INVOKE_T2(COMMAND_PING, handle_ping)
+      HANDLE_INVOKE_T2(COMMAND_REQUEST_NETWORK_STATE, handle_get_network_state)
+      HANDLE_INVOKE_T2(COMMAND_REQUEST_PEER_ID, handle_get_peer_id)
       HANDLE_INVOKE_T2(COMMAND_REQUEST_SUPPORT_FLAGS, handle_get_support_flags)
       CHAIN_INVOKE_MAP_TO_OBJ_FORCE_CONTEXT(m_payload_handler, typename t_payload_net_handler::connection_context&)
     END_INVOKE_MAP2()
@@ -315,11 +319,14 @@ namespace nodetool
     int handle_handshake(int command, typename COMMAND_HANDSHAKE::request& arg, typename COMMAND_HANDSHAKE::response& rsp, p2p_connection_context& context);
     int handle_timed_sync(int command, typename COMMAND_TIMED_SYNC::request& arg, typename COMMAND_TIMED_SYNC::response& rsp, p2p_connection_context& context);
     int handle_ping(int command, COMMAND_PING::request& arg, COMMAND_PING::response& rsp, p2p_connection_context& context);
+    int handle_get_network_state(int command, COMMAND_REQUEST_NETWORK_STATE::request& arg, COMMAND_REQUEST_NETWORK_STATE::response& rsp, p2p_connection_context& context);
+    int handle_get_peer_id(int command, COMMAND_REQUEST_PEER_ID::request& arg, COMMAND_REQUEST_PEER_ID::response& rsp, p2p_connection_context& context);
     int handle_get_support_flags(int command, COMMAND_REQUEST_SUPPORT_FLAGS::request& arg, COMMAND_REQUEST_SUPPORT_FLAGS::response& rsp, p2p_connection_context& context);
     bool init_config();
     bool make_default_peer_id();
     bool make_default_config();
     bool store_config();
+    bool check_trust(const proof_of_trust& tr, epee::net_utils::zone zone_type);
 
 
     //----------------- levin_commands_handler -------------------------------------------------------------
@@ -397,6 +404,7 @@ namespace nodetool
     bool set_rate_limit(const boost::program_options::variables_map& vm, int64_t limit);
 
     bool has_too_many_connections(const epee::net_utils::network_address &address);
+    uint64_t get_connections_count();
     size_t get_incoming_connections_count();
     size_t get_incoming_connections_count(network_zone&);
     size_t get_outgoing_connections_count();
@@ -417,9 +425,7 @@ namespace nodetool
     //debug functions
     std::string print_connections_container();
 
-
-    public:
-
+  public:
     void set_rpc_port(uint16_t rpc_port)
     {
       m_rpc_port = rpc_port;
@@ -459,6 +465,8 @@ namespace nodetool
     tools::periodic_task m_gray_peerlist_housekeeping_interval{1min};
     tools::periodic_task m_incoming_connections_interval{1h};
     tools::periodic_task m_dns_blocklist_interval{116h};
+
+    uint64_t m_last_stat_request_time;
 
     std::list<epee::net_utils::network_address>   m_priority_peers;
     std::vector<epee::net_utils::network_address> m_exclusive_peers;
