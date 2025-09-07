@@ -493,7 +493,7 @@ namespace cryptonote
      */
     void mark_double_spend(const transaction &tx);
 
-    bool remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta = nullptr, const sorted_tx_container::iterator *stc_it = nullptr);
+    //bool remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta = nullptr, const sorted_tx_container::iterator *stc_it = nullptr);
 
     /**
      * @brief prune lowest fee/byte txes till we're not above bytes

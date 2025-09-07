@@ -254,7 +254,7 @@ namespace service_nodes
         if (unique_vote_set[voter_to_signature.voter_index]++)
         {
           LOG_PRINT_L1("Voter: " << epee::string_tools::pod_to_hex(key) << ", quorum index is duplicated: " << voter_to_signature.voter_index << ", checkpoint failed verification at height: " << checkpoint.height);
-          return true; //false;
+          return false;
         }
 
         if (!crypto::check_signature(checkpoint.block_hash, key, voter_to_signature.signature))
