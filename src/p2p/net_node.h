@@ -116,8 +116,6 @@ namespace nodetool
   {
     p2p_connection_context_t(): peer_id(0), support_flags(0), m_in_timedsync(false) {}
 
-    static constexpr int handshake_command() noexcept { return 1001; }
-
     peerid_type peer_id;
     uint32_t support_flags;
     bool m_in_timedsync;
