@@ -85,9 +85,10 @@ namespace net_utils
   connection<t_protocol_handler>::connection( boost::asio::io_service& io_service,
                 std::shared_ptr<shared_state> state,
 		t_connection_type connection_type,
-		ssl_support_t ssl_support
+		ssl_support_t ssl_support,
+		t_connection_context&& initial
 	)
-	: connection(boost::asio::ip::tcp::socket{io_service}, std::move(state), connection_type, ssl_support)
+	: connection(boost::asio::ip::tcp::socket{io_service}, std::move(state), connection_type, ssl_support, std::move(initial))
   {
   }
 
@@ -95,7 +96,8 @@ namespace net_utils
   connection<t_protocol_handler>::connection( boost::asio::ip::tcp::socket&& sock,
                 std::shared_ptr<shared_state> state,
 		t_connection_type connection_type,
-		ssl_support_t ssl_support
+		ssl_support_t ssl_support,
+		t_connection_context&& initial
 	)
 	:
 		connection_basic(std::move(sock), state, ssl_support),
@@ -105,6 +107,7 @@ namespace net_utils
 		m_throttle_speed_in("speed_in", "throttle_speed_in"),
 		m_throttle_speed_out("speed_out", "throttle_speed_out"),
 		m_timer(GET_IO_SERVICE(socket_)),
+		context(std::move(initial)),
 		m_local(false),
 		m_ready_to_close(false)
   {
@@ -1560,10 +1563,10 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler> template<class t_callback>
-  bool boosted_tcp_server<t_protocol_handler>::connect_async(const std::string& adr, const std::string& port, uint32_t conn_timeout, const t_callback &cb, const std::string& bind_ip, epee::net_utils::ssl_support_t ssl_support)
+  bool boosted_tcp_server<t_protocol_handler>::connect_async(const std::string& adr, const std::string& port, uint32_t conn_timeout, const t_callback &cb, const std::string& bind_ip, epee::net_utils::ssl_support_t ssl_support, t_connection_context&& initial)
   {
     TRY_ENTRY();
-    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support) );
+    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support, std::move(initial)) );
     connections_mutex.lock();
     connections_.insert(new_connection_l);
     MDEBUG("connections_ size now " << connections_.size());
