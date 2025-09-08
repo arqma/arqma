@@ -2254,7 +2254,6 @@ namespace nodetool
   {
     if(arg.node_data.network_id != m_network_id)
     {
-
       LOG_INFO_CC(context, "WRONG NETWORK AGENT CONNECTED! id=" << arg.node_data.network_id);
       drop_connection(context);
       add_host_fail(context.m_remote_address);

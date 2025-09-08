@@ -160,8 +160,8 @@
 
 #define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)    // 1 day
 #define P2P_IP_BLOCKTIME                                (60*60*24) // 2 days
-#define P2P_IP_FAILS_BEFORE_BLOCK                       5
-#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60)     // 30 seconds
+#define P2P_IP_FAILS_BEFORE_BLOCK                       25
+#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (30)     // 30 seconds
 
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
