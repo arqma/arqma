@@ -39,6 +39,8 @@
 #include <mutex>
 #include <condition_variable>
 
+class ThreadWithStack;
+
 namespace tools
 {
 //! A global thread pool
@@ -103,7 +105,7 @@ public:
     std::deque<entry> queue;
     std::condition_variable has_work;
     std::mutex mutex;
-    std::vector<std::thread> threads;
+    std::vector<ThreadWithStack> threads;
     unsigned int active;
     unsigned int max;
     bool running;

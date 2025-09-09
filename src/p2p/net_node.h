@@ -57,6 +57,7 @@
 #include "net/fwd.h"
 #include "common/command_line.h"
 #include "common/periodic_task.h"
+#include "thread_with_stack.h"
 
 PUSH_WARNINGS
 DISABLE_VS_WARNINGS(4355)
@@ -455,7 +456,7 @@ namespace nodetool
     bool m_use_ipv6;
     bool m_require_ipv4;
     std::atomic<bool> is_closing;
-    std::optional<std::thread> mPeersLoggerThread;
+    std::optional<ThreadWithStack> mPeersLoggerThread;
     //critical_section m_connections_lock;
     //connections_indexed_container m_connections;
 
