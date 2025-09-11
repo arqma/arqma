@@ -38,8 +38,7 @@
 #include <stdexcept>
 #include <mutex>
 #include <condition_variable>
-
-class ThreadWithStack;
+#include "thread_with_stack.h"
 
 namespace tools
 {
@@ -105,7 +104,7 @@ public:
     std::deque<entry> queue;
     std::condition_variable has_work;
     std::mutex mutex;
-    std::vector<ThreadWithStack> threads;
+    std::vector<thread_with_stack> threads;
     unsigned int active;
     unsigned int max;
     bool running;

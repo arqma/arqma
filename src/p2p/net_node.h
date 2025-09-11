@@ -456,7 +456,7 @@ namespace nodetool
     bool m_use_ipv6;
     bool m_require_ipv4;
     std::atomic<bool> is_closing;
-    std::optional<ThreadWithStack> mPeersLoggerThread;
+    std::optional<thread_with_stack> mPeersLoggerThread;
     //critical_section m_connections_lock;
     //connections_indexed_container m_connections;
 
