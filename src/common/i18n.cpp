@@ -49,6 +49,8 @@ static const unsigned char qm_magic[16] = {0x3c, 0xb8, 0x64, 0x18, 0xca, 0xef, 0
 
 static std::map<std::string,std::string> i18n_entries;
 
+using namespace std::literals;
+
 /* Logging isn't initialized yet when this is run */
 /* add std::flush, because std::endl doesn't seem to flush, contrary to expected */
 // #define i18n_log(x) do { std::cout << __FILE__ << ":" << __LINE__ << ": " << x << std::endl; std::cout << std::flush; } while(0)
@@ -285,7 +287,7 @@ int i18n_set_language(const char *directory, const char *base, std::string langu
       chunk_type = data[idx++];
       chunk_size = 0;
       if (chunk_type == 0x01) {
-        i18n_entries[context + std::string("",1) + source] = translation;
+        i18n_entries[context + "\0"s + source] = translation;
         context = std::string();
         source = std::string();
         translation = std::string();
@@ -323,7 +325,7 @@ int i18n_set_language(const char *directory, const char *base, std::string langu
 /* The entries is constant by that time */
 const char *i18n_translate(const char *s, const std::string &context)
 {
-  const std::string key = context + std::string("", 1) + s;
+  const std::string key = context + "\0"s + s;
   std::map<std::string,std::string>::const_iterator i = i18n_entries.find(key);
   if (i == i18n_entries.end())
     return s;

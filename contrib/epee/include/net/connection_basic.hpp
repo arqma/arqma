@@ -46,6 +46,7 @@
 #include <atomic>
 #include <memory>
 #include <utility>
+#include <deque>
 
 #include <boost/asio.hpp>
 #if BOOST_VERSION >= 108700
@@ -56,7 +57,6 @@ namespace boost::asio {
 #include <boost/asio/ssl.hpp>
 
 #include "shared_sv.h"
-#include "net/net_utils_base.h"
 #include "net/net_ssl.h"
 #include "syncobj.h"
 

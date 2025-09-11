@@ -1,9 +1,9 @@
 #pragma once
 
+#include <string>
 #include <streambuf>
 #include <sstream>
 #include <vector>
-#include "readline_suspend.h"
 
 namespace rdln
 {

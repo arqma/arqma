@@ -429,10 +429,15 @@ std::string t_command_server::get_commands_str()
      std::string usage = documentation.second.empty() ? args.front() : documentation.first;
      std::string description = documentation.second.empty() ? documentation.first : documentation.second;
      usage.insert(0, "  ");
-     ss << "Command usage: " << std::endl << usage << std::endl << std::endl;
-     boost::replace_all(description, "\n", "\n  ");
-     description.insert(0, "  ");
-     ss << "Command description: " << std::endl << description << std::endl;
+     ss << "Command usage: \n" << usage << "\n\n";
+     ss << "Command description:\n ";
+     for (char c : description)
+     {
+       if (c == '\n')
+         ss << "\n ";
+       else
+         ss << c;
+     }
    }
    return ss.str();
  }

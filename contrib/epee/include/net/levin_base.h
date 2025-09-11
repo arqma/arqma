@@ -28,8 +28,9 @@
 #define _LEVIN_BASE_H_
 
 #include <cstdint>
+#include <string>
+#include <string_view>
 
-#include "shared_sv.h"
 #include "net_utils_base.h"
 #include "span.h"
 

@@ -99,7 +99,8 @@ namespace tools
   //------------------------------------------------------------------------------------------------------------------------------
   wallet_rpc_server::~wallet_rpc_server()
   {
-    stop();
+    if (m_wallet)
+      delete m_wallet;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::set_wallet(wallet2 *cr)
@@ -566,6 +567,37 @@ namespace tools
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  static bool extract_account_addr(cryptonote::address_parse_info& info, cryptonote::network_type nettype, std::string_view addr_or_url, epee::json_rpc::error& er)
+  {
+    if (!get_account_address_from_str_or_url(info, nettype, addr_or_url,
+      [&er](const std::string_view url, const std::vector<std::string> &addresses, bool dnssec_valid)
+    {
+      if (!dnssec_valid)
+      {
+        er.message = "Invalid DNSSEC for "s;
+        er.message += url;
+        return ""s;
+      }
+      if (addresses.empty())
+      {
+        er.message = "No Arqma address found at "s;
+        er.message += url;
+        return ""s;
+      }
+      return addresses[0];
+    }))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
+      if (er.message.empty())
+      {
+        er.message = "WALLET_RPC_ERROR_CODE_WRONG_ADDRESS: "s;
+        er.message += addr_or_url;
+      }
+      return false;
+    }
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::validate_transfer(const std::list<transfer_destination>& destinations, const std::string& payment_id, std::vector<cryptonote::tx_destination_entry>& dsts, std::vector<uint8_t>& extra, bool at_least_one_destination, epee::json_rpc::error& er)
   {
     crypto::hash8 integrated_payment_id = crypto::null_hash8;
@@ -573,29 +605,11 @@ namespace tools
     for (auto it = destinations.begin(); it != destinations.end(); it++)
     {
       cryptonote::address_parse_info info;
-      cryptonote::tx_destination_entry de;
       er.message = "";
-      if(!get_account_address_from_str_or_url(info, m_wallet->nettype(), it->address,
-        [&er](const std::string &url, const std::vector<std::string> &addresses, bool dnssec_valid)->std::string {
-          if (!dnssec_valid)
-          {
-            er.message = std::string("Invalid DNSSEC for ") + url;
-            return {};
-          }
-          if (addresses.empty())
-          {
-            er.message = std::string("No ArQmA address found at ") + url;
-            return {};
-          }
-          return addresses[0];
-        }))
-      {
-        er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
-        if (er.message.empty())
-          er.message = std::string("WALLET_RPC_ERROR_CODE_WRONG_ADDRESS: ") + it->address;
+      if (!extract_account_addr(info, m_wallet->nettype(), it->address, er))
         return false;
-      }
 
+      cryptonote::tx_destination_entry de;
       de.original = it->address;
       de.addr = info.address;
       de.is_subaddress = info.is_subaddress;
@@ -1815,24 +1829,8 @@ namespace tools
 
     cryptonote::address_parse_info info;
     er.message = "";
-    if(!get_account_address_from_str_or_url(info, m_wallet->nettype(), req.address,
-      [&er](const std::string &url, const std::vector<std::string> &addresses, bool dnssec_valid)->std::string {
-        if (!dnssec_valid)
-        {
-          er.message = std::string("Invalid DNSSEC for ") + url;
-          return {};
-        }
-        if (addresses.empty())
-        {
-          er.message = std::string("No ArQmA address found at ") + url;
-          return {};
-        }
-        return addresses[0];
-      }))
-    {
-      er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
+    if (!extract_account_addr(info, m_wallet->nettype(), req.address, er))
       return false;
-    }
 
     res.good = m_wallet->verify(req.data, info.address, req.signature);
     return true;
@@ -2611,26 +2609,9 @@ namespace tools
     cryptonote::address_parse_info info;
     crypto::hash payment_id = crypto::null_hash;
     er.message = "";
-    if(!get_account_address_from_str_or_url(info, m_wallet->nettype(), req.address,
-      [&er](const std::string &url, const std::vector<std::string> &addresses, bool dnssec_valid)->std::string {
-        if (!dnssec_valid)
-        {
-          er.message = std::string("Invalid DNSSEC for ") + url;
-          return {};
-        }
-        if (addresses.empty())
-        {
-          er.message = std::string("No ArQmA address found at ") + url;
-          return {};
-        }
-        return addresses[0];
-      }))
-    {
-      er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
-      if (er.message.empty())
-        er.message = std::string("WALLET_RPC_ERROR_CODE_WRONG_ADDRESS: ") + req.address;
+    if (!extract_account_addr(info, m_wallet->nettype(), req.address, er))
       return false;
-    }
+
     if (info.has_payment_id)
     {
       memcpy(payment_id.data, info.payment_id.data, 8);
@@ -3912,24 +3893,9 @@ namespace tools
         continue;
       if (req.allow_openalias)
       {
-        std::string address;
-        res.valid = get_account_address_from_str_or_url(info, net_type.type, req.address,
-          [&er, &address](const std::string &url, const std::vector<std::string> &addresses, bool dnssec_valid)->std::string {
-            if (!dnssec_valid)
-            {
-              er.message = std::string("Invalid DNSSEC for: ") + url;
-              return {};
-            }
-            if (addresses.empty())
-            {
-              er.message = std::string("No Arqma Wallet Address found at: ") + url;
-              return {};
-            }
-            address = addresses[0];
-            return address;
-          });
+        res.valid = extract_account_addr(info, net_type.type, req.address, er);
         if (res.valid)
-          res.openalias_address = address;
+          res.openalias_address = info.as_str(net_type.type);
       }
       else
       {
@@ -3990,7 +3956,7 @@ namespace tools
 	    ssl_options.verification != epee::net_utils::ssl_verification_t::none &&
 	    ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled;
 
-	  if (verification_required && !ssl_options.has_strong_verification(boost::string_ref{}))
+	  if (verification_required && !ssl_options.has_strong_verification(""sv))
 	  {
 	    er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
 	    er.message = "SSL is enabled but no user certificate or fingerprints were provided";

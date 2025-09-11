@@ -468,7 +468,7 @@ bool t_command_parser_executor::start_mining(const std::vector<std::string>& arg
       {
         bool dnssec_valid;
         std::string address_str = tools::dns_utils::get_account_address_as_str_from_url(args.front(), dnssec_valid,
-            [](const std::string &url, const std::vector<std::string> &addresses, bool dnssec_valid){return addresses[0];});
+            [](const std::string_view url, const std::vector<std::string> &addresses, bool dnssec_valid){return addresses[0];});
         if(!cryptonote::get_account_address_from_str(info, cryptonote::MAINNET, address_str))
         {
           if(!cryptonote::get_account_address_from_str(info, cryptonote::TESTNET, address_str))

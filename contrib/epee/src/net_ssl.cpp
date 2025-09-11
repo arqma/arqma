@@ -26,15 +26,16 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <string.h>
 #include <thread>
+#include <cstring>
 #include <boost/asio/ssl.hpp>
 #include <boost/cerrno.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/lambda/lambda.hpp>
+extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/pem.h>
+}
 #include "misc_log_ex.h"
 #include "net/net_helper.h"
 #include "net/net_ssl.h"
@@ -390,13 +391,13 @@ void ssl_authentication_t::use_ssl_certificate(boost::asio::ssl::context &ssl_co
   ssl_context.use_certificate_chain_file(certificate_path);
 }
 
-bool is_ssl(const unsigned char *data, size_t len)
+bool is_ssl(std::string_view data)
 {
-  if (len < get_ssl_magic_size())
+  if (data.size() < get_ssl_magic_size())
     return false;
 
   // https://security.stackexchange.com/questions/34780/checking-client-hello-for-https-classification
-  MDEBUG("SSL detection buffer, " << len << " bytes: "
+  MDEBUG("SSL detection buffer, " << data.size() << " bytes: "
     << (unsigned)(unsigned char)data[0] << " " << (unsigned)(unsigned char)data[1] << " "
     << (unsigned)(unsigned char)data[2] << " " << (unsigned)(unsigned char)data[3] << " "
     << (unsigned)(unsigned char)data[4] << " " << (unsigned)(unsigned char)data[5] << " "
@@ -410,11 +411,16 @@ bool is_ssl(const unsigned char *data, size_t len)
   return false;
 }
 
-bool ssl_options_t::has_strong_verification(boost::string_ref host) const noexcept
+static bool ends_with(std::string_view str, std::string_view suffix)
+{
+  return str.size() >= suffix.size() && str.substr(str.size() - suffix.size()) == suffix;
+}
+
+bool ssl_options_t::has_strong_verification(std::string_view host) const noexcept
 {
   // onion and i2p addresses contain information about the server cert
   // which both authenticates and encrypts
-  if (host.ends_with(".onion") || host.ends_with(".i2p"))
+  if (ends_with(host, ".onion"sv) || ends_with(host, ".i2p"sv))
 	return true;
   switch (verification)
   {
@@ -538,7 +544,7 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
   return true;
 }
 
-bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s)
+bool ssl_support_from_string(ssl_support_t &ssl, std::string_view s)
 {
   if (s == "enabled")
     ssl = epee::net_utils::ssl_support_t::e_ssl_support_enabled;

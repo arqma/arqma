@@ -35,7 +35,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/type_traits/integral_constant.hpp>
-#include <boost/utility/string_ref.hpp>
+#include <string_view>
 #include <memory>
 #include <utility>
 
@@ -157,7 +157,7 @@ namespace socks
         bool set_connect_command(const epee::net_utils::ipv4_network_address& address);
 
         //! Try to set `domain` + `port` as remote connection request.
-        bool set_connect_command(boost::string_ref domain, std::uint16_t port);
+        bool set_connect_command(std::string_view domain, std::uint16_t port);
 
         //! Try to set `address` as remote Tor hidden service connection request.
         bool set_connect_command(const net::tor_address& address);
@@ -166,7 +166,7 @@ namespace socks
         bool set_connect_command(const net::i2p_address& address);
 
         //! Try to set `domain` as remote DNS A record lookup request.
-        bool set_resolve_command(boost::string_ref domain);
+        bool set_resolve_command(std::string_view domain);
 
         /*!
             Asynchronously connect to `proxy_address` then issue command in

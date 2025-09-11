@@ -30,10 +30,10 @@
 #define _NET_SSL_H
 
 #include <chrono>
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <vector>
-#include <boost/utility/string_ref.hpp>
+#include <string_view>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/filesystem/path.hpp>
@@ -43,6 +43,7 @@
 
 namespace epee
 {
+using namespace std::literals;
 namespace net_utils
 {
 	enum class ssl_support_t: uint8_t {
@@ -106,7 +107,7 @@ class ssl_options_t
     explicit operator bool() const noexcept { return support != ssl_support_t::e_ssl_support_disabled; }
 
     //! \retrurn True if `host` can be verified using `this` configuration WITHOUT system "root" CAs.
-    bool has_strong_verification(boost::string_ref host) const noexcept;
+    bool has_strong_verification(std::string_view host) const noexcept;
 
     //! Search against internal fingerprints. Always false if `behavior() != user_certificate_check`.
     bool has_fingerprint(boost::asio::ssl::verify_context &ctx) const;
@@ -118,8 +119,8 @@ class ssl_options_t
 
   // https://security.stackexchange.com/questions/34780/checking-client-hello-for-https-classification
   constexpr size_t get_ssl_magic_size() { return 9; }
-  bool is_ssl(const unsigned char *data, size_t len);
-  bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s);
+  bool is_ssl(std::string_view data);
+  bool ssl_support_from_string(ssl_support_t &ssl, std::string_view s);
 
 	bool create_ec_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
 	bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);

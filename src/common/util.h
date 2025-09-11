@@ -232,7 +232,7 @@ namespace tools
   unsigned get_max_concurrency();
 
   bool is_local_address(const std::string &address);
-  int vercmp(const char *v0, const char *v1); // returns < 0, 0, > 0, similar to strcmp, but more human friendly than lexical - does not attempt to validate
+  int vercmp(std::string_view v0, std::string_view v1); // returns < 0, 0, > 0, similar to strcmp, but more human friendly than lexical - does not attempt to validate
 
   bool sha256sum(const uint8_t *data, size_t len, crypto::hash &hash);
   bool sha256sum(const std::string &filename, crypto::hash &hash);

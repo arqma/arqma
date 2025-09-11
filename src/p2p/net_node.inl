@@ -588,9 +588,22 @@ namespace nodetool
   {
     using namespace boost::asio;
 
-    std::string host;
-    std::string port = std::to_string(default_port);
-    net::get_network_address_host_and_port(addr, host, port);
+    bool has_colon = addr.find_last_of(':') != std::string::npos;
+    bool has_dot = addr.find_last_of('.') != std::string::npos;
+    bool has_square_bracket = addr.find('[') != std::string::npos;
+
+    std::string host, port;
+
+    if ((has_colon && has_dot) || has_square_bracket)
+    {
+      std::tie(host, port) = net::get_network_address_host_and_port(addr);
+    }
+    else
+    {
+      host = addr;
+      port = std::to_string(default_port);
+    }
+
     MINFO("Resolving node address: host=" << host << ", port=" << port);
 
     io_service io_srv;

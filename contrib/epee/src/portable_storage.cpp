@@ -65,14 +65,14 @@ namespace serialization
     CATCH_ENTRY("portable_storage::dump_as_json", false)
   }
 
-  bool portable_storage::load_from_json(const std::string& source)
+  bool portable_storage::load_from_json(std::string_view source)
   {
     TRY_ENTRY();
     return json::load_from_json(source, *this);
     CATCH_ENTRY("portable_storage::load_from_json", false)
   }
 
-  bool portable_storage::load_from_binary(const std::string& target)
+  bool portable_storage::load_from_binary(std::string_view target)
   {
     return load_from_binary(epee::strspan<uint8_t>(target));
   }

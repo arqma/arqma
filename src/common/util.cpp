@@ -69,6 +69,7 @@ using namespace epee;
 #include "memwipe.h"
 #include "net/http_client.h"                        // epee::net_utils::...
 #include "readline_buffer.h"
+#include "string_util.h"
 
 #ifdef WIN32
 #ifndef STRSAFE_NO_DEPRECATE
@@ -83,7 +84,6 @@ using namespace epee;
   #include <sys/stat.h>
 #endif
 #include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <openssl/evp.h>
@@ -906,7 +906,7 @@ if(not f.is_open())
       return false;
     }
 
-    if (u_c.host == "localhost" || boost::ends_with(u_c.host, ".localhost"))
+    if (u_c.host == "localhost" || tools::ends_with(u_c.host, ".localhost"))
     {
       MDEBUG("Address '" << address << "' is local");
       return true;
@@ -929,17 +929,19 @@ if(not f.is_open())
     MDEBUG("Address '" << address << "' is not local");
     return false;
   }
-  int vercmp(const char *v0, const char *v1)
+  int vercmp(std::string_view v0, std::string_view v1)
   {
-    std::vector<std::string> f0, f1;
-    boost::split(f0, v0, boost::is_any_of(".-"));
-    boost::split(f1, v1, boost::is_any_of(".-"));
-    for (size_t i = 0; i < std::max(f0.size(), f1.size()); ++i) {
+    auto f0 = tools::split_any(v0, ".-");
+    auto f1 = tools::split_any(v1, ".-");
+    const auto max = std::max(f0.size(), f1.size());
+    for (size_t i = 0; i < max; ++i) {
       if (i >= f0.size())
         return -1;
       if (i >= f1.size())
         return 1;
-      int f0i = atoi(f0[i].c_str()), f1i = atoi(f1[i].c_str());
+      int f0i = 0, f1i = 0;
+      tools::parse_int(f0[i], f0i);
+      tools::parse_int(f1[i], f1i);
       int n = f0i - f1i;
       if (n)
         return n;

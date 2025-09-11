@@ -29,6 +29,7 @@
 
 #include "common/dns_utils.h"
 // check local first (in the event of static or in-source compilation of libunbound)
+#include "common/string_util.h"
 #include "unbound.h"
 
 #include <chrono>
@@ -36,7 +37,8 @@
 #include <optional>
 #include <deque>
 #include <set>
-#include <stdlib.h>
+#include <cstdlib>
+#include <cstdio>
 #include "include_base_utils.h"
 #include "common/threadpool.h"
 #include "crypto/crypto.h"
@@ -47,14 +49,15 @@ using namespace epee;
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.dns"
 
-static const char *DEFAULT_DNS_PUBLIC_ADDR[] =
+using namespace std::literals;
+static constexpr std::array DEFAULT_DNS_PUBLIC_ADDR =
 {
-  "1.1.1.1",      // Cloudflare
-  "8.8.8.8",      // Google
-  "64.6.64.6",    // Verisign
-  "209.244.0.3",  // Level3
-  "8.26.56.26",   // Comodo
-  "77.88.8.8",    // Yandex
+  "1.1.1.1"sv,      // Cloudflare
+  "8.8.8.8"sv,      // Google
+  "64.6.64.6"sv,    // Verisign
+  "209.244.0.3"sv,  // Level3
+  "8.26.56.26"sv,   // Comodo
+  "77.88.8.8"sv,    // Yandex
 };
 
 namespace
@@ -263,7 +266,7 @@ DNSResolver::DNSResolver()
 	    m_ctx = ub_ctx_create();
 	    add_anchors(m_ctx);
 	    for (const auto &ip: DEFAULT_DNS_PUBLIC_ADDR)
-	      ub_ctx_set_fwd(m_ctx, ip);
+	      ub_ctx_set_fwd(m_ctx, const_cast<char*>(ip.data()));
 	    ub_ctx_set_option(m_ctx, "do-udp:", "no");
 	    ub_ctx_set_option(m_ctx, "do-tcp:", "yes");
 	  }
@@ -276,7 +279,7 @@ std::vector<std::string> DNSResolver::get_record(const std::string& url, int rec
   dnssec_available = false;
   dnssec_valid = false;
 
-  if (!check_address_syntax(url.c_str()))
+  if (url.find('.') == std::string::npos)
   {
     return addresses;
   }
@@ -417,8 +420,9 @@ std::vector<std::vector<std::string>> DNSResolver::get_many(int type, const std:
   return results;
 }
 
-std::string DNSResolver::get_dns_format_from_oa_address(std::string addr)
+std::string DNSResolver::get_dns_format_from_oa_address(std::string_view addr_v)
 {
+  std::string addr{addr_v};
   auto first_at = addr.find("@");
   if (first_at == std::string::npos)
     return addr;
@@ -440,45 +444,33 @@ DNSResolver DNSResolver::create()
   return DNSResolver();
 }
 
-bool DNSResolver::check_address_syntax(const char *addr) const
-{
-  // if string doesn't contain a dot, we won't consider it a url for now.
-  if (strchr(addr,'.') == NULL)
-  {
-    return false;
-  }
-  return true;
-}
-
 namespace dns_utils
 {
 
 //-----------------------------------------------------------------------
 // TODO: parse the string in a less stupid way, probably with regex
-std::string address_from_txt_record(const std::string& s)
+std::string address_from_txt_record(std::string_view s)
 {
-  // make sure the txt record has "oa1:arq" and find it
-  auto pos = s.find("oa1:arq");
-  if (pos == std::string::npos)
+  constexpr auto addr_type = "oa1:arq"sv;
+  if (auto pos = s.find(addr_type); pos == std::string_view::npos)
+    s.remove_prefix(pos + addr_type.size());
+  else
     return {};
-  // search from there to find "recipient_address="
-  pos = s.find("recipient_address=", pos);
-  if (pos == std::string::npos)
+
+  constexpr auto recipient_address = "recipient_address="sv;
+  if (auto pos = s.find(recipient_address); pos == std::string_view::npos)
+    s.remove_prefix(pos + recipient_address.size());
+  else
     return {};
-  pos += 18; // move past "recipient_address="
+
   // find the next semicolon
-  auto pos2 = s.find(";", pos);
-  if (pos2 != std::string::npos)
+  if (auto pos = s.find(';'); pos != std::string::npos)
   {
     // length of address == 97, we can at least validate that much here
-    if (pos2 - pos == 97)
-    {
-      return s.substr(pos, 97);
-    }
-    else if (pos2 - pos == 109) // length of address == 109 --> integrated address
-    {
-      return s.substr(pos, 109);
-    }
+    if (pos == 97)
+      return std::string{s.substr(0, 97)};
+    else if (pos == 109) // length of address == 109 --> integrated address
+      return std::string{s.substr(0, 109)};
   }
   return {};
 }
@@ -496,7 +488,7 @@ std::string address_from_txt_record(const std::string& s)
  *
  * @return a Arqma address (as a string) or an empty string
  */
-std::vector<std::string> addresses_from_url(const std::string& url, bool& dnssec_valid)
+std::vector<std::string> addresses_from_url(const std::string_view url, bool& dnssec_valid)
 {
   std::vector<std::string> addresses;
   // get txt records
@@ -517,13 +509,13 @@ std::vector<std::string> addresses_from_url(const std::string& url, bool& dnssec
     std::string addr = address_from_txt_record(rec);
     if (addr.size())
     {
-      addresses.push_back(addr);
+      addresses.push_back(std::move(addr));
     }
   }
   return addresses;
 }
 
-std::string get_account_address_as_str_from_url(const std::string& url, bool& dnssec_valid, std::function<std::string(const std::string&, const std::vector<std::string>&, bool)> dns_confirm)
+std::string get_account_address_as_str_from_url(const std::string_view url, bool& dnssec_valid, std::function<std::string(const std::string_view, const std::vector<std::string>&, bool)> dns_confirm)
 {
   // attempt to get address from dns query
   auto addresses = addresses_from_url(url, dnssec_valid);
@@ -650,13 +642,13 @@ std::vector<std::string> parse_dns_public(const char *s)
   unsigned ip0, ip1, ip2, ip3;
   char c;
   std::vector<std::string> dns_public_addr;
-  if (!strcmp(s, "tcp"))
+  if (s == "tcp"sv)
   {
-    for (size_t i = 0; i < sizeof(DEFAULT_DNS_PUBLIC_ADDR) / sizeof(DEFAULT_DNS_PUBLIC_ADDR[0]); ++i)
-      dns_public_addr.push_back(DEFAULT_DNS_PUBLIC_ADDR[i]);
+    for (auto& default_dns : DEFAULT_DNS_PUBLIC_ADDR)
+      dns_public_addr.emplace_back(default_dns);
     LOG_PRINT_L0("Using default public DNS server(s): " << boost::join(dns_public_addr, ", ") << " (TCP)");
   }
-  else if (sscanf(s, "tcp://%u.%u.%u.%u%c", &ip0, &ip1, &ip2, &ip3, &c) == 4)
+  else if (std::sscanf(s, "tcp://%u.%u.%u.%u%c", &ip0, &ip1, &ip2, &ip3, &c) == 4)
   {
     if (ip0 > 255 || ip1 > 255 || ip2 > 255 || ip3 > 255)
     {
@@ -664,7 +656,7 @@ std::vector<std::string> parse_dns_public(const char *s)
     }
     else
     {
-      dns_public_addr.push_back(std::string(s + strlen("tcp://")));
+      dns_public_addr.emplace_back(s + 6);
     }
   }
   else

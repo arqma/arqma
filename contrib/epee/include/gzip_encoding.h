@@ -181,7 +181,7 @@ namespace net_utils
 		*
 		*/
 		inline 
-		virtual void stop(std::string& OUT collect_remains)
+		virtual void stop(std::string& collect_remains)
 		{
 		}
 	protected:

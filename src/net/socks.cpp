@@ -38,6 +38,7 @@
 #include <cstring>
 #include <limits>
 #include <string>
+#include <string_view>
 
 #include "net/net_utils_base.h"
 #include "net/tor_address.h"
@@ -61,7 +62,7 @@ namespace socks
             boost::endian::big_uint32_t ip;
         };
 
-        std::size_t write_domain_header(epee::span<std::uint8_t> out, const std::uint8_t command, const std::uint16_t port, const boost::string_ref domain)
+        std::size_t write_domain_header(epee::span<std::uint8_t> out, const std::uint8_t command, const std::uint16_t port, std::string_view domain)
         {
             if (std::numeric_limits<std::size_t>::max() - sizeof(v4_header) - 2 < domain.size())
                 return 0;
@@ -250,7 +251,7 @@ namespace socks
         return true;
     }
 
-    bool client::set_connect_command(const boost::string_ref domain, std::uint16_t port)
+    bool client::set_connect_command(std::string_view domain, std::uint16_t port)
     {
         switch (socks_version())
         {
@@ -281,7 +282,7 @@ namespace socks
         return false;
     }
 
-    bool client::set_resolve_command(boost::string_ref domain)
+    bool client::set_resolve_command(std::string_view domain)
     {
         if (socks_version() != version::v4a_tor)
             return false;

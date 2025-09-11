@@ -116,7 +116,7 @@ namespace net_utils
 			bool handle_invoke_query_line();
 			bool parse_cached_header(http_header_info& body_info, const std::string& m_cache_to_process, size_t pos);
 			std::string::size_type match_end_of_header(const std::string& buf);
-			bool get_len_from_content_lenght(const std::string& str, size_t& len);
+			bool get_len_from_content_length(const std::string& str, size_t& len);
 			bool handle_retriving_query_body();
 			bool handle_query_measure();
 			bool set_ready_state();

@@ -100,7 +100,7 @@ namespace wallet_args
     _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
 #endif
 
-    const command_line::arg_descriptor<std::string> arg_log_level = {"log-level", "0-4 or categories", ""};
+    const command_line::arg_descriptor<std::string> arg_log_level = {"log-level", "0-4 or categories", "1"};
     const command_line::arg_descriptor<std::size_t> arg_max_log_file_size = {"max-log-file-size", "Specify maximum log file size [B]", MAX_LOG_FILE_SIZE};
     const command_line::arg_descriptor<std::size_t> arg_max_log_files = {"max-log-files", "Specify maximum number of rotated log files to be saved (no limit by setting to 0)", MAX_LOG_FILES};
     const command_line::arg_descriptor<uint32_t> arg_max_concurrency = {"max-concurrency", wallet_args::tr("Max number of threads to use for a parallel job"), DEFAULT_MAX_CONCURRENCY};
@@ -213,7 +213,7 @@ namespace wallet_args
     Print(print) << boost::format(wallet_args::tr("Logging to %s")) % log_path;
 
     const ssize_t lockable_memory = tools::get_lockable_memory();
-	if (lockable_memory >= 0 && lockable_memory < 256 * 4096) // 256 pages -> at least 256 secret keys and other such small/medium objects
+  	if (lockable_memory >= 0 && lockable_memory < 256 * 4096) // 256 pages -> at least 256 secret keys and other such small/medium objects
 	  Print(print) << tr("WARNING: You may not have a high enough lockable memory limit")
 #ifdef ELPP_OS_UNIX
 	    << ", " << tr("see ulimit -l")

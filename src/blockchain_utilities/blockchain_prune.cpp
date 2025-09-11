@@ -29,11 +29,11 @@
 
 #include <array>
 #include "lmdb/liblmdb/lmdb.h"
-#include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/filesystem.hpp>
 #include "common/command_line.h"
 #include "common/pruning.h"
+#include "common/string_util.h"
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/blockchain.h"
 #include "blockchain_db/blockchain_db.h"
@@ -243,7 +243,7 @@ static bool is_v1_tx(MDB_cursor *c_txs_pruned, MDB_val *tx_id)
     throw std::runtime_error("Failed to find transaction pruned data: " + std::string(mdb_strerror(ret)));
   if (v.mv_size == 0)
     throw std::runtime_error("Invalid transaction pruned data");
-  return cryptonote::is_v1_tx(cryptonote::blobdata_ref{(const char*)v.mv_data, v.mv_size});
+  return cryptonote::is_v1_tx(std::string_view{(const char*)v.mv_data, v.mv_size});
 }
 
 static void prune(MDB_env *env0, MDB_env *env1)
@@ -386,9 +386,7 @@ static void prune(MDB_env *env0, MDB_env *env1)
 
 static bool parse_db_sync_mode(std::string db_sync_mode, uint64_t &db_flags)
 {
-  std::vector<std::string> options;
-  boost::trim(db_sync_mode);
-  boost::split(options, db_sync_mode, boost::is_any_of(" :"));
+  auto options = tools::split_any(db_sync_mode, " :", true);
 
   for(const auto &option : options)
     MDEBUG("option: " << option);
@@ -428,7 +426,8 @@ static bool parse_db_sync_mode(std::string db_sync_mode, uint64_t &db_flags)
   if(options.size() >= 2 && !safemode)
   {
     char *endptr;
-    uint64_t bps = strtoull(options[1].c_str(), &endptr, 0);
+    std::string bpsstr{options[1]};
+    uint64_t bps = strtoull(bpsstr.c_str(), &endptr, 0);
     if (*endptr != '\0')
       return false;
     records_per_sync = bps;
@@ -501,7 +500,7 @@ int main(int argc, char* argv[])
   network_type net_type = opt_testnet ? TESTNET : opt_stagenet ? STAGENET : MAINNET;
   bool opt_copy_pruned_database = command_line::get_arg(vm, arg_copy_pruned_database);
   std::string data_dir = command_line::get_arg(vm, cryptonote::arg_data_dir);
-  while (boost::ends_with(data_dir, "/") || boost::ends_with(data_dir, "\\"))
+  while (tools::ends_with(data_dir, "/") || tools::ends_with(data_dir, "\\"))
     data_dir.pop_back();
 
   std::string db_sync_mode = command_line::get_arg(vm, arg_db_sync_mode);

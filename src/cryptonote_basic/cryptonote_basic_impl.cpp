@@ -208,7 +208,7 @@ namespace cryptonote {
   bool get_account_address_from_str(
       address_parse_info& info
     , network_type nettype
-    , std::string const & str
+    , const std::string_view str
     )
   {
     uint64_t address_prefix = get_config(nettype).CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
@@ -313,8 +313,8 @@ namespace cryptonote {
   bool get_account_address_from_str_or_url(
       address_parse_info& info
     , network_type nettype
-    , const std::string& str_or_url
-    , std::function<std::string(const std::string&, const std::vector<std::string>&, bool)> dns_confirm
+    , const std::string_view str_or_url
+    , std::function<std::string(const std::string_view, const std::vector<std::string>&, bool)> dns_confirm
     )
   {
     if (get_account_address_from_str(info, nettype, str_or_url))

@@ -29,14 +29,15 @@
 #pragma once
 #include "memwipe.h"
 
-#include <boost/utility/string_ref.hpp>
-
 #include <string>
+#include <string_view>
 #include <utility>
 #include <list>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.http"
+
+using namespace std::literals;
 
 namespace epee
 {
@@ -68,10 +69,9 @@ namespace net_utils
     std::string get_value_from_fields_list(const std::string& param_name, const net_utils::http::fields_list& fields);
     std::string get_value_from_uri_line(const std::string& param_name, const std::string& uri);
 
-		static inline void add_field(std::string& out, const boost::string_ref name, const boost::string_ref value)
+		static inline void add_field(std::string& out, std::string_view name, std::string_view value)
 		{
-			out.append(name.data(), name.size()).append(": ");
-			out.append(value.data(), value.size()).append("\r\n");
+			out.append(name).append(": "sv).append(value).append("\r\n"sv);
 		}
 		static inline void add_field(std::string& out, const std::pair<std::string, std::string>& field)
 		{

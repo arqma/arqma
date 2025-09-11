@@ -27,6 +27,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "net/levin_base.h"
+#include <cstring>
 
 #include "int-util.h"
 
@@ -68,7 +69,7 @@ namespace levin
 
     std::string buffer(noise_bytes, char(0));
     const bucket_head2 head = make_header(0, noise_bytes - sizeof(bucket_head2), flags, false);
-    std::memcpy(std::addressof(buffer[0]), std::addressof(head), sizeof(head));
+    std::memcpy(buffer.data(), &head, sizeof(head));
 
     return buffer;
   }

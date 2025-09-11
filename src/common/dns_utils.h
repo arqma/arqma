@@ -33,6 +33,7 @@
 #include <functional>
 #include <optional>
 #include <chrono>
+#include <string_view>
 
 struct ub_ctx;
 
@@ -118,7 +119,7 @@ public:
    *
    * @return dns_addr  DNS address
    */
-  std::string get_dns_format_from_oa_address(std::string oa_addr);
+  std::string get_dns_format_from_oa_address(std::string_view oa_addr);
 
   /**
    * @brief Gets the singleton instance of DNSResolver
@@ -149,25 +150,16 @@ private:
   // TODO: modify this to accommodate DNSSEC
   std::vector<std::string> get_record(const std::string& url, int record_type, std::optional<std::string> (*reader)(const char *,size_t), bool& dnssec_available, bool& dnssec_valid);
 
-  /**
-   * @brief Checks a string to see if it looks like a URL
-   *
-   * @param addr the string to be checked
-   *
-   * @return true if it looks enough like a URL, false if not
-   */
-  bool check_address_syntax(const char *addr) const;
-
   ub_ctx* m_ctx = nullptr;
 }; // class DNSResolver
 
 namespace dns_utils
 {
 
-std::string address_from_txt_record(const std::string& s);
-std::vector<std::string> addresses_from_url(const std::string& url, bool& dnssec_valid);
+std::string address_from_txt_record(std::string_view s);
+std::vector<std::string> addresses_from_url(const std::string_view url, bool& dnssec_valid);
 
-std::string get_account_address_as_str_from_url(const std::string& url, bool& dnssec_valid, std::function<std::string(const std::string&, const std::vector<std::string>&, bool)> confirm_dns);
+std::string get_account_address_as_str_from_url(const std::string_view url, bool& dnssec_valid, std::function<std::string(const std::string_view, const std::vector<std::string>&, bool)> confirm_dns);
 
 bool load_txt_records_from_dns(std::vector<std::string> &records, const std::vector<std::string> &dns_urls);
 

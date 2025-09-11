@@ -43,6 +43,7 @@
 #ifdef HAVE_READLINE
   #include "readline_buffer.h"
 #endif
+#include "readline_suspend.h"
 
 namespace epee
 {
@@ -57,7 +58,7 @@ namespace epee
 #ifdef HAVE_READLINE
       m_readline_buffer.start();
 #endif
-      m_reader_thread = std::thread([this]() { return reader_thread_func(); });
+      m_reader_thread = std::thread([this] { reader_thread_func(); });
     }
 
     ~async_stdin_reader()
