@@ -826,7 +826,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::run()
   {
     // creating thread to log number of connections
-    mPeersLoggerThread.emplace([&]()
+    mPeersLoggerThread.emplace(0, [&]()
     {
       _note("Thread monitor number of peers - start");
       const network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
@@ -856,7 +856,7 @@ namespace nodetool
         std::this_thread::sleep_for(1s);
       } // main loop of thread
       _note("Thread monitor number of peers - done");
-    }, 8388608); // lambda
+    }); // lambda
 
     network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
     public_zone.m_net_server.add_idle_handler([this] { return idle_worker(); }, 1s);

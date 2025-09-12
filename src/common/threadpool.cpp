@@ -33,12 +33,8 @@
 #include "cryptonote_config.h"
 #include "common/util.h"
 
-#include "thread_with_stack.h"
-
 static thread_local int depth = 0;
 static thread_local bool is_leaf = false;
-
-class ThreadWithStack;
 
 namespace tools
 {
@@ -86,10 +82,13 @@ void threadpool::create(unsigned int max_threads)
   const std::unique_lock lock{mutex};
   max = max_threads ? max_threads : tools::get_max_concurrency();
   running = true;
-  ThreadWithStack work_thread([this] { run(false); }, 8388608);
   for (size_t i = max ? max : 1; i > 0; i--)
   {
-    threads.emplace_back(std::move(work_thread));
+#ifdef __APPLE__
+    threads.emplace_back(8 * 1024 * 1024, [this] { run(false); });
+#else
+    threads.emplace_back(0, [this] { run(false); });
+#endif
   }
 }
 

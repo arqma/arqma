@@ -54,7 +54,6 @@
 #include <algorithm>
 #include <functional>
 #include <random>
-#include <pthread.h>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
@@ -1151,7 +1150,11 @@ namespace net_utils
       CRITICAL_REGION_BEGIN(m_threads_lock);
       for (std::size_t i = 0; i < threads_count; ++i)
       {
-        m_threads.emplace_back([this] { worker_thread(); }, 8388608);
+#ifdef __APPLE__
+        m_threads.emplace_back(8 * 1024 * 1024, [this] { worker_thread(); });
+#else
+        m_threads.emplace_back(0, [this] { worker_thread(); });
+#endif
         MDEBUG("Run server thread name: " << m_thread_name_prefix);
       }
       CRITICAL_REGION_END();
@@ -1208,7 +1211,7 @@ namespace net_utils
   {
     TRY_ENTRY();
     for (auto &th : m_threads)
-//      if (th.joinable())
+      if (th.joinable())
         th.join();
     return true;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::server_stop", false);

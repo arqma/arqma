@@ -362,7 +362,7 @@ namespace net_utils
     bool m_require_ipv4;
     std::string m_thread_name_prefix; //TODO: change to enum server_type, now used
     size_t m_threads_count;
-    std::vector<ThreadWithStack> m_threads;
+    std::vector<thread_with_stack> m_threads;
     std::thread::id m_main_thread_id;
     critical_section m_threads_lock;
     std::atomic<uint32_t> m_thread_index;

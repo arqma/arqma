@@ -4,47 +4,115 @@
 #include <functional>
 #include <stdexcept>
 #include <utility>
+#include <thread>
+#include <sstream>
 
-class ThreadWithStack {
+class thread_with_stack {
 public:
-  ThreadWithStack(std::function<void()> func, size_t stack_size_bytes) {
-    _func_ptr = new std::function<void()>(std::move(func));
+  using id = std::thread::id;
+  using native_handle_type = pthread_t;
+
+  thread_with_stack() noexcept : thread_(0), joinable_(false) {}
+
+  template <typename Function, typename... Args>
+  explicit thread_with_stack(size_t stack_size, Function(f), Args&&... args) {
+    start(stack_size, std::forward<Function>(f), std::forward<Args>(args)...);
+  }
+
+  thread_with_stack(const thread_with_stack&) = delete;
+  thread_with_stack& operator=(const thread_with_stack&) = delete;
+
+  thread_with_stack(thread_with_stack&& other) noexcept
+    : thread_(other.thread_)
+    , joinable_(other.joinable_)
+    , id_(other.id_)
+  {
+    other.thread_ = 0;
+    other.joinable_ = false;
+    other.id_ = id();
+  }
+
+  thread_with_stack& operator=(thread_with_stack&& other) noexcept {
+    if (this != &other) {
+      if (joinable_)
+        pthread_detach(thread_);
+      thread_ = other.thread_;
+      joinable_ = other.joinable_;
+      id_ = other.id_;
+      other.thread_ = 0;
+      other.joinable_ = false;
+      other.id_ = id();
+    }
+    return *this;
+  }
+
+  template <typename Function, typename... Args>
+  void start(size_t stack_size, Function&& f, Args&&... args) {
+    auto bound = std::bind(std::forward<Function>(f), std::forward<Args>(args)...);
+    auto task_ptr = new decltype(bound)(std::move(bound));
+    auto pack = new std::pair<decltype(bound)*, id*>(task_ptr, &id_);
+
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, stack_size_bytes);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    if (stack_size > 0)
+      pthread_attr_setstacksize(&attr, stack_size);
 
-    if (pthread_create(&_thread, &attr, &ThreadWithStack::trampoline, _func_ptr) != 0) {
-      pthread_attr_destroy(&attr);
-      delete _func_ptr;
-      throw std::runtime_error("Failed to launch thread with custom stack size");
-    }
+    int rc = pthread_create(&thread_, &attr,
+      [](void* p) -> void* {
+        auto pack = static_cast<std::pair<decltype(bound)*, id*>*>(p);
+        *(pack->second) = std::this_thread::get_id();
+        (*(pack->first))();
+        delete pack->first;
+        delete pack;
+        return nullptr;
+      },
+      pack);
 
     pthread_attr_destroy(&attr);
+
+    if (rc != 0) {
+      delete task_ptr;
+      delete pack;
+      throw std::runtime_error("pthread_create failed with code " + std::to_string(rc));
+    }
+    joinable_ = true;
   }
 
   void join() {
-    pthread_join(_thread, nullptr);
+    if (joinable_) {
+      pthread_join(thread_, nullptr);
+      joinable_ = false;
+    }
   }
 
   void detach() {
-    pthread_detach(_thread);
+    if (joinable_) {
+      pthread_detach(thread_);
+      joinable_ = false;
+    }
   }
 
-  void get_id() {
-    pthread_self();
+  bool joinable() const noexcept {
+    return joinable_;
   }
 
-  ~ThreadWithStack() = default;
+  id get_id() const noexcept {
+    return id_;
+  }
+
+  native_handle_type native_handle() const noexcept {
+    return thread_;
+  }
+
+  ~thread_with_stack() {
+    if (joinable_) {
+      pthread_detach(thread_);
+    }
+  }
 
 private:
-  static void* trampoline(void* arg) {
-    auto* fn = static_cast<std::function<void()>*>(arg);
-    (*fn)();
-    delete fn;
-    return nullptr;
-  }
-
-  pthread_t _thread;
-  std::function<void()>* _func_ptr;
+  pthread_t thread_;
+  bool joinable_;
+  id id_;
 };
+
