@@ -843,7 +843,7 @@ namespace nodetool
             {
               ++number_of_in_peers;
             }
-            else if (!cntxt.is_ping)
+            else
             {
               if(!(cntxt.m_state == p2p_connection_context::state_before_handshake && std::chrono::steady_clock::now() < cntxt.m_started + 10s))
                 ++number_of_out_peers;
@@ -882,15 +882,6 @@ namespace nodetool
     if (public_zone == m_network_zones.end())
       return 0;
     return public_zone->second.m_net_server.get_config_object().get_connections_count();
-  }
-  //-----------------------------------------------------------------------------------
-  template<class t_payload_net_handler>
-  uint64_t node_server<t_payload_net_handler>::get_connections_count()
-  {
-    std::uint64_t count = 0;
-    for (auto& zone : m_network_zones)
-      count += zone.second.m_net_server.get_config_object().get_connections_count();
-    return count;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -1117,7 +1108,7 @@ namespace nodetool
     bool used = false;
     server->second.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
     {
-      if((cntxt.peer_id == peer.id && peer.adr.is_same_host(cntxt.m_remote_address)) || (!cntxt.m_is_income && peer.adr == cntxt.m_remote_address))
+      if(cntxt.peer_id == peer.id || (!cntxt.m_is_income && peer.adr == cntxt.m_remote_address))
       {
         used = true;
         return false;//stop enumerating
@@ -1141,7 +1132,7 @@ namespace nodetool
     bool used = false;
     server->second.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
     {
-      if((cntxt.peer_id == peer.id && peer.adr.is_same_host(cntxt.m_remote_address)) || (!cntxt.m_is_income && peer.adr == cntxt.m_remote_address))
+      if(cntxt.peer_id == peer.id || (!cntxt.m_is_income && peer.adr == cntxt.m_remote_address))
       {
         used = true;
         return false;//stop enumerating
@@ -1647,7 +1638,7 @@ namespace nodetool
     size_t count = 0;
     zone.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
     {
-      if(cntxt.m_is_income && !cntxt.is_ping)
+      if(cntxt.m_is_income)
         ++count;
       return true;
     });
@@ -1897,73 +1888,6 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::check_trust(const proof_of_trust& tr, const epee::net_utils::zone zone_type)
-  {
-    uint64_t local_time = time(NULL);
-    uint64_t time_delta = local_time > tr.time ? local_time - tr.time: tr.time - local_time;
-    if(time_delta > 24*60*60 )
-    {
-      MWARNING("check_trust failed to check time conditions, local_time=" <<  local_time << ", proof_time=" << tr.time);
-      return false;
-    }
-    if(m_last_stat_request_time >= tr.time )
-    {
-      MWARNING("check_trust failed to check time conditions, last_stat_request_time=" <<  m_last_stat_request_time << ", proof_time=" << tr.time);
-      return false;
-    }
-
-    const network_zone& zone = m_network_zones.at(zone_type);
-    if(zone.m_config.m_peer_id != tr.peer_id)
-    {
-      MWARNING("check_trust failed: peer_id mismatch (passed " << tr.peer_id << ", expected " << peerid_to_string(zone.m_config.m_peer_id) << ")");
-      return false;
-    }
-    crypto::public_key pk{};
-    epee::string_tools::hex_to_pod(::config::P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY, pk);
-    crypto::hash h = get_proof_of_trust_hash(tr);
-    if(!crypto::check_signature(h, pk, tr.sign))
-    {
-      MWARNING("check_trust failed: sign check failed");
-      return false;
-    }
-    //update last request time
-    m_last_stat_request_time = tr.time;
-    return true;
-  }
-  //-----------------------------------------------------------------------------------
-  template<class t_payload_net_handler>
-  int node_server<t_payload_net_handler>::handle_get_network_state(int command, COMMAND_REQUEST_NETWORK_STATE::request& arg, COMMAND_REQUEST_NETWORK_STATE::response& rsp, p2p_connection_context& context)
-  {
-    if(!check_trust(arg.tr, context.m_remote_address.get_zone()))
-    {
-      drop_connection(context);
-      return 1;
-    }
-    m_network_zones.at(epee::net_utils::zone::public_).m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
-    {
-      connection_entry ce;
-      ce.adr  = cntxt.m_remote_address;
-      ce.id = cntxt.peer_id;
-      ce.is_income = cntxt.m_is_income;
-      rsp.connections_list.push_back(ce);
-      return true;
-    });
-
-    network_zone& zone = m_network_zones.at(context.m_remote_address.get_zone());
-    zone.m_peerlist.get_peerlist(rsp.local_peerlist_gray, rsp.local_peerlist_white);
-    rsp.my_id = zone.m_config.m_peer_id;
-    rsp.local_time = time(NULL);
-    return 1;
-  }
-  //-----------------------------------------------------------------------------------
-  template<class t_payload_net_handler>
-  int node_server<t_payload_net_handler>::handle_get_peer_id(int command, COMMAND_REQUEST_PEER_ID::request& arg, COMMAND_REQUEST_PEER_ID::response& rsp, p2p_connection_context& context)
-  {
-    rsp.my_id = m_network_zones.at(context.m_remote_address.get_zone()).m_config.m_peer_id;
-    return 1;
-  }
-  //-----------------------------------------------------------------------------------
-  template<class t_payload_net_handler>
   int node_server<t_payload_net_handler>::handle_get_support_flags(int command, COMMAND_REQUEST_SUPPORT_FLAGS::request& arg, COMMAND_REQUEST_SUPPORT_FLAGS::response& rsp, p2p_connection_context& context)
   {
     rsp.support_flags = m_network_zones.at(context.m_remote_address.get_zone()).m_config.m_support_flags;
@@ -2177,7 +2101,7 @@ namespace nodetool
         return false;
       }
       return true;
-    }, zone.m_bind_ip, m_ssl_support, p2p_connection_context{true});
+    }, zone.m_bind_ip, m_ssl_support);
     if(!r)
     {
       LOG_WARNING_CC(context, "Failed to call connect_async, network error.");

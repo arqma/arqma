@@ -42,7 +42,6 @@
 #include "string_tools.h"
 #include "time_helper.h"
 #include "cryptonote_config.h"
-#include "crypto/crypto.h"
 
 namespace nodetool
 {
@@ -185,7 +184,7 @@ namespace nodetool
   {
     const static int ID = P2P_COMMANDS_POOL_BASE + 1;
 
-    struct request_t
+    struct request
     {
       basic_node_data node_data;
       t_playload_type payload_data;
@@ -195,9 +194,8 @@ namespace nodetool
         KV_SERIALIZE(payload_data)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
+    struct response
     {
       basic_node_data node_data;
       t_playload_type payload_data;
@@ -209,7 +207,6 @@ namespace nodetool
         KV_SERIALIZE(local_peerlist_new)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<response_t> response;
   };
 
 
@@ -221,16 +218,15 @@ namespace nodetool
   {
     const static int ID = P2P_COMMANDS_POOL_BASE + 2;
 
-    struct request_t
+    struct request
     {
       t_playload_type payload_data;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(payload_data)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
+    struct response
     {
       t_playload_type payload_data;
       std::vector<peerlist_entry> local_peerlist_new;
@@ -240,7 +236,6 @@ namespace nodetool
         KV_SERIALIZE(local_peerlist_new)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<response_t> response;
   };
 
   /************************************************************************/
@@ -258,16 +253,15 @@ namespace nodetool
 
 #define PING_OK_RESPONSE_STATUS_TEXT "OK"
 
-    struct request_t
+    struct request
     {
       /*actually we don't need to send any real data*/
 
       BEGIN_KV_SERIALIZE_MAP()
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
+    struct response
     {
       std::string status;
       peerid_type peer_id;
@@ -277,79 +271,6 @@ namespace nodetool
         KV_SERIALIZE(peer_id)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct proof_of_trust
-  {
-    peerid_type peer_id;
-    uint64_t time;
-    crypto::signature sign;
-
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE(peer_id)
-      KV_SERIALIZE(time)
-      KV_SERIALIZE_VAL_POD_AS_BLOB(sign)
-    END_KV_SERIALIZE_MAP()
-  };
-
-  /************************************************************************/
-  /*                                                                      */
-  /************************************************************************/
-  struct COMMAND_REQUEST_NETWORK_STATE
-  {
-    const static int ID = P2P_COMMANDS_POOL_BASE + 5;
-
-    struct request_t
-    {
-      proof_of_trust tr;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(tr)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      std::vector<peerlist_entry> local_peerlist_white;
-      std::vector<peerlist_entry> local_peerlist_gray;
-      std::vector<connection_entry> connections_list;
-      peerid_type my_id;
-      uint64_t    local_time;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(local_peerlist_white)
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(local_peerlist_gray)
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(connections_list)
-        KV_SERIALIZE(my_id)
-        KV_SERIALIZE(local_time)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  /************************************************************************/
-  /*                                                                      */
-  /************************************************************************/
-  struct COMMAND_REQUEST_PEER_ID
-  {
-    const static int ID = P2P_COMMANDS_POOL_BASE + 6;
-
-    struct request_t
-    {
-      BEGIN_KV_SERIALIZE_MAP()
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      peerid_type my_id;
-
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(my_id)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
   };
 
   /************************************************************************/
@@ -359,14 +280,13 @@ namespace nodetool
   {
     const static int ID = P2P_COMMANDS_POOL_BASE + 7;
 
-    struct request_t
+    struct request
     {
       BEGIN_KV_SERIALIZE_MAP()
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<request_t> request;
 
-    struct response_t
+    struct response
     {
       uint32_t support_flags;
 
@@ -374,14 +294,5 @@ namespace nodetool
         KV_SERIALIZE(support_flags)
       END_KV_SERIALIZE_MAP()
     };
-    typedef epee::misc_utils::struct_init<response_t> response;
   };
-
-  inline crypto::hash get_proof_of_trust_hash(const nodetool::proof_of_trust& pot)
-  {
-    std::string s;
-    s.append(reinterpret_cast<const char*>(&pot.peer_id), sizeof(pot.peer_id));
-    s.append(reinterpret_cast<const char*>(&pot.time), sizeof(pot.time));
-    return crypto::cn_fast_hash(s.data(), s.size());
-  }
 }

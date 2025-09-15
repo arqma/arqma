@@ -403,7 +403,7 @@ namespace cryptonote
       context.m_state = cryptonote_connection_context::state_synchronizing;
     }
 
-    if (context.m_state = cryptonote_connection_context::state_synchronizing)
+    if (context.m_state == cryptonote_connection_context::state_synchronizing)
     {
       //let the socket to send response to handshake, but request callback, to let send request data after response
       LOG_PRINT_CCONTEXT_L2("requesting callback");
