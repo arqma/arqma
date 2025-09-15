@@ -1,6 +1,6 @@
 package=readline
 $(package)_version=8.0
-$(package)_download_path=https://ftp.gnu.org/gnu/readline
+$(package)_download_path=ftp://ftp.task.gda.pl/pub/gnu/readline
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=e339f51971478d369f8a053a330a190781acb9864cf4c541060f12078948e461
 $(package)_dependencies=ncurses
