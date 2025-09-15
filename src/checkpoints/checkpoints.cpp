@@ -84,6 +84,8 @@ namespace cryptonote
     {1783560, "28e320b0729f3bdcb8cedd7275c0cdd3328653bcb5e97341db38564aa557e903"},
     {1784352, "59732f183678346c2506a1de4e11dc8eb097a17557a28ab1fbb0fae13fe1cf9a"},
     {1784580, "c02b6986fa4195a0f3d1814ebe636208261a36e4db05bb3390d1d8c94ccdaf9d"},
+    {1784581, "f52d8e1f579f28f4e1d10a08c01c3a1fd3cf5823f1baf6488ad637b53c5ee6b8"},
+    {1784582, "008464f3ec250755db61a6e57ef6b5b072d82961822b975d5142fdb3c4a97a52"},
   };
   //---------------------------------------------------------------------------
   crypto::hash get_newest_hardcoded_checkpoint(cryptonote::network_type nettype, uint64_t *height)
@@ -93,11 +95,14 @@ namespace cryptonote
     if(nettype != MAINNET)
       return result;
 
-    uint64_t last_index = arqma::array_count(HARDCODED_MAINNET_CHECKPOINTS) - 1;
-    height_to_hash const &entry = HARDCODED_MAINNET_CHECKPOINTS[last_index];
+    if (nettype == MAINNET)
+    {
+      uint64_t last_index = arqma::array_count(HARDCODED_MAINNET_CHECKPOINTS) - 1;
+      height_to_hash const &entry = HARDCODED_MAINNET_CHECKPOINTS[last_index];
 
-    if(epee::string_tools::hex_to_pod(entry.hash, result))
-      *height = entry.height;
+      if(epee::string_tools::hex_to_pod(entry.hash, result))
+        *height = entry.height;
+    }
 
     return result;
   }
@@ -174,7 +179,8 @@ namespace cryptonote
       result = false;
     }
 
-    if (batch_started) m_db->batch_stop();
+    if (batch_started)
+      m_db->batch_stop();
     return result;
   }
   //---------------------------------------------------------------------------
