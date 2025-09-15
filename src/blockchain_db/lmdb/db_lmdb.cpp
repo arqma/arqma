@@ -4012,7 +4012,7 @@ uint64_t BlockchainLMDB::add_block(const std::pair<block, blobdata>& blk, size_t
 
 struct checkpoint_mdb_buffer
 {
-  char data[sizeof(blk_checkpoint_header) + (sizeof(service_nodes::voter_to_signature) * (1000 * service_nodes::CHECKPOINT_QUORUM_SIZE))];
+  char data[sizeof(blk_checkpoint_header) + (sizeof(service_nodes::voter_to_signature) * (5000 * service_nodes::CHECKPOINT_QUORUM_SIZE))];
   size_t len;
 };
 
