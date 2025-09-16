@@ -175,7 +175,7 @@ namespace cryptonote
   static const command_line::arg_descriptor<size_t> arg_max_txpool_weight = {
     "max-txpool-weight"
   , "Set maximum txpool weight in bytes."
-  , config::blockchain_settings::DEFAULT_TXPOOL_MAX_WEIGHT
+  , DEFAULT_TXPOOL_MAX_WEIGHT
   };
   static const command_line::arg_descriptor<std::string> arg_block_notify = {
     "block-notify"
