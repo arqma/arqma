@@ -714,24 +714,46 @@ crypto::hash Blockchain::get_tail_id() const
  *   - base-2 exponential drop off from there, so: H-13, H-17, H-25, etc... (going down to, at smallest, height 1)
  *   - the genesis block (height 0)
  */
-void Blockchain::get_short_chain_history(std::list<crypto::hash>& ids) const
+bool Blockchain::get_short_chain_history(std::list<crypto::hash>& ids) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   std::unique_lock lock{*this};
+  uint64_t i = 0;
+  uint64_t current_multiplier = 1;
   uint64_t sz = m_db->height();
 
   if(!sz)
-    return;
+    return true;
 
   db_rtxn_guard rtxn_guard(m_db);
-  for (uint64_t i = 0, decr = 1, offset = 1; offset < sz; ++i)
+  bool genesis_included = false;
+  uint64_t current_back_offset = 1;
+  while(current_back_offset < sz)
   {
-    ids.push_back(m_db->get_block_hash_from_height(sz - offset));
-    if (i >= 10) decr *= 2;
-    offset += decr;
+    ids.push_back(m_db->get_block_hash_from_height(sz - current_back_offset));
+
+    if(sz-current_back_offset == 0)
+    {
+      genesis_included = true;
+    }
+    if(i < 10)
+    {
+      ++current_back_offset;
+    }
+    else
+    {
+      current_multiplier *= 2;
+      current_back_offset += current_multiplier;
+    }
+    ++i;
   }
 
-  ids.push_back(m_db->get_block_hash_from_height(0));
+  if (!genesis_included)
+  {
+    ids.push_back(m_db->get_block_hash_from_height(0));
+  }
+
+  return true;
 }
 //------------------------------------------------------------------
 crypto::hash Blockchain::get_block_id_by_height(uint64_t height) const
@@ -2042,7 +2064,7 @@ bool Blockchain::get_blocks(uint64_t start_offset, size_t count, std::vector<std
 //FIXME: This function appears to want to return false if any transactions
 //       that belong with blocks are missing, but not if blocks themselves
 //       are missing.
-bool Blockchain::handle_get_blocks(NOTIFY_REQUEST_GET_BLOCKS::request& arg, NOTIFY_RESPONSE_GET_BLOCKS::request& rsp)
+bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NOTIFY_RESPONSE_GET_OBJECTS::request& rsp)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   std::unique_lock lock{*this};
@@ -2058,6 +2080,7 @@ bool Blockchain::handle_get_blocks(NOTIFY_REQUEST_GET_BLOCKS::request& arg, NOTI
   {
     auto &block_blob = bl.first;
     auto &block = bl.second;
+    std::vector<crypto::hash> missed_tx_ids;
 
     rsp.blocks.push_back(block_complete_entry());
     block_complete_entry& block_entry = rsp.blocks.back();
@@ -2084,13 +2107,12 @@ bool Blockchain::handle_get_blocks(NOTIFY_REQUEST_GET_BLOCKS::request& arg, NOTI
 
     // FIXME: s/rsp.missed_ids/missed_tx_id/ ?  Seems like rsp.missed_ids
     //        is for missed blocks, not missed transactions as well.
-    std::vector<crypto::hash> missed_tx_ids;
     get_transactions_blobs(block.tx_hashes, block_entry.txs, missed_tx_ids);
 
     if (missed_tx_ids.size() != 0)
     {
       LOG_ERROR("Error retrieving blocks, missed " << missed_tx_ids.size()
-          << " transactions for block with hash: " << get_block_hash(bl.second)
+          << " transactions for block with hash: " << get_block_hash(block)
           << std::endl
       );
 
@@ -2101,26 +2123,7 @@ bool Blockchain::handle_get_blocks(NOTIFY_REQUEST_GET_BLOCKS::request& arg, NOTI
     //pack block
     block_entry.block = std::move(block_blob);
   }
-
-  return true;
-}
-//------------------------------------------------------------------
-bool Blockchain::handle_get_txs(NOTIFY_REQUEST_GET_TXS::request& arg, NOTIFY_NEW_TRANSACTIONS::request& rsp)
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  std::unique_lock lock{*this};
-
-  db_rtxn_guard rtxn_guard (m_db);
-  std::vector<std::pair<cryptonote::blobdata,block>> blocks;
-  std::vector<crypto::hash> ignore_missed;
-
-  get_transactions_blobs(arg.txs, rsp.txs, ignore_missed);
-
-  if (!ignore_missed.empty())
-  {
-    MINFO("Peer requested one or more txes that we don't have");
-    ignore_missed.clear();
-  }
+  get_transactions_blobs(arg.txs, rsp.txs, rsp.missed_ids);
 
   return true;
 }

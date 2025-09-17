@@ -54,7 +54,7 @@
 PUSH_WARNINGS
 DISABLE_VS_WARNINGS(4355)
 
-#define CURRENCY_PROTOCOL_MAX_TXS_REQUEST_COUNT 5000
+#define LOCALHOST_INT 2130706433
 
 namespace cryptonote
 {
@@ -72,9 +72,8 @@ namespace cryptonote
 
     BEGIN_INVOKE_MAP2(cryptonote_protocol_handler)
       HANDLE_NOTIFY_T2(NOTIFY_NEW_TRANSACTIONS, handle_notify_new_transactions)
-      HANDLE_NOTIFY_T2(NOTIFY_REQUEST_GET_BLOCKS, handle_request_get_blocks)
-      HANDLE_NOTIFY_T2(NOTIFY_RESPONSE_GET_BLOCKS, handle_response_get_blocks)
-      HANDLE_NOTIFY_T2(NOTIFY_REQUEST_GET_TXS, handle_request_get_txs)
+      HANDLE_NOTIFY_T2(NOTIFY_REQUEST_GET_OBJECTS, handle_request_get_objects)
+      HANDLE_NOTIFY_T2(NOTIFY_RESPONSE_GET_OBJECTS, handle_response_get_objects)
       HANDLE_NOTIFY_T2(NOTIFY_REQUEST_CHAIN, handle_request_chain)
       HANDLE_NOTIFY_T2(NOTIFY_RESPONSE_CHAIN_ENTRY, handle_response_chain_entry)
       HANDLE_NOTIFY_T2(NOTIFY_NEW_FLUFFY_BLOCK, handle_notify_new_fluffy_block)
@@ -88,7 +87,7 @@ namespace cryptonote
     bool deinit();
     void set_p2p_endpoint(nodetool::i_p2p_endpoint<connection_context>* p2p);
     //bool process_handshake_data(const blobdata& data, cryptonote_connection_context& context);
-    bool process_payload_sync_data(const CORE_SYNC_DATA& hshd, cryptonote_connection_context& context, bool is_inital);
+    bool process_payload_sync_data(const CORE_SYNC_DATA& hshd, cryptonote_connection_context& context, bool is_initial);
     bool get_payload_sync_data(blobdata& data);
     bool get_payload_sync_data(CORE_SYNC_DATA& hshd);
     bool on_callback(cryptonote_connection_context& context);
@@ -108,9 +107,8 @@ namespace cryptonote
   private:
     //----------------- commands handlers ----------------------------------------------
     int handle_notify_new_transactions(int command, NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& context);
-    int handle_request_get_blocks(int command, NOTIFY_REQUEST_GET_BLOCKS::request& arg, cryptonote_connection_context& context);
-    int handle_response_get_blocks(int command, NOTIFY_RESPONSE_GET_BLOCKS::request& arg, cryptonote_connection_context& context);
-    int handle_request_get_txs(int command, NOTIFY_REQUEST_GET_TXS::request& arg, cryptonote_connection_context& context);
+    int handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context);
+    int handle_response_get_objects(int command, NOTIFY_RESPONSE_GET_OBJECTS::request& arg, cryptonote_connection_context& context);
     int handle_request_chain(int command, NOTIFY_REQUEST_CHAIN::request& arg, cryptonote_connection_context& context);
     int handle_response_chain_entry(int command, NOTIFY_RESPONSE_CHAIN_ENTRY::request& arg, cryptonote_connection_context& context);
     int handle_notify_new_fluffy_block(int command, NOTIFY_NEW_FLUFFY_BLOCK::request& arg, cryptonote_connection_context& context);
@@ -157,12 +155,14 @@ namespace cryptonote
     bool on_connection_synchronized();
     bool should_download_next_span(cryptonote_connection_context& context, bool standby);
     void drop_connection(cryptonote_connection_context &context, bool add_fail, bool flush_all_spans);
+    void drop_connection_with_score(cryptonote_connection_context &context, unsigned int score, bool flush_all_spans);
     bool kick_idle_peers();
     bool check_standby_peers();
     bool update_sync_search();
     int try_add_next_blocks(cryptonote_connection_context &context);
     void notify_new_stripe(cryptonote_connection_context &context, uint32_t stripe);
-    void skip_unneeded_hashes(cryptonote_connection_context& context, bool check_block_queue) const;
+    void skip_unneeded_hashes(cryptonote_connection_context &context, bool check_block_queue) const;
+    void hit_score(cryptonote_connection_context &context, int32_t score);
 
     t_core& m_core;
 
@@ -173,9 +173,10 @@ namespace cryptonote
     std::atomic<bool> m_stopping;
     std::mutex m_sync_lock;
     block_queue m_block_queue;
-    tools::periodic_task m_idle_peer_kicker{30s};
+    tools::periodic_task m_idle_peer_kicker{8s};
     tools::periodic_task m_standby_checker{100ms};
     tools::periodic_task m_sync_search_checker{101s};
+    tools::periodic_task m_bad_peer_checker{43s};
     std::atomic<unsigned int> m_max_out_peers;
     tools::PerformanceTimer m_sync_timer, m_add_timer;
     uint64_t m_last_add_end_time;
@@ -185,6 +186,7 @@ namespace cryptonote
 
     std::mutex m_buffer_mutex;
     boost::circular_buffer<size_t> m_avg_buffer = boost::circular_buffer<size_t>(10);
+    std::mutex m_bad_peer_check_lock;
 
     template<class t_parameter>
     bool post_notify(typename t_parameter::request& arg, cryptonote_connection_context& context)
