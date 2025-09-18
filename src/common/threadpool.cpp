@@ -84,7 +84,11 @@ void threadpool::create(unsigned int max_threads)
   running = true;
   for (size_t i = max ? max : 1; i > 0; i--)
   {
-    threads.emplace_back([this] { run(false); });
+#ifdef __APPLE__
+    threads.emplace_back(8 * 1024 * 1024, [this] { run(false); });
+#else
+    threads.emplace_back(0, [this] { run(false); });
+#endif
   }
 }
 

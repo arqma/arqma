@@ -17,7 +17,7 @@ namespace service_nodes
   constexpr uint64_t CHECKPOINT_NUM_CHECKPOINTS_FOR_CHAIN_FINALITY = 2;
   constexpr uint64_t CHECKPOINT_INTERVAL                           = 4;
   constexpr uint64_t CHECKPOINT_STORE_PERSISTENTLY_INTERVAL        = 60;
-  constexpr uint64_t CHECKPOINT_VOTE_LIFETIME                      = CHECKPOINT_STORE_PERSISTENTLY_INTERVAL;
+  constexpr uint64_t CHECKPOINT_VOTE_LIFETIME                      = CHECKPOINT_STORE_PERSISTENTLY_INTERVAL / 2;
 
   constexpr int16_t CHECKPOINT_NUM_QUORUMS_TO_PARTICIPATE_IN = 8;
   constexpr int16_t CHECKPOINT_MAX_MISSABLE_VOTES            = 4;

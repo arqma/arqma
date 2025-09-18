@@ -165,8 +165,6 @@ namespace cryptonote
      */
     bool have_tx(const crypto::hash &id) const;
 
-    std::vector<uint8_t> have_txs(const std::vector<crypto::hash> &hashes) const;
-
     /**
      * @brief action to take when notified of a block added to the blockchain
      *
@@ -341,8 +339,6 @@ namespace cryptonote
      */
     bool get_relayable_transactions(std::vector<std::pair<crypto::hash, cryptonote::blobdata>>& txs) const;
 
-    int set_relayable(const std::vector<crypto::hash> &tx_hashes);
-
     /**
      * @brief tell the pool that certain transactions were just relayed
      *
@@ -383,14 +379,14 @@ namespace cryptonote
      *
      * @return the cumulative txpool weight in bytes
      */
-    uint64_t get_txpool_weight() const;
+    size_t get_txpool_weight() const;
 
     /**
      * @brief set the max cumulative txpool weight in bytes
      *
      * @param bytes the max cumulative txpool weight in bytes
      */
-    uint64_t set_txpool_max_weight();
+    void set_txpool_max_weight(size_t bytes);
 
   private:
 

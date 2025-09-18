@@ -100,10 +100,10 @@ static const char *get_default_categories(int level)
   switch (level)
   {
     case 0:
-      categories = "net:FATAL,net.http:FATAL,net.ssl:FATAL,net.p2p:FATAL,net.cn:FATAL,global:INFO,verify:FATAL,serialization:FATAL,daemon.zmq:INFO,logging:INFO,msgwriter:INFO,arqnet:INFO";
+      categories = "*:WARNING,net:FATAL,net.http:FATAL,net.ssl:FATAL,net.p2p:FATAL,net.cn:FATAL,global:INFO,verify:FATAL,serialization:FATAL,daemon.zmq:INFO,logging:INFO,msgwriter:INFO";
       break;
     case 1:
-      categories = "*:INFO,global:INFO,stacktrace:INFO,logging:INFO,msgwriter:INFO,daemon.zmq:ERROR,daemon.zmq:WARNING,arqnet:WARNING";
+      categories = "*:INFO,global:INFO,stacktrace:INFO,logging:INFO,msgwriter:INFO,daemon.zmq:ERROR,daemon.zmq:WARNING";
       break;
     case 2:
       categories = "*:DEBUG";
