@@ -1143,53 +1143,6 @@ namespace cryptonote
     return 1;
   }
 
-  // Get an estimate for the remaining sync time from given current to target blockchain height, in seconds
-  template<class t_core>
-  uint64_t t_cryptonote_protocol_handler<t_core>::get_estimated_remaining_sync_seconds(uint64_t current_blockchain_height, uint64_t target_blockchain_height)
-  {
-    // The average sync speed varies so much, even averaged over quite long time periods like 10 minutes,
-    // that using some sliding window would be difficult to implement without often leading to bad estimates.
-    // The simplest strategy - always average sync speed over the maximum available interval i.e. since sync
-    // started at all (from "m_sync_start_time" and "m_sync_start_height") - gives already useful results
-    // and seems to be quite robust. Some quite special cases like "Internet connection suddenly becoming
-    // much faster after syncing already a long time, and staying fast" are not well supported however.
-
-    if (target_blockchain_height <= current_blockchain_height)
-    {
-      // Syncing stuck, or other special circumstance: Avoid errors, simply give back 0
-      return 0;
-    }
-
-    const auto now = std::chrono::steady_clock::now();
-    seconds_f sync_time = now - m_sync_start_time;
-    cryptonote::network_type nettype = m_core.get_nettype();
-
-    // Don't simply use remaining number of blocks for the estimate but "sync weight" as provided by
-    // "cumulative_block_sync_weight" which knows about strongly varying Monero mainnet block sizes
-    uint64_t synced_weight = tools::cumulative_block_sync_weight(nettype, m_sync_start_height, current_blockchain_height - m_sync_start_height);
-    uint64_t remaining_weight = tools::cumulative_block_sync_weight(nettype, current_blockchain_height, target_blockchain_height - current_blockchain_height);
-    return (uint64_t)((sync_time.count() / synced_weight) * remaining_weight);
-  }
-
-  // Return a textual remaining sync time estimate, or the empty string if waiting period not yet over
-  template<class t_core>
-  std::string t_cryptonote_protocol_handler<t_core>::get_periodic_sync_estimate(uint64_t current_blockchain_height, uint64_t target_blockchain_height)
-  {
-    std::string text;
-    const auto now = std::chrono::steady_clock::now();
-    auto period_sync_time = now - m_period_start_time;
-    if (period_sync_time > 2min)
-    {
-      // Period is over, time to report another estimate
-      uint64_t remaining_seconds = get_estimated_remaining_sync_seconds(current_blockchain_height, target_blockchain_height);
-      text = tools::get_human_readable_timespan(std::chrono::seconds(remaining_seconds));
-
-      // Start the new period
-      m_period_start_time = now;
-    }
-    return text;
-  }
-
   template<class t_core>
   int t_cryptonote_protocol_handler<t_core>::try_add_next_blocks(cryptonote_connection_context& context)
   {
@@ -1218,9 +1171,6 @@ namespace cryptonote
           if (!starting)
             m_last_add_end_time = epee::misc_utils::get_ns_count();
         });
-        m_sync_start_time = std::chrono::steady_clock::now();
-        m_sync_start_height = m_core.get_current_blockchain_height();
-        m_period_start_time = m_sync_start_time;
 
         while (1)
         {
@@ -1464,16 +1414,7 @@ namespace cryptonote
               if (completion_percent == 100) // never show 100% if not actually up to date
                 completion_percent = 99;
               progress_message = " (" + std::to_string(completion_percent) + "%, "
-                  + std::to_string(target_blockchain_height - current_blockchain_height) + " left";
-              std::string time_message = get_periodic_sync_estimate(current_blockchain_height, target_blockchain_height);
-              if (!time_message.empty())
-              {
-                uint64_t total_blocks_to_sync = target_blockchain_height - m_sync_start_height;
-                uint64_t total_blocks_synced = current_blockchain_height - m_sync_start_height;
-                progress_message += ", " + std::to_string(total_blocks_synced * 100 / total_blocks_to_sync) + "% of total synced";
-                progress_message += ", estimated " + time_message + " left";
-              }
-              progress_message += ")";
+                  + std::to_string(target_blockchain_height - current_blockchain_height) + " left)";
             }
             const uint32_t previous_stripe = tools::get_pruning_stripe(previous_height, target_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES);
             const uint32_t current_stripe = tools::get_pruning_stripe(current_blockchain_height, target_blockchain_height, CRYPTONOTE_PRUNING_LOG_STRIPES);
@@ -2174,23 +2115,8 @@ skip:
   bool t_cryptonote_protocol_handler<t_core>::on_connection_synchronized()
   {
     bool val_expected = false;
-    uint64_t current_blockchain_height = m_core.get_current_blockchain_height();
     if(m_synchronized.compare_exchange_strong(val_expected, true))
     {
-      if ((current_blockchain_height > m_sync_start_height) && (m_sync_spans_downloaded > 0))
-      {
-        uint64_t synced_blocks = current_blockchain_height - m_sync_start_height;
-        // Report only after syncing an "interesting" number of blocks:
-        if (synced_blocks > 20)
-        {
-          auto synced_seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - m_sync_start_time);
-          if (synced_seconds == 0s)
-            synced_seconds = 1s;
-          float blocks_per_second = synced_blocks / (float)synced_seconds.count();
-          MGINFO_YELLOW("Synced " << synced_blocks << " blocks in "
-            << tools::get_human_readable_timespan(synced_seconds) << " (" << blocks_per_second << " blocks per second)");
-        }
-      }
       MGINFO_RED(ENDL << crypto_synced << ENDL);
       m_sync_timer.pause();
       if (ELPP->vRegistry()->allowed(el::Level::Info, "sync-info"))
