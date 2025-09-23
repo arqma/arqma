@@ -57,7 +57,6 @@
 #include "net/fwd.h"
 #include "common/command_line.h"
 #include "common/periodic_task.h"
-#include "thread_with_stack.h"
 
 PUSH_WARNINGS
 DISABLE_VS_WARNINGS(4355)
@@ -115,10 +114,7 @@ namespace nodetool
   template<class base_type>
   struct p2p_connection_context_t: base_type //t_payload_net_handler::connection_context //public net_utils::connection_context_base
   {
-    p2p_connection_context_t()
-      : peer_id(0)
-      , support_flags(0)
-      , m_in_timedsync(false) {}
+    p2p_connection_context_t(): peer_id(0), support_flags(0), m_in_timedsync(false) {}
 
     peerid_type peer_id;
     uint32_t support_flags;
@@ -325,6 +321,7 @@ namespace nodetool
     bool make_default_config();
     bool store_config();
 
+
     //----------------- levin_commands_handler -------------------------------------------------------------
     virtual void on_connection_new(p2p_connection_context& context);
     virtual void on_connection_close(p2p_connection_context& context);
@@ -338,7 +335,7 @@ namespace nodetool
     virtual void request_callback(const epee::net_utils::connection_context_base& context);
     virtual void for_each_connection(std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type, uint32_t)> f);
     virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type, uint32_t)> f);
-    virtual bool add_host_fail(const epee::net_utils::network_address &address, unsigned int score = 1);
+    virtual bool add_host_fail(const epee::net_utils::network_address &address);
     //----------------- i_connection_filter  --------------------------------------------------------
     virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address, time_t *t = NULL);
     //-----------------------------------------------------------------------------------------------
@@ -420,7 +417,9 @@ namespace nodetool
     //debug functions
     std::string print_connections_container();
 
-  public:
+
+    public:
+
     void set_rpc_port(uint16_t rpc_port)
     {
       m_rpc_port = rpc_port;
@@ -447,7 +446,7 @@ namespace nodetool
     bool m_use_ipv6;
     bool m_require_ipv4;
     std::atomic<bool> is_closing;
-    std::optional<thread_with_stack> mPeersLoggerThread;
+    std::optional<std::thread> mPeersLoggerThread;
     //critical_section m_connections_lock;
     //connections_indexed_container m_connections;
 

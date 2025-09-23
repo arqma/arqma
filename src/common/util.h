@@ -254,6 +254,8 @@ namespace tools
 
   std::string get_human_readable_bytes(uint64_t bytes);
 
+  uint64_t cumulative_block_sync_weight(cryptonote::network_type nettype, uint64_t start_block, uint64_t num_blocks);
+
   template <typename... T> constexpr size_t constexpr_sum(T... ns) { return (0 + ... + size_t{ns}); }
 
   namespace detail {
