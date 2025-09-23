@@ -4,12 +4,12 @@
 #include <functional>
 #include <stdexcept>
 #include <utility>
-#include <thread>
+#include <boost/thread/thread.hpp>
 #include <sstream>
 
 class thread_with_stack {
 public:
-  using id = std::thread::id;
+  using id = boost::thread::id;
   using native_handle_type = pthread_t;
 
   thread_with_stack() noexcept : thread_(0), joinable_(false) {}
@@ -60,7 +60,7 @@ public:
     int rc = pthread_create(&thread_, &attr,
       [](void* p) -> void* {
         auto pack = static_cast<std::pair<decltype(bound)*, id*>*>(p);
-        *(pack->second) = std::this_thread::get_id();
+        *(pack->second) = boost::this_thread::get_id();
         (*(pack->first))();
         delete pack->first;
         delete pack;

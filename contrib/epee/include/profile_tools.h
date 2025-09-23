@@ -90,24 +90,25 @@ namespace profile_tools
 		call_frame(local_call_account& cc):m_cc(cc)
 		{
 			cc.m_count_of_call++;
-			m_call_time = std::chrono::steady_clock::now();
+			m_call_time = boost::posix_time::microsec_clock::local_time();
 			//::QueryPerformanceCounter((LARGE_INTEGER *)&m_call_time);
 		}
 
 		~call_frame()
 		{
 			//__int64 ret_time = 0;
-			auto elapsed = std::chrono::steady_clock::now() - m_call_time;
-			uint64_t useconds_used = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count());
+			boost::posix_time::ptime now_t(boost::posix_time::microsec_clock::local_time());
+			boost::posix_time::time_duration delta_microsec = now_t - m_call_time;
+			uint64_t milliseconds_used = delta_microsec.total_microseconds();
 
 			//::QueryPerformanceCounter((LARGE_INTEGER *)&ret_time);
 			//m_call_time = (ret_time-m_call_time)/1000;
-			m_cc.m_summary_time_used += useconds_used;
+			m_cc.m_summary_time_used += milliseconds_used;
 		}
 
 	private:
 		local_call_account& m_cc;
-		std::chrono::steady_clock::time_point m_call_time;
+		boost::posix_time::ptime m_call_time;
 	};
 }
 }

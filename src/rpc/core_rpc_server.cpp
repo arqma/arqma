@@ -916,7 +916,7 @@ namespace cryptonote
       return true;
     }
 
-    unsigned int concurrency_count = std::thread::hardware_concurrency() * 4;
+    unsigned int concurrency_count = boost::thread::hardware_concurrency() * 4;
 
     // if we couldn't detect threads, set it to a ridiculously high number
     if(concurrency_count == 0)
@@ -1210,7 +1210,7 @@ namespace cryptonote
   {
     PERF_TIMER(on_getblockcount);
     {
-      std::shared_lock lock{m_bootstrap_daemon_mutex};
+      boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
       if (m_should_use_bootstrap_daemon)
       {
         res.status = "This command is unsupported for bootstrap daemon";
@@ -1226,7 +1226,7 @@ namespace cryptonote
   {
     PERF_TIMER(on_getblockhash);
     {
-      std::shared_lock lock{m_bootstrap_daemon_mutex};
+      boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
       if (m_should_use_bootstrap_daemon)
       {
         res = "This command is unsupported for bootstrap daemon";
@@ -1413,7 +1413,7 @@ namespace cryptonote
   {
     PERF_TIMER(on_submitblock);
     {
-      std::shared_lock lock{m_bootstrap_daemon_mutex};
+      boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
       if (m_should_use_bootstrap_daemon)
       {
         res.status = "This command is unsupported for bootstrap daemon";
@@ -1596,7 +1596,7 @@ namespace cryptonote
     if (m_bootstrap_daemon_address.empty())
       return false;
 
-    std::unique_lock lock{m_bootstrap_daemon_mutex};
+    boost::unique_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
     if (!m_should_use_bootstrap_daemon)
     {
       MINFO("The local daemon is fully synced. Not switching back to the bootstrap daemon");

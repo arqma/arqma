@@ -33,8 +33,7 @@
 #include <unordered_set>
 #include <atomic>
 #include <algorithm>
-#include <chrono>
-#include <optional>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "net/net_utils_base.h"
 #include "copyable_atomic.h"
 #include "crypto/hash.h"
@@ -62,13 +61,17 @@ namespace cryptonote
     std::unordered_set<crypto::hash> m_requested_objects;
     uint64_t m_remote_blockchain_height{0};
     uint64_t m_last_response_height{0};
-    std::optional<std::chrono::steady_clock::time_point> m_last_request_time;
+    boost::posix_time::ptime m_last_request_time{boost::date_time::not_a_date_time};
     epee::copyable_atomic m_callback_request_count{0}; //in debug purpose: problem with double callback rise
     crypto::hash m_last_known_hash{crypto::null_hash};
     uint32_t m_pruning_seed{0};
     uint16_t m_rpc_port{0};
     bool m_anchor{false};
-    //size_t m_score;  TODO: add score calculations
+    epee::copyable_atomic m_new_stripe_notification{0};
+    epee::copyable_atomic m_idle_peer_notification{0};
+    int32_t m_score{0};
+    int m_expect_response{0};
+
   };
 
   inline std::string get_protocol_state_string(cryptonote_connection_context::state s)

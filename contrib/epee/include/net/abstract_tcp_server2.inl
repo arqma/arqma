@@ -32,23 +32,20 @@
 
 #pragma once
 
-#define BOOST_BIND_GLOBAL_PLACEHOLDERS
-
 #include <boost/bind/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/utility/value_init.hpp>
-#include <boost/asio/steady_timer.hpp>
+#include <boost/chrono.hpp>
+#include <boost/asio/deadline_timer.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <boost/thread.hpp>
 #include "warnings.h"
 #include "string_tools_lexical.h"
 #include "misc_language.h"
 #include "net/abstract_tcp_server2.h"
 
-#include <mutex>
-#include <condition_variable>
-#include <thread>
-#include <chrono>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -201,7 +198,7 @@ namespace net_utils
 
     m_protocol_handler.after_init_connection();
 
-    reset_timer(std::chrono::milliseconds(m_local ? NEW_CONNECTION_TIMEOUT_LOCAL : NEW_CONNECTION_TIMEOUT_REMOTE), false);
+    reset_timer(boost::posix_time::milliseconds(m_local ? NEW_CONNECTION_TIMEOUT_LOCAL : NEW_CONNECTION_TIMEOUT_REMOTE), false);
 
     // first read on the raw socket to detect SSL for the server
     buffer_ssl_init_fill = 0;
@@ -328,52 +325,52 @@ namespace net_utils
   {
     TRY_ENTRY();
     //_info("[sock " << socket().native_handle() << "] Async read calledback.");
-    
+
     if (m_was_shutdown)
         return;
 
     if (!e)
     {
-        double current_speed_down;
-		{
-			CRITICAL_REGION_LOCAL(m_throttle_speed_in_mutex);
-			m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
-			current_speed_down = m_throttle_speed_in.get_current_speed();
-		}
-        context.m_current_speed_down = current_speed_down;
-        context.m_max_speed_down = std::max(context.m_max_speed_down, current_speed_down);
-    
-    {
-			CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in );
-			epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
-		}
+      double current_speed_down;
+		  {
+			  CRITICAL_REGION_LOCAL(m_throttle_speed_in_mutex);
+			  m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
+			  current_speed_down = m_throttle_speed_in.get_current_speed();
+		  }
+      context.m_current_speed_down = current_speed_down;
+      context.m_max_speed_down = std::max(context.m_max_speed_down, current_speed_down);
 
-		double delay=0; // will be calculated - how much we should sleep to obey speed limit etc
+      {
+			  CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in );
+			  epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
+		  }
+
+		  double delay=0; // will be calculated - how much we should sleep to obey speed limit etc
 
 
-		if (speed_limit_is_enabled()) {
-			do // keep sleeping if we should sleep
-			{
-				{ //_scope_dbg1("CRITICAL_REGION_LOCAL");
-					CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in );
-					delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
-				}
+		  if (speed_limit_is_enabled()) {
+			  do // keep sleeping if we should sleep
+			  {
+				  { //_scope_dbg1("CRITICAL_REGION_LOCAL");
+					  CRITICAL_REGION_LOCAL(	epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in );
+					  delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
+				  }
 
-				if (m_was_shutdown)
-					return;
-				
-				delay *= 0.5;
-				long int ms = (long int)(delay * 100);
-				if (ms > 0) {
-					reset_timer(std::chrono::milliseconds(ms + 1), true);
-					std::this_thread::sleep_for(std::chrono::milliseconds{ms});
-				}
-			} while(delay > 0);
-		} // any form of sleeping
-		
+				  if (m_was_shutdown)
+					  return;
+
+				  delay *= 0.5;
+				  long int ms = (long int)(delay * 100);
+				  if (ms > 0) {
+					  reset_timer(boost::posix_time::milliseconds(ms + 1), true);
+					  boost::this_thread::sleep_for(boost::chrono::milliseconds(ms));
+				  }
+			  } while(delay > 0);
+		  } // any form of sleeping
+
       //_info("[sock " << socket().native_handle() << "] RECV " << bytes_transferred);
       logger_handle_net_read(bytes_transferred);
-      context.m_last_recv = std::chrono::steady_clock::now();
+      context.m_last_recv = time(NULL);
       context.m_recv_cnt += bytes_transferred;
       m_ready_to_close = false;
       bool recv_res = m_protocol_handler.handle_recv(buffer_.data(), bytes_transferred);
@@ -532,9 +529,9 @@ namespace net_utils
     CATCH_ENTRY_L0("connection<t_protocol_handler>::call_run_once_service_io", false);
   }
   //---------------------------------------------------------------------------------
-    template<class t_protocol_handler>
-  bool connection<t_protocol_handler>::do_send(shared_sv message) {
-    TRY_ENTRY();
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::do_send(byte_slice message) {
+  TRY_ENTRY();
 
     // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
     auto self = safe_shared_from_this();
@@ -542,35 +539,49 @@ namespace net_utils
     if (m_was_shutdown) return false;
 		// TODO avoid copy
 
+		std::uint8_t const* const message_data = message.data();
+		const std::size_t message_size = message.size();
+
 		const double factor = 32; // TODO config
 		typedef long long signed int t_safe; // my t_size to avoid any overunderflow in arithmetic
 		const t_safe chunksize_good = (t_safe)( 1024 * std::max(1.0,factor) );
-        const t_safe chunksize_max = chunksize_good * 2 ;
+    const t_safe chunksize_max = chunksize_good * 2 ;
 		const bool allow_split = (m_connection_type == e_connection_type_RPC) ? false : true; // do not split RPC data
 
-        CHECK_AND_ASSERT_MES(! (chunksize_max<0), false, "Negative chunksize_max" ); // make sure it is unsigned before removin sign with cast:
-        long long unsigned int chunksize_max_unsigned = static_cast<long long unsigned int>( chunksize_max ) ;
+		CHECK_AND_ASSERT_MES(! (chunksize_max<0), false, "Negative chunksize_max" ); // make sure it is unsigned before removin sign with cast:
+    long long unsigned int chunksize_max_unsigned = static_cast<long long unsigned int>( chunksize_max ) ;
 
-        if (allow_split && (message.size() > chunksize_max_unsigned)) {
-          { // LOCK: chunking
-			      boost::unique_lock send_guard(m_chunking_lock); // *** critical *** 
+    if (allow_split && (message_size >  chunksize_max_unsigned))
+    {
+      {
+			  boost::unique_lock send_guard(m_chunking_lock); // *** critical ***
 
-				    MDEBUG("do_send() will SPLIT into small chunks, from packet="<<message.size()<<" B for ptr="<<(void*)message.ptr.get());
+			  MDEBUG("do_send() will SPLIT into small chunks, from packet="<<message_size<<" B for ptr="<<message_data);
 
-				    while (!message.view.empty()) {
-				      bool ok = do_send_chunk(message.extract_prefix(chunksize_good));
+			  bool all_ok = true;
+			  while (!message.empty())
+			  {
+			    byte_slice chunk = message.take_slice(chunksize_good);
 
-				      if (!ok) {
-				        MDEBUG("do_send() DONE ***FAILED***");
-				        MDEBUG("do_send() SEND was aborted in middle of big package - this is probably harmless");
-				        return false;
-				      }
-				    }
+			    MDEBUG("chunk_start="<<(void*)chunk.data()<<" ptr="<<message_data<<" pos="<<(chunk.data() - message_data));
+			    MDEBUG("part of " << message.size() << ": pos="<<(chunk.data() - message_data) << " len="<<chunk.size());
 
-				MDEBUG("do_send() DONE SPLIT send");
-                MDEBUG("do_send() m_connection_type = " << m_connection_type);
+				  bool ok = do_send_chunk(std::move(chunk));
 
-				return true; // done - e.g. queued - all the chunks of current do_send call
+				  all_ok = all_ok && ok;
+				  if (!all_ok)
+				  {
+				    MDEBUG("do_send() DONE ***FAILED*** from packet="<<message_size<<" B for ptr="<<message_data);
+				    MDEBUG("do_send() SEND was aborted in middle of big package - this is mostly harmless "
+				           << " (e.g. peer closed connection) but if it causes trouble tell us at #arqma. " << message_size);
+				    return false;
+				  }
+				}
+
+				MDEBUG("do_send() DONE SPLIT from packet="<<message_size<<" B for ptr="<<message_data);
+        MDEBUG("do_send() m_connection_type = " << m_connection_type);
+
+				return all_ok; // done - e.g. queued - all the chunks of current do_send call
 			} // LOCK: chunking
 		} // a big block (to be chunked) - all chunks
 		else { // small block
@@ -582,7 +593,7 @@ namespace net_utils
 
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool connection<t_protocol_handler>::do_send_chunk(shared_sv chunk)
+  bool connection<t_protocol_handler>::do_send_chunk(byte_slice chunk)
   {
     TRY_ENTRY();
     // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
@@ -601,7 +612,7 @@ namespace net_utils
     context.m_max_speed_up = std::max(context.m_max_speed_up, current_speed_up);
 
     //_info("[sock " << socket().native_handle() << "] SEND " << cb);
-    context.m_last_send = std::chrono::steady_clock::now();
+    context.m_last_send = time(NULL);
     context.m_send_cnt += chunk.size();
     //some data should be wrote to stream
     //request complete
@@ -635,7 +646,7 @@ namespace net_utils
         long int ms = 250 + (rng() % 50);
         MDEBUG("Sleeping because QUEUE is FULL, in " << __FUNCTION__ << " for " << ms << " ms before packet_size="<<chunk.size()); // XXX debug sleep
         m_send_que_lock.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+        boost::this_thread::sleep(boost::posix_time::milliseconds(ms));
         m_send_que_lock.lock();
         _dbg1("sleep for queue: " << ms);
 	if (m_was_shutdown)
@@ -692,24 +703,26 @@ namespace net_utils
   } // do_send_chunk
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  std::chrono::milliseconds connection<t_protocol_handler>::get_default_timeout()
+  boost::posix_time::milliseconds connection<t_protocol_handler>::get_default_timeout()
   {
     unsigned count;
     try { count = host_count(m_host); } catch (...) { count = 0; }
     const unsigned shift = get_state().sock_count > AGGRESSIVE_TIMEOUT_THRESHOLD ? std::min(std::max(count, 1u) - 1, 8u) : 0;
+    boost::posix_time::milliseconds timeout(0);
     if (m_local)
-      return std::chrono::milliseconds{DEFAULT_TIMEOUT_MS_LOCAL >> shift};
+      timeout = boost::posix_time::milliseconds(DEFAULT_TIMEOUT_MS_LOCAL >> shift);
     else
-      return std::chrono::milliseconds{DEFAULT_TIMEOUT_MS_REMOTE >> shift};
+      timeout = boost::posix_time::milliseconds(DEFAULT_TIMEOUT_MS_REMOTE >> shift);
+    return timeout;
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  std::chrono::milliseconds connection<t_protocol_handler>::get_timeout_from_bytes_read(size_t bytes)
+  boost::posix_time::milliseconds connection<t_protocol_handler>::get_timeout_from_bytes_read(size_t bytes)
   {
-    std::chrono::milliseconds ms{(unsigned)(bytes * TIMEOUT_EXTRA_MS_PER_BYTE)};
-    if (auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(m_timer.expiry() - std::chrono::steady_clock::now());
-        remaining > 0ms)
-      ms += remaining;
+    boost::posix_time::milliseconds ms = (boost::posix_time::milliseconds)(unsigned)(bytes * TIMEOUT_EXTRA_MS_PER_BYTE);
+    const auto cur = m_timer.expires_from_now().total_milliseconds();
+    if (cur > 0)
+      ms += (boost::posix_time::milliseconds)cur;
     if (ms > get_default_timeout())
       ms = get_default_timeout();
     return ms;
@@ -718,7 +731,7 @@ namespace net_utils
   template<class t_protocol_handler>
   unsigned int connection<t_protocol_handler>::host_count(const std::string &host, int delta)
   {
-    static std::mutex hosts_mutex;
+    static boost::mutex hosts_mutex;
     CRITICAL_REGION_LOCAL(hosts_mutex);
     static std::map<std::string, unsigned int> hosts;
     unsigned int &val = hosts[host];
@@ -733,14 +746,14 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  void connection<t_protocol_handler>::reset_timer(std::chrono::milliseconds ms, bool add)
+  void connection<t_protocol_handler>::reset_timer(boost::posix_time::milliseconds ms, bool add)
   {
-    if (ms < 0s)
+    if (ms.total_milliseconds() < 0)
     {
-      MWARNING("Ignoring negative timeout " << ms.count());
+      MWARNING("Ignoring negative timeout " << ms);
       return;
     }
-    MTRACE((add ? "Adding" : "Setting") << " " << ms.count() << "ms expiry");
+    MTRACE((add ? "Adding" : "Setting") << " " << ms << "expiry");
     auto self = safe_shared_from_this();
     if(!self)
     {
@@ -754,11 +767,11 @@ namespace net_utils
     }
     if (add)
     {
-      if (const auto cur = std::chrono::duration_cast<std::chrono::milliseconds>(m_timer.expiry() - std::chrono::steady_clock::now());
-          cur > 0s)
-        ms += cur;
+      const auto cur = m_timer.expires_from_now().total_milliseconds();
+      if (cur > 0)
+        ms += (boost::posix_time::milliseconds)cur;
     }
-    m_timer.expires_after(ms);
+    m_timer.expires_from_now(ms);
     m_timer.async_wait([=](const boost::system::error_code& ec)
     {
       if(ec == boost::asio::error::operation_aborted)
@@ -950,12 +963,12 @@ namespace net_utils
   template<class t_protocol_handler>
   boosted_tcp_server<t_protocol_handler>::~boosted_tcp_server()
   {
-    send_stop_signal();
-    server_stop();
+    this->send_stop_signal();
+    timed_wait_server_stop(10000);
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  void boosted_tcp_server<t_protocol_handler>::create_server_type_map() 
+  void boosted_tcp_server<t_protocol_handler>::create_server_type_map()
   {
 		server_type_map["NET"] = e_connection_type_NET;
 		server_type_map["RPC"] = e_connection_type_RPC;
@@ -1093,7 +1106,7 @@ namespace net_utils
     TRY_ENTRY();
     const uint32_t local_thr_index = m_thread_index++; // atomically increment, getting value before increment
     std::string thread_name = std::string("[") + m_thread_name_prefix;
-    thread_name += std::to_string(local_thr_index) + "]";
+    thread_name += boost::to_string(local_thr_index) + "]";
     MLOG_SET_THREAD_NAME(thread_name);
     //   _fact("Thread name: " << m_thread_name_prefix);
     while(!m_stop_signal_sent)
@@ -1135,11 +1148,11 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::run_server(size_t threads_count, bool wait)
+  bool boosted_tcp_server<t_protocol_handler>::run_server(size_t threads_count, bool wait, const boost::thread::attributes& attrs)
   {
     TRY_ENTRY();
     m_threads_count = threads_count;
-    m_main_thread_id = std::this_thread::get_id();
+    m_main_thread_id = boost::this_thread::get_id();
     MLOG_SET_THREAD_NAME("[SRV_MAIN]");
     while(!m_stop_signal_sent)
     {
@@ -1150,7 +1163,8 @@ namespace net_utils
 #ifdef __APPLE__
         m_threads.emplace_back(8 * 1024 * 1024, [this] { worker_thread(); });
 #else
-        m_threads.emplace_back(0, [this] { worker_thread(); });
+        std::shared_ptr<boost::thread> thread(new boost::thread(attrs, boost::bind(&boosted_tcp_server<t_protocol_handler>::worker_thread, this)));
+        m_threads.push_back(thread);
 #endif
         MDEBUG("Run server thread name: " << m_thread_name_prefix);
       }
@@ -1158,12 +1172,17 @@ namespace net_utils
       // Wait for all threads in the pool to exit.
       if (wait)
       {
-		    _fact("JOINING all threads");
-		    for (auto &th : m_threads)
-		      th.join();
+		    MDEBUG("JOINING all threads");
+		    for (std::size_t i = 0; i < m_threads.size(); ++i) {
+#ifdef __APPLE__
+		      m_threads[i].join();
+#else
+          m_threads[i]->join();
+#endif
+        }
 		    MDEBUG("JOINING all threads - almost");
         m_threads.clear();
-        _fact("JOINING all threads - DONE");
+        MDEBUG("JOINING all threads - DONE");
 
       } 
       else {
@@ -1194,24 +1213,38 @@ namespace net_utils
   {
     TRY_ENTRY();
     CRITICAL_REGION_LOCAL(m_threads_lock);
-    for (auto &th : m_threads)
-      if (th.get_id() == std::this_thread::get_id())
+    for (auto &thp : m_threads)
+    {
+      if (thp->get_id() == boost::this_thread::get_id())
         return true;
-    if(m_threads_count == 1 && std::this_thread::get_id() == m_main_thread_id)
+    }
+    if(m_threads_count == 1 && boost::this_thread::get_id() == m_main_thread_id)
       return true;
     return false;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::is_thread_worker", false);
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::server_stop()
+  bool boosted_tcp_server<t_protocol_handler>::timed_wait_server_stop(uint64_t wait_mseconds)
   {
     TRY_ENTRY();
+#ifdef __APPLE__
     for (auto &th : m_threads)
       if (th.joinable())
         th.join();
+#else
+    boost::chrono::milliseconds ms(wait_mseconds);
+    for (std::size_t i = 0; i < m_threads.size(); ++i)
+    {
+      if (m_threads[i]->joinable() && !m_threads[i]->try_join_for(ms))
+      {
+        MDEBUG("Interrupting thread " << m_threads[i]->native_handle());
+        m_threads[i]->interrupt();
+      }
+    }
+#endif
     return true;
-    CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::server_stop", false);
+    CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::timed_wait_server_stop", false);
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
@@ -1370,13 +1403,13 @@ namespace net_utils
     struct local_async_context
     {
       boost::system::error_code ec;
-      std::mutex connect_mut;
-      std::condition_variable cond;
+      boost::mutex connect_mut;
+      boost::condition_variable cond;
     };
 
     std::shared_ptr<local_async_context> local_shared_context(new local_async_context());
     local_shared_context->ec = boost::asio::error::would_block;
-    std::unique_lock lock{local_shared_context->connect_mut};
+    boost::unique_lock<boost::mutex> lock(local_shared_context->connect_mut);
     auto connect_callback = [](boost::system::error_code ec_, std::shared_ptr<local_async_context> shared_context)
     {
       shared_context->connect_mut.lock(); shared_context->ec = ec_; shared_context->cond.notify_one(); shared_context->connect_mut.unlock();
@@ -1385,14 +1418,14 @@ namespace net_utils
     sock_.async_connect(remote_endpoint, boost::bind<void>(connect_callback, boost::placeholders::_1, local_shared_context));
     while(local_shared_context->ec == boost::asio::error::would_block)
     {
-      auto wait_stat = local_shared_context->cond.wait_for(lock, std::chrono::milliseconds{conn_timeout});
+      bool r = local_shared_context->cond.timed_wait(lock, boost::get_system_time() + boost::posix_time::milliseconds(conn_timeout));
       if (m_stop_signal_sent)
       {
         if (sock_.is_open())
           sock_.close();
         return CONNECT_FAILURE;
       }
-      if(local_shared_context->ec == boost::asio::error::would_block && wait_stat == std::cv_status::timeout)
+      if(local_shared_context->ec == boost::asio::error::would_block && !r)
       {
         //timeout
         sock_.close();
@@ -1641,9 +1674,9 @@ namespace net_utils
       }
     }
 
-    std::shared_ptr<boost::asio::steady_timer> sh_deadline(new boost::asio::steady_timer(io_service_));
+    std::shared_ptr<boost::asio::deadline_timer> sh_deadline(new boost::asio::deadline_timer(io_service_));
     //start deadline
-    sh_deadline->expires_after(std::chrono::milliseconds(conn_timeout));
+    sh_deadline->expires_from_now(boost::posix_time::milliseconds(conn_timeout));
     sh_deadline->async_wait([=](const boost::system::error_code& error)
       {
           if(error != boost::asio::error::operation_aborted)

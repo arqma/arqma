@@ -32,8 +32,9 @@
 #pragma once
 
 #include <boost/program_options.hpp>
+#include <boost/logic/tribool_fwd.hpp>
+#include <boost/thread/thread.hpp>
 #include <atomic>
-#include <thread>
 #include "cryptonote_basic/blobdatatype.h"
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "cryptonote_basic/verification_context.h"
@@ -112,7 +113,7 @@ namespace cryptonote
     std::atomic<int32_t> m_pausers_count;
     epee::critical_section m_miners_count_lock;
 
-    std::list<std::thread> m_threads;
+    std::list<boost::thread> m_threads;
     epee::critical_section m_threads_lock;
     i_miner_handler* m_phandler;
     get_block_hash_t m_gbh;
@@ -129,5 +130,6 @@ namespace cryptonote
     std::list<uint64_t> m_last_hash_rates;
     bool m_do_print_hashrate;
     bool m_do_mining;
+    boost::thread::attributes m_attrs;
   };
 }

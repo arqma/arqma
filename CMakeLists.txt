@@ -95,21 +95,10 @@ endif()
 cmake_minimum_required(VERSION 3.12...3.31)
 statusinfo("CMake version ${CMAKE_VERSION}")
 
-project(arqma
-  LANGUAGES CXX C)
+project(arqma)
 
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
-endif()
-
-cmake_host_system_information(RESULT freememsys QUERY AVAILABLE_PHYSICAL_MEMORY)
-cmake_host_system_information(RESULT freememvirt QUERY AVAILABLE_VIRTUAL_MEMORY)
-statusinfo("${Green}Total available physical memory:${ColourReset}${BoldBlue} ${freememsys} Mib ${ColourReset}")
-statusinfo("${Green}Total available virtual memory:${ColourReset}${BoldBlue} ${freememvirt} Mib ${ColourReset}")
-math(EXPR totalmemavail "${freememsys} + ${freememvirt}")
-statusinfo("${Green}Total available memory:${ColourReset}${BoldBlue} ${totalmemavail} Mib ${ColourReset}")
-if(totalmemavail LESS 2000)
-  die("Arqma needs at least 2GB of available memory (physical+virtual) to compile!")
 endif()
 
 # On Darwin, ensure the user-defined paths are used to find libs
@@ -130,20 +119,14 @@ if(USE_COMPILATION_TIME_PROFILER)
   add_compile_options("-ftime-trace")
 endif()
 
+enable_language(C ASM)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.3.0)
-    die("GCC version must be at least 7.3!")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.0.0)
-    die("Clang version must be at least 8.0!")
-endif()
-
-enable_language(C ASM)
 
 function (add_c_flag_if_supported flag var)
   string(REPLACE "-" "_" supported ${flag}_c)
@@ -355,19 +338,10 @@ set(Blocks "blocks")
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_SOURCE_DIR}/cmake")
 
-if(NOT DEFINED ENV{DEVELOPER_LOCAL_TOOLS})
-  statusinfo("Could not find DEVELOPER_LOCAL_TOOLS in env (not required)")
-  set(BOOST_IGNORE_SYSTEM_PATHS_DEFAULT OFF)
-elseif("$ENV{DEVELOPER_LOCAL_TOOLS}" EQUAL 1)
-  statusinfo("Found: env DEVELOPER_LOCAL_TOOLS = 1")
-  set(BOOST_IGNORE_SYSTEM_PATHS_DEFAULT ON)
-else()
-  statusinfo("Found: env DEVELOPER_LOCAL_TOOLS = 0")
-  set(BOOST_IGNORE_SYSTEM_PATHS_DEFAULT OFF)
+option(BOOST_IGNORE_SYSTEM_PATHS "Ignore boost system paths for local boost installation" OFF)
+if (BOOST_IGNORE_SYSTEM_PATHS)
+  set(Boost_NO_SYSTEM_PATHS TRUE)
 endif()
-
-statusinfo("BOOST_IGNORE_SYSTEM_PATHS defaults to ${BOOST_IGNORE_SYSTEM_PATHS_DEFAULT}")
-option(BOOST_IGNORE_SYSTEM_PATHS "Ignore boost system paths for local boost installation" ${BOOST_IGNORE_SYSTEM_PATHS_DEFAULT})
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 enable_testing()
@@ -421,11 +395,6 @@ endif()
 
 include_directories(external/rapidjson/include external/easylogging++ src contrib/epee/include external/cppzmq external)
 
-if(APPLE)
-  include_directories(SYSTEM /usr/include/malloc)
-  cmake_policy(SET CMP0042 NEW)
-endif()
-
 if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif()
@@ -447,11 +416,14 @@ if(BUILD_SHARED_LIBS)
   statusinfo("Building internal libraries with position independent code")
   add_definitions("-DBUILD_SHARED_LIBS")
 else()
-  set(CMAKE_VISIBILITY_INLINES_HIDDEN ON CACHE BOOL "Hide inlines")
-  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
   statusinfo("Building internal libraries as static")
 endif()
 set(PIC_FLAG "-fPIC")
+
+if(STATIC)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DZMQ_STATIC")
+endif()
 
 if(MINGW)
   string(REGEX MATCH "^[^/]:/[^/]*" msys2_install_path "${CMAKE_C_COMPILER}")
@@ -464,11 +436,6 @@ if(MINGW)
   set(DEFLIB ${msys2_install_path}/mingw${ARCH_WIDTH}/lib)
   list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_DIRECTORIES ${DEFLIB})
   list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES ${DEFLIB})
-endif()
-
-if(STATIC)
-  set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DZMQ_STATIC")
 endif()
 
 option(SANITIZE "Use ASAN memory sanitizer" OFF)
@@ -519,10 +486,12 @@ else()
   statusinfo("Stack trace on exception disabled")
 endif()
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads)
-add_c_flag_if_supported(-pthread CMAKE_C_FLAGS)
-add_cxx_flag_if_supported(-pthread CMAKE_CXX_FLAGS)
+if (UNIX AND NOT APPLE)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  find_package(Threads)
+  add_c_flag_if_supported(-pthread CMAKE_C_FLAGS)
+  add_cxx_flag_if_supported(-pthread CMAKE_CXX_FLAGS)
+endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "(SunOS|Solaris)")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthreads")
@@ -753,7 +722,7 @@ endif()
 if(ARM7)
   set(WARNINGS "${WARNINGS} -Wno-psabi -Wno-maybe-uninitialized")
 endif()
-set(C_WARNINGS "-Waggregate-return -Wnested-externs -Wstrict-prototypes")
+set(C_WARNINGS "-Waggregate-return -Wnested-externs -Wold-style-definition -Wstrict-prototypes")
 set(CXX_WARNINGS "-Wno-reorder -Wno-missing-field-initializers")
 
 arqma_enable_coverage()
@@ -801,76 +770,63 @@ if(NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_C_COMPILER_VERSION VERS
   add_cxx_flag_if_supported(-mmitigate-rop CXX_SECURITY_FLAGS)
 endif()
 
-  # linker
-  if(NOT SANITIZE AND NOT (WIN32 AND NOT (CMAKE_C_COMPILER_ID MATCHES "Clang") AND NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1)))
-    # Windows binaries die on startup with PIE compiled with GCC < 9.x
-    add_linker_flag_if_supported(-pie LD_SECURITY_FLAGS)
-  endif()
-  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-    add_linker_flag_if_supported(-Wl, -pie LD_SECURITY_FLAGS)
-  endif()
-  add_linker_flag_if_supported(-Wl,-z,relro LD_SECURITY_FLAGS)
-  add_linker_flag_if_supported(-Wl,-z,now LD_SECURITY_FLAGS)
-  add_linker_flag_if_supported(-Wl,-z,noexecstack noexecstack_SUPPORTED)
-  if(noexecstack_SUPPORTED)
-    set(LD_SECURITY_FLAGS "${LD_SECURITY_FLAGS} -Wl,-z,noexecstack")
-  endif()
-  add_linker_flag_if_supported(-Wl,-z,noexecheap noexecheap_SUPPORTED)
-  if(noexecheap_SUPPORTED)
-    set(LD_SECURITY_FLAGS "${LD_SECURITY_FLAGS} -Wl,-z,noexecheap")
-  endif()
-
-  if(BACKCOMPAT)
-    add_linker_flag_if_supported(-Wl,--wrap=__divmoddi4 LD_BACKCOMPAT_FLAGS)
-    add_linker_flag_if_supported(-Wl,--wrap=glob LD_BACKCOMPAT_FLAGS)
-    statusinfo("Using Lib C back compat flags: ${LD_BACKCOMPAT_FLAGS}")
-  endif()
-
-  # some windows linker bits
-  if(WIN32)
-    add_linker_flag_if_supported(-Wl,--dynamicbase LD_SECURITY_FLAGS)
-    add_linker_flag_if_supported(-Wl,--nxcompat LD_SECURITY_FLAGS)
-    add_linker_flag_if_supported(-Wl,--high-entropy-va LD_SECURITY_FLAGS)
-  endif()
-
-  add_c_flag_if_supported(-Werror=switch C_SECURITY_FLAGS)
-  add_cxx_flag_if_supported(-Werror=swith CXX_SECURITY_FLAGS)
-  add_c_flag_if_supported(-Werror=return-type C_SECURITY_FLAGS)
-  add_cxx_flag_if_supported(-Werror=return-type CXX_SECURITY_FLAGS)
-
-  if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
-    set(LINKER_OPTIONS "${LINKER_OPTIONS} -ffunction-sections -fdata-sections -Wl,--gc-sections")
-  endif()
-  if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND APPLE)
-    set(LINKER_OPTIONS "${LINKER_OPTIONS} -ffunction-sections -fdata-sections -Wl,-dead_strip")
-    set(WARNINGS "${WARNINGS} -Wno-unused-command-line-argument")
-  endif()
-  if(DEPENDS OR MINGW AND NOT FREEBSD AND NOT APPLE)
-    set(CMAKE_EXE_LINKER_OPTIONS_FLAGS "${CMAKE_EXE_LINKER_OPTIONS_FLAGS} -Wl,-s")
-  endif()
-
-  statusinfo("Using C security hardening flags: ${C_SECURITY_FLAGS}")
-  statusinfo("Using C++ security hardening flags: ${CXX_SECURITY_FLAGS}")
-  statusinfo("Using linker security hardening flags: ${LD_SECURITY_FLAGS}")
-
-  if(NOT (DEPENDS OR MINGW))
-    statusinfo("Using linker elimination of unused data flags: ${LINKER_OPTIONS}")
+# linker
+if (NOT SANITIZE AND NOT OSSFUZZ AND NOT (WIN32 AND (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND (CMAKE_C_COMPILER_VERSION VERSION_LESS 9.1 OR NOT STATIC))))
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    add_linker_flag_if_supported("-Wl,-pie" LD_SECURITY_FLAGS)
   else()
-    statusinfo("Using linker elimination of unused data flags: ${LINKER_OPTIONS}")
-    statusinfo("Using exe linker elimination of unused data flags: ${CMAKE_EXE_LINKER_OPTIONS_FLAGS}")
+    add_linker_flag_if_supported("-pie" LD_SECURITY_FLAGS)
   endif()
+endif()
+add_linker_flag_if_supported(-Wl,-z,relro LD_SECURITY_FLAGS)
+add_linker_flag_if_supported(-Wl,-z,now LD_SECURITY_FLAGS)
+add_linker_flag_if_supported(-Wl,-z,noexecstack noexecstack_SUPPORTED)
+if(noexecstack_SUPPORTED)
+  set(LD_SECURITY_FLAGS "${LD_SECURITY_FLAGS} -Wl,-z,noexecstack")
+endif()
+add_linker_flag_if_supported(-Wl,-z,noexecheap noexecheap_SUPPORTED)
+if(noexecheap_SUPPORTED)
+  set(LD_SECURITY_FLAGS "${LD_SECURITY_FLAGS} -Wl,-z,noexecheap")
+endif()
 
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${C_WARNINGS} ${PIC_FLAG} ${C_SECURITY_FLAGS} ${LINKER_OPTIONS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS} ${LINKER_OPTIONS} ${CMAKE_EXE_LINKER_OPTIONS_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${LD_BACKCOMPAT_FLAGS}")
 
-  # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that
-  # is fixed in the code (Issue #847), force compiler to be conservative.
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+if(BACKCOMPAT)
+  add_linker_flag_if_supported(-Wl,--wrap=__divmoddi4 LD_BACKCOMPAT_FLAGS)
+  add_linker_flag_if_supported(-Wl,--wrap=glob LD_BACKCOMPAT_FLAGS)
+  statusinfo("Using Lib C back compat flags: ${LD_BACKCOMPAT_FLAGS}")
+endif()
 
-  if(ARM)
-    statusinfo("Setting FPU Flags for ARM Processors")
+# some windows linker bits
+if(WIN32)
+  add_linker_flag_if_supported(-Wl,--dynamicbase LD_SECURITY_FLAGS)
+  add_linker_flag_if_supported(-Wl,--nxcompat LD_SECURITY_FLAGS)
+  add_linker_flag_if_supported(-Wl,--high-entropy-va LD_SECURITY_FLAGS)
+endif()
+
+add_c_flag_if_supported(-Werror=switch C_SECURITY_FLAGS)
+add_cxx_flag_if_supported(-Werror=swith CXX_SECURITY_FLAGS)
+add_c_flag_if_supported(-Werror=return-type C_SECURITY_FLAGS)
+add_cxx_flag_if_supported(-Werror=return-type CXX_SECURITY_FLAGS)
+
+statusinfo("Using C security hardening flags: ${C_SECURITY_FLAGS}")
+statusinfo("Using C++ security hardening flags: ${CXX_SECURITY_FLAGS}")
+statusinfo("Using linker security hardening flags: ${LD_SECURITY_FLAGS}")
+
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND APPLE)
+  set(WARNINGS "${WARNINGS} -Wno-unused-command-line-argument")
+endif()
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${C_WARNINGS} ${PIC_FLAG} ${C_SECURITY_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${LD_BACKCOMPAT_FLAGS}")
+
+# With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that
+# is fixed in the code (Issue #847), force compiler to be conservative.
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+
+if(ARM)
+  statusinfo("Setting FPU Flags for ARM Processors")
 
     #NB NEON hardware does not fully implement the IEEE 754 standard for floating-point arithmetic
     #Need custom assembly code to take full advantage of NEON SIMD
@@ -886,12 +842,12 @@ endif()
     #0xd08 - Cortex-A72
     #0xd03 - Cortex-A73
 
-    if(NOT ARM8)
-      CHECK_CXX_ACCEPTS_FLAG(-mfpu=vfp3-d16 CXX_ACCEPTS_VFP3_D16)
-      CHECK_CXX_ACCEPTS_FLAG(-mfpu=vfp4 CXX_ACCEPTS_VFP4)
-      CHECK_CXX_ACCEPTS_FLAG(-mfloat-abi=hard CXX_ACCEPTS_MFLOAT_HARD)
-      CHECK_CXX_ACCEPTS_FLAG(-mfloat-abi=softfp CXX_ACCEPTS_MFLOAT_SOFTFP)
-    endif()
+  if(NOT ARM8)
+    CHECK_CXX_ACCEPTS_FLAG(-mfpu=vfp3-d16 CXX_ACCEPTS_VFP3_D16)
+    CHECK_CXX_ACCEPTS_FLAG(-mfpu=vfp4 CXX_ACCEPTS_VFP4)
+    CHECK_CXX_ACCEPTS_FLAG(-mfloat-abi=hard CXX_ACCEPTS_MFLOAT_HARD)
+    CHECK_CXX_ACCEPTS_FLAG(-mfloat-abi=softfp CXX_ACCEPTS_MFLOAT_SOFTFP)
+  endif()
 
     if(ARM8)
       CHECK_CXX_ACCEPTS_FLAG(-mfix-cortex-a53-835769 CXX_ACCEPTS_MFIX_CORTEX_A53_835769)
@@ -959,12 +915,12 @@ endif()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -pie")
   endif()
 
-  if(APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -DGTEST_HAS_TR1_TUPLE=0")
-#    if(NOT DEPENDS)
-#      set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0)
-#    endif()
+if(APPLE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default -DGTEST_HAS_TR1_TUPLE=0")
+  if(ARM)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-aligned-allocation")
   endif()
+endif()
 
   set(DEBUG_FLAGS "-g3")
 
@@ -1049,6 +1005,7 @@ elseif (WIN32)
   find_package(Boost 1.66.0 COMPONENTS system filesystem thread date_time chrono regex serialization program_options locale)
 endif()
 
+add_definitions(-DBOOST_ASIO_ENABLE_SEQUENTIAL_STRAND_ALLOCATION)
 add_definitions(-DBOOST_NO_AUTO_PTR)
 add_definitions(-DBOOST_UUID_DISABLE_ALIGNMENT)
 
@@ -1215,7 +1172,3 @@ endif()
 
 # when ON - will install libwallet_merged into "lib"
 option(BUILD_GUI_DEPS "Build GUI dependencies." OFF)
-
-# This is not nice, distribution packagers should not enable this, but depend
-# on libunbound shipped with their distribution instead
-option(INSTALL_VENDORED_LIBUNBOUND "Install libunbound binary built from source vendored with this repo." OFF)

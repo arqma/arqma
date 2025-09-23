@@ -29,7 +29,7 @@
 #pragma once
 
 #include <map>
-#include <mutex>
+#include <boost/thread/mutex.hpp>
 #include "span.h"
 
 namespace epee
@@ -51,7 +51,7 @@ namespace epee
     static size_t page_size;
     static size_t num_locked_objects;
 
-    static std::mutex &mutex();
+    static boost::mutex &mutex();
     static std::map<size_t, unsigned int> &map();
     static void lock_page(size_t page);
     static void unlock_page(size_t page);

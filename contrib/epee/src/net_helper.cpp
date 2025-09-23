@@ -4,7 +4,7 @@ namespace epee
 {
 namespace net_utils
 {
-	std::future<boost::asio::ip::tcp::socket>
+	boost::unique_future<boost::asio::ip::tcp::socket>
 	direct_connect::operator()(const std::string& addr, const std::string& port, boost::asio::steady_timer& timeout) const
 	{
 		// Get a list of endpoints corresponding to the server name.
@@ -42,7 +42,7 @@ namespace net_utils
 
 		struct new_connection
 		{
-			std::promise<boost::asio::ip::tcp::socket> result_;
+			boost::promise<boost::asio::ip::tcp::socket> result_;
 			boost::asio::ip::tcp::socket socket_;
 
 			explicit new_connection(boost::asio::io_service& io_service)
@@ -64,10 +64,7 @@ namespace net_utils
 			if (shared)
 			{
 				if (error)
-				{
-				  try { throw boost::system::system_error{error}; }
-					catch (...) { shared->result_.set_exception(std::current_exception()); }
-			  }
+				  shared->result_.set_exception(boost::system::system_error{error});
 				else
 					shared->result_.set_value(std::move(shared->socket_));
 			}

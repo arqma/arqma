@@ -222,9 +222,9 @@ network_time_seconds network_throttle::get_sleep_time_after_tick(size_t packet_s
 
 void network_throttle::logger_handle_net(const std::string &filename, double time, size_t size)
 {
-    static std::mutex mutex;
+    static boost::mutex mutex;
 
-    std::lock_guard lock{mutex};
+    boost::lock_guard<boost::mutex> lock(mutex);
     {
         std::fstream file;
         file.open(filename.c_str(), std::ios::app | std::ios::out );

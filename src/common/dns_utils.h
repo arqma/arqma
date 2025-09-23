@@ -31,23 +31,18 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include <optional>
-#include <chrono>
-
-struct ub_ctx;
+#include <boost/optional/optional_fwd.hpp>
 
 namespace tools
 {
 
-using namespace std::literals;
-
 // RFC defines for record types and classes for DNS, gleaned from ldns source
-constexpr int DNS_CLASS_IN  = 1;
-constexpr int DNS_TYPE_A    = 1;
-constexpr int DNS_TYPE_TXT  = 16;
-constexpr int DNS_TYPE_AAAA = 8;
+const static int DNS_CLASS_IN  = 1;
+const static int DNS_TYPE_A    = 1;
+const static int DNS_TYPE_TXT  = 16;
+const static int DNS_TYPE_AAAA = 8;
 
-struct ub_ctx_deleter { void operator()(ub_ctx*); };
+struct DNSResolverData;
 
 /**
  * @brief Provides high-level access to DNS resolution
@@ -68,6 +63,8 @@ private:
   DNSResolver();
 
 public:
+
+  ~DNSResolver();
 
   /**
    * @brief gets ipv4 addresses from DNS query of a URL
@@ -106,8 +103,6 @@ public:
   // TODO: modify this to accommodate DNSSEC
    std::vector<std::string> get_txt_record(const std::string& url, bool& dnssec_available, bool& dnssec_valid);
 
-   std::vector<std::vector<std::string>> get_many(int type, const std::vector<std::string>& hostnames, std::chrono::milliseconds timeout = 10s, bool dnssec = false, bool dnssec_required = false);
-
   /**
    * @brief Gets a DNS address from OpenAlias format
    *
@@ -118,7 +113,7 @@ public:
    *
    * @return dns_addr  DNS address
    */
-  std::string get_dns_format_from_oa_address(std::string oa_addr);
+  std::string get_dns_format_from_oa_address(const std::string& oa_addr);
 
   /**
    * @brief Gets the singleton instance of DNSResolver
@@ -147,7 +142,7 @@ private:
    * @return A vector of strings containing the requested record; or an empty vector
    */
   // TODO: modify this to accommodate DNSSEC
-  std::vector<std::string> get_record(const std::string& url, int record_type, std::optional<std::string> (*reader)(const char *,size_t), bool& dnssec_available, bool& dnssec_valid);
+  std::vector<std::string> get_record(const std::string& url, int record_type, boost::optional<std::string> (*reader)(const char *,size_t), bool& dnssec_available, bool& dnssec_valid);
 
   /**
    * @brief Checks a string to see if it looks like a URL
@@ -158,7 +153,7 @@ private:
    */
   bool check_address_syntax(const char *addr) const;
 
-  ub_ctx* m_ctx = nullptr;
+  DNSResolverData *m_data;
 }; // class DNSResolver
 
 namespace dns_utils

@@ -29,9 +29,12 @@
 //
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
+#include <boost/algorithm/string/find_iterator.hpp>
+#include <boost/algorithm/string/finder.hpp>
+#include <boost/chrono/duration.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/optional/optional.hpp>
-#include <future>
+#include <boost/thread/future.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <chrono>
 #include <utility>
@@ -48,11 +51,9 @@
 #include "p2p/p2p_protocol_defs.h"
 #include "string_tools.h"
 
-using namespace std::literals;
-
 namespace
 {
-    constexpr const std::chrono::milliseconds future_poll_interval = 500ms;
+    constexpr const boost::chrono::milliseconds future_poll_interval{500};
     constexpr const std::chrono::seconds socks_connect_timeout{P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT};
 
     std::int64_t get_max_connections(const boost::iterator_range<boost::string_ref::const_iterator> value) noexcept
@@ -321,7 +322,7 @@ namespace nodetool
 
         struct notify
         {
-            std::promise<client_result> socks_promise;
+            boost::promise<client_result> socks_promise;
 
             void operator()(boost::system::error_code error, socket_type&& sock)
             {
@@ -330,9 +331,9 @@ namespace nodetool
         };
 
         net::socks::client::close_on_exit close_client{};
-        std::future<client_result> socks_result{};
+        boost::unique_future<client_result> socks_result{};
         {
-            std::promise<client_result> socks_promise{};
+            boost::promise<client_result> socks_promise{};
             socks_result = socks_promise.get_future();
 
             auto client = net::socks::make_connect_client(
@@ -344,7 +345,7 @@ namespace nodetool
         }
 
         const auto start = std::chrono::steady_clock::now();
-        while (socks_result.wait_for(future_poll_interval) == std::future_status::timeout)
+        while (socks_result.wait_for(future_poll_interval) == boost::future_status::timeout)
         {
             if (socks_connect_timeout < std::chrono::steady_clock::now() - start)
             {
@@ -367,7 +368,7 @@ namespace nodetool
 
             MERROR("Failed to make socks connection to " << remote.str() << " (via " << proxy << "): " << result.first.message());
         }
-        catch (const std::future_error&)
+        catch (boost::broken_promise const&)
         {}
 
         return boost::none;

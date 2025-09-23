@@ -25,7 +25,7 @@
 //
 
 #pragma once
-#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/deadline_timer.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/unordered_map.hpp>
 
@@ -91,7 +91,7 @@ public:
   int invoke_async(int command, const epee::span<const uint8_t> in_buff, boost::uuids::uuid connection_id, const callback_t &cb, size_t timeout = LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED);
 
   int notify(int command, const epee::span<const uint8_t> in_buff, boost::uuids::uuid connection_id);
-  int send(epee::shared_sv message, const boost::uuids::uuid& connection_id);
+  int send(epee::byte_slice message, const boost::uuids::uuid& connection_id);
   bool close(boost::uuids::uuid connection_id);
   bool update_connection_context(const t_connection_context& contxt);
   bool request_callback(boost::uuids::uuid connection_id);
@@ -122,11 +122,7 @@ class async_protocol_handler
   bool send_message(uint32_t command, epee::span<const uint8_t> in_buff, uint32_t flags, bool expect_response)
   {
     const bucket_head2 head = make_header(command, in_buff.size(), flags, expect_response);
-    std::string data;
-    data.reserve(sizeof(head) + in_buff.size());
-    data.append(reinterpret_cast<const char*>(&head), sizeof(head));
-    data.append(reinterpret_cast<const char*>(in_buff.data()), in_buff.size());
-    if (!m_pservice_endpoint->do_send(shared_sv{std::move(data)}))
+    if (!m_pservice_endpoint->do_send(byte_slice{as_byte_span(head), in_buff}))
       return false;
 
     MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len=" << head.m_cb
@@ -189,7 +185,7 @@ public:
       if(m_con.start_outer_call())
       {
         MDEBUG(con.get_context_ref() << "anvoke_handler, timeout: " << timeout);
-        m_timer.expires_after(std::chrono::milliseconds(timeout));
+        m_timer.expires_from_now(boost::posix_time::milliseconds(timeout));
         m_timer.async_wait([&con, command, cb, timeout](const boost::system::error_code& ec)
         {
           if(ec == boost::asio::error::operation_aborted)
@@ -207,7 +203,7 @@ public:
     {}
     callback_t m_cb;
     async_protocol_handler& m_con;
-    boost::asio::steady_timer m_timer;
+    boost::asio::deadline_timer m_timer;
     bool m_timer_started;
     bool m_cancel_timer_called;
     bool m_timer_cancelled;
@@ -251,7 +247,7 @@ public:
         uint64_t timeout = m_timeout;
         async_protocol_handler& con = m_con;
         int command = m_command;
-        m_timer.expires_after(std::chrono::milliseconds(m_timeout));
+        m_timer.expires_from_now(boost::posix_time::milliseconds(m_timeout));
         m_timer.async_wait([&con, cb, command, timeout](const boost::system::error_code& ec)
         {
           if(ec == boost::asio::error::operation_aborted)
@@ -375,7 +371,7 @@ public:
 
   void request_callback()
   {
-    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
+    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(boost::bind(&async_protocol_handler::finish_outer_call, this));
 
     m_pservice_endpoint->request_callback();
   }
@@ -532,7 +528,7 @@ public:
               head.m_return_code = SWAP32LE(return_code);
               return_buff.insert(0, reinterpret_cast<const char*>(&head), sizeof(head));
 
-              if (!m_pservice_endpoint->do_send(shared_sv{std::move(return_buff)}))
+              if (!m_pservice_endpoint->do_send(byte_slice{std::move(return_buff)}))
                 return false;
 
               MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len= " << head.m_cb
@@ -617,7 +613,7 @@ public:
   template<class callback_t>
   bool async_invoke(int command, const epee::span<const uint8_t> in_buff, const callback_t &cb, size_t timeout = LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED)
   {
-    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
+    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(boost::bind(&async_protocol_handler::finish_outer_call, this));
 
     if(timeout == LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED)
       timeout = m_config.m_invoke_timeout;
@@ -661,7 +657,7 @@ public:
 
   int invoke(int command, const epee::span<const uint8_t> in_buff, std::string& buff_out)
   {
-    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
+    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(boost::bind(&async_protocol_handler::finish_outer_call, this));
 
     CRITICAL_REGION_LOCAL(m_call_lock);
 
@@ -709,7 +705,7 @@ public:
 
   int notify(int command, const epee::span<const uint8_t> in_buff)
   {
-    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
+    misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(boost::bind(&async_protocol_handler::finish_outer_call, this));
 
     CRITICAL_REGION_LOCAL(m_call_lock);
 
@@ -727,11 +723,11 @@ public:
       See additional instructions for `make_fragmented_notify`.
 
       \return 1 on success */
-  int send(shared_sv message)
+  int send(byte_slice message)
   {
-    const misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
+    const misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler(boost::bind(&async_protocol_handler::finish_outer_call, this));
 
-    const std::size_t length = message.view.size();
+    const std::size_t length = message.size();
     if (!m_pservice_endpoint->do_send(std::move(message)))
     {
       LOG_ERROR_CC(m_connection_context, "Failed to send message, dropping it");
@@ -873,9 +869,7 @@ bool async_protocol_handler_config<t_connection_context>::for_connection(const b
   async_protocol_handler<t_connection_context>* aph = nullptr;
   if (find_and_lock_connection(connection_id, aph) != LEVIN_OK)
     return false;
-//  auto scope_exit_handler = misc_utils::create_scope_leave_handler(
-//    boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
-  auto scope_exit_handler = misc_utils::create_scope_leave_handler([aph]() { aph->finish_outer_call(); });
+  auto scope_exit_handler = misc_utils::create_scope_leave_handler(boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
   if(!cb(aph->get_context_ref()))
     return false;
   return true;
@@ -928,7 +922,7 @@ int async_protocol_handler_config<t_connection_context>::notify(int command, con
 }
 //------------------------------------------------------------------------------------------
 template<class t_connection_context>
-int async_protocol_handler_config<t_connection_context>::send(shared_sv message, const boost::uuids::uuid& connection_id)
+int async_protocol_handler_config<t_connection_context>::send(byte_slice message, const boost::uuids::uuid& connection_id)
 {
   async_protocol_handler<t_connection_context>* aph;
   int r = find_and_lock_connection(connection_id, aph);
@@ -941,9 +935,7 @@ bool async_protocol_handler_config<t_connection_context>::close(boost::uuids::uu
   async_protocol_handler<t_connection_context>* aph = nullptr;
   if (find_and_lock_connection(connection_id, aph) != LEVIN_OK)
     return false;
-//  auto scope_exit_handler = misc_utils::create_scope_leave_handler(
-//    boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
-  auto scope_exit_handler = misc_utils::create_scope_leave_handler([aph]() { aph->finish_outer_call(); });
+  auto scope_exit_handler = misc_utils::create_scope_leave_handler(boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
   if (!aph->close())
     return false;
   CRITICAL_REGION_LOCAL(m_connects_lock);

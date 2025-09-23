@@ -206,6 +206,10 @@ namespace cryptonote
 
     bool try_lock() const { return m_transactions_lock.try_lock(); }
 
+    void lock() { m_transactions_lock.lock(); }
+    void unlock() { m_transactions_lock.unlock(); }
+    bool try_lock() { return m_transactions_lock.try_lock(); }
+
     // load/store operations
 
     /**
@@ -500,7 +504,7 @@ namespace cryptonote
      *
      * if bytes is 0, use m_txpool_max_weight
      */
-    void prune(uint64_t bytes = 0);
+    void prune(size_t bytes = 0);
 
     //TODO: confirm the below comments and investigate whether or not this
     //      is the desired behavior
@@ -513,7 +517,7 @@ namespace cryptonote
      */
     typedef std::unordered_map<crypto::key_image, std::unordered_set<crypto::hash>> key_images_container;
 
-    mutable std::recursive_mutex m_transactions_lock;  //!< mutex for the pool
+    mutable boost::recursive_mutex m_transactions_lock;  //!< mutex for the pool
 
     //! container for spent key images from the transactions in the pool
     key_images_container m_spent_key_images;
