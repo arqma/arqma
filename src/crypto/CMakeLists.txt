@@ -66,6 +66,8 @@ target_link_libraries(cncrypto
     epee
     randomx
     ${Boost_SYSTEM_LIBRARY}
+    ${Boost_CHRONO_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
     sodium
   PRIVATE
     ${EXTRA_LIBRARIES})

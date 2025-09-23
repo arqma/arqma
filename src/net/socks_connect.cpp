@@ -45,26 +45,23 @@ namespace net
 {
 namespace socks
 {
-    std::future<boost::asio::ip::tcp::socket>
+    boost::unique_future<boost::asio::ip::tcp::socket>
     connector::operator()(const std::string& remote_host, const std::string& remote_port, boost::asio::steady_timer& timeout) const
     {
         struct future_socket
         {
-            std::promise<boost::asio::ip::tcp::socket> result_;
+            boost::promise<boost::asio::ip::tcp::socket> result_;
 
             void operator()(boost::system::error_code error, boost::asio::ip::tcp::socket&& socket)
             {
                 if (error)
-                {
-                  try { throw boost::system::system_error{error}; }
-                  catch (...) { result_.set_exception(std::current_exception()); }
-                }
+                  result_.set_exception(boost::system::system_error{error});
                 else
-                    result_.set_value(std::move(socket));
+                  result_.set_value(std::move(socket));
             }
         };
 
-        std::future<boost::asio::ip::tcp::socket> out{};
+        boost::unique_future<boost::asio::ip::tcp::socket> out{};
         {
             std::uint16_t port = 0;
             if (!epee::string_tools::get_xtype_from_string(port, remote_port))
@@ -72,7 +69,7 @@ namespace socks
 
             bool is_set = false;
             std::uint32_t ip_address = 0;
-            std::promise<boost::asio::ip::tcp::socket> result{};
+            boost::promise<boost::asio::ip::tcp::socket> result{};
             out = result.get_future();
             const auto proxy = net::socks::make_connect_client(
                 boost::asio::ip::tcp::socket{GET_IO_SERVICE(timeout)}, net::socks::version::v4a, future_socket{std::move(result)}

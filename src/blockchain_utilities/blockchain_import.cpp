@@ -31,7 +31,6 @@
 #include <cstdio>
 #include <algorithm>
 #include <fstream>
-#include <stack>
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
@@ -71,7 +70,7 @@ uint64_t db_batch_size = 100;
 
 // when verifying, use a smaller default batch size so progress is more
 // frequently saved
-uint64_t db_batch_size_verify = 500;
+uint64_t db_batch_size_verify = 250;
 
 std::string refresh_string = "\r                                    \r";
 }

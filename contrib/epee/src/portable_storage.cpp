@@ -24,6 +24,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "byte_slice.h"
+#include "byte_stream.h"
 #include "misc_log_ex.h"
 #include "span.h"
 #include "storages/portable_storage.h"

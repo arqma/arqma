@@ -141,12 +141,12 @@ bool t_daemon::run(bool interactive)
   }
 
   std::atomic<bool> stop(false), shutdown(false);
-  std::thread stop_thread{[&stop, &shutdown, this] {
+  boost::thread stop_thread = boost::thread([&stop, &shutdown, this] {
     while (!stop)
       epee::misc_utils::sleep_no_w(100);
     if (shutdown)
       this->stop_p2p();
-  }};
+  });
   epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){
     stop = true;
     stop_thread.join();
@@ -166,7 +166,7 @@ bool t_daemon::run(bool interactive)
     {
       // The first three variables are not used when the fourth is false
       rpc_commands.reset(new daemonize::t_command_server(0, 0, boost::none, epee::net_utils::ssl_support_t::e_ssl_support_disabled, false, mp_internals->rpcs.front()->get_server()));
-      rpc_commands->start_handling([this] { stop_p2p(); });
+      rpc_commands->start_handling(std::bind(&daemonize::t_daemon::stop_p2p, this));
     }
 
     cryptonote::rpc::DaemonHandler rpc_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());

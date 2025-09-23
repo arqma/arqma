@@ -45,6 +45,7 @@ namespace epee
     public:
       typedef epee::serialization::hsection hsection;
       typedef epee::serialization::harray  harray;
+      typedef storage_entry meta_entry;
 
       portable_storage(){}
       virtual ~portable_storage(){}

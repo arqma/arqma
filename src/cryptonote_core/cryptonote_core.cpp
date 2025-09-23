@@ -259,7 +259,6 @@ namespace cryptonote
               m_miner(this, [this](const cryptonote::block &b, uint64_t height, const crypto::hash *seed_hash, unsigned int threads, crypto::hash &hash) {
                 return cryptonote::get_block_longhash(&m_blockchain_storage, b, hash, height, seed_hash, threads);
               }),
-              m_miner_address{},
               m_starter_message_showed(false),
               m_target_blockchain_height(0),
               m_checkpoints_path(""),
@@ -310,7 +309,7 @@ namespace cryptonote
 
     tools::download_async_handle handle;
     {
-      std::lock_guard lock{m_update_mutex};
+      boost::lock_guard<boost::mutex> lock(m_update_mutex);
       handle = m_update_download;
       m_update_download = 0;
     }
@@ -800,7 +799,7 @@ namespace cryptonote
 
     if (m_service_node_keys)
     {
-      std::lock_guard<std::mutex> lock{m_arqnet_init_mutex};
+      boost::lock_guard<boost::mutex> lock(m_arqnet_init_mutex);
       std::string listen_ip = vm["p2p-bind-ip"].as<std::string>();
       if (listen_ip.empty())
         listen_ip = "0.0.0.0";
@@ -961,7 +960,7 @@ namespace cryptonote
     }
     //std::cout << "!"<< tx.vin.size() << std::endl;
 
-    std::lock_guard lock{bad_semantics_txes_lock};
+    std::lock_guard<boost::mutex> lock(bad_semantics_txes_lock);
     for (int idx = 0; idx < 2; ++idx)
     {
       if (bad_semantics_txes[idx].find(tx_info.tx_hash) != bad_semantics_txes[idx].end())
@@ -1906,7 +1905,7 @@ namespace cryptonote
     boost::filesystem::path path(epee::string_tools::get_current_module_folder());
     path /= filename;
 
-    std::unique_lock lock{m_update_mutex};
+    boost::unique_lock<boost::mutex> lock(m_update_mutex);
 
     if (m_update_download != 0)
     {
@@ -1947,7 +1946,7 @@ namespace cryptonote
           MCERROR("updates", "Failed to download " << uri);
           good = false;
         }
-        std::unique_lock lock{m_update_mutex};
+        boost::unique_lock<boost::mutex> lock(m_update_mutex);
         m_update_download = 0;
         if (success && !remove)
         {

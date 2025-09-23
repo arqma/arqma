@@ -354,8 +354,7 @@ namespace cryptonote
         memset(meta.padding, 0, sizeof(meta.padding));
         try
         {
-          if (opts.kept_by_block)
-            m_parsed_tx_cache.insert(std::make_pair(id, tx));
+          m_parsed_tx_cache.insert(std::make_pair(id, tx));
           std::unique_lock b_lock{m_blockchain};
           LockedTXN lock(m_blockchain);
           m_blockchain.add_txpool_tx(id, blob, meta);
@@ -436,6 +435,7 @@ namespace cryptonote
   bool tx_memory_pool::add_tx(transaction &tx, tx_verification_context& tvc, const tx_pool_options &opts, uint8_t hard_fork_version)
   {
     crypto::hash h = null_hash;
+    size_t blob_size = 0;
     cryptonote::blobdata bl;
     t_serializable_object_to_blob(tx, bl);
     if(bl.size() == 0 || !get_transaction_hash(tx, h))
@@ -495,10 +495,11 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------------------------
-  void tx_memory_pool::prune(uint64_t bytes)
+  void tx_memory_pool::prune(size_t bytes)
   {
-    CRITICAL_REGION_LOCAL(m_transactions_lock);
-    CRITICAL_REGION_LOCAL1(m_blockchain);
+    std::unique_lock tx_lock{*this, std::defer_lock};
+    std::unique_lock bc_lock{m_blockchain, std::defer_lock};
+    boost::lock(tx_lock, bc_lock);
     LockedTXN lock(m_blockchain);
     bool changed = false;
 
@@ -977,8 +978,9 @@ namespace cryptonote
   //TODO: investigate whether boolean return is appropriate
   bool tx_memory_pool::get_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_sensitive_data) const
   {
-    CRITICAL_REGION_LOCAL(m_transactions_lock);
-    CRITICAL_REGION_LOCAL1(m_blockchain);
+    std::unique_lock tx_lock{m_transactions_lock, std::defer_lock};
+    std::unique_lock bc_lock{m_blockchain, std::defer_lock};
+    boost::lock(tx_lock, bc_lock);
     tx_infos.reserve(m_blockchain.get_txpool_tx_count());
     key_image_infos.reserve(m_blockchain.get_txpool_tx_count());
     m_blockchain.for_all_txpool_txes([&tx_infos, key_image_infos, include_sensitive_data](const crypto::hash &txid, const txpool_tx_meta_t &meta, const cryptonote::blobdata *bd){

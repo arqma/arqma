@@ -174,7 +174,7 @@ namespace cryptonote
     txtype tx_type;
     uint8_t hard_fork_version;
 
-    bool is_transfer() const { return (tx_type == txtype::standard || tx_type == txtype::stake); }
+    bool is_transfer() const { return tx_type == txtype::standard || tx_type == txtype::stake; }
 
     uint64_t unlock_time;  // number of block (or time), used as a limitation like: spend this tx not early then block/time
 
@@ -304,9 +304,9 @@ namespace cryptonote
       }
       else
       {
-        ar.tag("rct_signatures");
         if (!vin.empty())
         {
+          ar.tag("rct_signatures");
           ar.begin_object();
           bool r = rct_signatures.serialize_rctsig_base(ar, vin.size(), vout.size());
           if (!r || !ar.stream().good()) return false;
@@ -340,9 +340,9 @@ namespace cryptonote
       }
       else
       {
-        ar.tag("rct_signatures");
         if (!vin.empty())
         {
+          ar.tag("rct_signatures");
           ar.begin_object();
           bool r = rct_signatures.serialize_rctsig_base(ar, vin.size(), vout.size());
           if (!r || !ar.stream().good()) return false;

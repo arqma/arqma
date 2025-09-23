@@ -29,8 +29,6 @@
 
 #include "daemon_handler.h"
 
-#include <thread>
-
 // likely included by daemon_handler.h's includes,
 // but including here for clarity
 #include "cryptonote_core/cryptonote_core.h"
@@ -412,7 +410,7 @@ namespace rpc
       return;
     }
 
-    unsigned int concurrency_count = std::thread::hardware_concurrency() * 4;
+    unsigned int concurrency_count = boost::thread::hardware_concurrency() * 4;
 
     // if we couldn't detect threads, set it to a ridiculously high number
     if(concurrency_count == 0)

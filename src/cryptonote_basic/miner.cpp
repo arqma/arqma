@@ -85,6 +85,7 @@ namespace cryptonote
     m_do_mining(false),
     m_current_hash_rate(0)
   {
+    m_attrs.set_stack_size(THREAD_STACK_SIZE);
   }
   //-----------------------------------------------------------------------------------------------------
   miner::~miner()
@@ -269,7 +270,7 @@ namespace cryptonote
 
     for(size_t i = 0; i != threads_count; i++)
     {
-      m_threads.emplace_back([this] { return worker_thread(); });
+      m_threads.push_back(boost::thread(m_attrs, boost::bind(&miner::worker_thread, this)));
     }
 
     LOG_PRINT_L0("Mining has started with " << threads_count << " threads, good luck!" );
