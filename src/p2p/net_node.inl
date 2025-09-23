@@ -324,13 +324,13 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::add_host_fail(const epee::net_utils::network_address &address, unsigned int score)
+  bool node_server<t_payload_net_handler>::add_host_fail(const epee::net_utils::network_address &address)
   {
     if(!address.is_blockable())
       return false;
 
     CRITICAL_REGION_LOCAL(m_host_fails_score_lock);
-    uint64_t fails = m_host_fails_score[address.host_str()] += score;
+    uint64_t fails = ++m_host_fails_score[address.host_str()];
     MDEBUG("Host " << address.host_str() << " fail score:" << fails);
     if(fails > P2P_IP_FAILS_BEFORE_BLOCK)
     {
@@ -826,7 +826,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::run()
   {
     // creating thread to log number of connections
-    mPeersLoggerThread.emplace(0, [&]()
+    mPeersLoggerThread.emplace([&]()
     {
       _note("Thread monitor number of peers - start");
       const network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
@@ -2178,6 +2178,7 @@ namespace nodetool
   {
     if(arg.node_data.network_id != m_network_id)
     {
+
       LOG_INFO_CC(context, "WRONG NETWORK AGENT CONNECTED! id=" << arg.node_data.network_id);
       drop_connection(context);
       add_host_fail(context.m_remote_address);
@@ -2534,7 +2535,7 @@ namespace nodetool
     if (address.get_zone() != epee::net_utils::zone::public_)
       return false; // Unable to determine connections quantity from host
 
-    const size_t max_connections = 5;
+    const size_t max_connections = 1;
     size_t count = 0;
 
     m_network_zones.at(epee::net_utils::zone::public_).m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)

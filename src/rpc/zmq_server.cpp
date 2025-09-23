@@ -28,6 +28,9 @@
 
 #include "zmq_server.h"
 
+#undef ARQMA_DEFAULT_LOG_CATEGORY
+#define ARQMA_DEFAULT_LOG_CATEGORY "daemon.zmq"
+
 namespace cryptonote
 {
 

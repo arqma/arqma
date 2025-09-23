@@ -1122,7 +1122,7 @@ namespace net_utils
   {
     m_thread_name_prefix = prefix_name;
 		auto it = server_type_map.find(m_thread_name_prefix);
-		if (it == server_type_map.end()) throw std::runtime_error("Unknown prefix/server type:" + std::string(prefix_name));
+		if (it==server_type_map.end()) throw std::runtime_error("Unknown prefix/server type:" + std::string(prefix_name));
     auto connection_type = it->second; // the value of type
     MINFO("Set server type to: " << connection_type << " from name: " << m_thread_name_prefix << ", prefix_name = " << prefix_name);
   }
@@ -1147,11 +1147,7 @@ namespace net_utils
       CRITICAL_REGION_BEGIN(m_threads_lock);
       for (std::size_t i = 0; i < threads_count; ++i)
       {
-#ifdef __APPLE__
-        m_threads.emplace_back(8 * 1024 * 1024, [this] { worker_thread(); });
-#else
-        m_threads.emplace_back(0, [this] { worker_thread(); });
-#endif
+        m_threads.emplace_back([this] { worker_thread(); });
         MDEBUG("Run server thread name: " << m_thread_name_prefix);
       }
       CRITICAL_REGION_END();

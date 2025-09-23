@@ -99,8 +99,7 @@ namespace tools
   //------------------------------------------------------------------------------------------------------------------------------
   wallet_rpc_server::~wallet_rpc_server()
   {
-    if (m_wallet)
-      delete m_wallet;
+    stop();
   }
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::set_wallet(wallet2 *cr)
@@ -4355,7 +4354,6 @@ public:
 std::string const t_executor::NAME = "Arqma Wallet RPC Daemon";
 
 int main(int argc, char** argv) {
-  TRY_ENTRY();
 
   namespace po = boost::program_options;
 
@@ -4401,5 +4399,4 @@ int main(int argc, char** argv) {
   }
 
   return daemonizer::daemonize(argc, const_cast<const char**>(argv), t_executor{}, *vm) ? 0 : 1;
-  CATCH_ENTRY_L0("main", 1);
 }
