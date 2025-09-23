@@ -105,6 +105,8 @@ namespace cryptonote
      core(const core &) = delete;
      core &operator=(const core &) = delete;
 
+     bool handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NOTIFY_RESPONSE_GET_OBJECTS::request& rsp, cryptonote_connection_context& context);
+
      /**
       * @brief calls various idle routines
       *
@@ -232,7 +234,7 @@ namespace cryptonote
      /**
       * @brief called when a transaction is relayed
       */
-     virtual crypto::hash on_transaction_relayed(const cryptonote::blobdata& tx);
+     virtual void on_transaction_relayed(const cryptonote::blobdata& tx);
 
      /**
       * @brief gets the miner instance
@@ -433,6 +435,8 @@ namespace cryptonote
       * @note see Blockchain::have_block
       */
      bool have_block(const crypto::hash& id) const;
+
+     bool get_short_chain_history(std::list<crypto::hash>& ids) const;
 
      /**
       * @copydoc Blockchain::find_blockchain_supplement(const std::list<crypto::hash>&, NOTIFY_RESPONSE_CHAIN_ENTRY::request&) const
@@ -800,9 +804,9 @@ namespace cryptonote
      /// Time point at which the storage server last pinged us
      std::atomic<time_t> m_last_storage_server_ping; //, m_last_arqnet_ping;
 
-     bool relay_txpool_transactions();
-
    private:
+
+     bool add_new_tx(transaction& tx, const crypto::hash& tx_hash, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, const tx_pool_options& opts);
 
      /**
       * @copydoc Blockchain::add_new_block
@@ -837,8 +841,9 @@ namespace cryptonote
      bool check_tx_semantic(const transaction& tx, bool kept_by_block) const;
      void set_semantics_failed(const crypto::hash &tx_hash);
 
-     void parse_incoming_tx_pre(tx_verification_batch_info &tx_info);
-     void parse_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool kept_by_block);
+     bool handle_incoming_tx_pre(const blobdata& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, const tx_pool_options &opts);
+     struct tx_verification_batch_info { const cryptonote::transaction *tx; crypto::hash tx_hash; tx_verification_context &tvc; bool &result; };
+     bool handle_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool kept_by_block);
 
      /**
       * @brief act on a set of command line options given
@@ -876,6 +881,8 @@ namespace cryptonote
       * @return false if any key image is not in the valid domain, otherwise true
       */
      bool check_tx_inputs_keyimages_domain(const transaction& tx) const;
+
+     bool relay_txpool_transactions();
 
      /**
       * @brief checks DNS versions

@@ -53,7 +53,7 @@
 PUSH_WARNINGS
 DISABLE_VS_WARNINGS(4355)
 
-#define CURRENCY_PROTOCOL_MAX_TXS_REQUEST_COUNT 5000
+#define LOCALHOST_INT 2130706433
 
 namespace cryptonote
 {
@@ -107,9 +107,8 @@ namespace cryptonote
   private:
     //----------------- commands handlers ----------------------------------------------
     int handle_notify_new_transactions(int command, NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& context);
-    int handle_request_get_blocks(int command, NOTIFY_REQUEST_GET_BLOCKS::request& arg, cryptonote_connection_context& context);
-    int handle_response_get_blocks(int command, NOTIFY_RESPONSE_GET_BLOCKS::request& arg, cryptonote_connection_context& context);
-    int handle_request_get_txs(int command, NOTIFY_REQUEST_GET_TXS::request& arg, cryptonote_connection_context& context);
+    int handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context);
+    int handle_response_get_objects(int command, NOTIFY_RESPONSE_GET_OBJECTS::request& arg, cryptonote_connection_context& context);
     int handle_request_chain(int command, NOTIFY_REQUEST_CHAIN::request& arg, cryptonote_connection_context& context);
     int handle_response_chain_entry(int command, NOTIFY_RESPONSE_CHAIN_ENTRY::request& arg, cryptonote_connection_context& context);
     int handle_notify_new_fluffy_block(int command, NOTIFY_NEW_FLUFFY_BLOCK::request& arg, cryptonote_connection_context& context);
@@ -188,6 +187,7 @@ namespace cryptonote
     boost::mutex m_buffer_mutex;
     boost::circular_buffer<size_t> m_avg_buffer = boost::circular_buffer<size_t>(10);
     boost::mutex m_bad_peer_check_lock;
+
 
     template<class t_parameter>
     bool post_notify(typename t_parameter::request& arg, cryptonote_connection_context& context)

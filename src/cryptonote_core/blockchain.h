@@ -401,7 +401,7 @@ namespace cryptonote
      *
      * @return true
      */
-    void get_short_chain_history(std::list<crypto::hash>& ids) const;
+    bool get_short_chain_history(std::list<crypto::hash>& ids) const;
 
     /**
      * @brief get recent block hashes for a foreign chain
@@ -468,9 +468,7 @@ namespace cryptonote
      */
     bool find_blockchain_supplement(const uint64_t req_start_block, const std::list<crypto::hash>& qblock_ids, std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata> > > >& blocks, uint64_t& total_height, uint64_t& start_height, bool pruned, bool get_miner_tx_hash, size_t max_block_count, size_t max_tx_count) const;
 
-    bool handle_get_blocks(NOTIFY_REQUEST_GET_BLOCKS::request& arg, NOTIFY_RESPONSE_GET_BLOCKS::request& rsp);
-
-    bool handle_get_txs(NOTIFY_REQUEST_GET_TXS::request& arg, NOTIFY_NEW_TRANSACTIONS::request& rsp);
+    bool handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NOTIFY_RESPONSE_GET_OBJECTS::request& rsp);
 
     /**
      * @brief get number of outputs of an amount past the minimum spendable age

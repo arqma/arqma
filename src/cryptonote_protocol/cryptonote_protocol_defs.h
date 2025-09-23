@@ -146,12 +146,10 @@ namespace cryptonote
     struct request
     {
       std::vector<blobdata> txs;
-      bool requested = false;
       std::string _; // padding
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(txs)
-        KV_SERIALIZE_OPT(requested, false)
         KV_SERIALIZE(_)
       END_KV_SERIALIZE_MAP()
     };
@@ -159,30 +157,34 @@ namespace cryptonote
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
-  struct NOTIFY_REQUEST_GET_BLOCKS
+  struct NOTIFY_REQUEST_GET_OBJECTS
   {
     const static int ID = BC_COMMANDS_POOL_BASE + 3;
 
     struct request
     {
+      std::vector<crypto::hash> txs;
       std::vector<crypto::hash> blocks;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(txs)
         KV_SERIALIZE_CONTAINER_POD_AS_BLOB(blocks)
       END_KV_SERIALIZE_MAP()
     };
   };
 
-  struct NOTIFY_RESPONSE_GET_BLOCKS
+  struct NOTIFY_RESPONSE_GET_OBJECTS
   {
     const static int ID = BC_COMMANDS_POOL_BASE + 4;
 
     struct request
     {
+      std::vector<blobdata> txs;
       std::vector<block_complete_entry> blocks;
       std::vector<crypto::hash> missed_ids;
       uint64_t current_blockchain_height;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(txs)
         KV_SERIALIZE(blocks)
         KV_SERIALIZE_CONTAINER_POD_AS_BLOB(missed_ids)
         KV_SERIALIZE(current_blockchain_height)
@@ -323,6 +325,7 @@ namespace cryptonote
   struct NOTIFY_NEW_SERVICE_NODE_VOTE
   {
     const static int ID = BC_COMMANDS_POOL_BASE + 12;
+
     struct request
     {
       std::vector<service_nodes::quorum_vote_t> votes;
@@ -332,18 +335,4 @@ namespace cryptonote
       END_KV_SERIALIZE_MAP()
     };
   };
-
-  struct NOTIFY_REQUEST_GET_TXS
-  {
-    constexpr static int ID = BC_COMMANDS_POOL_BASE + 13;
-
-    struct request
-    {
-      std::vector<crypto::hash> txs;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(txs)
-      END_KV_SERIALIZE_MAP()
-    };
-  };
-
 }

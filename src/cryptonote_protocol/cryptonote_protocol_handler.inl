@@ -84,6 +84,24 @@
 
 namespace cryptonote
 {
+
+  constexpr size_t BLOCK_QUEUE_NSPANS_THRESHOLD = 10; // chunks of N blocks
+  constexpr size_t BLOCK_QUEUE_SIZE_THRESHOLD = 100*1024*1024; // 100MB
+  constexpr uint64_t BLOCK_QUEUE_FORCE_DOWNLOAD_NEAR_BLOCKS = 1000;
+  constexpr auto REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD_STANDBY = 5s;
+  constexpr auto REQUEST_NEXT_SCHEDULED_SPAN_THRESHOLD = 30s;
+  constexpr auto IDLE_PEER_KICK_TIME = 240s;
+  constexpr auto NON_RESPONSIVE_PEER_KICK_TIME = 20s;
+  constexpr auto PASSIVE_PEER_KICK_TIME = 1min;
+  constexpr auto DROP_ON_SYNC_WEDGE_THRESHOLD = 30s;
+  constexpr auto LAST_ACTIVITY_STALL_THRESHOLD = 2s;
+  constexpr int32_t DROP_PEERS_ON_SCORE = -2;
+
+  using seconds_f = std::chrono::duration<double>;
+
+  template <typename Duration>
+  auto count_seconds(const Duration &d) { return std::chrono::duration_cast<std::chrono::seconds>(d).count(); }
+
   //-----------------------------------------------------------------------------------------------------------------------
   template<class t_core>
   t_cryptonote_protocol_handler<t_core>::t_cryptonote_protocol_handler(t_core& rcore, nodetool::i_p2p_endpoint<connection_context>* p_net_layout, bool offline):m_core(rcore),
@@ -172,10 +190,9 @@ namespace cryptonote
         context.m_state = cryptonote_connection_context::state_synchronizing;
     }
 
-
     if(context.m_state == cryptonote_connection_context::state_synchronizing)
     {
-      NOTIFY_REQUEST_CHAIN::request r{};
+      NOTIFY_REQUEST_CHAIN::request r = {};
       context.m_needed_objects.clear();
       m_core.get_blockchain_storage().get_short_chain_history(r.block_ids);
       context.m_last_request_time = boost::posix_time::microsec_clock::universal_time();
@@ -466,7 +483,7 @@ namespace cryptonote
   template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::get_payload_sync_data(blobdata& data)
   {
-    CORE_SYNC_DATA hsd = {};
+    CORE_SYNC_DATA hsd{};
     get_payload_sync_data(hsd);
     epee::serialization::store_t_to_binary(hsd, data);
     return true;
@@ -936,46 +953,40 @@ namespace cryptonote
     if(context.m_state != cryptonote_connection_context::state_normal)
       return 1;
 
-    if(!is_synchronized() && !arg.requested)
+    if(!is_synchronized())
     {
       LOG_DEBUG_CC(context, "Received new tx while syncing, ignored");
       return 1;
     }
 
-    auto lock = m_core.incoming_tx_lock();
-
     std::vector<cryptonote::blobdata> newtxs;
     newtxs.reserve(arg.txs.size());
-
-    const auto txpool_opts = tx_pool_options::from_peer();
-    auto parsed_txs = m_core.parse_incoming_txs(arg.txs, txpool_opts);
-
-    bool all_ok = m_core.handle_parsed_txs(parsed_txs, txpool_opts);
-
     for (size_t i = 0; i < arg.txs.size(); ++i)
     {
-      if (parsed_txs[i].tvc.m_should_be_relayed)
+      cryptonote::tx_verification_context tvc{};
+      m_core.handle_incoming_tx(arg.txs[i], tvc, tx_pool_options::from_peer());
+      if(tvc.m_verification_failed)
+      {
+        LOG_PRINT_CCONTEXT_L1("Tx verification failed, dropping connection");
+        drop_connection(context, false, false);
+        return 1;
+      }
+      if (tvc.m_should_be_relayed)
         newtxs.push_back(std::move(arg.txs[i]));
     }
     arg.txs = std::move(newtxs);
 
-    if(arg.txs.size() && !arg.requested)
+    if(arg.txs.size())
     {
       //TODO: add announce usage here
       relay_transactions(arg, context);
-    }
-
-    if (!all_ok)
-    {
-      LOG_PRINT_CCONTEXT_L1("TX verification(s) failed. Dropping connection");
-      drop_connection(context, false, false);
     }
 
     return 1;
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
-  int t_cryptonote_protocol_handler<t_core>::handle_request_get_blocks(int command, NOTIFY_REQUEST_GET_BLOCKS::request& arg, cryptonote_connection_context& context)
+  int t_cryptonote_protocol_handler<t_core>::handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context)
   {
     if(context.m_state == cryptonote_connection_context::state_before_handshake)
     {
@@ -983,25 +994,28 @@ namespace cryptonote
       drop_connection(context, false, false);
       return 1;
     }
-    MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_GET_BLOCKS (" << arg.blocks.size() << " blocks)");
-    NOTIFY_RESPONSE_GET_BLOCKS::request rsp;
-    if(!m_core.get_blockchain_storage().handle_get_blocks(arg, rsp))
+    MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_GET_OBJECTS (" << arg.blocks.size() << " blocks, " << arg.txs.size() << " txes)");
+    NOTIFY_RESPONSE_GET_OBJECTS::request rsp;
+    if(!m_core.handle_get_objects(arg, rsp, context))
     {
-      LOG_ERROR_CCONTEXT("failed to handle request NOTIFY_REQUEST_GET_BLOCKS, dropping connection");
+      LOG_ERROR_CCONTEXT("failed to handle request NOTIFY_REQUEST_GET_OBJECTS, dropping connection");
       drop_connection(context, false, false);
       return 1;
     }
-    MLOG_P2P_MESSAGE("-->>NOTIFY_RESPONSE_GET_BLOCKS: blocks.size()=" << rsp.blocks.size() << ", rsp.m_current_blockchain_height=" << rsp.current_blockchain_height << ", missed_ids.size()=" << rsp.missed_ids.size());
-    post_notify<NOTIFY_RESPONSE_GET_BLOCKS>(rsp, context);
+    context.m_last_request_time = std::chrono::steady_clock::now();
+    MLOG_P2P_MESSAGE("-->>NOTIFY_RESPONSE_GET_OBJECTS: blocks.size()=" << rsp.blocks.size() << ", txs.size()=" << rsp.txs.size() << ", rsp.m_current_blockchain_height=" << rsp.current_blockchain_height << ", missed_ids.size()=" << rsp.missed_ids.size());
+    post_notify<NOTIFY_RESPONSE_GET_OBJECTS>(rsp, context);
     return 1;
   }
   //------------------------------------------
   template<class t_core>
-  int t_cryptonote_protocol_handler<t_core>::handle_response_get_blocks(int command, NOTIFY_RESPONSE_GET_BLOCKS::request& arg, cryptonote_connection_context& context)
+  int t_cryptonote_protocol_handler<t_core>::handle_response_get_objects(int command, NOTIFY_RESPONSE_GET_OBJECTS::request& arg, cryptonote_connection_context& context)
   {
-    MLOG_P2P_MESSAGE("Received NOTIFY_RESPONSE_GET_BLOCKS (" << arg.blocks.size() << " blocks)");
-    MLOG_PEER_STATE("received blocks");
+    MLOG_P2P_MESSAGE("Received NOTIFY_RESPONSE_GET_OBJECTS (" << arg.blocks.size() << " blocks, " << arg.txs.size() << " txes)");
+    MLOG_PEER_STATE("received objects");
 
+    auto request_time = context.m_last_request_time;
+    context.m_last_request_time = std::chrono::steady_clock::now();
     boost::posix_time::ptime request_time = context.m_last_request_time;
     context.m_last_request_time = boost::date_time::not_a_date_time;
 
@@ -1014,17 +1028,19 @@ namespace cryptonote
     context.m_expect_response = 0;
 
     // calculate size of request
-    size_t blocks_size = 0, others_size = 0;
+    size_t blocks_size = 0, checkpoints_size = 0, txs_size = 0;
+    for (const auto &element : arg.txs)
+      txs_size += element.size();
 
     for (const auto& element : arg.blocks)
     {
       blocks_size += element.block.size();
       for (const auto &tx : element.txs)
         blocks_size += tx.size();
-      others_size += element.checkpoint.size();
+      checkpoints_size += element.checkpoint.size();
     }
 
-    size_t size = blocks_size + others_size;
+    size_t size = blocks_size + checkpoints_size + txs_size;
     for (const auto &element : arg.missed_ids)
       size += sizeof(element.data);
 
@@ -1039,7 +1055,7 @@ namespace cryptonote
 
     if(context.m_last_response_height > arg.current_blockchain_height)
     {
-      LOG_ERROR_CCONTEXT("sent wrong NOTIFY_GET_BLOCKS: arg.m_current_blockchain_height=" << arg.current_blockchain_height
+      LOG_ERROR_CCONTEXT("sent wrong NOTIFY_HAVE_OBJECTS: arg.m_current_blockchain_height=" << arg.current_blockchain_height
         << " < m_last_response_height=" << context.m_last_response_height << ", dropping connection");
       drop_connection(context, false, false);
       ++m_sync_bad_spans_downloaded;
@@ -1092,7 +1108,7 @@ namespace cryptonote
       auto req_it = context.m_requested_objects.find(block_hash);
       if(req_it == context.m_requested_objects.end())
       {
-        LOG_ERROR_CCONTEXT("sent wrong NOTIFY_RESPONSE_GET_BLOCKS: block with id=" << epee::string_tools::pod_to_hex(get_blob_hash(block_entry.block))
+        LOG_ERROR_CCONTEXT("sent wrong NOTIFY_RESPONSE_GET_OBJECTS: block with id=" << epee::string_tools::pod_to_hex(get_blob_hash(block_entry.block))
           << " wasn't requested, dropping connection");
         drop_connection(context, false, false);
         ++m_sync_bad_spans_downloaded;
@@ -1100,7 +1116,7 @@ namespace cryptonote
       }
       if(b.tx_hashes.size() != block_entry.txs.size())
       {
-        LOG_ERROR_CCONTEXT("sent wrong NOTIFY_RESPONSE_GET_BLOCKS: block with id=" << epee::string_tools::pod_to_hex(get_blob_hash(block_entry.block))
+        LOG_ERROR_CCONTEXT("sent wrong NOTIFY_RESPONSE_GET_OBJECTS: block with id=" << epee::string_tools::pod_to_hex(get_blob_hash(block_entry.block))
           << ", tx_hashes.size()=" << b.tx_hashes.size() << " mismatch with block_complete_entry.m_txs.size()=" << block_entry.txs.size() << ", dropping connection");
         drop_connection(context, false, false);
         ++m_sync_bad_spans_downloaded;
@@ -1297,15 +1313,23 @@ namespace cryptonote
             // process transactions
             TIME_MEASURE_START(transactions_process_time);
             num_txs += block_entry.txs.size();
-            auto parsed_txs = m_core.handle_incoming_txs(block_entry.txs, tx_pool_options::from_block());
-            for (size_t i = 0; i < parsed_txs.size(); ++i)
+            std::vector<tx_verification_context> tvc;
+            m_core.handle_incoming_txs(block_entry.txs, tvc, tx_pool_options::from_block());
+            if (tvc.size() != block_entry.txs.size())
             {
-              if (parsed_txs[i].tvc.m_verification_failed)
+              LOG_ERROR_CCONTEXT("Internal error: tvc.size() != block_entry.txs.size()");
+              return 1;
+            }
+
+            std::vector<blobdata>::const_iterator it = block_entry.txs.begin();
+            for (size_t i = 0; i < tvc.size(); ++i, ++it)
+            {
+              if (tvc[i].m_verification_failed)
               {
                 if (!m_p2p->for_connection(span_connection_id, [&](cryptonote_connection_context& context, nodetool::peerid_type peer_id, uint32_t f)->bool{
                   cryptonote::transaction tx;
-                  parse_and_validate_tx_from_blob(block_entry.txs[i], tx);
-                  LOG_ERROR_CCONTEXT("transaction verification failed on NOTIFY_RESPONSE_GET_BLOCKS, tx_id = "
+                  parse_and_validate_tx_from_blob(*it, tx);
+                  LOG_ERROR_CCONTEXT("transaction verification failed on NOTIFY_RESPONSE_GET_OBJECTS, tx_id = "
                       << epee::string_tools::pod_to_hex(cryptonote::get_transaction_hash(tx)) << ", dropping connection");
                   drop_connection(context, false, true);
                   return 1;
@@ -1485,31 +1509,6 @@ skip:
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
-  int t_cryptonote_protocol_handler<t_core>::handle_request_get_txs(int command, NOTIFY_REQUEST_GET_TXS::request& arg, cryptonote_connection_context& context)
-  {
-    MLOG_P2P_MESSAGE("Received NOTIFY_REQUEST_GET_TXS (" << arg.txs.size() << " txs)");
-
-    if (arg.txs.size() > CURRENCY_PROTOCOL_MAX_TXS_REQUEST_COUNT)
-    {
-      LOG_ERROR_CCONTEXT("Requested txs count is too big (" << arg.txs.size() << ") expected not more than " << CURRENCY_PROTOCOL_MAX_TXS_REQUEST_COUNT);
-      drop_connection(context, false, false);
-      return 1;
-    }
-
-    NOTIFY_NEW_TRANSACTIONS::request rsp;
-    rsp.requested = true;
-    if(!m_core.get_blockchain_storage().handle_get_txs(arg, rsp))
-    {
-      LOG_ERROR_CCONTEXT("failed to handle request NOTIFY_REQUEST_GET_TXS, dropping connection");
-      drop_connection(context, false, false);
-      return 1;
-    }
-    MLOG_P2P_MESSAGE("-->>NOTIFY_NEW_TRANSACTIONS: requested=true, txs[" << rsp.txs.size() << "]");
-    post_notify<NOTIFY_NEW_TRANSACTIONS>(rsp, context);
-    return 1;
-  }
-  //------------------------------------------------------------------------------------------------------------------------
-  template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::on_idle()
   {
     m_idle_peer_kicker.do_call([this] { return kick_idle_peers(); });
@@ -1540,6 +1539,7 @@ skip:
       }
       return true;
     });
+
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------
@@ -1914,7 +1914,7 @@ skip:
     if(context.m_needed_objects.size() || force_next_span)
     {
       //we know objects that we need, request this objects
-      NOTIFY_REQUEST_GET_BLOCKS::request req;
+      NOTIFY_REQUEST_GET_OBJECTS::request req;
       bool is_next = false;
       size_t count = 0;
       const size_t count_limit = m_core.get_block_sync_size(m_core.get_current_blockchain_height());
@@ -2022,7 +2022,7 @@ skip:
         MLOG_P2P_MESSAGE("-->>NOTIFY_REQUEST_GET_BLOCKS: blocks.size()=" << req.blocks.size()
             << "requested blocks count=" << count << " / " << count_limit << " from " << span.first << ", first hash " << req.blocks.front());
 
-        post_notify<NOTIFY_REQUEST_GET_BLOCKS>(req, context);
+        post_notify<NOTIFY_REQUEST_GET_OBJECTS>(req, context);
         MLOG_PEER_STATE("requesting objects");
         return true;
       }
@@ -2068,7 +2068,7 @@ skip:
     {//we have to fetch more objects ids, request blockchain entry
 
       NOTIFY_REQUEST_CHAIN::request r{};
-      m_core.get_blockchain_storage().get_short_chain_history(r.block_ids);
+      m_core.get_short_chain_history(r.block_ids);
       CHECK_AND_ASSERT_MES(!r.block_ids.empty(), false, "Short chain history is empty");
 
       if (!start_from_current_chain)
@@ -2289,10 +2289,8 @@ skip:
   template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::relay_transactions(NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& exclude_context)
   {
-    std::vector<crypto::hash> relayed_txes;
-    relayed_txes.reserve(arg.txs.size());
     for (auto& tx_blob : arg.txs)
-      relayed_txes.push_back(m_core.on_transaction_relayed(tx_blob));
+      m_core.on_transaction_relayed(tx_blob);
 
     // no check for success, so tell core they're relayed unconditionally
     m_p2p->send_txs(std::move(arg.txs), exclude_context.m_remote_address.get_zone(), exclude_context.m_connection_id, m_core.pad_transactions());

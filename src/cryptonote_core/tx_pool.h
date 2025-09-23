@@ -165,8 +165,6 @@ namespace cryptonote
      */
     bool have_tx(const crypto::hash &id) const;
 
-    std::vector<uint8_t> have_txs(const std::vector<crypto::hash> &hashes) const;
-
     /**
      * @brief action to take when notified of a block added to the blockchain
      *
@@ -344,8 +342,6 @@ namespace cryptonote
      * @return true
      */
     bool get_relayable_transactions(std::vector<std::pair<crypto::hash, cryptonote::blobdata>>& txs) const;
-
-    int set_relayable(const std::vector<crypto::hash> &tx_hashes);
 
     /**
      * @brief tell the pool that certain transactions were just relayed
