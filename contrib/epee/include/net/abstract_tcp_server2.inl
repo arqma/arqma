@@ -1207,11 +1207,7 @@ namespace net_utils
     CRITICAL_REGION_LOCAL(m_threads_lock);
     for (auto &thp : m_threads)
     {
-#ifdef __APPLE__
-      if (thp.get_id() == boost::this_thread::get_id())
-#else
       if (thp->get_id() == boost::this_thread::get_id())
-#endif
         return true;
     }
     if(m_threads_count == 1 && boost::this_thread::get_id() == m_main_thread_id)
@@ -1224,11 +1220,6 @@ namespace net_utils
   bool boosted_tcp_server<t_protocol_handler>::timed_wait_server_stop(uint64_t wait_mseconds)
   {
     TRY_ENTRY();
-#ifdef __APPLE__
-    for (auto &th : m_threads)
-      if (th.joinable())
-        th.join();
-#else
     boost::chrono::milliseconds ms(wait_mseconds);
     for (std::size_t i = 0; i < m_threads.size(); ++i)
     {
@@ -1238,7 +1229,6 @@ namespace net_utils
         m_threads[i]->interrupt();
       }
     }
-#endif
     return true;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::timed_wait_server_stop", false);
   }
