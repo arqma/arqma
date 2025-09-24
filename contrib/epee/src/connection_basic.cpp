@@ -96,7 +96,7 @@ class connection_basic_pimpl {
 		static int m_default_tos;
 
 		network_throttle_bw m_throttle; // per-perr
-        critical_section m_throttle_lock;
+    critical_section m_throttle_lock;
 
 		int m_peer_number; // e.g. for debug/stats
 };

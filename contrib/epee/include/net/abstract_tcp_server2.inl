@@ -1160,12 +1160,8 @@ namespace net_utils
       CRITICAL_REGION_BEGIN(m_threads_lock);
       for (std::size_t i = 0; i < threads_count; ++i)
       {
-#ifdef __APPLE__
-        m_threads.emplace_back(8 * 1024 * 1024, [this] { worker_thread(); });
-#else
         std::shared_ptr<boost::thread> thread(new boost::thread(attrs, boost::bind(&boosted_tcp_server<t_protocol_handler>::worker_thread, this)));
         m_threads.push_back(thread);
-#endif
         MDEBUG("Run server thread name: " << m_thread_name_prefix);
       }
       CRITICAL_REGION_END();
@@ -1174,11 +1170,7 @@ namespace net_utils
       {
 		    MDEBUG("JOINING all threads");
 		    for (std::size_t i = 0; i < m_threads.size(); ++i) {
-#ifdef __APPLE__
-		      m_threads[i].join();
-#else
           m_threads[i]->join();
-#endif
         }
 		    MDEBUG("JOINING all threads - almost");
         m_threads.clear();

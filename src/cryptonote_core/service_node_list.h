@@ -450,7 +450,7 @@ namespace service_nodes
     cryptonote::Blockchain& m_blockchain;
     const service_node_keys *m_service_node_keys;
     uint64_t m_store_quorum_history = 0;
-    mutable boost::shared_mutex m_x25519_map_mutex;
+    mutable std::shared_timed_mutex m_x25519_map_mutex;
 
     std::unordered_map<crypto::x25519_public_key, std::pair<crypto::public_key, time_t>> x25519_to_pub;
     time_t x25519_map_last_pruned = 0;

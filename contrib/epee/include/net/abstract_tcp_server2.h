@@ -50,10 +50,6 @@
 #include "connection_basic.hpp"
 #include "network_throttle-detail.hpp"
 
-#ifdef __APPLE__
-#include "thread_with_stack.h"
-#endif
-
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
@@ -374,11 +370,7 @@ namespace net_utils
     bool m_require_ipv4;
     std::string m_thread_name_prefix; //TODO: change to enum server_type, now used
     size_t m_threads_count;
-#ifdef __APPLE__
-    std::vector<thread_with_stack> m_threads;
-#else
     std::vector<std::shared_ptr<boost::thread>> m_threads;
-#endif
     boost::thread::id m_main_thread_id;
     critical_section m_threads_lock;
     std::atomic<uint32_t> m_thread_index;

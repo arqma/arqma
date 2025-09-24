@@ -140,7 +140,7 @@ namespace net_utils
 			chunked_state m_chunked_state;
 			std::string m_chunked_cache;
 			bool m_auto_connect;
-			critical_section m_lock;
+			mutable critical_section m_lock;
 
 		public:
 			explicit http_simple_client_template()

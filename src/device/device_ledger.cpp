@@ -35,7 +35,8 @@
 #include "cryptonote_basic/subaddress_index.h"
 #include "cryptonote_core/cryptonote_tx_utils.h"
 
-#include "common/lock.h"
+#include <boost/thread/locks.hpp>
+#include <boost/thread/lock_guard.hpp>
 
 namespace hw {
 
@@ -220,6 +221,13 @@ namespace hw {
     /* ======================================================================= */
     /*  LOCKER                                                                 */
     /* ======================================================================= */
+
+    #define AUTO_LOCK_CMD() \
+      /* lock both mutexes without deadlock*/ \
+      boost::lock(device_locker, command_locker); \
+      /* make sure both already-locked mutexes are unlocked at the end of scope */ \
+      boost::lock_guard<boost::recursive_mutex> lock1(device_locker, boost::adopt_lock); \
+      boost::lock_guard<boost::mutex> lock2(command_locker, boost::adopt_lock)
 
     //lock the device for a long sequence
     void device_ledger::lock(void) {
@@ -434,7 +442,7 @@ namespace hw {
     }
 
     bool  device_ledger::set_mode(device_mode mode) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         int offset;
 
@@ -470,7 +478,7 @@ namespace hw {
     /* ======================================================================= */
 
      bool device_ledger::get_public_address(cryptonote::account_public_address &pubkey){
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         send_simple(INS_GET_KEY, 1);
 
@@ -481,7 +489,7 @@ namespace hw {
     }
 
     bool  device_ledger::get_secret_keys(crypto::secret_key &vkey , crypto::secret_key &skey) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         //secret key are represented as fake key on the wallet side
         memset(vkey.data, 0x00, 32);
@@ -509,7 +517,7 @@ namespace hw {
     }
 
     bool  device_ledger::generate_chacha_key(const cryptonote::account_keys &keys, crypto::chacha_key &key, uint64_t kdf_rounds) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         crypto::chacha_key key_x;
@@ -535,7 +543,7 @@ namespace hw {
     /* ======================================================================= */
 
     bool device_ledger::derive_subaddress_public_key(const crypto::public_key &pub, const crypto::key_derivation &derivation, const std::size_t output_index, crypto::public_key &derived_pub){
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         #ifdef DEBUG_HWDEVICE
         const crypto::public_key pub_x = pub;
         crypto::key_derivation derivation_x;
@@ -589,7 +597,7 @@ namespace hw {
     }
 
     crypto::public_key device_ledger::get_subaddress_spend_public_key(const cryptonote::account_keys& keys, const cryptonote::subaddress_index &index) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         crypto::public_key D;
 
         #ifdef DEBUG_HWDEVICE
@@ -640,7 +648,7 @@ namespace hw {
     }
 
     cryptonote::account_public_address device_ledger::get_subaddress(const cryptonote::account_keys& keys, const cryptonote::subaddress_index &index) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         cryptonote::account_public_address address;
 
         #ifdef DEBUG_HWDEVICE
@@ -683,7 +691,7 @@ namespace hw {
     }
 
     crypto::secret_key  device_ledger::get_subaddress_secret_key(const crypto::secret_key &sec, const cryptonote::subaddress_index &index) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         crypto::secret_key sub_sec;
 
         #ifdef DEBUG_HWDEVICE
@@ -724,7 +732,7 @@ namespace hw {
     /* ======================================================================= */
 
     bool  device_ledger::verify_keys(const crypto::secret_key &secret_key, const crypto::public_key &public_key) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         int offset;
 
         offset = set_command_header_noopt(INS_VERIFY_KEY);
@@ -749,7 +757,7 @@ namespace hw {
     }
 
     bool device_ledger::scalarmultKey(rct::key & aP, const rct::key &P, const rct::key &a) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const rct::key P_x    =  P;
@@ -785,7 +793,7 @@ namespace hw {
     }
 
     bool device_ledger::scalarmultBase(rct::key &aG, const rct::key &a) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const rct::key a_x    =  hw::ledger::decrypt(a);
@@ -815,7 +823,7 @@ namespace hw {
     }
 
     bool device_ledger::sc_secret_add( crypto::secret_key &r, const crypto::secret_key &a, const crypto::secret_key &b) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const crypto::secret_key a_x = hw::ledger::decrypt(a);
@@ -852,7 +860,7 @@ namespace hw {
     }
 
     crypto::secret_key  device_ledger::generate_keys(crypto::public_key &pub, crypto::secret_key &sec, const crypto::secret_key& recovery_key, bool recover) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         if (recover) {
            throw std::runtime_error("device generate key does not support recover");
         }
@@ -889,7 +897,7 @@ namespace hw {
     }
 
     bool device_ledger::generate_key_derivation(const crypto::public_key &pub, const crypto::secret_key &sec, crypto::key_derivation &derivation) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         bool r = false;
 
         #ifdef DEBUG_HWDEVICE
@@ -958,7 +966,7 @@ namespace hw {
     }
 
     bool device_ledger::derivation_to_scalar(const crypto::key_derivation &derivation, const size_t output_index, crypto::ec_scalar &res) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const crypto::key_derivation derivation_x = hw::ledger::decrypt(derivation);
@@ -997,7 +1005,7 @@ namespace hw {
     }
 
     bool device_ledger::derive_secret_key(const crypto::key_derivation &derivation, const std::size_t output_index, const crypto::secret_key &sec, crypto::secret_key &derived_sec) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const crypto::key_derivation derivation_x   = hw::ledger::decrypt(derivation);
@@ -1041,7 +1049,7 @@ namespace hw {
     }
 
     bool device_ledger::derive_public_key(const crypto::key_derivation &derivation, const std::size_t output_index, const crypto::public_key &pub, crypto::public_key &derived_pub){
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const crypto::key_derivation derivation_x   = hw::ledger::decrypt(derivation);
@@ -1084,7 +1092,7 @@ namespace hw {
     }
 
     bool device_ledger::secret_key_to_public_key(const crypto::secret_key &sec, crypto::public_key &pub) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const crypto::secret_key sec_x = hw::ledger::decrypt(sec);
@@ -1117,7 +1125,7 @@ namespace hw {
     }
 
     bool device_ledger::generate_key_image(const crypto::public_key &pub, const crypto::secret_key &sec, crypto::key_image &image){
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const crypto::public_key pub_x = pub;
@@ -1156,7 +1164,7 @@ namespace hw {
     /* ======================================================================= */
 
     void device_ledger::generate_tx_proof(const crypto::hash &prefix_hash, const crypto::public_key &R, const crypto::public_key &A, const boost::optional<crypto::public_key> &B, const crypto::public_key &D, const crypto::secret_key &r, crypto::signature &sig) {
-      auto locks = tools::unique_locks(device_locker, command_locker);
+      AUTO_LOCK_CMD();
 
       #ifdef DEBUG_HWDEVICE
       const crypto::hash prefix_hash_x = prefix_hash;
@@ -1222,7 +1230,7 @@ namespace hw {
     }
 
     bool device_ledger::open_tx(crypto::secret_key &tx_key) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         key_map.clear();
         int offset = set_command_header_noopt(INS_OPEN_TX, 0x01);
@@ -1248,7 +1256,7 @@ namespace hw {
     }
 
     bool device_ledger::encrypt_payment_id(crypto::hash8 &payment_id, const crypto::public_key &public_key, const crypto::secret_key &secret_key) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const crypto::public_key public_key_x = public_key;
@@ -1291,7 +1299,7 @@ namespace hw {
                                                        const bool &need_additional_txkeys, const std::vector<crypto::secret_key> &additional_tx_keys,
                                                        std::vector<crypto::public_key> &additional_tx_public_keys,
                                                        std::vector<rct::key> &amount_keys, crypto::public_key &out_eph_public_key) {
-      auto locks = tools::unique_locks(device_locker, command_locker);
+      AUTO_LOCK_CMD();
 
       #ifdef DEBUG_HWDEVICE
       const size_t                             &tx_version_x                   = tx_version;
@@ -1470,7 +1478,7 @@ namespace hw {
     }
 
     bool  device_ledger::ecdhEncode(rct::ecdhTuple & unmasked, const rct::key & AKout, bool short_amount) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const rct::key AKout_x =   hw::ledger::decrypt(AKout);
@@ -1511,7 +1519,7 @@ namespace hw {
     }
 
     bool  device_ledger::ecdhDecode(rct::ecdhTuple & masked, const rct::key & AKout, bool short_amount) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const rct::key AKout_x =   hw::ledger::decrypt(AKout);
@@ -1552,7 +1560,7 @@ namespace hw {
     bool device_ledger::mlsag_prehash(const std::string &blob, size_t inputs_size, size_t outputs_size,
                                      const rct::keyV &hashes, const rct::ctkeyV &outPk,
                                      rct::key &prehash) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         unsigned int  data_offset, C_offset, kv_offset, i;
         const char *data;
 
@@ -1731,7 +1739,7 @@ namespace hw {
 
     bool device_ledger::mlsag_prepare(const rct::key &H, const rct::key &xx,
                                      rct::key &a, rct::key &aG, rct::key &aHP, rct::key &II) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         const rct::key H_x = H;
@@ -1774,7 +1782,7 @@ namespace hw {
     }
 
     bool device_ledger::mlsag_prepare(rct::key &a, rct::key &aG) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         #ifdef DEBUG_HWDEVICE
         rct::key a_x;
@@ -1796,7 +1804,7 @@ namespace hw {
     }
 
     bool device_ledger::mlsag_hash(const rct::keyV &long_message, rct::key &c) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         size_t cnt;
 
         #ifdef DEBUG_HWDEVICE
@@ -1831,7 +1839,7 @@ namespace hw {
     }
 
     bool device_ledger::mlsag_sign(const rct::key &c, const rct::keyV &xx, const rct::keyV &alpha, const size_t rows, const size_t dsRows, rct::keyV &ss) {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
 
         CHECK_AND_ASSERT_THROW_MES(dsRows<=rows, "dsRows greater than rows");
         CHECK_AND_ASSERT_THROW_MES(xx.size() == rows, "xx size does not match rows");
@@ -1885,7 +1893,7 @@ namespace hw {
     }
 
     bool device_ledger::close_tx() {
-        auto locks = tools::unique_locks(device_locker, command_locker);
+        AUTO_LOCK_CMD();
         send_simple(INS_CLOSE_TX);
         return true;
     }

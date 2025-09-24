@@ -87,11 +87,7 @@ void threadpool::create(unsigned int max_threads)
   running = true;
   while(i--)
   {
-#ifdef __APPLE__
-    threads.emplace_back(8 * 1024 * 1024, [this] { run(false); });
-#else
     threads.push_back(boost::thread(attrs, boost::bind(&threadpool::run, this, false)));
-#endif
   }
 }
 

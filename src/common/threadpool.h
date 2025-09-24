@@ -38,9 +38,6 @@
 #include <deque>
 #include <vector>
 #include <stdexcept>
-#ifdef __APPLE__
-#include "thread_with_stack.h"
-#endif
 
 namespace tools
 {
@@ -106,11 +103,7 @@ public:
     std::deque<entry> queue;
     boost::condition_variable has_work;
     boost::mutex mutex;
-#ifdef __APPLE__
-    std::vector<thread_with_stack> threads;
-#else
     std::vector<boost::thread> threads;
-#endif
     unsigned int active;
     unsigned int max;
     bool running;

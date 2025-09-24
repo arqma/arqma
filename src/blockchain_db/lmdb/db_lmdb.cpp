@@ -1757,6 +1757,19 @@ std::string BlockchainLMDB::get_db_name() const
   return std::string("lmdb");
 }
 
+bool BlockchainLMDB::lock()
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  check_open();
+  return false;
+}
+
+void BlockchainLMDB::unlock()
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  check_open();
+}
+
 #define TXN_PREFIX(flags) \
   mdb_txn_safe auto_txn; \
   mdb_txn_safe* txn_ptr = &auto_txn; \
