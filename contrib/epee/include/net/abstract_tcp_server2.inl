@@ -1215,7 +1215,11 @@ namespace net_utils
     CRITICAL_REGION_LOCAL(m_threads_lock);
     for (auto &thp : m_threads)
     {
+#ifdef __APPLE__
+      if (thp.get_id() == boost::this_thread::get_id())
+#else
       if (thp->get_id() == boost::this_thread::get_id())
+#endif
         return true;
     }
     if(m_threads_count == 1 && boost::this_thread::get_id() == m_main_thread_id)
