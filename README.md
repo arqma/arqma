@@ -29,7 +29,7 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 ## Arqma Exchange Websites
 
-- TradeOgre: [https://tradeogre.com/exchange/BTC-ARQ](https://tradeogre.com/exchange/BTC-ARQ)
+- Cexswap.cc: [https://cexswap.cc/trade/ARQ-BTC](https://cexswap.cc/trade/ARQ-BTC)
 - Nonkyc: [https://nonkyc.io/market/ARQ_USDT](https://nonkyc.io/market/ARQ_USDT)
 
 ## Introduction
