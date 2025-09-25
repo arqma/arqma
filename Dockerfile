@@ -79,4 +79,4 @@ EXPOSE 19993 19994 19995
 
 USER arqma
 
-ENTRYPOINT ["arqmad", "--p2p-bind-ip=0.0.0.0", "--p2p-bind-port=19993", "--rpc-bind-ip=0.0.0.0", "--rpc-bind-port=19994", "--restricted-rpc", "--zmq-rpc-bind-ip=0.0.0.0", "--zmq-rpc-bind-port=19995" --non-interactive", "--confirm-external-bind"]
+ENTRYPOINT ["arqmad", "--p2p-bind-ip=0.0.0.0", "--p2p-bind-port=19993", "--rpc-bind-ip=0.0.0.0", "--rpc-bind-port=19994", "--restricted-rpc", "--zmq-rpc-bind-ip=0.0.0.0", "--zmq-rpc-bind-port=19995" "--non-interactive", "--confirm-external-bind"]
