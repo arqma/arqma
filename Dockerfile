@@ -75,7 +75,7 @@ RUN adduser --system --group --disabled-password arqma && \
 VOLUME /home/arqma/.arqma
 VOLUME /wallet
 
-EXPOSE 19993 19994
+EXPOSE 19993 19994 19995
 
 USER arqma
 
