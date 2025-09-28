@@ -186,11 +186,10 @@ bool t_daemon::run(bool interactive)
       return false;
     }
 
-    MINFO("Starting Arqma ZMQ Server...");
+    MGINFO("Starting Arqma ZMQ Server...");
     zmq_server.run();
 
-    MINFO(std::string("Arqma ZMQ Server started at ") + zmq_rpc_bind_address
-          + ":" + zmq_rpc_bind_port + ".");
+    MGINFO("Arqma ZMQ Server started at " << zmq_rpc_bind_address << ":" << zmq_rpc_bind_port);
 
     if (public_rpc_port > 0)
     {
@@ -204,7 +203,6 @@ bool t_daemon::run(bool interactive)
       rpc_commands->stop_handling();
 
     zmq_server.stop();
-
 
     for(auto& rpc : mp_internals->rpcs)
       rpc->stop();

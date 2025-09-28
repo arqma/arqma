@@ -29,6 +29,7 @@
 
 #include "common/dns_utils.h"
 // check local first (in the event of static or in-source compilation of libunbound)
+#include "misc_language.h"
 #include "unbound.h"
 
 #include <deque>
@@ -188,31 +189,6 @@ boost::optional<std::string> txt_to_string(const char* src, size_t len)
   return std::string(src+1, len-1);
 }
 
-template<typename type, void (*freefunc)(type*)>
-class scoped_ptr
-{
-public:
-  scoped_ptr() : ptr(nullptr)
-  {
-  }
-  scoped_ptr(type *p) : ptr(p)
-  {
-  }
-  ~scoped_ptr()
-  {
-    freefunc(ptr);
-  }
-  operator type *() { return ptr; }
-  type **operator &() { return &ptr; }
-  type *operator->() { return ptr; }
-  operator const type*() const { return &ptr; }
-
-private:
-  type* ptr;
-};
-
-typedef class scoped_ptr<ub_result,ub_resolve_free> ub_result_ptr;
-
 struct DNSResolverData
 {
   ub_ctx* m_ub_context;
@@ -319,7 +295,12 @@ std::vector<std::string> DNSResolver::get_record(const std::string& url, int rec
     return addresses;
   }
 
-  ub_result_ptr result;
+  ub_result *result;
+  // Make sure we are cleaning after result.
+  epee::misc_utils::auto_scope_leave_caller scope_exit_handler =
+    epee::misc_utils::create_scope_leave_handler([&](){
+    ub_resolve_free(result);
+  });
 
   // call DNS resolver, blocking.  if return value not zero, something went wrong
   if (!ub_resolve(m_data->m_ub_context, string_copy(url.c_str()), record_type, DNS_CLASS_IN, &result))

@@ -30,8 +30,8 @@
 #pragma once
 
 #include <cstdint>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/type_traits/integral_constant.hpp>
@@ -41,10 +41,6 @@
 
 #include "net/fwd.h"
 #include "span.h"
-
-namespace boost::asio {
-  using io_service = io_context;
-}
 
 namespace epee
 {
@@ -98,7 +94,7 @@ namespace socks
     class client
     {
         boost::asio::ip::tcp::socket proxy_;
-        boost::asio::io_service::strand strand_;
+        boost::asio::strand<boost::asio::ip::tcp::socket::executor_type> strand_;
         std::uint16_t buffer_size_;
         std::uint8_t buffer_[1024];
         socks::version ver_;

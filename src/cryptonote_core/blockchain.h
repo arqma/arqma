@@ -37,10 +37,6 @@
 #include <boost/serialization/library_version_type.hpp>
 #endif
 
-namespace boost::asio {
-  using io_service = io_context;
-}
-
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/list.hpp>
@@ -1060,10 +1056,9 @@ namespace cryptonote
     crypto::hash m_difficulty_for_next_block_top_hash;
     difficulty_type m_difficulty_for_next_block;
 
-    boost::asio::io_service m_async_service;
+    boost::asio::io_context m_async_service;
     boost::thread_group m_async_pool;
-    using work_type = boost::asio::executor_work_guard<decltype(m_async_service.get_executor())>;
-    std::unique_ptr<work_type> m_async_work_idle;
+    std::unique_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> m_async_work_idle;
 
     // some invalid blocks
     std::set<crypto::hash> m_invalid_blocks;

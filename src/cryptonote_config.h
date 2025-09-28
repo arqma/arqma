@@ -162,8 +162,8 @@
 
 #define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)    // 1 day
 #define P2P_IP_BLOCKTIME                                (60*60*24) // 2 days
-#define P2P_IP_FAILS_BEFORE_BLOCK                       5
-#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60)     // 30 seconds
+#define P2P_IP_FAILS_BEFORE_BLOCK                       10
+#define P2P_IDLE_CONNECTION_KILL_INTERVAL               30     // 30 seconds
 
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
@@ -192,7 +192,7 @@
 
 #define BULLETPROOF_MAX_OUTPUTS                         16
 
-#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  1024         // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096         // the smaller, the smoother the increase
 #define CRYPTONOTE_PRUNING_LOG_STRIPES                  3            // the higher, the more space saved
 #define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500         // the smaller, the more space saved
 //#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED

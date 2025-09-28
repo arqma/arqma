@@ -49,12 +49,6 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
-#if BOOST_VERSION >= 108700
-namespace boost::asio {
-  typedef io_context io_service;
-}
-#endif
-
 namespace epee
 {
 namespace net_utils
@@ -166,7 +160,7 @@ namespace net_utils
 					// SSL Options
 					if(m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled || m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
 					{
-						if(!m_ssl_options.handshake(*m_ssl_socket, boost::asio::ssl::stream_base::client, {}, addr, timeout))
+						if(!m_ssl_options.handshake(m_io_service, *m_ssl_socket, boost::asio::ssl::stream_base::client, {}, addr, timeout))
 						{
 							if(m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
 							{
@@ -474,7 +468,7 @@ namespace net_utils
 			m_ssl_socket->async_shutdown(boost::lambda::var(ec) = boost::lambda::_1);
 			while (ec == boost::asio::error::would_block)
 			{
-                m_io_service.restart();
+        m_io_service.restart();
 				m_io_service.run_one();
 			}
 			// Ignore "short read" error
@@ -503,7 +497,7 @@ namespace net_utils
 		}
 
 	protected:
-		boost::asio::io_service m_io_service;
+		boost::asio::io_context m_io_service;
     boost::asio::ssl::context m_ctx;
 		std::shared_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> m_ssl_socket;
     std::function<connect_func> m_connector;

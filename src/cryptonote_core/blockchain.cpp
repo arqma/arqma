@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <boost/asio/dispatch.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 
@@ -384,9 +385,9 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 
   // create general purpose async service queue
 
-  m_async_work_idle = std::make_unique<work_type>(m_async_service.get_executor());
+  m_async_work_idle = std::make_unique<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(m_async_service.get_executor());
   // we only need 1
-  m_async_pool.create_thread([this] { m_async_service.run(); });
+  m_async_pool.create_thread(boost::bind(&boost::asio::io_context::run, &m_async_service));
 
 #if defined(PER_BLOCK_CHECKPOINT)
   if (m_nettype != FAKECHAIN)
@@ -4513,7 +4514,7 @@ bool Blockchain::cleanup_handle_incoming_blocks(bool force_sync)
       {
         m_sync_counter = 0;
         m_bytes_to_sync = 0;
-        m_async_service.get_executor().dispatch([this] { return store_blockchain(); }, std::allocator<void>{});
+        boost::asio::dispatch(m_async_service, boost::bind(&Blockchain::store_blockchain, this));
       }
       else if(m_db_sync_mode == db_sync)
       {

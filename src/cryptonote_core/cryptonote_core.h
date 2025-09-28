@@ -73,8 +73,8 @@ namespace cryptonote
   extern const command_line::arg_descriptor<bool> arg_offline;
   extern const command_line::arg_descriptor<size_t> arg_block_download_max_size;
 
-  extern void *(*arqnet_new)(core &core, const std::string &bind);
-  extern void (*arqnet_delete)(void *&self);
+  extern void *(*arqnet_new)(core &core, service_nodes::service_node_list &sn_list, const std::string &bind);
+  extern void (*arqnet_delete)(void *self);
   extern void (*arqnet_relay_obligation_votes)(void *self, const std::vector<service_nodes::quorum_vote_t> &votes);
   extern bool init_core_callback_complete;
 
@@ -100,10 +100,7 @@ namespace cryptonote
        *
        * @param pprotocol pre-constructed protocol object to store and use
        */
-     explicit core(i_cryptonote_protocol* pprotocol);
-
-     core(const core &) = delete;
-     core &operator=(const core &) = delete;
+     core(i_cryptonote_protocol* pprotocol);
 
      /**
       * @brief calls various idle routines
@@ -956,7 +953,6 @@ namespace cryptonote
 
      std::string m_arqnet_bind_ip;
      void *m_arqnet_obj = nullptr;
-     boost::mutex m_arqnet_init_mutex;
 
      size_t block_sync_size;
 

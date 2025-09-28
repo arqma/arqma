@@ -77,13 +77,14 @@ void ZmqServer::serve()
 
       }
     }
-    catch (const boost::thread_interrupted& e)
-    {
-      MDEBUG("ZMQ Server thread interrupted.");
-    }
+//    catch (const boost::thread_interrupted& e)
+//    {
+//      MDEBUG("ZMQ Server thread interrupted.");
+//    }
     catch (const zmq::error_t& e)
     {
-      MERROR(std::string("ZMQ error: ") + e.what());
+      if (zmq_errno() != ETERM)
+        MERROR(std::string("ZMQ error: ") + e.what());
     }
     boost::this_thread::interruption_point();
   }
@@ -132,10 +133,10 @@ void ZmqServer::stop()
   stop_signal = true;
 
   run_thread.interrupt();
+//  context.close();
   run_thread.join();
 
   running = false;
-
   return;
 }
 
