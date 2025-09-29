@@ -24,9 +24,6 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-
-
-
 #pragma once
 
 #include <atomic>
@@ -41,6 +38,7 @@
 #include <boost/lambda/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/utility/string_ref.hpp>
 #include <functional>
 #include "net/net_utils_base.h"
 #include "net/net_ssl.h"
@@ -264,7 +262,7 @@ namespace net_utils
 
 
 		inline
-		bool send(const std::string& buff, std::chrono::milliseconds timeout)
+		bool send(const boost::string_ref buff, std::chrono::milliseconds timeout)
 		{
 			try
 			{
@@ -277,7 +275,7 @@ namespace net_utils
 				// ec indicates completion.
 				boost::system::error_code ec = boost::asio::error::would_block;
 
-				async_write(buff.c_str(), buff.size(), ec);
+				async_write(buff.data(), buff.size(), ec);
 
 				// Block until the asynchronous operation has completed.
 				while (ec == boost::asio::error::would_block)
