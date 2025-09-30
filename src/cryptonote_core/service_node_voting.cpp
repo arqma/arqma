@@ -509,7 +509,7 @@ namespace service_nodes
   {
     auto vote_it = std::lower_bound(votes.begin(), votes.end(), vote, [](pool_vote_entry const &pool_entry, quorum_vote_t const &vote) {
         assert(pool_entry.vote.group == vote.group);
-        return (pool_entry.vote.index_in_group == vote.index_in_group);
+        return pool_entry.vote.index_in_group < vote.index_in_group;
     });
 
     if (vote_it == votes.end() || vote_it->vote.index_in_group != vote.index_in_group)
