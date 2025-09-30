@@ -36,6 +36,8 @@
 #include <stdexcept>
 #include <chrono>
 
+#define CRYPTONOTE_DNS_TIMEOUT_MS                       20000
+
 #define CRYPTONOTE_MAX_BLOCK_NUMBER                     500000000
 #define CRYPTONOTE_MAX_TX_SIZE                          1000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
@@ -160,11 +162,13 @@
 
 #define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)    // 1 day
 #define P2P_IP_BLOCKTIME                                (60*60*24) // 2 days
-#define P2P_IP_FAILS_BEFORE_BLOCK                       5
-#define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60)     // 30 seconds
+#define P2P_IP_FAILS_BEFORE_BLOCK                       10
+#define P2P_IDLE_CONNECTION_KILL_INTERVAL               30     // 30 seconds
 
 #define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
 #define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
+
+#define THREAD_STACK_SIZE                               8 * 1024 * 1024
 
 #define CRYPTONOTE_NAME                                 "arqma"
 #define CRYPTONOTE_POOLDATA_FILENAME                    "poolstate.bin"
@@ -188,7 +192,7 @@
 
 #define BULLETPROOF_MAX_OUTPUTS                         16
 
-#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  1024         // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096         // the smaller, the smoother the increase
 #define CRYPTONOTE_PRUNING_LOG_STRIPES                  3            // the higher, the more space saved
 #define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500         // the smaller, the more space saved
 //#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
@@ -232,10 +236,6 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 
 namespace config
 {
-  using namespace std::literals;
-
-  constexpr auto DNS_TIMEOUT = 20s;
-
   const char HASH_KEY_BULLETPROOF_EXPONENT[] = "bulletproof";
   const char HASH_KEY_RINGDB[] = "ringdsb";
   const char HASH_KEY_SUBADDRESS[] = "SubAddr";

@@ -194,6 +194,10 @@ public:
 
   std::string get_db_name() const override;
 
+  bool lock() override;
+
+  void unlock() override;
+
   bool block_exists(const crypto::hash& h, uint64_t *height = NULL) const override;
 
   uint64_t get_block_height(const crypto::hash& h) const override;

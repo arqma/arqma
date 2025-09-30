@@ -30,7 +30,7 @@
 #include <string>
 #include <atomic>
 #include <boost/filesystem.hpp>
-#include <thread>
+#include <boost/thread/thread.hpp>
 #include "net/http_client.h"
 #include "download.h"
 
@@ -48,8 +48,8 @@ namespace tools
     bool stop;
     bool stopped;
     bool success;
-    std::thread thread;
-    std::mutex mutex;
+    boost::thread thread;
+    boost::mutex mutex;
 
     download_thread_control(const std::string &path, const std::string &uri, std::function<void(const std::string&, const std::string&, bool)> result_cb, std::function<bool(const std::string&, const std::string&, size_t, ssize_t)> progress_cb):
         path(path), uri(uri), result_cb(result_cb), progress_cb(progress_cb), stop(false), stopped(false), success(false) {}
@@ -71,7 +71,7 @@ namespace tools
 
     try
     {
-      std::unique_lock lock{control->mutex};
+      boost::unique_lock<boost::mutex> lock(control->mutex);
       std::ios_base::openmode mode = std::ios_base::out | std::ios_base::binary;
       boost::system::error_code ec{};
       uint64_t existing_size = static_cast<uint64_t>(boost::filesystem::file_size(control->path, ec));
@@ -144,7 +144,7 @@ namespace tools
         {
           try
           {
-            std::lock_guard lock{control->mutex};
+            boost::lock_guard<boost::mutex> lock(control->mutex);
             if (control->stop)
               return false;
             f << piece_of_transfer;
@@ -188,7 +188,7 @@ namespace tools
       client.set_server(u_c.host, std::to_string(port), boost::none, ssl);
       if (!client.connect(std::chrono::seconds(30)))
       {
-        std::lock_guard lock{control->mutex};
+        boost::lock_guard<boost::mutex> lock(control->mutex);
         MERROR("Failed to connect to " << control->uri);
         control->result_cb(control->path, control->uri, control->success);
         return;
@@ -204,7 +204,7 @@ namespace tools
       }
       if (!client.invoke_get(u_c.uri, std::chrono::seconds(30), "", &info, fields))
       {
-        std::lock_guard lock{control->mutex};
+        boost::lock_guard<boost::mutex> lock(control->mutex);
         MERROR("Failed to connect to " << control->uri);
         client.disconnect();
         control->result_cb(control->path, control->uri, control->success);
@@ -212,7 +212,7 @@ namespace tools
       }
       if (control->stop)
       {
-        std::lock_guard lock{control->mutex};
+        boost::lock_guard<boost::mutex> lock(control->mutex);
         MDEBUG("Download cancelled");
         client.disconnect();
         control->result_cb(control->path, control->uri, control->success);
@@ -220,7 +220,7 @@ namespace tools
       }
       if (!info)
       {
-        std::lock_guard lock{control->mutex};
+        boost::lock_guard<boost::mutex> lock(control->mutex);
         MERROR("Failed invoking GET command to " << control->uri << ", no status info returned");
         client.disconnect();
         control->result_cb(control->path, control->uri, control->success);
@@ -234,7 +234,7 @@ namespace tools
         MDEBUG("additional field: " << f.first << ": " << f.second);
       if (info->m_response_code != 200 && info->m_response_code != 206)
       {
-        std::lock_guard lock{control->mutex};
+        boost::lock_guard<boost::mutex> lock(control->mutex);
         MERROR("Status code " << info->m_response_code);
         client.disconnect();
         control->result_cb(control->path, control->uri, control->success);
@@ -253,7 +253,7 @@ namespace tools
       MERROR("Exception in download thread: " << e.what());
       // fall through and call result_cb not from the catch block to avoid another exception
     }
-    std::lock_guard lock{control->mutex};
+    boost::lock_guard<boost::mutex> lock(control->mutex);
     control->result_cb(control->path, control->uri, control->success);
   }
 
@@ -268,21 +268,21 @@ namespace tools
   download_async_handle download_async(const std::string &path, const std::string &url, std::function<void(const std::string&, const std::string&, bool)> result, std::function<bool(const std::string&, const std::string&, size_t, ssize_t)> progress)
   {
     download_async_handle control = std::make_shared<download_thread_control>(path, url, result, progress);
-    control->thread = std::thread([control](){ download_thread(control); });
+    control->thread = boost::thread([control](){ download_thread(control); });
     return control;
   }
 
   bool download_finished(const download_async_handle &control)
   {
     CHECK_AND_ASSERT_MES(control != 0, false, "NULL async download handle");
-    std::lock_guard lock{control->mutex};
+    boost::lock_guard<boost::mutex> lock(control->mutex);
     return control->stopped;
   }
 
   bool download_error(const download_async_handle &control)
   {
     CHECK_AND_ASSERT_MES(control != 0, false, "NULL async download handle");
-    std::lock_guard lock{control->mutex};
+    boost::lock_guard<boost::mutex> lock(control->mutex);
     return !control->success;
   }
 
@@ -290,7 +290,7 @@ namespace tools
   {
     CHECK_AND_ASSERT_MES(control != 0, false, "NULL async download handle");
     {
-      std::lock_guard lock{control->mutex};
+      boost::lock_guard<boost::mutex> lock(control->mutex);
       if (control->stopped)
         return true;
     }
@@ -302,7 +302,7 @@ namespace tools
   {
     CHECK_AND_ASSERT_MES(control != 0, false, "NULL async download handle");
     {
-      std::lock_guard lock{control->mutex};
+      boost::lock_guard<boost::mutex> lock(control->mutex);
       if (control->stopped)
         return true;
       control->stop = true;

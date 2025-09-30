@@ -270,7 +270,7 @@ namespace tools
       std::atomic<bool> m_stop;
       bool m_restricted;
       const boost::program_options::variables_map *m_vm;
-      std::chrono::milliseconds m_auto_refresh_period;
-      std::chrono::steady_clock::time_point m_last_auto_refresh_time;
+      uint32_t m_auto_refresh_period;
+      boost::posix_time::ptime m_last_auto_refresh_time;
   };
 }

@@ -754,9 +754,6 @@ bool t_rpc_command_executor::show_status()
   return true;
 }
 
-template <typename Duration>
-static auto count_seconds(const Duration &d) { return std::chrono::duration_cast<std::chrono::seconds>(d).count(); }
-
 bool t_rpc_command_executor::print_connections() {
   cryptonote::COMMAND_RPC_GET_CONNECTIONS::request req;
   cryptonote::COMMAND_RPC_GET_CONNECTIONS::response res;
@@ -810,9 +807,9 @@ bool t_rpc_command_executor::print_connections() {
      << std::setw(host_field_width) << std::left << address
      << std::setw(6) << (info.ssl ? "yes" : "no")
      << std::setw(20) << epee::string_tools::pad_string(info.peer_id, 16, '0', true)
-     << std::setw(30) << std::to_string(info.recv_count) + "("  + std::to_string(count_seconds(info.recv_idle_time)) + ")/" + std::to_string(info.send_count) + "(" + std::to_string(count_seconds(info.send_idle_time)) + ")"
+     << std::setw(30) << std::to_string(info.recv_count) + "("  + std::to_string(info.recv_idle_time) + ")/" + std::to_string(info.send_count) + "(" + std::to_string(info.send_idle_time) + ")"
      << std::setw(25) << info.state
-     << std::setw(20) << std::to_string(count_seconds(info.live_time))
+     << std::setw(20) << info.live_time
      << std::setw(12) << info.avg_download
      << std::setw(14) << info.current_download
      << std::setw(10) << info.avg_upload

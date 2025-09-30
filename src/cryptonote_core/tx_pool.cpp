@@ -42,7 +42,6 @@
 #include "blockchain.h"
 #include "blockchain_db/blockchain_db.h"
 #include "common/boost_serialization_helper.h"
-#include "common/lock.h"
 #include "int-util.h"
 #include "misc_language.h"
 #include "warnings.h"
@@ -354,9 +353,8 @@ namespace cryptonote
         memset(meta.padding, 0, sizeof(meta.padding));
         try
         {
-          if (opts.kept_by_block)
-            m_parsed_tx_cache.insert(std::make_pair(id, tx));
-          std::unique_lock b_lock{m_blockchain};
+          m_parsed_tx_cache.insert(std::make_pair(id, tx));
+          CRITICAL_REGION_LOCAL1(m_blockchain);
           LockedTXN lock(m_blockchain);
           m_blockchain.add_txpool_tx(id, blob, meta);
           if(!insert_key_images(tx, id, opts.kept_by_block))
@@ -401,7 +399,7 @@ namespace cryptonote
       {
         if(opts.kept_by_block)
           m_parsed_tx_cache.insert(std::make_pair(id, tx));
-        std::unique_lock b_lock{m_blockchain};
+        CRITICAL_REGION_LOCAL1(m_blockchain);
         LockedTXN lock(m_blockchain);
         m_blockchain.remove_txpool_tx(id);
         m_blockchain.add_txpool_tx(id, blob, meta);
@@ -436,6 +434,7 @@ namespace cryptonote
   bool tx_memory_pool::add_tx(transaction &tx, tx_verification_context& tvc, const tx_pool_options &opts, uint8_t hard_fork_version)
   {
     crypto::hash h = null_hash;
+    size_t blob_size = 0;
     cryptonote::blobdata bl;
     t_serializable_object_to_blob(tx, bl);
     if(bl.size() == 0 || !get_transaction_hash(tx, h))
@@ -495,7 +494,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------------------------
-  void tx_memory_pool::prune(uint64_t bytes)
+  void tx_memory_pool::prune(size_t bytes)
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     CRITICAL_REGION_LOCAL1(m_blockchain);
@@ -583,7 +582,8 @@ namespace cryptonote
   //       is treated properly.  Should probably not return early, however.
   bool tx_memory_pool::remove_transaction_keyimages(const transaction_prefix &tx, const crypto::hash &actual_hash)
   {
-    auto locks = tools::unique_locks(m_transactions_lock, m_blockchain);
+    CRITICAL_REGION_LOCAL(m_transactions_lock);
+    CRITICAL_REGION_LOCAL1(m_blockchain);
     // ND: Speedup
     for(const txin_v& vi: tx.vin)
     {
@@ -1145,7 +1145,7 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::on_blockchain_inc(block const &blk)
   {
-    std::unique_lock lock{m_transactions_lock};
+    CRITICAL_REGION_LOCAL(m_transactions_lock);
     m_input_cache.clear();
     m_parsed_tx_cache.clear();
 
@@ -1205,7 +1205,7 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::on_blockchain_dec()
   {
-    std::unique_lock lock{m_transactions_lock};
+    CRITICAL_REGION_LOCAL(m_transactions_lock);
     m_input_cache.clear();
     m_parsed_tx_cache.clear();
     return true;

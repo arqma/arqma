@@ -99,8 +99,10 @@
         return true; \
       } \
       uint64_t ticks2 = epee::misc_utils::get_tick_count(); \
-      epee::serialization::store_t_to_binary(resp, response_info.m_body); \
+      epee::byte_slice buffer; \
+      epee::serialization::store_t_to_binary(resp, buffer, 64 * 1024); \
       uint64_t ticks3 = epee::misc_utils::get_tick_count(); \
+      response_info.m_body.assign(reinterpret_cast<const char*>(buffer.data()), buffer.size()); \
       response_info.m_mime_type = " application/octet-stream"; \
       response_info.m_header_info.m_content_type = " application/octet-stream"; \
       MDEBUG( s_pattern << "() processed with " << ticks1-ticks << "/"<< ticks2-ticks1 << "/" << ticks3-ticks2 << "ms"); \
@@ -134,6 +136,13 @@
       rsp.error.message = "Invalid Request"; \
       epee::serialization::store_t_to_json(rsp, response_info.m_body); \
       return true; \
+    } \
+    epee::serialization::storage_entry params_; \
+    params_ = epee::serialization::storage_entry(epee::serialization::section()); \
+    if(!ps.get_value("params", params_, nullptr)) \
+    { \
+      epee::serialization::section params_section; \
+      ps.set_value("params", std::move(params_section), nullptr); \
     } \
     if(false) return true; //just a stub to have "else if"
 

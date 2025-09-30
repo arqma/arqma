@@ -32,6 +32,8 @@ set(epee_include_dir "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 arqma_find_all_headers(epee_headers_public "${epee_include_dir}")
 
 add_library(epee
+    byte_slice.cpp
+    byte_stream.cpp
     hex.cpp
     abstract_http_client.cpp
     http_auth.cpp

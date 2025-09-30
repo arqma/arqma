@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <boost/thread.hpp>
 #include "net/abstract_tcp_server2.h"
 #include "http_protocol_handler.h"
 #include "net/http_server_handlers_map2.h"
@@ -45,7 +46,7 @@ namespace epee
         : m_net_server(epee::net_utils::e_connection_type_RPC)
     {}
 
-    explicit http_server_impl_base(boost::asio::io_service& external_io_service)
+    explicit http_server_impl_base(boost::asio::io_context& external_io_service)
         : m_net_server(external_io_service)
     {}
 
@@ -102,9 +103,9 @@ namespace epee
       return m_net_server.deinit_server();
     }
 
-    bool server_stop()
+    bool timed_wait_server_stop(uint64_t ms)
     {
-      return m_net_server.server_stop();
+      return m_net_server.timed_wait_server_stop(ms);
     }
 
     bool send_stop_signal()

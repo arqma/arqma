@@ -29,19 +29,18 @@
 
 #include "common/dns_utils.h"
 // check local first (in the event of static or in-source compilation of libunbound)
+#include "misc_language.h"
 #include "unbound.h"
 
-#include <chrono>
-#include <stdexcept>
-#include <optional>
 #include <deque>
 #include <set>
 #include <stdlib.h>
 #include "include_base_utils.h"
 #include "common/threadpool.h"
 #include "crypto/crypto.h"
-#include <mutex>
+#include <boost/thread/mutex.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/optional.hpp>
 using namespace epee;
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -56,6 +55,8 @@ static const char *DEFAULT_DNS_PUBLIC_ADDR[] =
   "8.26.56.26",   // Comodo
   "77.88.8.8",    // Yandex
 };
+
+static boost::mutex instance_lock;
 
 namespace
 {
@@ -100,12 +101,15 @@ get_builtin_cert(void)
 */
 
 /** return the built in root DS trust anchor */
-constexpr auto get_builtin_ds()
+static const char* const* get_builtin_ds(void)
 {
-  return std::array{
-    ". IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5\n",
+  static const char * const ds[] =
+  {
     ". IN DS 20326 8 2 E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D\n",
+    ". IN DS 38696 8 2 683D2D0ACB8C9B712A1948B27F741219298D0A450D612C483AF444A4C0FB2B16\n",
+    NULL
   };
+  return ds;
 }
 
 /************************************************************
@@ -117,7 +121,7 @@ constexpr auto get_builtin_ds()
 namespace tools
 {
 
-static constexpr const char *get_record_name(int record_type)
+static const char *get_record_name(int record_type)
 {
   switch (record_type)
   {
@@ -128,12 +132,12 @@ static constexpr const char *get_record_name(int record_type)
   }
 }
 // fuck it, I'm tired of dealing with getnameinfo()/inet_ntop/etc
-std::optional<std::string> ipv4_to_string(const char* src, size_t len)
+boost::optional<std::string> ipv4_to_string(const char* src, size_t len)
 {
   if (len < 4)
   {
     MERROR("Invalid IPv4 address: " << std::string(src, len));
-    return std::nullopt;
+    return boost::none;
   }
 
   std::stringstream ss;
@@ -152,12 +156,12 @@ std::optional<std::string> ipv4_to_string(const char* src, size_t len)
 
 // this obviously will need to change, but is here to reflect the above
 // stop-gap measure and to make the tests pass at least...
-std::optional<std::string> ipv6_to_string(const char* src, size_t len)
+boost::optional<std::string> ipv6_to_string(const char* src, size_t len)
 {
   if (len < 8)
   {
     MERROR("Invalid IPv6 address: " << std::string(src, len));
-    return std::nullopt;
+    return boost::none;
   }
 
   std::stringstream ss;
@@ -178,40 +182,38 @@ std::optional<std::string> ipv6_to_string(const char* src, size_t len)
   return ss.str();
 }
 
-std::optional<std::string> txt_to_string(const char* src, size_t len)
+boost::optional<std::string> txt_to_string(const char* src, size_t len)
 {
   if (len == 0)
-    return std::nullopt;
+    return boost::none;
   return std::string(src+1, len-1);
 }
 
-void ub_ctx_deleter::operator()(ub_ctx* ctx)
+struct DNSResolverData
 {
-  ub_ctx_delete(ctx);
-}
-
-namespace {
-
-struct ub_result_deleter {
-  void operator()(ub_result* result) {
-    ub_resolve_free(result);
-  }
+  ub_ctx* m_ub_context;
 };
 
-using ub_result_ptr = std::unique_ptr<ub_result, ub_result_deleter>;
+class string_copy {
+public:
+  string_copy(const char *s) : str(strdup(s)) {}
+  ~string_copy() { free(str); }
+  operator char*() { return str; }
 
-void add_anchors(ub_ctx *ctx)
+  char *str;
+};
+
+static void add_anchors(ub_ctx *ctx)
 {
-  for (const char* ds : get_builtin_ds())
+  const char * const *ds = ::get_builtin_ds();
+  while (*ds)
   {
-	MINFO("adding trust anchor: " << *ds);
-	ub_ctx_add_ta(ctx, const_cast<char*>(ds));
+    MINFO("adding trust anchor: " << *ds);
+	  ub_ctx_add_ta(ctx, string_copy(*ds++));
   }
 }
 
-} // anonymous namespace
-
-DNSResolver::DNSResolver()
+DNSResolver::DNSResolver() : m_data(new DNSResolverData())
 {
   int use_dns_public = 0;
   std::vector<std::string> dns_public_addr;
@@ -231,22 +233,22 @@ DNSResolver::DNSResolver()
   }
 
   // init libunbound context
-  m_ctx = ub_ctx_create();
+  m_data->m_ub_context = ub_ctx_create();
 
   if (use_dns_public)
   {
     for (const auto &ip: dns_public_addr)
-      ub_ctx_set_fwd(m_ctx, ip.c_str());
-    ub_ctx_set_option(m_ctx, "do-udp:", "no");
-    ub_ctx_set_option(m_ctx, "do-tcp:", "yes");
+      ub_ctx_set_fwd(m_data->m_ub_context, string_copy(ip.c_str()));
+    ub_ctx_set_option(m_data->m_ub_context, string_copy("do-udp:"), string_copy("no"));
+    ub_ctx_set_option(m_data->m_ub_context, string_copy("do-tcp:"), string_copy("yes"));
   }
   else {
     // look for "/etc/resolv.conf" and "/etc/hosts" or platform equivalent
-    ub_ctx_resolvconf(m_ctx, NULL);
-    ub_ctx_hosts(m_ctx, NULL);
+    ub_ctx_resolvconf(m_data->m_ub_context, NULL);
+    ub_ctx_hosts(m_data->m_ub_context, NULL);
   }
 
-  add_anchors(m_ctx);
+  add_anchors(m_data->m_ub_context);
 
   if (!DNS_PUBLIC)
   {
@@ -259,18 +261,30 @@ DNSResolver::DNSResolver()
 	  if (!valid)
 	  {
 	    MINFO("Failed to verify DNSSEC record from " << probe_hostname << ", falling back to well known DNSSEC resolvers");
-	    ub_ctx_delete(m_ctx);
-	    m_ctx = ub_ctx_create();
-	    add_anchors(m_ctx);
+	    ub_ctx_delete(m_data->m_ub_context);
+	    m_data->m_ub_context = ub_ctx_create();
+	    add_anchors(m_data->m_ub_context);
 	    for (const auto &ip: DEFAULT_DNS_PUBLIC_ADDR)
-	      ub_ctx_set_fwd(m_ctx, ip);
-	    ub_ctx_set_option(m_ctx, "do-udp:", "no");
-	    ub_ctx_set_option(m_ctx, "do-tcp:", "yes");
+	      ub_ctx_set_fwd(m_data->m_ub_context, string_copy(ip));
+	    ub_ctx_set_option(m_data->m_ub_context, string_copy("do-udp:"), string_copy("no"));
+	    ub_ctx_set_option(m_data->m_ub_context, string_copy("do-tcp:"), string_copy("yes"));
 	  }
   }
 }
 
-std::vector<std::string> DNSResolver::get_record(const std::string& url, int record_type, std::optional<std::string> (*reader)(const char *,size_t), bool& dnssec_available, bool& dnssec_valid)
+DNSResolver::~DNSResolver()
+{
+  if (m_data)
+  {
+    if (m_data->m_ub_context != NULL)
+    {
+      ub_ctx_delete(m_data->m_ub_context);
+    }
+    delete m_data;
+  }
+}
+
+std::vector<std::string> DNSResolver::get_record(const std::string& url, int record_type, boost::optional<std::string> (*reader)(const char *,size_t), bool& dnssec_available, bool& dnssec_valid)
 {
   std::vector<std::string> addresses;
   dnssec_available = false;
@@ -281,20 +295,24 @@ std::vector<std::string> DNSResolver::get_record(const std::string& url, int rec
     return addresses;
   }
 
-  ub_result* result_raw = nullptr;
-  // call DNS resolver, blocking.  if return value not zero, something went wrong
-  if (!ub_resolve(m_ctx, url.c_str(), record_type, DNS_CLASS_IN, &result_raw))
-  {
-    // destructor takes care of cleanup
-    ub_result_ptr result{result_raw};
+  ub_result *result;
+  // Make sure we are cleaning after result.
+  epee::misc_utils::auto_scope_leave_caller scope_exit_handler =
+    epee::misc_utils::create_scope_leave_handler([&](){
+    ub_resolve_free(result);
+  });
 
+  // call DNS resolver, blocking.  if return value not zero, something went wrong
+  if (!ub_resolve(m_data->m_ub_context, string_copy(url.c_str()), record_type, DNS_CLASS_IN, &result))
+  {
     dnssec_available = (result->secure || result->bogus);
     dnssec_valid = result->secure && !result->bogus;
     if (result->havedata)
     {
       for (size_t i=0; result->data[i] != NULL; i++)
       {
-        if (auto res = (*reader)(result->data[i], result->len[i]))
+        boost::optional<std::string> res = (*reader)(result->data[i], result->len[i]);
+        if (res)
         {
           MINFO("Found \"" << *res << "\" in " << get_record_name(record_type) << " record for " << url);
           addresses.push_back(*res);
@@ -321,104 +339,9 @@ std::vector<std::string> DNSResolver::get_txt_record(const std::string& url, boo
   return get_record(url, DNS_TYPE_TXT, txt_to_string, dnssec_available, dnssec_valid);
 }
 
-namespace {
-  // Data pack that we pass into the unbound callback:
-  struct dns_results {
-    int& all_done;
-    const std::string& hostname;
-    const char* record_name;
-    std::vector<std::string>& results;
-    std::optional<std::string> (*reader)(const char*, size_t);
-    int async_id{0};
-    bool done{false};
-    bool dnssec;
-    bool dnssec_required;
-
-    dns_results(int& a, const std::string& h, const char* rn, std::vector<std::string>& r, std::optional<std::string> (*rdr)(const char*, size_t), bool dnssec, bool dnssec_req)
-      : all_done{a}, hostname{h}, record_name{rn}, results{r}, reader{rdr}, dnssec{dnssec}, dnssec_required{dnssec_req}
-    {}
-  };
-}
-
-extern "C" void DNSResolver_async_callback(void* data, int err, ub_result* result_raw)
+std::string DNSResolver::get_dns_format_from_oa_address(const std::string& oa_addr)
 {
-  ub_result_ptr result{result_raw};
-  auto &res = *static_cast<dns_results*>(data);
-  res.all_done++;
-  res.done = true;
-  if (err)
-    MWARNING("resolution of " << res.hostname << " failed: " << ub_strerror(err));
-  else if ((res.dnssec || res.dnssec_required) && result->bogus)
-    MWARNING("resolution of " << res.hostname << " failed DNSSEC validation: " << result->why_bogus);
-  else if (res.dnssec_required && !result->secure)
-    MWARNING("resolution of " << res.hostname << " failed: DNSSEC validate is required but is not available");
-  else if (result->havedata)
-  {
-    for (size_t i = 0; result->data[i] != NULL; i++)
-    {
-      if (auto r = (*res.reader)(result->data[i], result->len[i]))
-      {
-        MINFO("Found \"" << *r << "\" in " << res.record_name << " record for " << res.hostname);
-        res.results.push_back(*r);
-      }
-    }
-  }
-}
-
-std::vector<std::vector<std::string>> DNSResolver::get_many(int type, const std::vector<std::string>& hostnames, std::chrono::milliseconds timeout, bool dnssec, bool dnssec_required)
-{
-  auto* reader = type == DNS_TYPE_A ? ipv4_to_string : type == DNS_TYPE_AAAA ? ipv6_to_string : type == DNS_TYPE_TXT ? txt_to_string : nullptr;
-  if (!reader)
-    throw std::invalid_argument("Invalid lookup type: " + std::to_string(type));
-
-  std::vector<std::vector<std::string>> results;
-  if (hostnames.empty())
-    return results;
-
-  int num_done = 0;
-  std::vector<dns_results> result_packs;
-  results.reserve(hostnames.size());
-  result_packs.reserve(hostnames.size());
-  ub_ctx_async(m_ctx, true); // Tells libunbound to use a thread instead of a fork
-
-  // Initiate lookups:
-  for (auto& host : hostnames)
-  {
-    auto& pack = result_packs.emplace_back(num_done, host, get_record_name(type), results.emplace_back(), reader, dnssec, dnssec_required);
-    int err = ub_resolve_async(m_ctx, host.c_str(), type, DNS_CLASS_IN, static_cast<void*>(&pack), DNSResolver_async_callback, &pack.async_id);
-    if (err)
-    {
-      MWARNING("unable to initiate lookup for " << host << ": " << ub_strerror(err));
-      num_done++;
-      pack.done = true;
-    }
-  }
-
-  // Wait for results
-  auto expiry = std::chrono::steady_clock::now() + timeout;
-  while (num_done < (int)results.size() && std::chrono::steady_clock::now() < expiry)
-  {
-    std::this_thread::sleep_for(5ms);
-    int err = ub_process(m_ctx);
-    if (err)
-    {
-      MWARNING("ub_process returned an error while waiting for async results: " << ub_strerror(err));
-      break;
-    }
-  }
-
-  // Cancel any outstanding requests
-  for (auto& pack : result_packs)
-  {
-    if (!pack.done)
-      ub_cancel(m_ctx, pack.async_id);
-  }
-
-  return results;
-}
-
-std::string DNSResolver::get_dns_format_from_oa_address(std::string addr)
-{
+  std::string addr(oa_addr);
   auto first_at = addr.find("@");
   if (first_at == std::string::npos)
     return addr;
@@ -431,6 +354,8 @@ std::string DNSResolver::get_dns_format_from_oa_address(std::string addr)
 
 DNSResolver& DNSResolver::instance()
 {
+  boost::lock_guard<boost::mutex> lock(instance_lock);
+
   static DNSResolver staticInstance;
   return staticInstance;
 }

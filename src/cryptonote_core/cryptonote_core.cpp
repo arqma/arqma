@@ -239,13 +239,13 @@ namespace cryptonote
   {
     throw std::logic_error("Internal error: arqnet::init_core_callbacks() should have been called");
   }
-  void *(*arqnet_new)(core &, const std::string &bind);
-  void (*arqnet_delete)(void *&self);
+  void *(*arqnet_new)(core &, service_nodes::service_node_list &, const std::string &bind);
+  void (*arqnet_delete)(void *self);
   void (*arqnet_relay_obligation_votes)(void *self, const std::vector<service_nodes::quorum_vote_t> &);
   static bool init_core_callback_stubs()
   {
-    arqnet_new = [](core &, const std::string &) -> void * { need_core_init(); };
-    arqnet_delete = [](void *&) { need_core_init(); };
+    arqnet_new = [](core &, service_nodes::service_node_list &, const std::string &) -> void * { need_core_init(); };
+    arqnet_delete = [](void *) { need_core_init(); };
     arqnet_relay_obligation_votes = [](void *, const std::vector<service_nodes::quorum_vote_t> &) { need_core_init(); };
     return false;
   }
@@ -259,7 +259,6 @@ namespace cryptonote
               m_miner(this, [this](const cryptonote::block &b, uint64_t height, const crypto::hash *seed_hash, unsigned int threads, crypto::hash &hash) {
                 return cryptonote::get_block_longhash(&m_blockchain_storage, b, hash, height, seed_hash, threads);
               }),
-              m_miner_address{},
               m_starter_message_showed(false),
               m_target_blockchain_height(0),
               m_checkpoints_path(""),
@@ -310,7 +309,7 @@ namespace cryptonote
 
     tools::download_async_handle handle;
     {
-      std::lock_guard lock{m_update_mutex};
+      boost::lock_guard<boost::mutex> lock(m_update_mutex);
       handle = m_update_download;
       m_update_download = 0;
     }
@@ -800,12 +799,11 @@ namespace cryptonote
 
     if (m_service_node_keys)
     {
-      std::lock_guard<std::mutex> lock{m_arqnet_init_mutex};
       std::string listen_ip = vm["p2p-bind-ip"].as<std::string>();
       if (listen_ip.empty())
         listen_ip = "0.0.0.0";
       std::string arqnet_listen = "tcp://" + listen_ip + ":" + std::to_string(m_arqnet_port);
-      m_arqnet_obj = arqnet_new(*this, arqnet_listen);
+      m_arqnet_obj = arqnet_new(*this, m_service_node_list, arqnet_listen);
     }
 
 #ifdef ENABLE_SYSTEMD
@@ -896,7 +894,10 @@ namespace cryptonote
     sd_notify(0, "STOPPING=1\nSTATUS=Shutting down");
 #endif
     if (m_arqnet_obj)
+    {
       arqnet_delete(m_arqnet_obj);
+      m_arqnet_obj = nullptr;
+    }
     m_service_node_list.store();
     m_miner.stop();
     m_mempool.deinit();
@@ -961,7 +962,7 @@ namespace cryptonote
     }
     //std::cout << "!"<< tx.vin.size() << std::endl;
 
-    std::lock_guard lock{bad_semantics_txes_lock};
+    std::lock_guard<boost::mutex> lock(bad_semantics_txes_lock);
     for (int idx = 0; idx < 2; ++idx)
     {
       if (bad_semantics_txes[idx].find(tx_info.tx_hash) != bad_semantics_txes[idx].end())
@@ -1906,7 +1907,7 @@ namespace cryptonote
     boost::filesystem::path path(epee::string_tools::get_current_module_folder());
     path /= filename;
 
-    std::unique_lock lock{m_update_mutex};
+    boost::unique_lock<boost::mutex> lock(m_update_mutex);
 
     if (m_update_download != 0)
     {
@@ -1947,7 +1948,7 @@ namespace cryptonote
           MCERROR("updates", "Failed to download " << uri);
           good = false;
         }
-        std::unique_lock lock{m_update_mutex};
+        boost::unique_lock<boost::mutex> lock(m_update_mutex);
         m_update_download = 0;
         if (success && !remove)
         {

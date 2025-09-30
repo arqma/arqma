@@ -34,8 +34,6 @@
 
 #include <ctime>
 #include <chrono>
-#include <condition_variable>
-#include <mutex>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -75,8 +73,8 @@ namespace cryptonote
   extern const command_line::arg_descriptor<bool> arg_offline;
   extern const command_line::arg_descriptor<size_t> arg_block_download_max_size;
 
-  extern void *(*arqnet_new)(core &core, const std::string &bind);
-  extern void (*arqnet_delete)(void *&self);
+  extern void *(*arqnet_new)(core &core, service_nodes::service_node_list &sn_list, const std::string &bind);
+  extern void (*arqnet_delete)(void *self);
   extern void (*arqnet_relay_obligation_votes)(void *self, const std::vector<service_nodes::quorum_vote_t> &votes);
   extern bool init_core_callback_complete;
 
@@ -102,10 +100,7 @@ namespace cryptonote
        *
        * @param pprotocol pre-constructed protocol object to store and use
        */
-     explicit core(i_cryptonote_protocol* pprotocol);
-
-     core(const core &) = delete;
-     core &operator=(const core &) = delete;
+     core(i_cryptonote_protocol* pprotocol);
 
      /**
       * @brief calls various idle routines
@@ -152,7 +147,7 @@ namespace cryptonote
        transaction tx;
      };
 
-     auto incoming_tx_lock() { return std::unique_lock{m_incoming_tx_lock}; }
+     auto incoming_tx_lock() { return std::unique_lock<boost::recursive_mutex>{m_incoming_tx_lock}; }
 
      std::vector<tx_verification_batch_info> parse_incoming_txs(const std::vector<blobdata>& tx_blobs, const tx_pool_options &opts);
 
@@ -917,11 +912,10 @@ namespace cryptonote
 
      i_cryptonote_protocol* m_pprotocol; //!< cryptonote protocol instance
 
-     epee::critical_section m_incoming_tx_lock; //!< incoming transaction lock
+     boost::recursive_mutex m_incoming_tx_lock; //!< incoming transaction lock
 
      //m_miner and m_miner_addres are probably temporary here
      miner m_miner; //!< miner instance
-     account_public_address m_miner_address; //!< address to mine to (for miner instance)
 
      std::string m_config_folder; //!< folder to look in for configs and other files
 
@@ -959,14 +953,13 @@ namespace cryptonote
 
      std::string m_arqnet_bind_ip;
      void *m_arqnet_obj = nullptr;
-     std::mutex m_arqnet_init_mutex;
 
      size_t block_sync_size;
 
      time_t start_time;
 
      std::unordered_set<crypto::hash> bad_semantics_txes[2];
-     std::mutex bad_semantics_txes_lock;
+     boost::mutex bad_semantics_txes_lock;
 
      enum {
        UPDATES_DISABLED,
@@ -977,7 +970,7 @@ namespace cryptonote
 
      tools::download_async_handle m_update_download;
      size_t m_last_update_length;
-     std::mutex m_update_mutex;
+     boost::mutex m_update_mutex;
 
      bool m_offline;
      bool m_pad_transactions;

@@ -28,12 +28,15 @@
 
 #include "levin_notify.h"
 
+#include <boost/asio/dispatch.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/system/system_error.hpp>
 #include <chrono>
 #include <deque>
 #include <stdexcept>
 
+#include "byte_slice.h"
 #include "common/expect.h"
 #include "common/varint.h"
 #include "cryptonote_config.h"
@@ -89,7 +92,7 @@ namespace levin
       return outs;
     }
 
-    std::string make_tx_payload(std::vector<blobdata>&& txs, const bool pad)
+    epee::levin::message_writer make_tx_message(std::vector<blobdata>&& txs, const bool pad)
     {
       NOTIFY_NEW_TRANSACTIONS::request request{};
       request.txs = std::move(txs);
@@ -110,7 +113,7 @@ namespace levin
           padding -= overhead;
         request._ = std::string(padding, ' ');
 
-        std::string arg_buff;
+        epee::byte_slice arg_buff;
         epee::serialization::store_t_to_binary(request, arg_buff);
 
         // we probably lowballed the payload size a bit, so added a but too much. Fix this now.
@@ -122,11 +125,11 @@ namespace levin
         // if the size of _ moved enough, we might lose byte in size encoding, we don't care
       }
 
-      std::string fullBlob;
-      if (!epee::serialization::store_t_to_binary(request, fullBlob))
+      epee::levin::message_writer out;
+      if (!epee::serialization::store_t_to_binary(request, out.buffer))
         throw std::runtime_error{"Failed to serialize to epee binary format"};
 
-      return fullBlob;
+      return out;
     }
 
     /* The current design uses `asio::strand`s. The documentation isn't as clear
@@ -144,7 +147,7 @@ namespace levin
        `dispatch` is used heavily, which means "execute immediately in _this_
        thread if the strand is not in use, otherwise queue the callback to be
        executed immediately after the strand completes its current task".
-       `post` is used where deferred execution to an `asio::io_service::run`
+       `post` is used where deferred execution to an `asio::io_context::run`
        thread is preferred.
 
        The strand per "zone" is useful because the levin
@@ -161,22 +164,23 @@ namespace levin
     //! A queue of levin messages for a noise i2p/tor link
     struct noise_channel
     {
-      explicit noise_channel(boost::asio::io_service& io_service)
-        : queue(),
+      explicit noise_channel(boost::asio::io_context& io_service)
+        : active(nullptr),
+          queue(),
           strand(io_service),
           next_noise(io_service),
           connection(boost::uuids::nil_uuid())
       {}
 
-      // `asio::io_service::strand` cannot be copied or moved
+      // `asio::io_context::strand` cannot be copied or moved
       noise_channel(const noise_channel&) = delete;
       noise_channel& operator=(const noise_channel&) = delete;
 
       // Only read/write these values "inside the strand"
 
-      epee::shared_sv active;
-      std::deque<epee::shared_sv> queue;
-      boost::asio::io_service::strand strand;
+      epee::byte_slice active;
+      std::deque<epee::byte_slice> queue;
+      boost::asio::io_context::strand strand;
       boost::asio::steady_timer next_noise;
       boost::uuids::uuid connection;
     };
@@ -186,7 +190,7 @@ namespace levin
   {
     struct zone
     {
-      explicit zone(boost::asio::io_service& io_service, std::shared_ptr<connections> p2p, epee::shared_sv noise_in, epee::net_utils::zone zone)
+      explicit zone(boost::asio::io_context& io_service, std::shared_ptr<connections> p2p, epee::byte_slice noise_in, epee::net_utils::zone zone)
         : p2p(std::move(p2p)),
           noise(std::move(noise_in)),
           next_epoch(io_service),
@@ -196,14 +200,14 @@ namespace levin
           connection_count(0),
           nzone(zone)
       {
-        for (std::size_t count = 0; !noise.view.empty() && count < CRYPTONOTE_NOISE_CHANNELS; ++count)
+        for (std::size_t count = 0; !noise.empty() && count < CRYPTONOTE_NOISE_CHANNELS; ++count)
           channels.emplace_back(io_service);
       }
 
       const std::shared_ptr<connections> p2p;
-      const epee::shared_sv noise; //!< `!empty()` means zone is using noise channels
+      const epee::byte_slice noise; //!< `!empty()` means zone is using noise channels
       boost::asio::steady_timer next_epoch;
-      boost::asio::io_service::strand strand;
+      boost::asio::io_context::strand strand;
       net::dandelionpp::connection_map map;//!< Tracks outgoing uuid's for noise channels or Dandelion++ stems
       std::deque<noise_channel> channels;  //!< Never touch after init; only update elements on `noise_channel.strand`
       std::atomic<std::size_t> connection_count; //!< Only update in strand, can be read at any time
@@ -217,17 +221,17 @@ namespace levin
     class queue_covert_notify
     {
       std::shared_ptr<detail::zone> zone_;
-      epee::shared_sv message_; // Requires manual copy constructor
+      epee::byte_slice message_; // Requires manual copy constructor
       const std::size_t destination_;
 
     public:
-      queue_covert_notify(std::shared_ptr<detail::zone> zone, epee::shared_sv message, std::size_t destination)
+      queue_covert_notify(std::shared_ptr<detail::zone> zone, epee::byte_slice message, std::size_t destination)
         : zone_(std::move(zone)), message_(std::move(message)), destination_(destination)
       {}
 
       queue_covert_notify(queue_covert_notify&&) = default;
       queue_covert_notify(const queue_covert_notify& source)
-        : zone_(source.zone_), message_(source.message_), destination_(source.destination_)
+        : zone_(source.zone_), message_(source.message_.clone()), destination_(source.destination_)
       {}
 
       //! \pre Called within `zone_->channels[destionation_].strand`.
@@ -248,17 +252,17 @@ namespace levin
     class flood_notify
     {
       std::shared_ptr<detail::zone> zone_;
-      epee::shared_sv message_; // Requires manual copy
+      epee::byte_slice message_; // Requires manual copy
       boost::uuids::uuid source_;
 
     public:
-      explicit flood_notify(std::shared_ptr<detail::zone> zone, epee::shared_sv message, const boost::uuids::uuid& source)
-        : zone_(std::move(zone)), message_(message), source_(source)
+      explicit flood_notify(std::shared_ptr<detail::zone> zone, epee::byte_slice message, const boost::uuids::uuid& source)
+        : zone_(std::move(zone)), message_(message.clone()), source_(source)
       {}
 
       flood_notify(flood_notify&&) = default;
       flood_notify(const flood_notify& source)
-        : zone_(source.zone_), message_(source.message_), source_(source.source_)
+        : zone_(source.zone_), message_(source.message_.clone()), source_(source.source_)
       {}
 
       void operator()() const
@@ -283,7 +287,7 @@ namespace levin
         });
 
         for (const boost::uuids::uuid& connection : connections)
-          zone_->p2p->send(message_, connection);
+          zone_->p2p->send(message_.clone(), connection);
       }
     };
 
@@ -313,7 +317,7 @@ namespace levin
            notify (tx) instead of dummy noise. */
 
         channel.connection = connection_;
-        channel.active = {};
+        channel.active = nullptr;
 
         if (connection_.is_nil())
           channel.queue.clear();
@@ -338,7 +342,7 @@ namespace levin
         for (auto id = zone->map.begin(); id != zone->map.end(); ++id)
         {
           const std::size_t i = id - zone->map.begin();
-          zone->channels[i].strand.post(update_channel{zone, i, *id}, std::allocator<void>{});
+          boost::asio::post(zone->channels[i].strand, update_channel{zone, i, *id});
         }
       }
 
@@ -404,7 +408,7 @@ namespace levin
       //! \pre Called within `zone_->channels[channel_].strand`.
       void operator()(boost::system::error_code error)
       {
-        if (!zone_ || !zone_->p2p || zone_->noise.view.empty())
+        if (!zone_ || !zone_->p2p || zone_->noise.empty())
           return;
 
         if (error && error != boost::system::errc::operation_canceled)
@@ -417,37 +421,32 @@ namespace levin
 
         if (!channel.connection.is_nil())
         {
-          epee::shared_sv message;
-          if (!channel.active.view.empty())
-            message = channel.active.extract_prefix(zone_->noise.size());
+          epee::byte_slice message = nullptr;
+          if (!channel.active.empty())
+            message = channel.active.take_slice(zone_->noise.size());
           else if (!channel.queue.empty())
           {
-            channel.active = channel.queue.front();
-            message = channel.active.extract_prefix(zone_->noise.size());
+            channel.active = channel.queue.front().clone();
+            message = channel.active.take_slice(zone_->noise.size());
           }
           else
-            message = zone_->noise;
+            message = zone_->noise.clone();
 
-          zone_->p2p->for_connection(channel.connection, [&](detail::p2p_context& context) {
-            on_levin_traffic(context, true, true, false, message.size(), "noise");
-            return true;
-          });
           if (zone_->p2p->send(std::move(message), channel.connection))
           {
-            if (!channel.queue.empty() && channel.active.view.empty())
+            if (!channel.queue.empty() && channel.active.empty())
               channel.queue.pop_front();
           }
           else
           {
-            channel.active = {};
+            channel.active = nullptr;
             channel.connection = boost::uuids::nil_uuid();
 
             auto connections = get_out_connections(*zone_->p2p);
             if (connections.empty())
               MWARNING("Lost all outbound connections to anonymity network - currently unable to send transaction(s)");
 
-            zone_->strand.post(update_channels{zone_, std::move(connections)}, std::allocator<void>{});
-            //boost::asio::post(zone_->strand, update_channels{zone_, get_out_connections(*zone_->p2p)});
+            boost::asio::post(zone_->strand, update_channels{zone_, std::move(connections)});
           }
         }
 
@@ -474,8 +473,9 @@ namespace levin
           throw boost::system::system_error{error, "start_epoch timer failed"};
 
         const auto start = std::chrono::steady_clock::now();
-        zone_->strand.dispatch(
-          change_channels{zone_, net::dandelionpp::connection_map{get_out_connections(*(zone_->p2p)), count_}}, std::allocator<void>{}
+        boost::asio::dispatch(
+          zone_->strand,
+          change_channels{zone_, net::dandelionpp::connection_map{get_out_connections(*(zone_->p2p)), count_}}
         );
 
         detail::zone& alias = *zone_;
@@ -485,13 +485,13 @@ namespace levin
     };
   } // anonymous
 
-  notify::notify(boost::asio::io_service& service, std::shared_ptr<connections> p2p, epee::shared_sv noise, epee::net_utils::zone zone)
+  notify::notify(boost::asio::io_context& service, std::shared_ptr<connections> p2p, epee::byte_slice noise, epee::net_utils::zone zone)
     : zone_(std::make_shared<detail::zone>(service, std::move(p2p), std::move(noise), zone))
   {
     if (!zone_->p2p)
       throw std::logic_error{"cryptonote::levin::notify cannot have nullptr p2p argument"};
 
-    if (!zone_->noise.view.empty())
+    if (!zone_->noise.empty())
     {
       const auto now = std::chrono::steady_clock::now();
       start_epoch{zone_, noise_min_epoch, noise_epoch_range, CRYPTONOTE_NOISE_CHANNELS}();
@@ -508,16 +508,16 @@ namespace levin
     if (!zone_)
       return {false, false};
 
-    return {!zone_->noise.view.empty(), CRYPTONOTE_NOISE_CHANNELS <= zone_->connection_count};
+    return {!zone_->noise.empty(), CRYPTONOTE_NOISE_CHANNELS <= zone_->connection_count};
   }
 
   void notify::new_out_connection()
   {
-    if (!zone_ || zone_->noise.view.empty() || CRYPTONOTE_NOISE_CHANNELS <= zone_->connection_count)
+    if (!zone_ || zone_->noise.empty() || CRYPTONOTE_NOISE_CHANNELS <= zone_->connection_count)
       return;
 
-    zone_->strand.dispatch(
-      update_channels{zone_, get_out_connections(*(zone_->p2p))}, std::allocator<void>{}
+    boost::asio::dispatch(
+      zone_->strand, update_channels{zone_, get_out_connections(*(zone_->p2p))}
     );
   }
 
@@ -548,7 +548,7 @@ namespace levin
     if (zone_->nzone == epee::net_utils::zone::public_)
       std::sort(txs.begin(), txs.end());
 
-    if (!zone_->noise.view.empty() && !zone_->channels.empty())
+    if (!zone_->noise.empty() && !zone_->channels.empty())
     {
       // covert send in "noise" channel
       static_assert(
@@ -556,10 +556,9 @@ namespace levin
       );
 
       // padding is not useful when using noise mode
-      const std::string payload = make_tx_payload(std::move(txs), false);
-      epee::shared_sv message{epee::levin::make_fragmented_notify(
-        zone_->noise.view, NOTIFY_NEW_TRANSACTIONS::ID, epee::strspan<uint8_t>(payload)
-      )};
+      epee::byte_slice message = epee::levin::make_fragmented_notify(
+        zone_->noise.size(), NOTIFY_NEW_TRANSACTIONS::ID, make_tx_message(std::move(txs), false)
+      );
       if (CRYPTONOTE_MAX_FRAGMENTS * zone_->noise.size() < message.size())
       {
         MERROR("notify::send_txs provided message exceeding covert fragment size");
@@ -568,19 +567,18 @@ namespace levin
 
       for (std::size_t channel = 0; channel < zone_->channels.size(); ++channel)
       {
-        zone_->channels[channel].strand.dispatch(
-          queue_covert_notify{zone_, message, channel}, std::allocator<void>{}
+        boost::asio::dispatch(
+          zone_->channels[channel].strand, queue_covert_notify{zone_, message.clone(), channel}
         );
       }
     }
     else
     {
-      const std::string payload = make_tx_payload(std::move(txs), pad_txs);
-      epee::shared_sv message{
-        epee::levin::make_notify(NOTIFY_NEW_TRANSACTIONS::ID, epee::strspan<uint8_t>(payload))};
+      epee::byte_slice message =
+        epee::levin::make_fragmented_notify(zone_->noise.empty(), NOTIFY_NEW_TRANSACTIONS::ID, make_tx_message(std::move(txs), pad_txs));
 
       // traditional monero send technique
-      zone_->strand.dispatch(flood_notify{zone_, std::move(message), source}, std::allocator<void>{});
+      boost::asio::dispatch(zone_->strand, flood_notify{zone_, std::move(message), source});
     }
 
     return true;

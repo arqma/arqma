@@ -93,9 +93,9 @@ namespace epee
   size_t mlocker::page_size = 0;
   size_t mlocker::num_locked_objects = 0;
 
-  std::mutex &mlocker::mutex()
+  boost::mutex &mlocker::mutex()
   {
-    static std::mutex *vmutex = new std::mutex();
+    static boost::mutex *vmutex = new boost::mutex();
     return *vmutex;
   }
   std::map<size_t, unsigned int> &mlocker::map()

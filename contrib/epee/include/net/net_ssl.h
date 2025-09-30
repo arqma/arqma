@@ -34,6 +34,7 @@
 #include <string>
 #include <vector>
 #include <boost/utility/string_ref.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/filesystem/path.hpp>
@@ -111,9 +112,18 @@ class ssl_options_t
     //! Search against internal fingerprints. Always false if `behavior() != user_certificate_check`.
     bool has_fingerprint(boost::asio::ssl::verify_context &ctx) const;
 
+    //! configure ssl_stream handshake verification
+    void configure(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, const std::string& host = {}) const;
+
     boost::asio::ssl::context create_context() const;
 
-    bool handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, boost::asio::const_buffer buffer = {}, const std::string& host = {}, std::chrono::milliseconds timeout = std::chrono::seconds(15)) const;
+    bool handshake(
+      boost::asio::io_context& io_context,
+      boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket,
+      boost::asio::ssl::stream_base::handshake_type type,
+      boost::asio::const_buffer buffer = {},
+      const std::string& host = {},
+      std::chrono::milliseconds timeout = std::chrono::seconds(15)) const;
 	};
 
   // https://security.stackexchange.com/questions/34780/checking-client-hello-for-https-classification

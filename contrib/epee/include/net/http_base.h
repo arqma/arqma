@@ -34,6 +34,7 @@
 #include <string>
 #include <utility>
 #include <list>
+#include <stdint.h>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net.http"

@@ -694,6 +694,9 @@ public:
    */
   virtual std::string get_db_name() const = 0;
 
+  virtual bool lock() = 0;
+  virtual void unlock() = 0;
+
   /**
    * @brief tells the BlockchainDB to start a new "batch" of blocks
    *

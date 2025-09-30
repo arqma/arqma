@@ -40,6 +40,8 @@
 #include "net/net_utils_base.h"
 #include "p2p_protocol_defs.h"
 
+namespace epee { namespace levin { class message_writer; } }
+
 namespace nodetool
 {
   typedef boost::uuids::uuid uuid;
@@ -48,10 +50,9 @@ namespace nodetool
   template<class t_connection_context>
   struct i_p2p_endpoint
   {
-    virtual bool relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)=0;
+    virtual bool relay_notify_to_list(int command, epee::levin::message_writer message, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)=0;
     virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, const bool pad_txs)=0;
-    virtual bool invoke_command_to_peer(int command, const epee::span<const uint8_t> req_buff, std::string& resp_buff, const epee::net_utils::connection_context_base& context)=0;
-    virtual bool invoke_notify_to_peer(int command, const epee::span<const uint8_t> req_buff, const epee::net_utils::connection_context_base& context)=0;
+    virtual bool invoke_notify_to_peer(int command, epee::levin::message_writer message, const epee::net_utils::connection_context_base& context)=0;
     virtual bool drop_connection(const epee::net_utils::connection_context_base& context)=0;
     virtual void request_callback(const epee::net_utils::connection_context_base& context)=0;
     virtual uint64_t get_public_connections_count()=0;
@@ -61,7 +62,7 @@ namespace nodetool
     virtual bool unblock_host(const epee::net_utils::network_address &address)=0;
     virtual std::map<std::string, time_t> get_blocked_hosts()=0;
     virtual std::map<epee::net_utils::ipv4_network_subnet, time_t> get_blocked_subnets()=0;
-    virtual bool add_host_fail(const epee::net_utils::network_address &address)=0;
+    virtual bool add_host_fail(const epee::net_utils::network_address &address, unsigned int score = 1)=0;
     virtual void add_used_stripe_peer(const t_connection_context &context)=0;
     virtual void remove_used_stripe_peer(const t_connection_context &context)=0;
     virtual void clear_used_stripe_peers()=0;
@@ -70,7 +71,7 @@ namespace nodetool
   template<class t_connection_context>
   struct p2p_endpoint_stub: public i_p2p_endpoint<t_connection_context>
   {
-    virtual bool relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)
+    virtual bool relay_notify_to_list(int command, epee::levin::message_writer message, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)
     {
       return false;
     }
@@ -78,11 +79,7 @@ namespace nodetool
     {
       return epee::net_utils::zone::invalid;
     }
-    virtual bool invoke_command_to_peer(int command, const epee::span<const uint8_t> req_buff, std::string& resp_buff, const epee::net_utils::connection_context_base& context)
-    {
-      return false;
-    }
-    virtual bool invoke_notify_to_peer(int command, const epee::span<const uint8_t> req_buff, const epee::net_utils::connection_context_base& context)
+    virtual bool invoke_notify_to_peer(int command, epee::levin::message_writer message, const epee::net_utils::connection_context_base& context)
     {
       return true;
     }
@@ -123,7 +120,7 @@ namespace nodetool
     {
       return std::map<epee::net_utils::ipv4_network_subnet, time_t>();
     }
-    virtual bool add_host_fail(const epee::net_utils::network_address &address)
+    virtual bool add_host_fail(const epee::net_utils::network_address &address, unsigned int score)
     {
       return true;
     }

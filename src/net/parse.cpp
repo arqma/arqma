@@ -82,11 +82,7 @@ namespace net
       return i2p_address::make(address, default_port);
 
     boost::system::error_code ec;
-#if BOOST_VERSION >= 106600
     auto v6 = boost::asio::ip::make_address_v6(host_str, ec);
-#else
-    auto v6 = boost::asio::ip::address_v6::from_string(host_str, ec);
-#endif
     ipv6 = !ec;
 
     std::uint16_t port = default_port;

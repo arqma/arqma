@@ -31,6 +31,8 @@
 
 #pragma once
 
+#include <boost/thread/locks.hpp>
+#include <boost/thread/mutex.hpp>
 #include <boost/optional.hpp>
 #include <boost/endian/conversion.hpp>
 #include <system_error>
@@ -40,15 +42,14 @@
 #include <memory>
 #include <string>
 #include <chrono>
-#include <mutex>
 
 #ifdef _WIN32
 #include "windows.h"
 #include "misc_log_ex.h"
 #endif
 
-#include "crypto/hash.h"
 #include "cryptonote_config.h"
+#include "crypto/hash.h"
 
 /*! \brief Various Tools
  *
@@ -215,8 +216,8 @@ namespace tools
     /*! \brief calles m_handler */
     static void handle_signal(int type)
     {
-      static std::mutex m_mutex;
-      std::unique_lock lock{m_mutex};
+      static boost::mutex m_mutex;
+      boost::unique_lock<boost::mutex> lock(m_mutex);
       m_handler(type);
     }
 
@@ -253,8 +254,6 @@ namespace tools
   std::string get_human_readable_timespan(std::chrono::seconds seconds);
 
   std::string get_human_readable_bytes(uint64_t bytes);
-
-  uint64_t cumulative_block_sync_weight(cryptonote::network_type nettype, uint64_t start_block, uint64_t num_blocks);
 
   template <typename... T> constexpr size_t constexpr_sum(T... ns) { return (0 + ... + size_t{ns}); }
 
