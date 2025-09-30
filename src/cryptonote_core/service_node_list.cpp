@@ -47,6 +47,7 @@ extern "C" {
 #include "common/i18n.h"
 #include "common/util.h"
 #include "common/random.h"
+#include "common/lock.h"
 #include "blockchain.h"
 #include "service_node_quorum_cop.h"
 #include "net/local_ip.h"
@@ -1815,10 +1816,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
         REJECT_PROOF("invalid arqnet port in uptime proof");
     }
 
-    std::unique_lock<cryptonote::Blockchain> bc_lock{m_blockchain, std::defer_lock};
-    std::unique_lock<boost::recursive_mutex> sn_lock{m_sn_mutex, std::defer_lock};
-    std::unique_lock<std::shared_timed_mutex> x_lock{m_x25519_map_mutex, std::defer_lock};
-    std::lock(bc_lock, sn_lock, x_lock);
+    auto locks = tools::unique_locks(m_sn_mutex, m_blockchain, m_x25519_map_mutex);
     auto it = m_state.service_nodes_infos.find(proof.pubkey);
     if (it == m_state.service_nodes_infos.end())
       REJECT_PROOF("no such service node is currently registered");
@@ -1862,9 +1860,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
   void service_node_list::cleanup_proofs()
   {
     MDEBUG("Cleaning up expired SN proofs");
-    std::unique_lock<boost::recursive_mutex> lock_sn{m_sn_mutex, std::defer_lock};
-    std::unique_lock<cryptonote::Blockchain> lock_db{m_blockchain, std::defer_lock};
-    std::lock(lock_sn, lock_db);
+    auto locks = tools::unique_locks(m_sn_mutex, m_blockchain);
     uint64_t now = std::time(nullptr);
     auto &db = m_blockchain.get_db();
     cryptonote::db_wtxn_guard guard{db};
@@ -1885,7 +1881,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
   //---------------------------------------------------------------------------
   crypto::public_key service_node_list::get_pubkey_from_x25519(const crypto::x25519_public_key &x25519) const
   {
-    std::shared_lock<std::shared_timed_mutex> lock{m_x25519_map_mutex};
+    auto lock = tools::shared_lock(m_x25519_map_mutex);
     auto it = x25519_to_pub.find(x25519);
     if (it != x25519_to_pub.end())
       return it->second.first;
@@ -1894,9 +1890,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
   //---------------------------------------------------------------------------
   void service_node_list::initialize_x25519_map()
   {
-    std::unique_lock<boost::recursive_mutex> lock_sn{m_sn_mutex, std::defer_lock};
-    std::unique_lock<cryptonote::Blockchain> lock_db{m_blockchain, std::defer_lock};
-    std::lock(lock_sn, lock_db);
+    auto locks = tools::unique_locks(m_sn_mutex, m_x25519_map_mutex);
 
     auto now = std::time(nullptr);
     for (const auto &pk_info : m_state.service_nodes_infos)

@@ -890,8 +890,7 @@ namespace nodetool
             }
             else
             {
-              if(!(cntxt.m_state == p2p_connection_context::state_before_handshake && std::time(NULL) < cntxt.m_started + 10))
-                ++number_of_out_peers;
+              ++number_of_out_peers;
             }
             return true;
           }); // lambda

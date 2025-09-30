@@ -390,7 +390,7 @@ namespace cryptonote
         return false;
       }
       context.m_state = cryptonote_connection_context::state_normal;
-      if(is_initial && target == m_core.get_current_blockchain_height())
+      if(is_initial && hshd.current_height >= target && target == m_core.get_current_blockchain_height())
         on_connection_synchronized();
       return true;
     }
@@ -2428,6 +2428,10 @@ skip:
     {
       MINFO("Target height decreasing from " << previous_target << " to " << target);
       m_core.set_target_blockchain_height(target);
+      if (target == 0 && context.m_state > cryptonote_connection_context::state_before_handshake && !m_stopping)
+      {
+        MCWARNING("global", "arqmad is now disconnected from the network");
+      }
     }
 
     m_block_queue.flush_spans(context.m_connection_id, false);
