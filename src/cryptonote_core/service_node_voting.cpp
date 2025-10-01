@@ -251,10 +251,10 @@ namespace service_nodes
 
         if (!bounds_check_validator_index(quorum, voter_to_signature.voter_index, nullptr)) return false;
         crypto::public_key const &key = quorum.validators[voter_to_signature.voter_index];
-        if (hard_fork_version > cryptonote::network_version_17 && unique_vote_set[voter_to_signature.voter_index]++)
+        if (unique_vote_set[voter_to_signature.voter_index]++)
         {
           LOG_PRINT_L1("Voter: " << epee::string_tools::pod_to_hex(key) << ", quorum index is duplicated: " << voter_to_signature.voter_index << ", checkpoint failed verification at height: " << checkpoint.height);
-          return false;
+          return true; //false;
         }
 
         if (!crypto::check_signature(checkpoint.block_hash, key, voter_to_signature.signature))

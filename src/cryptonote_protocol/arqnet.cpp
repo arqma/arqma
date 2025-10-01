@@ -2,12 +2,9 @@
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/service_node_voting.h"
 #include "cryptonote_core/service_node_rules.h"
-#include "cryptonote_core/tx_pool.h"
 #include "arqnet/sn_network.h"
 #include "arqnet/conn_matrix.h"
 #include "cryptonote_config.h"
-
-#include <shared_mutex>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "arqnet"
@@ -23,12 +20,13 @@ using namespace std::chrono_literals;
 struct SNNWrapper {
   SNNetwork snn;
   cryptonote::core &core;
+  service_node_list &sn_list;
 
-  std::shared_timed_mutex mutex;
+  boost::shared_mutex mutex;
 
   template <typename... Args>
-  SNNWrapper(cryptonote::core &core, Args &&...args)
-    : snn{std::forward<Args>(args)...}, core{core} {}
+  SNNWrapper(cryptonote::core &core, service_node_list &sn_list, Args &&...args)
+    : snn{std::forward<Args>(args)...}, core{core}, sn_list{sn_list} {}
 
   static SNNWrapper &from(void* obj)
   {
@@ -111,7 +109,7 @@ void snn_write_log(LogLevel level, const char *file, int line, std::string msg)
   el::base::Writer(easylogging_level(level), el::Color::Default, file, line, ELPP_FUNC, el::base::DispatchAction::NormalLog).construct(ARQMA_DEFAULT_LOG_CATEGORY) << msg;
 }
 
-void *new_snnwrapper(cryptonote::core &core, const std::string &bind)
+void *new_snnwrapper(cryptonote::core &core, service_node_list &sn_list, const std::string &bind)
 {
   auto keys = core.get_service_node_keys();
   auto peer_lookup = [&sn_list = core.get_service_node_list()](const std::string &x25519_pub)
@@ -134,12 +132,12 @@ void *new_snnwrapper(cryptonote::core &core, const std::string &bind)
   if (!keys)
   {
     MINFO("Starting remote-only arqnet instance");
-    obj = new SNNWrapper(core, peer_lookup, allow, snn_want_log, snn_write_log);
+    obj = new SNNWrapper(core, sn_list, peer_lookup, allow, snn_want_log, snn_write_log);
   }
   else
   {
     MINFO("Starting arqnet listener on " << bind << " with x25519 pubkey " << keys->pub_x25519);
-    obj = new SNNWrapper(core, get_data_as_string(keys->pub_x25519), get_data_as_string(keys->key_x25519.data),
+    obj = new SNNWrapper(core, sn_list, get_data_as_string(keys->pub_x25519), get_data_as_string(keys->key_x25519.data),
                          std::vector<std::string>{{bind}}, peer_lookup, allow, snn_want_log, snn_write_log);
   }
 
@@ -148,12 +146,11 @@ void *new_snnwrapper(cryptonote::core &core, const std::string &bind)
   return obj;
 }
 
-void delete_snnwrapper(void *&obj)
+void delete_snnwrapper(void *obj)
 {
   auto *snn = reinterpret_cast<SNNWrapper *>(obj);
   MINFO("Shutting down arqnet listener");
   delete snn;
-  obj = nullptr;
 }
 
 template <typename E>
@@ -390,7 +387,7 @@ void relay_obligation_votes(void *obj, const std::vector<service_nodes::quorum_v
       continue;
     }
 
-    auto quorum = snw.core.get_service_node_list().get_quorum(vote.type, vote.block_height);
+    auto quorum = snw.sn_list.get_quorum(vote.type, vote.block_height);
     if (!quorum)
     {
       MWARNING("Unable to relay vote: no " << vote.type << " quorum available for height " << vote.block_height);

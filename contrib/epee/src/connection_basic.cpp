@@ -40,7 +40,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "misc_language.h"
 #include <iomanip>
-#include <memory>
 
 #include <boost/asio/basic_socket.hpp>
 
