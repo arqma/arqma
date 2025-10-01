@@ -30,7 +30,6 @@
 
 #include <boost/shared_ptr.hpp>
 #include <vector>
-#include <memory>
 
 namespace epee
 {
@@ -82,7 +81,7 @@ namespace misc_utils
     virtual ~call_before_die_base() = default;
   };
 
-  using auto_scope_leave_caller = std::shared_ptr<call_before_die_base>;
+  using auto_scope_leave_caller = boost::shared_ptr<call_before_die_base>;
 
 
   template<class t_scope_leave_handler>

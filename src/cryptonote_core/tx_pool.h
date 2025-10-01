@@ -48,6 +48,8 @@
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "rpc/message_data_structs.h"
 
+namespace service_nodes { class service_node_list; };
+
 namespace cryptonote
 {
   class Blockchain;
@@ -98,7 +100,7 @@ namespace cryptonote
    *   helping create a new block template by choosing transactions for it
    *
    */
-  class tx_memory_pool
+  class tx_memory_pool : boost::noncopyable
   {
   public:
     /**
@@ -107,9 +109,6 @@ namespace cryptonote
      * @param bchs a Blockchain class instance, for getting chain info
      */
     tx_memory_pool(Blockchain& bchs);
-
-    tx_memory_pool(const tx_memory_pool &) = delete;
-    tx_memory_pool &operator=(const tx_memory_pool &) = delete;
 
     /**
      * @copydoc add_tx(transaction&, tx_verification_context&, const tx_pool_options &, uint8_t)
