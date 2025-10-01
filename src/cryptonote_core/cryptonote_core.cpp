@@ -894,10 +894,7 @@ namespace cryptonote
     sd_notify(0, "STOPPING=1\nSTATUS=Shutting down");
 #endif
     if (m_arqnet_obj)
-    {
       arqnet_delete(m_arqnet_obj);
-      m_arqnet_obj = nullptr;
-    }
     m_service_node_list.store();
     m_miner.stop();
     m_mempool.deinit();

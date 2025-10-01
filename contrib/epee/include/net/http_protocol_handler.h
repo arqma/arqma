@@ -55,14 +55,6 @@ namespace net_utils
 			std::vector<std::string> m_access_control_origins;
 			boost::optional<login> m_user;
 			critical_section m_lock;
-
-			template<typename T>
-			static bool after_init_connection(const std::shared_ptr<T>& self)
-			{
-			  if (!self)
-			    return false;
-			  return self->m_protocol_handler.after_init_connection();
-			}
 		};
 
 		/************************************************************************/
@@ -221,7 +213,7 @@ namespace net_utils
 			{}
 			bool after_init_connection()
 			{
-			  return true;
+				return true;
 			}
 
 		private:
