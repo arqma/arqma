@@ -38,7 +38,6 @@
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/condition_variable.hpp>
-#include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
 #include "warnings.h"
 #include "string_tools_lexical.h"
@@ -1338,7 +1337,7 @@ namespace net_utils
       CRITICAL_REGION_BEGIN(m_threads_lock);
       for (std::size_t i = 0; i < threads_count; ++i)
       {
-        boost::shared_ptr<boost::thread> thread(new boost::thread(attrs, boost::bind(&boosted_tcp_server<t_protocol_handler>::worker_thread, this)));
+        std::shared_ptr<boost::thread> thread(new boost::thread(attrs, boost::bind(&boosted_tcp_server<t_protocol_handler>::worker_thread, this)));
         m_threads.push_back(thread);
         MDEBUG("Run server thread name: " << m_thread_name_prefix);
       }
@@ -1571,10 +1570,10 @@ namespace net_utils
       boost::condition_variable cond;
     };
 
-    boost::shared_ptr<local_async_context> local_shared_context(new local_async_context());
+    std::shared_ptr<local_async_context> local_shared_context(new local_async_context());
     local_shared_context->ec = boost::asio::error::would_block;
     boost::unique_lock<boost::mutex> lock(local_shared_context->connect_mut);
-    auto connect_callback = [](boost::system::error_code ec_, boost::shared_ptr<local_async_context> shared_context)
+    auto connect_callback = [](boost::system::error_code ec_, std::shared_ptr<local_async_context> shared_context)
     {
       shared_context->connect_mut.lock(); shared_context->ec = ec_; shared_context->cond.notify_one(); shared_context->connect_mut.unlock();
     };
@@ -1845,7 +1844,7 @@ namespace net_utils
       }
     }
 
-    boost::shared_ptr<boost::asio::deadline_timer> sh_deadline(new boost::asio::deadline_timer(io_context_));
+    std::shared_ptr<boost::asio::deadline_timer> sh_deadline(new boost::asio::deadline_timer(io_context_));
     //start deadline
     sh_deadline->expires_from_now(boost::posix_time::milliseconds(conn_timeout));
     sh_deadline->async_wait([=](const boost::system::error_code& error)
