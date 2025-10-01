@@ -151,6 +151,7 @@ void delete_snnwrapper(void *obj)
   auto *snn = reinterpret_cast<SNNWrapper *>(obj);
   MINFO("Shutting down arqnet listener");
   delete snn;
+  obj = nullptr;
 }
 
 template <typename E>

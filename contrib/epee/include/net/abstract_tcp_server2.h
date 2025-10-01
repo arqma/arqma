@@ -80,10 +80,10 @@ namespace net_utils
   /// Represents a single connection from a client.
   template<class t_protocol_handler>
   class connection
-    : public std::enable_shared_from_this<connection<t_protocol_handler>>,
+    : public boost::enable_shared_from_this<connection<t_protocol_handler>>,
       private boost::noncopyable,
-      public connection_basic,
-      public service_endpoint<t_protocol_handler>
+      public i_service_endpoint,
+      public connection_basic
   {
   public:
     typedef typename t_protocol_handler::connection_context t_connection_context;
@@ -244,12 +244,14 @@ namespace net_utils
 
     io_context_t &m_io_context;
     t_connection_type m_connection_type;
+    t_connection_context m_conn_context{};
     strand_t m_strand;
     timers_t m_timers;
     connection_ptr self{};
     bool m_local{};
     std::string m_host{};
     state_t m_state{};
+    t_protocol_handler m_handler;
 
   public:
     struct shared_state : connection_basic_shared_state, t_protocol_handler::config_type
@@ -285,7 +287,7 @@ namespace net_utils
     // `real_remote` is the actual endpoint (if connection is to proxy, etc.)
     bool start(bool is_income, bool is_multithreaded, network_address real_remote);
 
-    void get_context(t_connection_context& context_){context_ = get_context();}
+    void get_context(t_connection_context& context_) { context_ = m_conn_context; }
 
     void call_back_starter();
 
@@ -303,12 +305,9 @@ namespace net_utils
     virtual bool call_run_once_service_io();
     virtual bool request_callback();
     virtual io_context_t& get_io_context();
+    virtual bool add_ref();
+    virtual bool release();
     //------------------------------------------------------
-    const t_connection_context& get_context() const noexcept { return this->context; }
-    t_connection_context& get_context() noexcept { return this->context; }
-
-    const t_protocol_handler& get_protocol_handler() const noexcept { return this->m_protocol_handler; }
-    t_protocol_handler& get_protocol_handler() noexcept { return this->m_protocol_handler; }
   public:
     void setRpcStation();
   };
@@ -327,7 +326,7 @@ namespace net_utils
     };
 
   public:
-    typedef std::shared_ptr<connection<t_protocol_handler>> connection_ptr;
+    typedef boost::shared_ptr<connection<t_protocol_handler>> connection_ptr;
     typedef typename t_protocol_handler::connection_context t_connection_context;
     // Construct the server to listen on the specified TCP address and port, and
     // serve up files from the given directory.
@@ -408,19 +407,19 @@ namespace net_utils
 
     boost::asio::io_context& get_io_context() { return io_context_; }
 
-    struct idle_callback_conext_base
+    struct idle_callback_context_base
     {
-      virtual ~idle_callback_conext_base(){}
+      virtual ~idle_callback_context_base(){}
       virtual bool call_handler() { return true; }
-      idle_callback_conext_base(boost::asio::io_context& io_serice) : m_timer(io_serice) {}
+      idle_callback_context_base(boost::asio::io_context& io_service) : m_timer(io_service) {}
       boost::asio::deadline_timer m_timer;
     };
 
     template <class t_handler>
-    struct idle_callback_conext : public idle_callback_conext_base
+    struct idle_callback_context : public idle_callback_context_base
     {
-      idle_callback_conext(boost::asio::io_context& io_serice, t_handler& h, uint64_t period)
-        : idle_callback_conext_base(io_serice)
+      idle_callback_context(boost::asio::io_context& io_service, t_handler& h, uint64_t period)
+        : idle_callback_context_base(io_service)
         , m_handler(h)
       {
         this->m_period = period;
@@ -437,7 +436,7 @@ namespace net_utils
     template<class t_handler>
     bool add_idle_handler(t_handler t_callback, uint64_t timeout_ms)
     {
-      boost::shared_ptr<idle_callback_conext<t_handler>> ptr(new idle_callback_conext<t_handler>(io_context_, t_callback, timeout_ms));
+      boost::shared_ptr<idle_callback_context<t_handler>> ptr(new idle_callback_context<t_handler>(io_context_, t_callback, timeout_ms));
       //needed call handler here ?...
       ptr->m_timer.expires_from_now(boost::posix_time::milliseconds(ptr->m_period));
       ptr->m_timer.async_wait(boost::bind(&boosted_tcp_server<t_protocol_handler>::global_timer_handler<t_handler>, this, ptr));
@@ -445,7 +444,7 @@ namespace net_utils
     }
 
     template<class t_handler>
-    bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_conext<t_handler>> ptr)
+    bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_context<t_handler>> ptr)
     {
       //if handler return false - he don't want to be called anymore
       if(!ptr->call_handler())
