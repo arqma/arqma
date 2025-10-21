@@ -106,6 +106,7 @@ t_daemon::t_daemon(
 {
   zmq_rpc_bind_port = command_line::get_arg(vm, daemon_args::arg_zmq_rpc_bind_port);
   zmq_rpc_bind_address = command_line::get_arg(vm, daemon_args::arg_zmq_rpc_bind_ip);
+  zmq_rpc_enabled = command_line::get_arg(vm, daemon_args::arg_zmq_rpc_enabled);
 }
 
 t_daemon::~t_daemon() = default;
@@ -172,24 +173,29 @@ bool t_daemon::run(bool interactive)
     cryptonote::rpc::DaemonHandler rpc_daemon_handler(mp_internals->core.get(), mp_internals->p2p.get());
     cryptonote::rpc::ZmqServer zmq_server(rpc_daemon_handler);
 
-    if (!zmq_server.addTCPSocket(zmq_rpc_bind_address, zmq_rpc_bind_port))
+    if (zmq_rpc_enabled)
     {
-      LOG_ERROR(std::string("Failed to add TCP Socket (") + zmq_rpc_bind_address
-          + ":" + zmq_rpc_bind_port + ") to Arqma ZMQ RPC Server");
+      if (!zmq_server.addTCPSocket(zmq_rpc_bind_address, zmq_rpc_bind_port))
+      {
+        LOG_ERROR(std::string("Failed to add TCP Socket (") + zmq_rpc_bind_address
+            + ":" + zmq_rpc_bind_port + ") to Arqma ZMQ RPC Server");
 
-      if (rpc_commands)
-        rpc_commands->stop_handling();
+        if (rpc_commands)
+          rpc_commands->stop_handling();
 
-      for(auto& rpc : mp_internals->rpcs)
-        rpc->stop();
+        for(auto& rpc : mp_internals->rpcs)
+          rpc->stop();
 
-      return false;
+        return false;
+      }
+
+      MGINFO("Starting Arqma ZMQ Server...");
+      zmq_server.run();
+
+      MGINFO("Arqma ZMQ Server started at " << zmq_rpc_bind_address << ":" << zmq_rpc_bind_port);
     }
-
-    MGINFO("Starting Arqma ZMQ Server...");
-    zmq_server.run();
-
-    MGINFO("Arqma ZMQ Server started at " << zmq_rpc_bind_address << ":" << zmq_rpc_bind_port);
+    else
+      MGINFO("Arqma ZMQ Server disabled");
 
     if (public_rpc_port > 0)
     {
@@ -202,7 +208,8 @@ bool t_daemon::run(bool interactive)
     if(rpc_commands)
       rpc_commands->stop_handling();
 
-    zmq_server.stop();
+    if (zmq_rpc_enabled)
+      zmq_server.stop();
 
     for(auto& rpc : mp_internals->rpcs)
       rpc->stop();

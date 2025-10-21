@@ -2252,10 +2252,10 @@ skip:
       return true;
     });
 
-    epee::levin::message_writer fluffyBlob{128 * 1024};
+    epee::byte_slice fluffyBlob;
     if (arg.b.txs.size())
     {
-      epee::serialization::store_t_to_binary(arg, fluffyBlob.buffer);
+      epee::serialization::store_t_to_binary(arg, fluffyBlob, 128 * 1024);
     }
     else
     {
@@ -2263,10 +2263,10 @@ skip:
       NOTIFY_NEW_FLUFFY_BLOCK::request arg_without_tx_blobs = {};
       arg_without_tx_blobs.current_blockchain_height = arg.current_blockchain_height;
       arg_without_tx_blobs.b.block = arg.b.block;
-      epee::serialization::store_t_to_binary(arg_without_tx_blobs, fluffyBlob.buffer);
+      epee::serialization::store_t_to_binary(arg_without_tx_blobs, fluffyBlob, 32 * 1024);
     }
 
-    m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, std::move(fluffyBlob), std::move(fluffyConnections));
+    m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, epee::to_span(fluffyBlob), std::move(fluffyConnections));
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------

@@ -381,14 +381,14 @@ namespace cryptonote
      *
      * @return the cumulative txpool weight in bytes
      */
-    uint64_t get_txpool_weight() const;
+    size_t get_txpool_weight() const;
 
     /**
      * @brief set the max cumulative txpool weight in bytes
      *
      * @param bytes the max cumulative txpool weight in bytes
      */
-    uint64_t set_txpool_max_weight();
+    void set_txpool_max_weight(size_t bytes);
 
   private:
 

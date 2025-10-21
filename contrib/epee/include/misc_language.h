@@ -81,7 +81,7 @@ namespace misc_utils
     virtual ~call_before_die_base() = default;
   };
 
-  using auto_scope_leave_caller = boost::shared_ptr<call_before_die_base>;
+  typedef std::shared_ptr<call_before_die_base> auto_scope_leave_caller;
 
 
   template<class t_scope_leave_handler>
@@ -100,7 +100,7 @@ namespace misc_utils
   template<class t_scope_leave_handler>
   auto_scope_leave_caller create_scope_leave_handler(t_scope_leave_handler f)
   {
-    auto_scope_leave_caller slc(new call_before_die<t_scope_leave_handler>(f));
+    auto_scope_leave_caller slc = std::make_shared<call_before_die<t_scope_leave_handler>>(f);
     return slc;
   }
 

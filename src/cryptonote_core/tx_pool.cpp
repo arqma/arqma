@@ -442,16 +442,16 @@ namespace cryptonote
     return add_tx(tx, h, bl, get_transaction_weight(tx, bl.size()), tvc, opts, hard_fork_version);
   }
   //---------------------------------------------------------------------------------
-  uint64_t tx_memory_pool::get_txpool_weight() const
+  size_t tx_memory_pool::get_txpool_weight() const
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     return m_txpool_weight;
   }
   //---------------------------------------------------------------------------------
-  uint64_t tx_memory_pool::set_txpool_max_weight()
+  void tx_memory_pool::set_txpool_max_weight(size_t bytes)
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
-    return m_txpool_max_weight;
+    m_txpool_max_weight = bytes;
   }
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta, const sorted_tx_container::iterator *stc_it)
@@ -497,6 +497,8 @@ namespace cryptonote
   void tx_memory_pool::prune(size_t bytes)
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
+    if (bytes == 0)
+      bytes = m_txpool_max_weight;
     CRITICAL_REGION_LOCAL1(m_blockchain);
     LockedTXN lock(m_blockchain);
     bool changed = false;
@@ -551,9 +553,6 @@ namespace cryptonote
       if (!try_pruning(it, false))
         return;
     }
-    if (get_txpool_weight() < 0)
-      m_txpool_weight = 0;
-
     lock.commit();
     if (changed)
       ++m_cookie;

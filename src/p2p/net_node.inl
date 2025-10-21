@@ -114,6 +114,7 @@ namespace nodetool
     command_line::add_arg(desc, arg_limit_rate_up);
     command_line::add_arg(desc, arg_limit_rate_down);
     command_line::add_arg(desc, arg_limit_rate);
+    command_line::add_arg(desc, arg_max_connections_per_ip);
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -205,6 +206,25 @@ namespace nodetool
 
     // not found in hosts or subnets, allowed
     return true;
+  }
+  //-----------------------------------------------------------------------------------
+  template<class t_payload_net_handler>
+  bool node_server<t_payload_net_handler>::is_host_limit(const epee::net_utils::network_address &address)
+  {
+    const network_zone& zone = m_network_zones.at(address.get_zone());
+    if (zone.m_current_number_of_in_peers >= zone.m_config.m_net_config.max_in_connection_count) // in peers limit
+    {
+      MWARNING("Exceeded max incoming connections, so dropping this one.");
+      return true;
+    }
+
+    if(has_too_many_connections(address))
+    {
+      MWARNING("CONNECTION FROM " << address.host_str() << " REFUSED, too many connections from the same address");
+      return true;
+    }
+
+    return false;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -573,6 +593,8 @@ namespace nodetool
         return false;
     }
 
+    max_connections = command_line::get_arg(vm, arg_max_connections_per_ip);
+
     return true;
   }
   //-----------------------------------------------------------------------------------
@@ -826,6 +848,7 @@ namespace nodetool
         std::string ipv6_addr = "";
         std::string ipv6_port = "";
         zone.second.m_net_server.set_connection_filter(this);
+        zone.second.m_net_server.set_connection_limit(this);
         MINFO("Binding (IPv4) on " << zone.second.m_bind_ip << ":" << zone.second.m_port);
         if (!zone.second.m_bind_ipv6_address.empty() && m_use_ipv6)
         {
@@ -1947,9 +1970,8 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::relay_notify_to_list(int command, epee::levin::message_writer data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)
+  bool node_server<t_payload_net_handler>::relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)
   {
-    epee::byte_slice message = data_buff.finalize_notify(command);
     std::sort(connections.begin(), connections.end());
     auto zone = m_network_zones.begin();
     for(const auto& c_id: connections)
@@ -1967,7 +1989,7 @@ namespace nodetool
         ++zone;
       }
       if (zone->first == c_id.first)
-        zone->second.m_net_server.get_config_object().send(message.clone(), c_id.second);
+        zone->second.m_net_server.get_config_object().notify(command, data_buff, c_id.second);
     }
     return true;
   }
@@ -2028,13 +2050,24 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::invoke_notify_to_peer(const int command, epee::levin::message_writer message, const epee::net_utils::connection_context_base& context)
+  bool node_server<t_payload_net_handler>::invoke_notify_to_peer(int command, const epee::span<const uint8_t> req_buff, const epee::net_utils::connection_context_base& context)
   {
     if(is_filtered_command(context.m_remote_address, command))
       return false;
 
     network_zone& zone = m_network_zones.at(context.m_remote_address.get_zone());
-    int res = zone.m_net_server.get_config_object().send(message.finalize_notify(command), context.m_connection_id);
+    int res = zone.m_net_server.get_config_object().notify(command, req_buff, context.m_connection_id);
+    return res > 0;
+  }
+  //-----------------------------------------------------------------------------------
+  template<class t_payload_net_handler>
+  bool node_server<t_payload_net_handler>::invoke_command_to_peer(int command, const epee::span<const uint8_t> req_buff, std::string& resp_buff, const epee::net_utils::connection_context_base& context)
+  {
+    if(is_filtered_command(context.m_remote_address, command))
+      return false;
+
+    network_zone& zone = m_network_zones.at(context.m_remote_address.get_zone());
+    int res = zone.m_net_server.get_config_object().invoke(command, req_buff, resp_buff, context.m_connection_id);
     return res > 0;
   }
   //-----------------------------------------------------------------------------------
@@ -2245,23 +2278,9 @@ namespace nodetool
       return 1;
     }
 
-    if (zone.m_current_number_of_in_peers >= zone.m_config.m_net_config.max_in_connection_count)
-    {
-      LOG_WARNING_CC(context, "COMMAND_HANDSHAKE came, but already have max incoming connections, so dropping this one.");
-      drop_connection(context);
-      return 1;
-    }
-
     if(!m_payload_handler.process_payload_sync_data(arg.payload_data, context, true))
     {
       LOG_WARNING_CC(context, "COMMAND_HANDSHAKE came, but process_payload_sync_data returned false, dropping connection.");
-      drop_connection(context);
-      return 1;
-    }
-
-    if(has_too_many_connections(context.m_remote_address))
-    {
-      LOG_PRINT_CCONTEXT_L1("CONNECTION FROM " << context.m_remote_address.host_str() << " REFUSED, too many connections from the same address");
       drop_connection(context);
       return 1;
     }
@@ -2571,15 +2590,14 @@ namespace nodetool
     if (address.get_zone() != epee::net_utils::zone::public_)
       return false; // Unable to determine connections quantity from host
 
-    const size_t max_connections = 3;
-    size_t count = 0;
+    uint32_t count = 0;
 
     m_network_zones.at(epee::net_utils::zone::public_).m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
     {
       if (cntxt.m_is_income && cntxt.m_remote_address.is_same_host(address)) {
         count++;
 
-        if (count > max_connections) {
+        if (count >= max_connections) {
           return false;
         }
       }
@@ -2587,7 +2605,7 @@ namespace nodetool
       return true;
     });
 
-    return count > max_connections;
+    return count >= max_connections;
   }
 
   template<class t_payload_net_handler>

@@ -92,7 +92,7 @@ namespace levin
       return outs;
     }
 
-    epee::levin::message_writer make_tx_message(std::vector<blobdata>&& txs, const bool pad)
+    epee::byte_slice make_tx_payload(std::vector<blobdata>&& txs, const bool pad)
     {
       NOTIFY_NEW_TRANSACTIONS::request request{};
       request.txs = std::move(txs);
@@ -125,11 +125,11 @@ namespace levin
         // if the size of _ moved enough, we might lose byte in size encoding, we don't care
       }
 
-      epee::levin::message_writer out;
-      if (!epee::serialization::store_t_to_binary(request, out.buffer))
+      epee::byte_slice fullBlob;
+      if (!epee::serialization::store_t_to_binary(request, fullBlob))
         throw std::runtime_error{"Failed to serialize to epee binary format"};
 
-      return out;
+      return fullBlob;
     }
 
     /* The current design uses `asio::strand`s. The documentation isn't as clear
@@ -432,6 +432,10 @@ namespace levin
           else
             message = zone_->noise.clone();
 
+          zone_->p2p->for_connection(channel.connection, [&](detail::p2p_context& context) {
+            on_levin_traffic(context, true, true, false, message.size(), "noise");
+            return true;
+          });
           if (zone_->p2p->send(std::move(message), channel.connection))
           {
             if (!channel.queue.empty() && channel.active.empty())
@@ -556,8 +560,9 @@ namespace levin
       );
 
       // padding is not useful when using noise mode
+      const epee::byte_slice payload = make_tx_payload(std::move(txs), false);
       epee::byte_slice message = epee::levin::make_fragmented_notify(
-        zone_->noise.size(), NOTIFY_NEW_TRANSACTIONS::ID, make_tx_message(std::move(txs), false)
+        zone_->noise, NOTIFY_NEW_TRANSACTIONS::ID, epee::to_span(payload)
       );
       if (CRYPTONOTE_MAX_FRAGMENTS * zone_->noise.size() < message.size())
       {
@@ -574,8 +579,9 @@ namespace levin
     }
     else
     {
+      const epee::byte_slice payload = make_tx_payload(std::move(txs), pad_txs);
       epee::byte_slice message =
-        epee::levin::make_fragmented_notify(zone_->noise.empty(), NOTIFY_NEW_TRANSACTIONS::ID, make_tx_message(std::move(txs), pad_txs));
+        epee::levin::make_notify(NOTIFY_NEW_TRANSACTIONS::ID, epee::to_span(payload));
 
       // traditional monero send technique
       boost::asio::dispatch(zone_->strand, flood_notify{zone_, std::move(message), source});

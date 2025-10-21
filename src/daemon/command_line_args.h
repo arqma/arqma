@@ -103,6 +103,11 @@ namespace daemon_args
   , "Allow Arq-Net Users to use this Arqma Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
   , false
   };
+  const command_line::arg_descriptor<bool> arg_zmq_rpc_enabled = {
+    "zmq-enabled"
+  , "Enable Arqma ZMQ server"
+  , false
+  };
   const command_line::arg_descriptor<std::string> arg_zmq_rpc_bind_ip = {
     "zmq-rpc-bind-ip"
   , "IP Address for Arqma ZMQ server to bind on"
