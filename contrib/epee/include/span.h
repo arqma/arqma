@@ -167,11 +167,11 @@ namespace epee
     return {reinterpret_cast<std::uint8_t*>(std::addressof(src)), sizeof(T)};
   }
 
-  template<typename T, std::enable_if_t<
-      std::is_same_v<T, char> || std::is_same_v<T, unsigned char> ||
-      std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t> || std::is_same_v<T, std::byte>, int> = 0>
-  span<const T> strspan(std::string_view s) noexcept
+  template<typename T, typename U>
+  span<const T> strspan(const U&s) noexcept
   {
+    static_assert(std::is_same<typename U::value_type, char>(), "unexpected source type");
+    static_assert(std::is_same<T, char>() || std::is_same<T, unsigned char>() || std::is_same<T, int8_t>() || std::is_same<T, uint8_t>(), "Unexpected type");
     return {reinterpret_cast<const T*>(s.data()), s.size()};
   }
 }

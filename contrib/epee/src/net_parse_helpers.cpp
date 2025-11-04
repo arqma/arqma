@@ -37,12 +37,11 @@ namespace epee
 {
 namespace net_utils
 {
-
   static bool parse_uri_query(const std::string& query, std::list<std::pair<std::string, std::string> >& params)
-  { 
+  {
     enum state
     {
-      st_param_name, 
+      st_param_name,
       st_param_val
     };
     state st = st_param_name;

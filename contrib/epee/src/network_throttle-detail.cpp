@@ -46,7 +46,7 @@
 #include "misc_log_ex.h"
 #include <boost/chrono.hpp>
 #include "misc_language.h"
-#include <fstream>
+#include <sstream>
 #include <iomanip>
 #include <algorithm>
 
@@ -132,7 +132,7 @@ network_throttle::network_throttle(const std::string &nameshort, const std::stri
 	m_start_time = 0;
 	m_any_packet_yet = false;
 	m_slot_size = 1.0; // hard coded in few places
-	m_target_speed = 64 * 1024; // other defaults are probably defined in the command-line parsing code when this class is used e.g. as main global throttle
+	m_target_speed = 16 * 1024; // other defaults are probably defined in the command-line parsing code when this class is used e.g. as main global throttle
 	m_last_sample_time = 0;
 	m_history.resize(m_window_size);
 	m_total_packets = 0;
@@ -187,23 +187,6 @@ void network_throttle::handle_trafic_exact(size_t packet_size)
 	_handle_trafic_exact(packet_size, packet_size);
 }
 
-namespace
-{
-  struct output_history
-  {
-    const boost::circular_buffer<network_throttle::packet_info>& history;
-  };
-
-  std::ostream& operator<<(std::ostream& out, const output_history& source)
-  {
-    out << '[';
-    for (auto sample : source.history)
-      out << sample.m_size << ' ';
-    out << ']';
-    return out;
-  }
-}
-
 void network_throttle::_handle_trafic_exact(size_t packet_size, size_t orginal_size)
 {
 	tick();
@@ -214,11 +197,14 @@ void network_throttle::_handle_trafic_exact(size_t packet_size, size_t orginal_s
 	m_total_packets++;
 	m_total_bytes += packet_size;
 
+	std::ostringstream oss; oss << "["; 	for (auto sample: m_history) oss << sample.m_size << " ";	 oss << "]" << std::ends;
+	std::string history_str = oss.str();
+
 	MTRACE("Throttle " << m_name << ": packet of ~" << packet_size << "b " << " (from " << orginal_size << " b)"
         << " Speed AVG=" << std::setw(4) <<  ((long int)(cts.average/1024)) <<  "[w=" << cts.window << "]"
         <<           " " << std::setw(4) <<  ((long int)(cts2.average/1024)) << "[w=" << cts2.window << "]"
         << " / " << " Limit=" << ((long int)(m_target_speed/1024)) << "kB/s "
-	      << " " << output_history{m_history});
+	      << " " << history_str);
 }
 
 void network_throttle::handle_trafic_tcp(size_t packet_size)
@@ -307,6 +293,8 @@ if (!m_any_packet_yet)
     }
 
 	if (dbg) {
+	  std::ostringstream oss; oss << "["; 	for (auto sample: m_history) oss << sample.m_size << " ";	 oss << "]" << std::ends;
+		std::string history_str = oss.str();
 		MTRACE((cts.delay > 0 ? "SLEEP" : "")
 			<< "dbg " << m_name << ": "
 			<< "speed is A=" << std::setw(8) <<cts.average<<" vs "
@@ -316,7 +304,7 @@ if (!m_any_packet_yet)
 			<< "E="<< std::setw(8) << E << " (Enow="<<std::setw(8)<<Enow<<") "
                         << "M=" << std::setw(8) << M <<" W="<< std::setw(8) << cts.window << " "
                         << "R=" << std::setw(8) << cts.recomendetDataSize << " Wgood" << std::setw(8) << Wgood << " "
-			<< "History: " << std::setw(8) << output_history{m_history} << " "
+			<< "History: " << std::setw(8) << history_str << " "
 			<< "m_last_sample_time=" << std::setw(8) << m_last_sample_time
 		);
 

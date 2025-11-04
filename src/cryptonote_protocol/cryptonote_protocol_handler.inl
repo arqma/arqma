@@ -49,6 +49,7 @@
 #include "profile_tools.h"
 #include "net/network_throttle-detail.hpp"
 #include "common/pruning.h"
+#include "common/random.h"
 #include "common/util.h"
 #include "config/ascii.h"
 
@@ -1152,7 +1153,7 @@ namespace cryptonote
       // We try to lock the sync lock. If we can, it means no other thread is
       // currently adding blocks, so we do that for as long as we can from the
       // block queue. Then, we go back to download.
-      const std::unique_lock sync{m_sync_lock, std::try_to_lock};
+      const boost::unique_lock<boost::mutex> sync{m_sync_lock, boost::try_to_lock};
       if (!sync.owns_lock())
       {
         MINFO(context << "Failed to lock m_sync_lock, going back to download");
@@ -1862,7 +1863,7 @@ skip:
 
         // this one triggers if all threads are in standby, which should not happen,
         // but happened at least once, so we unblock at least one thread if so
-        std::unique_lock sync{m_sync_lock, std::try_to_lock};
+        boost::unique_lock<boost::mutex> sync{m_sync_lock, boost::try_to_lock};
         if (sync.owns_lock())
         {
           bool filled = false;
@@ -2046,7 +2047,7 @@ skip:
     // actually already requested). In this case, if we can add blocks instead, do so
     if (m_core.get_current_blockchain_height() < m_core.get_target_blockchain_height())
     {
-      const std::unique_lock sync{m_sync_lock, std::try_to_lock};
+      const boost::unique_lock<boost::mutex> sync{m_sync_lock, boost::try_to_lock};
       if (sync.owns_lock())
       {
         uint64_t start_height;
@@ -2252,10 +2253,10 @@ skip:
       return true;
     });
 
-    epee::byte_slice fluffyBlob;
+    epee::levin::message_writer fluffyBlob{32 * 1024};
     if (arg.b.txs.size())
     {
-      epee::serialization::store_t_to_binary(arg, fluffyBlob, 128 * 1024);
+      epee::serialization::store_t_to_binary(arg, fluffyBlob.buffer);
     }
     else
     {
@@ -2263,10 +2264,10 @@ skip:
       NOTIFY_NEW_FLUFFY_BLOCK::request arg_without_tx_blobs = {};
       arg_without_tx_blobs.current_blockchain_height = arg.current_blockchain_height;
       arg_without_tx_blobs.b.block = arg.b.block;
-      epee::serialization::store_t_to_binary(arg_without_tx_blobs, fluffyBlob, 32 * 1024);
+      epee::serialization::store_t_to_binary(arg_without_tx_blobs, fluffyBlob.buffer);
     }
 
-    m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, epee::to_span(fluffyBlob), std::move(fluffyConnections));
+    m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, std::move(fluffyBlob), std::move(fluffyConnections));
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------
@@ -2294,7 +2295,6 @@ skip:
     for (auto& tx_blob : arg.txs)
       relayed_txes.push_back(m_core.on_transaction_relayed(tx_blob));
 
-    // no check for success, so tell core they're relayed unconditionally
     m_p2p->send_txs(std::move(arg.txs), exclude_context.m_remote_address.get_zone(), exclude_context.m_connection_id, m_core.pad_transactions());
     return true;
   }
@@ -2389,7 +2389,7 @@ skip:
   template<class t_core>
   bool t_cryptonote_protocol_handler<t_core>::currently_busy_syncing()
   {
-    const std::unique_lock sync{m_sync_lock, std::try_to_lock};
+    const boost::unique_lock<boost::mutex> sync{m_sync_lock, boost::try_to_lock};
     return !sync.owns_lock();
   }
   //------------------------------------------------------------------------------------------------------------------------

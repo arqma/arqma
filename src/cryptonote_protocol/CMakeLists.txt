@@ -30,8 +30,8 @@
 set(cryptonote_protocol_sources
   block_queue.cpp
   cryptonote_protocol_handler.inl
-  arqnet.cpp
   levin_notify.cpp
+  arqnet.cpp
   core_protocol_instantiation.cpp
   p2p_net_node_instantiation.cpp)
 

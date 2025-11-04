@@ -32,7 +32,6 @@
 #pragma once
 #include <unordered_set>
 #include <atomic>
-#include <algorithm>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "net/net_utils_base.h"
 #include "copyable_atomic.h"
@@ -40,7 +39,6 @@
 
 namespace cryptonote
 {
-
   struct cryptonote_connection_context: public epee::net_utils::connection_context_base
   {
     cryptonote_connection_context(): m_state(state_before_handshake), m_remote_blockchain_height(0), m_last_response_height(0),
@@ -56,10 +54,7 @@ namespace cryptonote
       state_normal
     };
 
-    static constexpr int handshake_command() noexcept { return 1001; }
     bool handshake_complete() const noexcept { return m_state != state_before_handshake; }
-
-    static size_t get_max_bytes(int command) noexcept;
 
     state m_state;
     std::vector<crypto::hash> m_needed_objects;
@@ -76,7 +71,6 @@ namespace cryptonote
     epee::copyable_atomic m_idle_peer_notification{0};
     int32_t m_score;
     int m_expect_response;
-
   };
 
   inline std::string get_protocol_state_string(cryptonote_connection_context::state s)

@@ -1140,7 +1140,7 @@ std::unique_ptr<wallet2> wallet2::make_dummy(const boost::program_options::varia
 //----------------------------------------------------------------------------------------------------
 bool wallet2::set_daemon(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, bool trusted_daemon, epee::net_utils::ssl_options_t ssl_options)
 {
-  std::lock_guard<std::recursive_mutex> daemon_mutex(m_daemon_rpc_mutex);
+  boost::lock_guard<boost::recursive_mutex> daemon_mutex(m_daemon_rpc_mutex);
 
   if (daemon_address.empty())
   {
@@ -1715,7 +1715,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
     }
 
     tx_pub_key = pub_key_field.pub_key;
-    tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+    tools::threadpool& tpool = tools::threadpool::getInstance();
     tools::threadpool::waiter waiter(tpool);
     const cryptonote::account_keys& keys = m_account.get_keys();
     crypto::key_derivation derivation;
@@ -1776,7 +1776,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
       continue;
     }
 
-    if((tx.vout.size() > 1 && tools::threadpool::getInstanceForCompute().get_max_concurrency() > 1 && !is_out_data_ptr) ||
+    if((tx.vout.size() > 1 && tools::threadpool::getInstance().get_max_concurrency() > 1 && !is_out_data_ptr) ||
        (miner_tx && m_refresh_type == RefreshOptimizeCoinbase))
     {
       for(size_t i = 0; i < tx.vout.size(); ++i)
@@ -2417,7 +2417,7 @@ void wallet2::process_parsed_blocks(uint64_t start_height, const std::vector<cry
   THROW_WALLET_EXCEPTION_IF(blocks.size() != parsed_blocks.size(), error::wallet_internal_error, "size mismatch");
   THROW_WALLET_EXCEPTION_IF(!m_blockchain.is_in_bounds(current_index), error::out_of_hashchain_bounds_error);
 
-  tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+  tools::threadpool& tpool = tools::threadpool::getInstance();
   tools::threadpool::waiter waiter(tpool);
 
   size_t num_txes = 0;
@@ -2573,7 +2573,7 @@ void wallet2::pull_and_parse_next_blocks(uint64_t start_height, uint64_t &blocks
     pull_blocks(start_height, blocks_start_height, short_chain_history, blocks, o_indices);
     THROW_WALLET_EXCEPTION_IF(blocks.size() != o_indices.size(), error::wallet_internal_error, "Mismatched sizes of blocks and o_indices");
 
-    tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+    tools::threadpool& tpool = tools::threadpool::getInstance();
     tools::threadpool::waiter waiter(tpool);
     parsed_blocks.resize(blocks.size());
     for (size_t i = 0; i < blocks.size(); ++i)
@@ -2966,7 +2966,7 @@ void wallet2::refresh(bool trusted_daemon, uint64_t start_height, uint64_t & blo
   size_t try_count = 0;
   crypto::hash last_tx_hash_id = m_transfers.size() ? m_transfers.back().m_txid : null_hash;
   std::list<crypto::hash> short_chain_history;
-  tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+  tools::threadpool& tpool = tools::threadpool::getInstance();
   tools::threadpool::waiter waiter(tpool);
   uint64_t blocks_start_height;
   std::vector<cryptonote::block_complete_entry> blocks;
@@ -4928,7 +4928,7 @@ bool wallet2::check_connection(uint32_t *version, bool *ssl, uint32_t timeout)
   }
 
   {
-    std::lock_guard<decltype(m_daemon_rpc_mutex)> lock(m_daemon_rpc_mutex);
+    boost::lock_guard<decltype(m_daemon_rpc_mutex)> lock(m_daemon_rpc_mutex);
     if(!m_http_client->is_connected(ssl))
     {
       m_node_rpc_proxy.invalidate();
@@ -4963,7 +4963,7 @@ void wallet2::set_offline(bool offline)
   m_http_client->set_auto_connect(!offline);
   if(offline)
   {
-    std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
+    boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
     if(m_http_client->is_connected())
       m_http_client->disconnect();
   }
@@ -7295,7 +7295,7 @@ bool wallet2::find_and_save_rings(bool force)
       req.txs_hashes.push_back(epee::string_tools::pod_to_hex(txs_hashes[s]));
     bool r;
     {
-      const std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
+      const boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
       r = epee::net_utils::invoke_http_json("/gettransactions", req, res, *m_http_client, rpc_timeout);
     }
     THROW_WALLET_EXCEPTION_IF(!r, error::no_connection_to_daemon, "gettransactions");

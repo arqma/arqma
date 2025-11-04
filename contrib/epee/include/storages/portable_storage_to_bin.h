@@ -41,7 +41,7 @@ namespace epee
     template<class pack_value, class t_stream>
     size_t pack_varint_t(t_stream& strm, uint8_t type_or, size_t& pv)
     {
-      pack_value v = (*((pack_value*)&pv)) << 2;
+      pack_value v = pv << 2;
       v |= type_or;
       v = CONVERT_POD(v);
       strm.write((const char*)&v, sizeof(pack_value));

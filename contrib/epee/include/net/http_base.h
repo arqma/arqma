@@ -66,9 +66,6 @@ namespace net_utils
 
 		typedef std::list<std::pair<std::string, std::string>> fields_list;
 
-    std::string get_value_from_fields_list(const std::string& param_name, const net_utils::http::fields_list& fields);
-    std::string get_value_from_uri_line(const std::string& param_name, const std::string& uri);
-
 		static inline void add_field(std::string& out, const boost::string_ref name, const boost::string_ref value)
 		{
 			out.append(name.data(), name.size()).append(": ");

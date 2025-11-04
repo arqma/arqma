@@ -47,8 +47,6 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/array.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/optional.hpp>
@@ -62,7 +60,6 @@
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
 #define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 1000
-#define ABSTRACT_SERVER_SEND_QUE_MAX_BYTES_DEFAULT 100 * 1024 * 1024
 
 namespace epee
 {
@@ -75,23 +72,16 @@ namespace net_utils
     virtual ~i_connection_filter(){}
   };
 
-  struct i_connection_limit
-  {
-    virtual bool is_host_limit(const epee::net_utils::network_address &address)=0;
-  protected:
-    virtual ~i_connection_limit(){}
-  };
-
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
   /// Represents a single connection from a client.
   template<class t_protocol_handler>
   class connection
-    : public boost::enable_shared_from_this<connection<t_protocol_handler>>,
+    : public std::enable_shared_from_this<connection<t_protocol_handler>>,
       private boost::noncopyable,
-      public i_service_endpoint,
-      public connection_basic
+      public connection_basic,
+      public service_endpoint<t_protocol_handler>
   {
   public:
     typedef typename t_protocol_handler::connection_context t_connection_context;
@@ -166,7 +156,6 @@ namespace net_utils
         } read;
         struct {
           std::deque<epee::byte_slice> queue;
-          std::size_t total_bytes;
           bool wait_consume;
         } write;
       };
@@ -253,30 +242,25 @@ namespace net_utils
 
     io_context_t &m_io_context;
     t_connection_type m_connection_type;
-    t_connection_context m_conn_context{};
     strand_t m_strand;
     timers_t m_timers;
     connection_ptr self{};
     bool m_local{};
     std::string m_host{};
     state_t m_state{};
-    t_protocol_handler m_handler;
 
   public:
+
     struct shared_state : connection_basic_shared_state, t_protocol_handler::config_type
     {
       shared_state()
         : connection_basic_shared_state()
         , t_protocol_handler::config_type()
         , pfilter(nullptr)
-        , plimit(nullptr)
-        , response_soft_limit(ABSTRACT_SERVER_SEND_QUE_MAX_BYTES_DEFAULT)
         , stop_signal_sent(false)
       {}
 
       i_connection_filter* pfilter;
-      i_connection_limit* plimit;
-      std::size_t response_soft_limit;
       bool stop_signal_sent;
     };
 
@@ -300,7 +284,7 @@ namespace net_utils
     // `real_remote` is the actual endpoint (if connection is to proxy, etc.)
     bool start(bool is_income, bool is_multithreaded, network_address real_remote);
 
-    void get_context(t_connection_context& context_) { context_ = m_conn_context; }
+    void get_context(t_connection_context& context_) { context_ = get_context(); }
 
     void call_back_starter();
 
@@ -318,9 +302,13 @@ namespace net_utils
     virtual bool call_run_once_service_io();
     virtual bool request_callback();
     virtual io_context_t& get_io_context();
-    virtual bool add_ref();
-    virtual bool release();
     //------------------------------------------------------
+    const t_connection_context& get_context() const noexcept { return this->context; }
+    t_connection_context& get_context() noexcept { return this->context; }
+
+    const t_protocol_handler& get_protocol_handler() const noexcept { return this->m_protocol_handler; }
+    t_protocol_handler& get_protocol_handler() noexcept { return this->m_protocol_handler; }
+
   public:
     void setRpcStation();
   };
@@ -339,7 +327,7 @@ namespace net_utils
     };
 
   public:
-    typedef boost::shared_ptr<connection<t_protocol_handler>> connection_ptr;
+    typedef std::shared_ptr<connection<t_protocol_handler>> connection_ptr;
     typedef typename t_protocol_handler::connection_context t_connection_context;
     // Construct the server to listen on the specified TCP address and port, and
     // serve up files from the given directory.
@@ -378,8 +366,6 @@ namespace net_utils
     size_t get_threads_count() { return m_threads_count; }
 
     void set_connection_filter(i_connection_filter* pfilter);
-    void set_connection_limit(i_connection_limit* plimit);
-    void set_response_soft_limit(std::size_t limit);
 
     void set_default_remote(epee::net_utils::network_address remote)
     {

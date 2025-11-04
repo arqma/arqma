@@ -50,6 +50,7 @@ namespace epee
     }
   };
 
+  //! Frees ref count + buffer allocated internally by `byte_buffer`.
   struct release_byte_buffer
   {
     void operator()(std::uint8_t* buf) const noexcept;
@@ -109,6 +110,7 @@ namespace epee
     //! Convert `buffer` into a slice using one allocation for shared count.
     explicit byte_slice(std::string&& buffer);
 
+    //! Convert `stream` into a slice with zero allocations.
     explicit byte_slice(byte_stream&& stream, bool shrink = true);
 
     byte_slice(byte_slice&& source) noexcept;
@@ -156,8 +158,18 @@ namespace epee
     std::unique_ptr<byte_slice_data, release_byte_slice> take_buffer() noexcept;
   };
 
+  //! Alias for a buffer that has space for a `byte_slice` ref count.
   using byte_buffer = std::unique_ptr<std::uint8_t, release_byte_buffer>;
+
+  /*! \return `buf` with a new size of exactly `length`. New bytes not
+        initialized. A `nullptr` is returned on allocation failure. */
   byte_buffer byte_buffer_resize(byte_buffer buf, std::size_t length) noexcept;
+
+  /*! Increase `buf` of size `current` by `more` bytes.
+
+    \throw std::range_error if `current + more` exceeds `size_t` bounds.
+    \return Buffer of `current + more` bytes. A `nullptr` is returned on
+      allocation failure. */
   byte_buffer byte_buffer_increase(byte_buffer buf, std::size_t current, std::size_t more);
 } // epee
 

@@ -283,6 +283,9 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------
   bool core::update_checkpoints_from_json_file()
   {
+    if (m_nettype != MAINNET)
+      return true;
+
     if (m_checkpoints_updating.test_and_set()) return true;
 
     bool res = true;
@@ -959,7 +962,7 @@ namespace cryptonote
     }
     //std::cout << "!"<< tx.vin.size() << std::endl;
 
-    std::lock_guard<boost::mutex> lock(bad_semantics_txes_lock);
+    boost::lock_guard<boost::mutex> lock(bad_semantics_txes_lock);
     for (int idx = 0; idx < 2; ++idx)
     {
       if (bad_semantics_txes[idx].find(tx_info.tx_hash) != bad_semantics_txes[idx].end())
@@ -1103,7 +1106,7 @@ namespace cryptonote
   {
     std::vector<tx_verification_batch_info> tx_info(tx_blobs.size());
 
-    tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+    tools::threadpool& tpool = tools::threadpool::getInstance();
     tools::threadpool::waiter waiter(tpool);
     for (size_t i = 0; i < tx_blobs.size(); i++)
     {

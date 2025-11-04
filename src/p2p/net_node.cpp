@@ -184,23 +184,23 @@ namespace nodetool
             ++next;
             for (unsigned count = 0; !next.eof(); ++count, ++next)
             {
-                if (2 <= count)
-                {
-                    MERROR("Too many ',' characters given to --" << arg_proxy.name);
-                    return boost::none;
-                }
+              if (2 <= count)
+              {
+                MERROR("Too many ',' characters given to --" << arg_proxy.name);
+                return boost::none;
+              }
+            }
 
-                if (boost::string_ref{next->begin(), next->size()} == "disable_noise")
-                    proxies.back().noise = false;
-                else
-                {
-                    proxies.back().max_connections = get_max_connections(*next);
-                    if (proxies.back().max_connections == 0)
-                    {
-                        MERROR("Invalid max connections given to --" << arg_proxy.name);
-                        return boost::none;
-                    }
-                }
+            if (boost::string_ref{next->begin(), next->size()} == "disable_noise")
+              proxies.back().noise = false;
+            else
+            {
+              proxies.back().max_connections = get_max_connections(*next);
+              if (proxies.back().max_connections == 0)
+              {
+                MERROR("Invalid max connections given to --" << arg_proxy.name);
+                return boost::none;
+              }
             }
 
             switch (epee::net_utils::zone_from_string(zone))

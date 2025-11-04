@@ -14,7 +14,7 @@
 #include <sstream>
 #include <boost/variant.hpp>
 #include "common.h"
-#include "../common/osrb.h"
+#include "common/osrb.h"
 #include <variant>
 
 namespace arqnet {

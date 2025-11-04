@@ -202,44 +202,9 @@ namespace net_utils
 		m_want_close(false),
 		m_newlines(0),
 		m_psnd_hndlr(psnd_hndlr),
-		m_conn_context(conn_context),
-		m_initialized(false)
+		m_conn_context(conn_context)
 	{
 
-	}
-	//--------------------------------------------------------------------------------------------
-	template<class t_connection_context>
-	simple_http_connection_handler<t_connection_context>::~simple_http_connection_handler()
-	{
-	  try
-	  {
-	    if (m_initialized)
-	    {
-	      CRITICAL_REGION_LOCAL(m_config.m_lock);
-	      if (m_config.m_connection_count)
-	        --m_config.m_connection_count;
-	      auto elem = m_config.m_connections.find(m_conn_context.m_remote_address.host_str());
-	      if (elem != m_config.m_connections.end())
-	      {
-	        if (elem->second == 1 || elem->second == 0)
-	          m_config.m_connections.erase(elem);
-	        else
-	          --(elem->second);
-	      }
-	    }
-	  }
-	  catch (...)
-	  {}
-	}
-	//--------------------------------------------------------------------------------------------
-	template<class t_connection_context>
-	bool simple_http_connection_handler<t_connection_context>::after_init_connection()
-	{
-	  CRITICAL_REGION_LOCAL(m_config.m_lock);
-	  ++m_config.m_connections[m_conn_context.m_remote_address.host_str()];
-	  ++m_config.m_connection_count;
-	  m_initialized = true;
-	  return true;
 	}
 	//--------------------------------------------------------------------------------------------
 	template<class t_connection_context>
@@ -406,7 +371,7 @@ namespace net_utils
 			m_query_info.m_http_method_str = result[2];
 			m_query_info.m_full_request_str = result[0];
 
-			m_cache.erase(m_cache.begin(),  to_nonsonst_iterator(m_cache, result[0].second));
+			m_cache.erase(m_cache.begin(), result[0].second);
 
 			m_state = http_state_retriving_header;
 

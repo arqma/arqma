@@ -92,7 +92,7 @@ namespace levin
       return outs;
     }
 
-    epee::byte_slice make_tx_payload(std::vector<blobdata>&& txs, const bool pad)
+    epee::levin::message_writer make_tx_message(std::vector<blobdata>&& txs, const bool pad)
     {
       NOTIFY_NEW_TRANSACTIONS::request request{};
       request.txs = std::move(txs);
@@ -125,11 +125,11 @@ namespace levin
         // if the size of _ moved enough, we might lose byte in size encoding, we don't care
       }
 
-      epee::byte_slice fullBlob;
-      if (!epee::serialization::store_t_to_binary(request, fullBlob))
+      epee::levin::message_writer out;
+      if (!epee::serialization::store_t_to_binary(request, out.buffer))
         throw std::runtime_error{"Failed to serialize to epee binary format"};
 
-      return fullBlob;
+      return out;
     }
 
     /* The current design uses `asio::strand`s. The documentation isn't as clear
@@ -190,15 +190,14 @@ namespace levin
   {
     struct zone
     {
-      explicit zone(boost::asio::io_context& io_service, std::shared_ptr<connections> p2p, epee::byte_slice noise_in, epee::net_utils::zone zone)
+      explicit zone(boost::asio::io_context& io_service, std::shared_ptr<connections> p2p, epee::byte_slice noise_in)
         : p2p(std::move(p2p)),
           noise(std::move(noise_in)),
           next_epoch(io_service),
           strand(io_service),
           map(),
           channels(),
-          connection_count(0),
-          nzone(zone)
+          connection_count(0)
       {
         for (std::size_t count = 0; !noise.empty() && count < CRYPTONOTE_NOISE_CHANNELS; ++count)
           channels.emplace_back(io_service);
@@ -211,7 +210,6 @@ namespace levin
       net::dandelionpp::connection_map map;//!< Tracks outgoing uuid's for noise channels or Dandelion++ stems
       std::deque<noise_channel> channels;  //!< Never touch after init; only update elements on `noise_channel.strand`
       std::atomic<std::size_t> connection_count; //!< Only update in strand, can be read at any time
-      const epee::net_utils::zone nzone;
     };
   } // detail
 
@@ -281,7 +279,7 @@ namespace levin
         std::vector<boost::uuids::uuid> connections;
         connections.reserve(connection_id_reserve_size);
         zone_->p2p->foreach_connection([this, &connections] (detail::p2p_context& context) {
-          if (this->source_ != context.m_connection_id && (this->zone_->nzone == epee::net_utils::zone::public_ || !context.m_is_income))
+          if (this->source_ != context.m_connection_id)
             connections.emplace_back(context.m_connection_id);
           return true;
         });
@@ -432,10 +430,6 @@ namespace levin
           else
             message = zone_->noise.clone();
 
-          zone_->p2p->for_connection(channel.connection, [&](detail::p2p_context& context) {
-            on_levin_traffic(context, true, true, false, message.size(), "noise");
-            return true;
-          });
           if (zone_->p2p->send(std::move(message), channel.connection))
           {
             if (!channel.queue.empty() && channel.active.empty())
@@ -445,12 +439,9 @@ namespace levin
           {
             channel.active = nullptr;
             channel.connection = boost::uuids::nil_uuid();
-
-            auto connections = get_out_connections(*zone_->p2p);
-            if (connections.empty())
-              MWARNING("Lost all outbound connections to anonymity network - currently unable to send transaction(s)");
-
-            boost::asio::post(zone_->strand, update_channels{zone_, std::move(connections)});
+            boost::asio::post(zone_->strand,
+              update_channels{zone_, get_out_connections(*zone_->p2p)}
+            );
           }
         }
 
@@ -477,8 +468,7 @@ namespace levin
           throw boost::system::system_error{error, "start_epoch timer failed"};
 
         const auto start = std::chrono::steady_clock::now();
-        boost::asio::dispatch(
-          zone_->strand,
+        boost::asio::dispatch(zone_->strand,
           change_channels{zone_, net::dandelionpp::connection_map{get_out_connections(*(zone_->p2p)), count_}}
         );
 
@@ -489,8 +479,8 @@ namespace levin
     };
   } // anonymous
 
-  notify::notify(boost::asio::io_context& service, std::shared_ptr<connections> p2p, epee::byte_slice noise, epee::net_utils::zone zone)
-    : zone_(std::make_shared<detail::zone>(service, std::move(p2p), std::move(noise), zone))
+  notify::notify(boost::asio::io_context& service, std::shared_ptr<connections> p2p, epee::byte_slice noise)
+    : zone_(std::make_shared<detail::zone>(service, std::move(p2p), std::move(noise)))
   {
     if (!zone_->p2p)
       throw std::logic_error{"cryptonote::levin::notify cannot have nullptr p2p argument"};
@@ -520,8 +510,8 @@ namespace levin
     if (!zone_ || zone_->noise.empty() || CRYPTONOTE_NOISE_CHANNELS <= zone_->connection_count)
       return;
 
-    boost::asio::dispatch(
-      zone_->strand, update_channels{zone_, get_out_connections(*(zone_->p2p))}
+    boost::asio::dispatch(zone_->strand,
+      update_channels{zone_, get_out_connections(*(zone_->p2p))}
     );
   }
 
@@ -541,16 +531,10 @@ namespace levin
       channel.next_noise.cancel();
   }
 
-  bool notify::send_txs(std::vector<blobdata> txs, const boost::uuids::uuid& source, const bool pad_txs)
+  bool notify::send_txs(std::vector<cryptonote::blobdata> txs, const boost::uuids::uuid& source, const bool pad_txs)
   {
-    if (txs.empty())
-      return true;
-
     if (!zone_)
       return false;
-
-    if (zone_->nzone == epee::net_utils::zone::public_)
-      std::sort(txs.begin(), txs.end());
 
     if (!zone_->noise.empty() && !zone_->channels.empty())
     {
@@ -560,9 +544,8 @@ namespace levin
       );
 
       // padding is not useful when using noise mode
-      const epee::byte_slice payload = make_tx_payload(std::move(txs), false);
       epee::byte_slice message = epee::levin::make_fragmented_notify(
-        zone_->noise, NOTIFY_NEW_TRANSACTIONS::ID, epee::to_span(payload)
+        zone_->noise.size(), NOTIFY_NEW_TRANSACTIONS::ID, make_tx_message(std::move(txs), false)
       );
       if (CRYPTONOTE_MAX_FRAGMENTS * zone_->noise.size() < message.size())
       {
@@ -572,19 +555,10 @@ namespace levin
 
       for (std::size_t channel = 0; channel < zone_->channels.size(); ++channel)
       {
-        boost::asio::dispatch(
-          zone_->channels[channel].strand, queue_covert_notify{zone_, message.clone(), channel}
+        boost::asio::dispatch(zone_->channels[channel].strand,
+          queue_covert_notify{zone_, message.clone(), channel}
         );
       }
-    }
-    else
-    {
-      const epee::byte_slice payload = make_tx_payload(std::move(txs), pad_txs);
-      epee::byte_slice message =
-        epee::levin::make_notify(NOTIFY_NEW_TRANSACTIONS::ID, epee::to_span(payload));
-
-      // traditional monero send technique
-      boost::asio::dispatch(zone_->strand, flood_notify{zone_, std::move(message), source});
     }
 
     return true;

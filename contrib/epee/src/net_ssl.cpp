@@ -30,11 +30,11 @@
 #include <thread>
 #include <boost/asio/post.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/asio/strand.hpp>
+#include <condition_variable>
 #include <boost/cerrno.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/strand.hpp>
-#include <condition_variable>
 #include <boost/lambda/lambda.hpp>
 #include <openssl/ssl.h>
 #include <openssl/pem.h>
@@ -470,7 +470,9 @@ bool ssl_options_t::has_fingerprint(boost::asio::ssl::verify_context &ctx) const
   return false;
 }
 
-void ssl_options_t::configure(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, const std::string& host) const
+void ssl_options_t::configure(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket,
+                              boost::asio::ssl::stream_base::handshake_type type,
+                              const std::string& host) const
 {
   socket.next_layer().set_option(boost::asio::ip::tcp::no_delay(true));
 
@@ -566,8 +568,7 @@ bool ssl_options_t::handshake(
     };
 
     deadline.async_wait(on_timer);
-    boost::asio::post(
-      strand,
+    boost::asio::post(strand,
       [&]{
         socket.async_handshake(
           type,

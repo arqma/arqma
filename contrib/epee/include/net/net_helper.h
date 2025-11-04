@@ -406,11 +406,11 @@ namespace net_utils
 		bool shutdown()
 		{
 			m_deadline.cancel();
-            boost::system::error_code ec;
+			boost::system::error_code ec;
 			if(m_ssl_options)
-				shutdown_ssl();
-            m_ssl_socket->next_layer().cancel(ec);
-            if(ec)
+			  shutdown_ssl();
+      m_ssl_socket->next_layer().cancel(ec);
+      if(ec)
 				MDEBUG("Problems at cancel: " << ec.message());
 			m_ssl_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
 			if(ec)
@@ -480,7 +480,7 @@ namespace net_utils
 	  void async_write(const void* data, size_t sz, boost::system::error_code& ec)
 		{
 			if(m_ssl_options.support != ssl_support_t::e_ssl_support_disabled)
-                boost::asio::async_write(*m_ssl_socket, boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
+			  boost::asio::async_write(*m_ssl_socket, boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
 			else
 				boost::asio::async_write(m_ssl_socket->next_layer(), boost::asio::buffer(data, sz), boost::lambda::var(ec) = boost::lambda::_1);
 		}
@@ -488,10 +488,9 @@ namespace net_utils
 		void async_read(char* buff, size_t sz, boost::asio::detail::transfer_at_least_t transfer_at_least, handler_obj& hndlr)
 		{
 			if(m_ssl_options.support == ssl_support_t::e_ssl_support_disabled)
-                boost::asio::async_read(m_ssl_socket->next_layer(), boost::asio::buffer(buff, sz), transfer_at_least, hndlr);
+			  boost::asio::async_read(m_ssl_socket->next_layer(), boost::asio::buffer(buff, sz), transfer_at_least, hndlr);
 			else
 				boost::asio::async_read(*m_ssl_socket, boost::asio::buffer(buff, sz), transfer_at_least, hndlr);
-
 		}
 
 	protected:

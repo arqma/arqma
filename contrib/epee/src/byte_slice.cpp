@@ -138,10 +138,13 @@ namespace epee
 
   template<typename T>
   byte_slice::byte_slice(const adapt_buffer, T&& buffer)
-    : storage_(nullptr), portion_(to_byte_span(to_span(buffer)))
+    : storage_(nullptr), portion_(nullptr)
   {
     if (!buffer.empty())
+    {
       storage_ = allocate_slice<adapted_byte_slice<T>>(0, std::move(buffer));
+      portion_ = to_byte_span(to_span(static_cast<adapted_byte_slice<T> *>(storage_.get())->buffer));
+    }
   }
 
   byte_slice::byte_slice(std::initializer_list<span<const std::uint8_t>> sources)
@@ -187,12 +190,12 @@ namespace epee
       byte_buffer buf;
       if (shrink && page_size <= stream.available())
       {
-        buf = byte_buffer_resize(stream.take_buffer(), portion_.size());
-        if (!buf)
-          throw std::bad_alloc{};
-        portion_ = {buf.get(), portion_.size()};
+          buf = byte_buffer_resize(stream.take_buffer(), portion_.size());
+          if (!buf)
+            throw std::bad_alloc{};
+          portion_ = {buf.get(), portion_.size()};
       }
-      else
+      else // no need to shrink buffer
         buf = stream.take_buffer();
 
       std::uint8_t* const data = buf.release() - sizeof(raw_byte_slice);
@@ -237,7 +240,7 @@ namespace epee
       out.portion_ = {ptr, portion_.remove_prefix(max_bytes)};
 
       if (portion_.empty())
-        out.storage_ = std::move(storage_);
+        out.storage_ = std::move(storage_); // no atomic inc/dec
       else
         out = {storage_.get(), out.portion_};
     }

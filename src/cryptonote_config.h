@@ -121,7 +121,6 @@
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) // seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 // seconds, one week
 
-// see src/cryptonote_protocol/levin_notify.cpp
 #define CRYPTONOTE_NOISE_MIN_EPOCH                      5      // minutes
 #define CRYPTONOTE_NOISE_EPOCH_RANGE                    30     // seconds
 #define CRYPTONOTE_NOISE_MIN_DELAY                      10     // seconds
@@ -129,17 +128,12 @@
 #define CRYPTONOTE_NOISE_BYTES                          3*1024 // 3 KiB
 #define CRYPTONOTE_NOISE_CHANNELS                       2      // Max outgoing connections per zone used for noise/covert sending
 
-#define CRYPTONOTE_MAX_FRAGMENTS                        20 // ~20 * NOISE_BYTES max payload size for covert/noise send
+#define CRYPTONOTE_MAX_FRAGMENTS                        20
 
 #define COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT     1000
 #define COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT        20000
 #define COMMAND_RPC_GET_CHECKPOINTS_MAX_COUNT           256
 #define COMMAND_RPC_GET_QUORUM_STATE_MAX_COUNT          256
-
-#define DEFAULT_RPC_MAX_CONNECTIONS_PER_PUBLIC_IP       3
-#define DEFAULT_RPC_MAX_CONNECTIONS_PER_PRIVATE_IP      25
-#define DEFAULT_RPC_MAX_CONNECTIONS                     100
-#define DEFAULT_RPC_SOFT_LIMIT_SIZE                     25 * 1024 * 1024 // 25 MiB
 
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
@@ -153,9 +147,9 @@
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
-#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               45         // seconds
+#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               20         // seconds
 #define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       // 2 seconds
-#define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  // 2 minutes
+#define P2P_DEFAULT_INVOKE_TIMEOUT                      30*1000    // 30 seconds
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2

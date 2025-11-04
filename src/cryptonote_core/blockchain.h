@@ -568,7 +568,7 @@ namespace cryptonote
      *
      * @return false if any input is invalid, otherwise true
      */
-    bool check_tx_inputs(transaction& tx, uint64_t& pmax_used_block_height, crypto::hash& max_used_block_id, tx_verification_context &tvc, bool kept_by_block = false) const;
+    bool check_tx_inputs(transaction& tx, uint64_t& pmax_used_block_height, crypto::hash& max_used_block_id, tx_verification_context &tvc, bool kept_by_block = false);
 
     /**
      * @brief get fee quantization mask
@@ -634,7 +634,7 @@ namespace cryptonote
      *
      * @return false if any outputs do not conform, otherwise true
      */
-    bool check_tx_outputs(const transaction& tx, tx_verification_context &tvc) const;
+    bool check_tx_outputs(const transaction& tx, tx_verification_context &tvc);
 
     /**
      * @brief gets the block weight limit based on recent blocks
@@ -971,6 +971,10 @@ namespace cryptonote
 
     uint64_t get_immutable_height() const;
 
+    void lock() const { m_blockchain_lock.lock(); }
+    void unlock() const { m_blockchain_lock.unlock(); }
+    bool try_lock() const { return m_blockchain_lock.try_lock(); }
+
     void lock() { m_blockchain_lock.lock(); }
     void unlock() { m_blockchain_lock.unlock(); }
     bool try_lock() { return m_blockchain_lock.try_lock(); }
@@ -1011,7 +1015,6 @@ namespace cryptonote
 
     typedef std::unordered_map<crypto::hash, block_extended_info> blocks_ext_by_hash;
 
-
     BlockchainDB* m_db;
 
     tx_memory_pool& m_tx_pool;
@@ -1027,6 +1030,7 @@ namespace cryptonote
     // metadata containers
     std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, std::vector<output_data_t> > > m_scan_table;
     std::unordered_map<crypto::hash, crypto::hash> m_blocks_longhash_table;
+    std::unordered_map<crypto::hash, std::unordered_map<crypto::key_image, bool>> m_check_txin_table;
 
     // SHA-3 hashes for each block and for fast pow checking
     std::vector<crypto::hash> m_blocks_hash_of_hashes;
@@ -1052,7 +1056,7 @@ namespace cryptonote
     mutable crypto::hash m_long_term_block_weights_cache_tip_hash;
     mutable epee::misc_utils::rolling_median_t<uint64_t> m_long_term_block_weights_cache_rolling_median;
 
-    epee::critical_section m_difficulty_lock;
+    std::mutex m_difficulty_lock;
     crypto::hash m_difficulty_for_next_block_top_hash;
     difficulty_type m_difficulty_for_next_block;
 
@@ -1133,17 +1137,14 @@ namespace cryptonote
      * If pmax_related_block_height is not NULL, its value is set to the height
      * of the most recent block which contains an output used in the input set
      *
-     * @param tx_version the transaction version
      * @param txin the transaction input
      * @param tx_prefix_hash the transaction prefix hash, for caching organization
-     * @param sig the input signature
      * @param output_keys return-by-reference the public keys of the outputs in the input set
-     * @param rct_signatures the ringCT signatures, which are only valid if tx version > 1
      * @param pmax_related_block_height return-by-pointer the height of the most recent block in the input set
      *
      * @return false if any output is not yet unlocked, or is missing, otherwise true
      */
-    bool check_tx_input(txversion tx_version, const txin_to_key& txin, const crypto::hash& tx_prefix_hash, const std::vector<crypto::signature>& sig, const rct::rctSig &rct_signatures, std::vector<rct::ctkey> &output_keys, uint64_t* pmax_related_block_height) const;
+    bool check_tx_input(const txin_to_key& txin, const crypto::hash& tx_prefix_hash, std::vector<rct::ctkey> &output_keys, uint64_t* pmax_related_block_height);
 
     /**
      * @brief validate a transaction's inputs and their keys
@@ -1168,7 +1169,7 @@ namespace cryptonote
      *
      * @return false if any validation step fails, otherwise true
      */
-    bool check_tx_inputs(transaction& tx, tx_verification_context &tvc, uint64_t* pmax_used_block_height = NULL) const;
+    bool check_tx_inputs(transaction& tx, tx_verification_context &tvc, uint64_t* pmax_used_block_height = NULL);
 
     /**
      * @brief performs a blockchain reorganization according to the longest chain rule
@@ -1451,7 +1452,7 @@ namespace cryptonote
      * @param sig the signature generated for each input in the ring signature
      * @param result false if the ring signature is invalid, otherwise true
      */
-    void check_ring_signature(const crypto::hash &tx_prefix_hash, const crypto::key_image &key_image, const std::vector<rct::ctkey> &pubkeys, const std::vector<crypto::signature> &sig, uint64_t &result) const;
+    void check_ring_signature(const crypto::hash &tx_prefix_hash, const crypto::key_image &key_image, const std::vector<rct::ctkey> &pubkeys, const std::vector<crypto::signature> &sig, uint64_t &result);
 
     /**
      * @brief loads block hashes from compiled-in data set
@@ -1471,7 +1472,7 @@ namespace cryptonote
      * can be reconstituted by the receiver. This function expands
      * that implicit data.
      */
-    bool expand_transaction_2(transaction &tx, const crypto::hash &tx_prefix_hash, const std::vector<std::vector<rct::ctkey>> &pubkeys) const;
+    bool expand_transaction_2(transaction &tx, const crypto::hash &tx_prefix_hash, const std::vector<std::vector<rct::ctkey>> &pubkeys);
 
     /**
      * @brief invalidates any cached block template

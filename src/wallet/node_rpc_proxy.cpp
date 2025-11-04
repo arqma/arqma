@@ -38,7 +38,7 @@ namespace tools
 
 static const std::chrono::seconds rpc_timeout = std::chrono::minutes(3) + std::chrono::seconds(30);
 
-NodeRPCProxy::NodeRPCProxy(epee::net_utils::http::abstract_http_client &http_client, std::recursive_mutex &mutex)
+NodeRPCProxy::NodeRPCProxy(epee::net_utils::http::abstract_http_client &http_client, boost::recursive_mutex &mutex)
   : m_http_client(http_client)
   , m_daemon_rpc_mutex(mutex)
   , m_offline(false)
@@ -342,7 +342,7 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> NodeRPCP
     return result;
 
   {
-    std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
+    boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
     if(m_all_service_nodes_cached_height != height && !update_all_service_nodes_cache(height, failed))
       return result;
 
@@ -363,7 +363,7 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response::entry> NodeRPCP
     return result;
 
   {
-    std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
+    boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
     if(m_contributed_service_nodes_cached_height != height || m_contributed_service_nodes_cached_address != contributor)
     {
       if(m_all_service_nodes_cached_height != height && !update_all_service_nodes_cache(height, failed))
@@ -394,7 +394,7 @@ std::vector<cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::ent
     return result;
 
   {
-    std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
+    boost::lock_guard<boost::recursive_mutex> lock(m_daemon_rpc_mutex);
     if(m_service_node_blacklisted_key_images_cached_height != height)
     {
       cryptonote::COMMAND_RPC_GET_SERVICE_NODE_BLACKLISTED_KEY_IMAGES::request req = {};

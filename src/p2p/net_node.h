@@ -39,7 +39,6 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <chrono>
 #include <functional>
 #include <utility>
 #include <vector>
@@ -111,7 +110,9 @@ namespace nodetool
   template<class base_type>
   struct p2p_connection_context_t: base_type //t_payload_net_handler::connection_context //public net_utils::connection_context_base
   {
-    p2p_connection_context_t(): peer_id(0), support_flags(0), m_in_timedsync(false) {}
+    p2p_connection_context_t(bool is_ping = false): peer_id(0), support_flags(0), m_in_timedsync(false) {}
+
+    static constexpr int handshake_command() noexcept { return 1001; }
 
     peerid_type peer_id;
     uint32_t support_flags;
@@ -122,8 +123,7 @@ namespace nodetool
   template<class t_payload_net_handler>
   class node_server: public epee::levin::levin_commands_handler<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>,
                      public i_p2p_endpoint<typename t_payload_net_handler::connection_context>,
-                     public epee::net_utils::i_connection_filter,
-                     public epee::net_utils::i_connection_limit
+                     public epee::net_utils::i_connection_filter
   {
     struct by_conn_id{};
     struct by_peer_id{};
@@ -326,10 +326,9 @@ namespace nodetool
     virtual void on_connection_close(p2p_connection_context& context);
     virtual void callback(p2p_connection_context& context);
     //----------------- i_p2p_endpoint -------------------------------------------------------------
-    virtual bool relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections);
+    virtual bool relay_notify_to_list(int command, epee::levin::message_writer message, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections) final;
     virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, const bool pad_txs);
-    virtual bool invoke_command_to_peer(int command, const epee::span<const uint8_t> req_buff, std::string& resp_buff, const epee::net_utils::connection_context_base& context);
-    virtual bool invoke_notify_to_peer(int command, const epee::span<const uint8_t> req_buff, const epee::net_utils::connection_context_base& context);
+    virtual bool invoke_notify_to_peer(int command, epee::levin::message_writer message, const epee::net_utils::connection_context_base& context) final;
     virtual bool drop_connection(const epee::net_utils::connection_context_base& context);
     virtual void request_callback(const epee::net_utils::connection_context_base& context);
     virtual void for_each_connection(std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type, uint32_t)> f);
@@ -337,7 +336,6 @@ namespace nodetool
     virtual bool add_host_fail(const epee::net_utils::network_address &address, unsigned int score = 1);
     //----------------- i_connection_filter  --------------------------------------------------------
     virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address, time_t *t = NULL);
-    virtual bool is_host_limit(const epee::net_utils::network_address &address);
     //-----------------------------------------------------------------------------------------------
     bool parse_peer_from_string(epee::net_utils::network_address& pe, const std::string& node_addr, uint16_t default_port = 0);
     bool handle_command_line(

@@ -147,7 +147,7 @@ namespace cryptonote
        transaction tx;
      };
 
-     auto incoming_tx_lock() { return std::unique_lock<boost::recursive_mutex>{m_incoming_tx_lock}; }
+     auto incoming_tx_lock() { return boost::unique_lock<boost::recursive_mutex>{m_incoming_tx_lock}; }
 
      std::vector<tx_verification_batch_info> parse_incoming_txs(const std::vector<blobdata>& tx_blobs, const tx_pool_options &opts);
 

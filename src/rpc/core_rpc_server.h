@@ -52,6 +52,7 @@ namespace cryptonote
   {
   public:
     static constexpr int DEFAULT_RPC_THREADS = 2;
+    static const command_line::arg_descriptor<bool> arg_public_node;
     static const command_line::arg_descriptor<std::string, false, true, 2> arg_rpc_bind_port;
     static const command_line::arg_descriptor<std::string> arg_rpc_restricted_bind_port;
     static const command_line::arg_descriptor<bool> arg_restricted_rpc;
@@ -63,10 +64,6 @@ namespace cryptonote
     static const command_line::arg_descriptor<bool> arg_rpc_ssl_allow_any_cert;
     static const command_line::arg_descriptor<std::string> arg_bootstrap_daemon_address;
     static const command_line::arg_descriptor<std::string> arg_bootstrap_daemon_login;
-    static const command_line::arg_descriptor<std::size_t> arg_rpc_max_connections_per_public_ip;
-    static const command_line::arg_descriptor<std::size_t> arg_rpc_max_connections_per_private_ip;
-    static const command_line::arg_descriptor<std::size_t> arg_rpc_max_connections;
-    static const command_line::arg_descriptor<std::size_t> arg_rpc_response_soft_limit;
 
     typedef epee::net_utils::connection_context_base connection_context;
 

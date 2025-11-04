@@ -100,7 +100,7 @@ namespace cryptonote
    *   helping create a new block template by choosing transactions for it
    *
    */
-  class tx_memory_pool : boost::noncopyable
+  class tx_memory_pool
   {
   public:
     /**
@@ -109,6 +109,9 @@ namespace cryptonote
      * @param bchs a Blockchain class instance, for getting chain info
      */
     tx_memory_pool(Blockchain& bchs);
+
+    tx_memory_pool(const tx_memory_pool &) = delete;
+    tx_memory_pool &operator=(const tx_memory_pool &) = delete;
 
     /**
      * @copydoc add_tx(transaction&, tx_verification_context&, const tx_pool_options &, uint8_t)
@@ -203,6 +206,10 @@ namespace cryptonote
     void unlock() const { m_transactions_lock.unlock(); }
 
     bool try_lock() const { return m_transactions_lock.try_lock(); }
+
+    void lock() { m_transactions_lock.lock(); }
+    void unlock() { m_transactions_lock.unlock(); }
+    bool try_lock() { return m_transactions_lock.try_lock(); }
 
     // load/store operations
 
