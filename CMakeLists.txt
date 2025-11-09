@@ -395,6 +395,10 @@ endif()
 
 include_directories(external/rapidjson/include external/easylogging++ src contrib/epee/include external)
 
+if(DEPENDS)
+  include_directories(external/cppzmq)
+endif()
+
 if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif()
