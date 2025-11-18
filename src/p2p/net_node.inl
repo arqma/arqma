@@ -36,6 +36,7 @@
 #include <boost/optional/optional.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/thread/thread.hpp>
 #include <atomic>
 #include <functional>
 #include <limits>

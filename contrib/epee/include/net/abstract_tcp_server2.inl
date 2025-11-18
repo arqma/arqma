@@ -30,12 +30,12 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <boost/bind/bind.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/foreach.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/thread.hpp>
 #include "warnings.h"
 #include "string_tools_lexical.h"
 #include "misc_language.h"
@@ -1826,7 +1826,7 @@ namespace net_utils
 
     std::shared_ptr<boost::asio::steady_timer> sh_deadline(new boost::asio::steady_timer(io_context_));
     //start deadline
-    sh_deadline->expires_from_now(std::chrono::milliseconds(conn_timeout));
+    sh_deadline->expires_after(std::chrono::milliseconds(conn_timeout));
     sh_deadline->async_wait([=](const boost::system::error_code& error)
       {
           if(error != boost::asio::error::operation_aborted)

@@ -6435,16 +6435,16 @@ bool wallet2::sign_tx(unsigned_tx_set &exported_txs, std::vector<wallet2::pendin
       m_additional_tx_keys.insert(std::make_pair(txid, additional_tx_keys));
     }
 
-    std::string key_images;
+    std::ostringstream key_images;
     bool all_are_txin_to_key = std::all_of(ptx.tx.vin.begin(), ptx.tx.vin.end(), [&](const txin_v& s_e) -> bool
     {
       CHECKED_GET_SPECIFIC_VARIANT(s_e, const txin_to_key, in, false);
-      key_images += boost::to_string(in.k_image) + " ";
+      key_images << in.k_image << ' ';
       return true;
     });
     THROW_WALLET_EXCEPTION_IF(!all_are_txin_to_key, error::unexpected_txin_type, ptx.tx);
 
-    ptx.key_images = key_images;
+    ptx.key_images = key_images.str();
     ptx.fee = 0;
     for (const auto &i: sd.sources) ptx.fee += i.amount;
     for (const auto &i: sd.splitted_dsts) ptx.fee -= i.amount;
@@ -8881,18 +8881,18 @@ void wallet2::transfer_selected_rct(std::vector<cryptonote::tx_destination_entry
   }
 
   LOG_PRINT_L2("gathering key images");
-  std::string key_images;
+  std::ostringstream key_images;
   bool all_are_txin_to_key = std::all_of(tx.vin.begin(), tx.vin.end(), [&](const txin_v& s_e) -> bool
   {
     CHECKED_GET_SPECIFIC_VARIANT(s_e, const txin_to_key, in, false);
-    key_images += boost::to_string(in.k_image) + " ";
+    key_images << in.k_image << ' ';
     return true;
   });
   THROW_WALLET_EXCEPTION_IF(!all_are_txin_to_key, error::unexpected_txin_type, tx);
   LOG_PRINT_L2("gathered key images");
 
   ptx = {};
-  ptx.key_images = key_images;
+  ptx.key_images = key_images.str();
   ptx.fee = fee;
   ptx.dust = 0;
   ptx.dust_added_to_fee = false;

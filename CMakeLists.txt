@@ -395,7 +395,7 @@ endif()
 
 include_directories(external/rapidjson/include external/easylogging++ src contrib/epee/include external)
 
-if(DEPENDS)
+if(DEPENDS OR APPLE)
   include_directories(external/cppzmq)
 endif()
 

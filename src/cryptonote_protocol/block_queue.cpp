@@ -41,17 +41,6 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "cn.block_queue"
 
-namespace std {
-template<>
-struct hash<boost::uuids::uuid>
-{
-  size_t operator()(const boost::uuids::uuid& uid) const
-  {
-    return boost::uuids::hash_value(uid);
-  }
-};
-}
-
 namespace cryptonote
 {
 
