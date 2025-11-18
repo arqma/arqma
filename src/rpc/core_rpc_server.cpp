@@ -30,7 +30,6 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #include <boost/preprocessor/stringize.hpp>
-#include <boost/endian/conversion.hpp>
 #include <algorithm>
 #include <cstring>
 #include <boost/filesystem.hpp>
@@ -273,7 +272,7 @@ namespace cryptonote
       res.was_bootstrap_ever_used = false;
     else
     {
-      boost::shared_lock<boost::shared_mutex> lock{m_bootstrap_daemon_mutex};
+      std::shared_lock lock{m_bootstrap_daemon_mutex};
       res.was_bootstrap_ever_used = m_was_bootstrap_ever_used;
     }
     res.database_size = m_core.get_blockchain_storage().get_db().get_database_size();
@@ -291,11 +290,11 @@ namespace cryptonote
     // No bootstrap daemon check: Only ever get stats about local server
     res.start_time = (uint64_t)m_core.get_start_time();
     {
-      CRITICAL_REGION_LOCAL(epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in);
+      std::lock_guard lock{epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in};
       epee::net_utils::network_throttle_manager::get_global_throttle_in().get_stats(res.total_packets_in, res.total_bytes_in);
     }
     {
-      CRITICAL_REGION_LOCAL(epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_out);
+      std::lock_guard lock{epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_out};
       epee::net_utils::network_throttle_manager::get_global_throttle_out().get_stats(res.total_packets_out, res.total_bytes_out);
     }
     res.status = CORE_RPC_STATUS_OK;
@@ -916,30 +915,30 @@ namespace cryptonote
       return true;
     }
 
-    unsigned int concurrency_count = boost::thread::hardware_concurrency() * 4;
+    int max_concurrency_count = std::thread::hardware_concurrency() * 4;
 
     // if we couldn't detect threads, set it to a ridiculously high number
-    if(concurrency_count == 0)
+    if(max_concurrency_count == 0)
     {
-      concurrency_count = 257;
+      max_concurrency_count = 257;
     }
 
     // if there are more threads requested than the hardware supports
     // then we fail and log that.
-    if(req.threads_count > concurrency_count)
+    if(req.threads_count > max_concurrency_count)
     {
       res.status = "Failed, too many threads relative to CPU cores.";
       LOG_PRINT_L0(res.status);
       return true;
     }
 
-    cryptonote::miner &miner= m_core.get_miner();
+    auto& miner= m_core.get_miner();
     if (miner.is_mining())
     {
       res.status = "Already mining";
       return true;
     }
-    if(!miner.start(info.address, static_cast<size_t>(req.threads_count)))
+    if(!miner.start(info.address, req.threads_count))
     {
       res.status = "Failed, mining not started";
       LOG_PRINT_L0(res.status);
@@ -1072,21 +1071,6 @@ namespace cryptonote
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_set_log_hash_rate(const COMMAND_RPC_SET_LOG_HASH_RATE::request& req, COMMAND_RPC_SET_LOG_HASH_RATE::response& res, const connection_context *ctx)
-  {
-    PERF_TIMER(on_set_log_hash_rate);
-    if(m_core.get_miner().is_mining())
-    {
-      m_core.get_miner().do_print_hashrate(req.visible);
-      res.status = CORE_RPC_STATUS_OK;
-    }
-    else
-    {
-      res.status = CORE_RPC_STATUS_NOT_MINING;
-    }
-    return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_set_log_level(const COMMAND_RPC_SET_LOG_LEVEL::request& req, COMMAND_RPC_SET_LOG_LEVEL::response& res, const connection_context *ctx)
   {
     PERF_TIMER(on_set_log_level);
@@ -1210,7 +1194,7 @@ namespace cryptonote
   {
     PERF_TIMER(on_getblockcount);
     {
-      boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
+      std::shared_lock lock{m_bootstrap_daemon_mutex};
       if (m_should_use_bootstrap_daemon)
       {
         res.status = "This command is unsupported for bootstrap daemon";
@@ -1226,7 +1210,7 @@ namespace cryptonote
   {
     PERF_TIMER(on_getblockhash);
     {
-      boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
+      std::shared_lock lock{m_bootstrap_daemon_mutex};
       if (m_should_use_bootstrap_daemon)
       {
         res = "This command is unsupported for bootstrap daemon";
@@ -1413,7 +1397,7 @@ namespace cryptonote
   {
     PERF_TIMER(on_submitblock);
     {
-      boost::shared_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
+      std::shared_lock lock{m_bootstrap_daemon_mutex};
       if (m_should_use_bootstrap_daemon)
       {
         res.status = "This command is unsupported for bootstrap daemon";
@@ -1596,7 +1580,7 @@ namespace cryptonote
     if (m_bootstrap_daemon_address.empty())
       return false;
 
-    boost::unique_lock<boost::shared_mutex> lock(m_bootstrap_daemon_mutex);
+    std::unique_lock lock{m_bootstrap_daemon_mutex};
     if (!m_should_use_bootstrap_daemon)
     {
       MINFO("The local daemon is fully synced. Not switching back to the bootstrap daemon");
@@ -3035,80 +3019,6 @@ namespace cryptonote
     auto req_all = req;
     req_all.service_node_pubkeys.clear();
     return on_get_service_nodes(req_all, res, error_resp);
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
-  static uint64_t perform_blockchain_test_routine(const cryptonote::core& core, uint64_t max_height, uint64_t seed)
-  {
-    constexpr size_t NUM_ITERATIONS = 1000;
-    std::mt19937_64 mt(seed);
-    crypto::hash hash;
-    uint64_t height = seed;
-    for(auto i = 0u; i < NUM_ITERATIONS; ++i)
-    {
-      height = height % (max_height + 1);
-      hash = core.get_block_id_by_height(height);
-      using blob_t = cryptonote::blobdata;
-      using block_pair_t = std::pair<blob_t, block>;
-
-      std::vector<block_pair_t> blocks;
-      std::vector<blob_t> txs;
-      if(!core.get_blockchain_storage().get_blocks(height, 1, blocks, txs))
-      {
-        MERROR("Could not query block at requested height: " << height);
-        return 0;
-      }
-      const blob_t &blob = blocks.at(0).first;
-      const uint64_t byte_idx = tools::uniform_distribution_portable(mt, blob.size());
-      uint8_t byte = blob[byte_idx];
-
-      if(!txs.empty())
-      {
-        const uint64_t tx_idx = tools::uniform_distribution_portable(mt, txs.size());
-        const blob_t &tx_blob = txs[tx_idx];
-
-        if(!tx_blob.empty())
-        {
-          const uint64_t byte_idx = tools::uniform_distribution_portable(mt, tx_blob.size());
-          const uint8_t tx_byte = tx_blob[byte_idx];
-          byte ^= tx_byte;
-        }
-      }
-
-      {
-        uint64_t n[4];
-        std::memcpy(n, hash.data, sizeof(n));
-        for(auto &ni : n)
-        {
-          boost::endian::little_to_native_inplace(ni);
-        }
-
-        height = n[0] ^ n[1] ^ n[2] ^ n[3] ^ byte;
-      }
-    }
-
-    return height;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_perform_blockchain_test(const COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST::request& req, COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST::response& res, epee::json_rpc::error& error_resp, const connection_context* ctx)
-  {
-    PERF_TIMER(on_perform_blockchain_test);
-
-    uint64_t max_height = req.max_height;
-    uint64_t seed = req.seed;
-
-    if(m_core.get_current_blockchain_height() <= max_height)
-    {
-      error_resp.code = CORE_RPC_ERROR_CODE_TOO_BIG_HEIGHT;
-      res.status = "Requested block height too big.";
-      return true;
-    }
-
-    uint64_t res_height = perform_blockchain_test_routine(m_core, max_height, seed);
-
-    res.status = CORE_RPC_STATUS_OK;
-    res.res_height = res_height;
-
-    return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
 

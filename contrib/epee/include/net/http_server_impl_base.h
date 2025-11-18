@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <boost/thread.hpp>
 #include "net/abstract_tcp_server2.h"
 #include "http_protocol_handler.h"
 #include "net/http_server_handlers_map2.h"
@@ -102,9 +101,9 @@ namespace epee
       return m_net_server.deinit_server();
     }
 
-    bool timed_wait_server_stop(uint64_t ms)
+    bool server_stop()
     {
-      return m_net_server.timed_wait_server_stop(ms);
+      return m_net_server.server_stop();
     }
 
     bool send_stop_signal()

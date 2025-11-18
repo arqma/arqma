@@ -32,15 +32,13 @@
 #pragma once
 
 #include <boost/program_options.hpp>
-#include <boost/logic/tribool_fwd.hpp>
-#include <boost/thread/thread.hpp>
 #include <atomic>
+#include <thread>
 #include "cryptonote_basic/blobdatatype.h"
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "cryptonote_basic/verification_context.h"
 #include "cryptonote_basic/difficulty.h"
 #include "common/periodic_task.h"
-#include "syncobj.h"
 #include "cryptonote_basic/blobdatatype.h"
 #ifdef _WIN32
 #include <windows.h>
@@ -72,8 +70,8 @@ namespace cryptonote
     static void init_options(boost::program_options::options_description& desc);
     bool set_block_template(const block &bl, const difficulty_type &diffic, uint64_t height);
     bool on_block_chain_update();
-    bool start(const account_public_address& adr, size_t threads_count);
-    uint64_t get_speed() const;
+    bool start(const account_public_address& adr, int threads_count);
+    double get_speed() const;
     uint32_t get_threads_count() const;
     bool stop();
     bool is_mining() const;
@@ -84,12 +82,11 @@ namespace cryptonote
     static bool find_nonce_for_given_block(const get_block_hash_t& gbh, block& bl, const difficulty_type& diffic, uint64_t height, const crypto::hash *seed_hash = NULL);
     void pause();
     void resume();
-    void do_print_hashrate(bool do_hr);
 
   private:
-    bool worker_thread();
+    bool worker_thread(uint32_t index);
     bool request_block_template();
-    void merge_hr();
+    void update_hashrate();
 
     struct miner_config
     {
@@ -102,34 +99,29 @@ namespace cryptonote
 
 
     std::atomic<bool> m_stop;
-    epee::critical_section m_template_lock;
+    std::mutex m_template_lock;
     block m_template;
-    std::atomic<uint32_t> m_template_no;
+    std::atomic<uint32_t> m_template_no = 0;
     std::atomic<uint32_t> m_starter_nonce;
-    difficulty_type m_diffic;
-    uint64_t m_height;
+    difficulty_type m_diffic = 0;;
+    uint64_t m_height = 0;
     std::atomic<uint32_t> m_thread_index;
-    volatile uint32_t m_threads_total;
-    std::atomic<int32_t> m_pausers_count;
-    epee::critical_section m_miners_count_lock;
+    std::atomic<int> m_threads_total = 0;
+    std::atomic<int> m_pausers_count = 0;
+    std::mutex m_miners_count_mutex;
 
-    std::list<boost::thread> m_threads;
-    epee::critical_section m_threads_lock;
+    std::list<std::thread> m_threads;
+    std::mutex m_threads_lock;
     i_miner_handler* m_phandler;
     get_block_hash_t m_gbh;
     account_public_address m_mine_address;
     tools::periodic_task m_update_block_template_interval{5s};
-    tools::periodic_task m_update_merge_hr_interval{2s};
-    std::vector<blobdata> m_extra_messages;
-    miner_config m_config;
-    std::string m_config_folder_path;
-    std::atomic<uint64_t> m_last_hr_merge_time;
-    std::atomic<uint64_t> m_hashes;
-    std::atomic<uint64_t> m_current_hash_rate;
-    epee::critical_section m_last_hash_rates_lock;
-    std::list<uint64_t> m_last_hash_rates;
-    bool m_do_print_hashrate;
-    bool m_do_mining;
-    boost::thread::attributes m_attrs;
+    tools::periodic_task m_update_hashrate_interval{2s};
+
+    mutable std::mutex m_hashrate_mutex;
+    std::optional<std::chrono::steady_clock::time_point> m_last_hr_update;
+    std::atomic<uint64_t> m_hashes = 0;
+    double m_current_hash_rate = 0.0;
+    bool m_do_mining = false;
   };
 }

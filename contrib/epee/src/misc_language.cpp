@@ -26,8 +26,8 @@
 
 #include "misc_language.h"
 
-#include <boost/thread.hpp>
-#include <boost/chrono/duration.hpp>
+#include <thread>
+#include <chrono>
 
 namespace epee
 {
@@ -35,7 +35,7 @@ namespace misc_utils
 {
 	void sleep_no_w(long ms)
 	{
-	  boost::this_thread::sleep_for(boost::chrono::milliseconds{ms});
+	  std::this_thread::sleep_for(std::chrono::milliseconds{ms});
 	}
 }
 }

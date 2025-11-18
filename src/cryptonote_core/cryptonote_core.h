@@ -31,9 +31,9 @@
 
 #pragma once
 
-
 #include <ctime>
 #include <chrono>
+#include <mutex>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -147,7 +147,7 @@ namespace cryptonote
        transaction tx;
      };
 
-     auto incoming_tx_lock() { return boost::unique_lock<boost::recursive_mutex>{m_incoming_tx_lock}; }
+     auto incoming_tx_lock() { return std::unique_lock{m_incoming_tx_lock}; }
 
      std::vector<tx_verification_batch_info> parse_incoming_txs(const std::vector<blobdata>& tx_blobs, const tx_pool_options &opts);
 
@@ -809,13 +809,6 @@ namespace cryptonote
      bool add_new_block(const block& b, block_verification_context& bvc, checkpoint_t const *checkpoint);
 
      /**
-      * @copydoc parse_tx_from_blob(transaction&, crypto::hash&, crypto::hash&, const blobdata&) const
-      *
-      * @note see parse_tx_from_blob(transaction&, crypto::hash&, crypto::hash&, const blobdata&) const
-      */
-     bool parse_tx_from_blob(transaction& tx, crypto::hash& tx_hash, const blobdata& blob) const;
-
-     /**
       * @brief validates some simple properties of a transaction
       *
       * Currently checks: tx has inputs,
@@ -912,7 +905,7 @@ namespace cryptonote
 
      i_cryptonote_protocol* m_pprotocol; //!< cryptonote protocol instance
 
-     boost::recursive_mutex m_incoming_tx_lock; //!< incoming transaction lock
+     std::recursive_mutex m_incoming_tx_lock; //!< incoming transaction lock
 
      //m_miner and m_miner_addres are probably temporary here
      miner m_miner; //!< miner instance
@@ -959,7 +952,7 @@ namespace cryptonote
      time_t start_time;
 
      std::unordered_set<crypto::hash> bad_semantics_txes[2];
-     boost::mutex bad_semantics_txes_lock;
+     std::mutex bad_semantics_txes_lock;
 
      enum {
        UPDATES_DISABLED,
@@ -970,7 +963,7 @@ namespace cryptonote
 
      tools::download_async_handle m_update_download;
      size_t m_last_update_length;
-     boost::mutex m_update_mutex;
+     std::mutex m_update_mutex;
 
      bool m_offline;
      bool m_pad_transactions;

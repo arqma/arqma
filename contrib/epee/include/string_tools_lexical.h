@@ -31,10 +31,6 @@
 #include "storages/parserse_base_utils.h"
 #include <boost/lexical_cast.hpp> // A heavy header, that was extracted from the rest
 
-#ifndef OUT
-	#define OUT
-#endif
-
 namespace epee
 {
 namespace string_tools
@@ -42,7 +38,7 @@ namespace string_tools
 PUSH_WARNINGS
 DISABLE_GCC_WARNING(maybe-uninitialized)
     template<class XType>
-    inline bool get_xtype_from_string(OUT XType& val, const std::string& str_id)
+    inline bool get_xtype_from_string(XType& val, const std::string& str_id)
     {
         if (std::is_integral<XType>::value && !std::numeric_limits<XType>::is_signed && !std::is_same<XType, bool>::value)
         {

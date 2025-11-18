@@ -66,7 +66,6 @@ target_link_libraries(cryptonote_core
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
-    ${Boost_CHRONO_LIBRARY}
   PRIVATE
     systemd
     ${EXTRA_LIBRARIES})

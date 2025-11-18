@@ -37,6 +37,7 @@
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
 namespace pl = std::placeholders;
+using namespace std::literals;
 
 template<typename context_t>
 void on_levin_traffic(const context_t &context, bool initiator, bool sent, bool error, size_t bytes, const char *category);
@@ -49,7 +50,7 @@ namespace epee
   namespace net_utils
   {
     template<class t_result, class t_arg, class callback_t, class t_transport>
-    bool async_invoke_remote_command2(const epee::net_utils::connection_context_base &context, int command, const t_arg& out_struct, t_transport& transport, const callback_t &cb, size_t inv_timeout = LEVIN_DEFAULT_TIMEOUT_PRECONFIGURED)
+    bool async_invoke_remote_command2(const epee::net_utils::connection_context_base &context, int command, const t_arg& out_struct, t_transport& transport, const callback_t &cb, std::chrono::nanoseconds inv_timeout = 0ns)
     {
       const boost::uuids::uuid &conn_id = context.m_connection_id;
       typename serialization::portable_storage stg;
@@ -188,11 +189,11 @@ namespace epee
 
 #define HANDLE_INVOKE_T2(COMMAND, func) \
   if(!is_notify && COMMAND::ID == command) \
-  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, typename COMMAND::request, typename COMMAND::response>(command, in_buff, buff_out, std::bind(func, this, pl::_1, pl::_2, pl::_3, pl::_4), context);}
+  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, typename COMMAND::request, typename COMMAND::response>(command, in_buff, buff_out, [this](auto&&...v) { return func(std::forward<decltype(v)>(v)...); }, context);}
 
 #define HANDLE_NOTIFY_T2(NOTIFY, func) \
   if(is_notify && NOTIFY::ID == command) \
-  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, typename NOTIFY::request>(this, command, in_buff, std::bind(func, this, pl::_1, pl::_2, pl::_3), context);}
+  {handled=true;return epee::net_utils::buff_to_t_adapter<internal_owner_type_name, typename NOTIFY::request>(this, command, in_buff, [this](auto&&...v) { return func(std::forward<decltype(v)>(v)...); }, context);}
 
 #define CHAIN_INVOKE_MAP_TO_OBJ_FORCE_CONTEXT(obj, context_type) \
   { \

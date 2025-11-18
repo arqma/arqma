@@ -58,7 +58,6 @@ namespace epee
     byte_buffer buffer_;        //! Beginning of buffer
     std::uint8_t* next_write_;  //! Current write position
     const std::uint8_t* end_;   //! End of buffer
-    std::size_t increase_size_; //! Minimum buffer size increase
 
     //! \post `requested <= available()`
     void overflow(const std::size_t requested);
@@ -74,30 +73,20 @@ namespace epee
   public:
     using char_type = std::uint8_t;
     using Ch = char_type;
-
-    //! \return Default minimum size increase on buffer overflow
-    static constexpr std::size_t default_increase() noexcept { return 4096; }
+    using value_type = char_type;
 
     //! Increase internal buffer by at least `byte_stream_increase` bytes.
     byte_stream() noexcept
-      : byte_stream(default_increase())
-    {}
-
-    //! Increase internal buffer by at least `increase` bytes.
-    explicit byte_stream(const std::size_t increase) noexcept
       : buffer_(nullptr),
         next_write_(nullptr),
-        end_(nullptr),
-        increase_size_(increase)
+        end_(nullptr)
     {}
 
     byte_stream(byte_stream&& rhs) noexcept;
     ~byte_stream() noexcept = default;
     byte_stream& operator=(byte_stream&& rhs) noexcept;
 
-    //! \return The minimum increase size on buffer overflow
-    std::size_t increase_size() const noexcept { return increase_size_; }
-
+    std::uint8_t* data() noexcept { return buffer_.get(); }
     const std::uint8_t* data() const noexcept { return buffer_.get(); }
     std::uint8_t* tellp() const noexcept { return next_write_; }
     std::size_t available() const noexcept { return end_ - next_write_; }
@@ -116,6 +105,8 @@ namespace epee
     {
       check(more);
     }
+
+    void clear() noexcept { next_write_ = buffer_.get(); }
 
     /*! Copy `length` bytes starting at `ptr` to end of stream.
         \throw std::range_error If exceeding max size_t value.
@@ -185,7 +176,7 @@ namespace epee
     void put_n(const std::uint8_t ch, const std::size_t count)
     {
       check(count);
-      std::memset(tellp(), count, ch);
+      std::memset(tellp(), ch, count);
       next_write_ += count;
     }
 

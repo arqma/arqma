@@ -33,12 +33,12 @@
 #ifndef _ABSTRACT_TCP_SERVER2_H_
 #define _ABSTRACT_TCP_SERVER2_H_
 
+#include <mutex>
 #include <string>
 #include <vector>
 #include <atomic>
 #include <cassert>
 #include <map>
-#include <memory>
 #include <condition_variable>
 
 #include <boost/asio.hpp>
@@ -46,13 +46,9 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/array.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/optional.hpp>
 #include "byte_slice.h"
 #include "net_utils_base.h"
-#include "syncobj.h"
 #include "connection_basic.hpp"
 #include "network_throttle-detail.hpp"
 
@@ -79,15 +75,17 @@ namespace net_utils
   template<class t_protocol_handler>
   class connection
     : public std::enable_shared_from_this<connection<t_protocol_handler>>,
-      private boost::noncopyable,
       public connection_basic,
       public service_endpoint<t_protocol_handler>
   {
   public:
+    connection(const connection&) = delete;
+    connection& operator=(const connection&) = delete;
+
     typedef typename t_protocol_handler::connection_context t_connection_context;
   private:
     using connection_t = connection<t_protocol_handler>;
-    using connection_ptr = boost::shared_ptr<connection_t>;
+    using connection_ptr = std::shared_ptr<connection_t>;
     using ssl_support_t = epee::net_utils::ssl_support_t;
     using timer_t = boost::asio::steady_timer;
     using duration_t = timer_t::duration;
@@ -317,8 +315,11 @@ namespace net_utils
   /*                                                                      */
   /************************************************************************/
   template<class t_protocol_handler>
-  class boosted_tcp_server : private boost::noncopyable
+  class boosted_tcp_server
   {
+    boosted_tcp_server(const boosted_tcp_server&) = delete;
+    boosted_tcp_server& operator=(const boosted_tcp_server&) = delete;
+
     enum try_connect_result_t
     {
       CONNECT_SUCCESS,
@@ -347,10 +348,10 @@ namespace net_utils
                      ssl_options_t ssl_options = ssl_support_t::e_ssl_support_autodetect);
 
     // Run the server's io_context loop.
-    bool run_server(size_t threads_count, bool wait = true, const boost::thread::attributes& attrs = boost::thread::attributes());
+    bool run_server(size_t threads_count, bool wait = true);
 
     // wait for service workers stop
-    bool timed_wait_server_stop(uint64_t wait_mseconds);
+    bool server_stop();
 
     // Stop the server.
     void send_stop_signal();
@@ -408,57 +409,49 @@ namespace net_utils
 
     boost::asio::io_context& get_io_context() { return io_context_; }
 
-    struct idle_callback_context_base
+    template <class Callback>
+    struct idle_callback_context
     {
-      virtual ~idle_callback_context_base(){}
-      virtual bool call_handler() { return true; }
-      idle_callback_context_base(boost::asio::io_context& io_service) : m_timer(io_service) {}
-      boost::asio::deadline_timer m_timer;
-    };
+      idle_callback_context(boost::asio::io_context& io_service, Callback h, std::chrono::milliseconds period)
+        : m_timer{io_service}
+        , m_handler{std::move(h)}
+        , m_period{period}
+      {}
 
-    template <class t_handler>
-    struct idle_callback_context : public idle_callback_context_base
-    {
-      idle_callback_context(boost::asio::io_context& io_service, t_handler& h, uint64_t period)
-        : idle_callback_context_base(io_service)
-        , m_handler(h)
-      {
-        this->m_period = period;
-      }
-
-      t_handler m_handler;
-      virtual bool call_handler()
+      bool call_handler()
       {
         return m_handler();
       }
-      uint64_t m_period;
+
+      Callback m_handler;
+      std::chrono::milliseconds m_period;
+      boost::asio::steady_timer m_timer;
     };
 
     template<class t_handler>
-    bool add_idle_handler(t_handler t_callback, uint64_t timeout_ms)
+    bool add_idle_handler(t_handler callback, std::chrono::milliseconds timeout)
     {
-      boost::shared_ptr<idle_callback_context<t_handler>> ptr(new idle_callback_context<t_handler>(io_context_, t_callback, timeout_ms));
+      auto ptr = std::make_shared<idle_callback_context<t_handler>>(io_context_, std::move(callback), timeout);
       //needed call handler here ?...
-      ptr->m_timer.expires_from_now(boost::posix_time::milliseconds(ptr->m_period));
-      ptr->m_timer.async_wait(boost::bind(&boosted_tcp_server<t_protocol_handler>::global_timer_handler<t_handler>, this, ptr));
+      ptr->m_timer.expires_after(ptr->m_period);
+      ptr->m_timer.async_wait([this, ptr] (const boost::system::error_code&) { global_timer_handler<t_handler>(ptr); });
       return true;
     }
 
     template<class t_handler>
-    bool global_timer_handler(/*const boost::system::error_code& err, */boost::shared_ptr<idle_callback_context<t_handler>> ptr)
+    void global_timer_handler(/*const boost::system::error_code& err, */std::shared_ptr<idle_callback_context<t_handler>> ptr)
     {
       //if handler return false - he don't want to be called anymore
       if(!ptr->call_handler())
-        return true;
-      ptr->m_timer.expires_from_now(boost::posix_time::milliseconds(ptr->m_period));
-      ptr->m_timer.async_wait(boost::bind(&boosted_tcp_server<t_protocol_handler>::global_timer_handler<t_handler>, this, ptr));
-      return true;
+        return;
+      ptr->m_timer.expires_after(ptr->m_period);
+      ptr->m_timer.async_wait([this, ptr] (const boost::system::error_code&) { global_timer_handler<t_handler>(ptr); });
     }
 
     template<class t_handler>
-    bool async_call(t_handler&& t_callback)
+    bool async_call(t_handler t_callback)
     {
-      boost::asio::post(io_context_, std::forward<t_handler>(t_callback));
+      boost::asio::post(io_context_, std::move(t_callback));
       return true;
     }
 
@@ -501,9 +494,9 @@ namespace net_utils
     bool m_require_ipv4;
     std::string m_thread_name_prefix; //TODO: change to enum server_type, now used
     size_t m_threads_count;
-    std::vector<boost::shared_ptr<boost::thread>> m_threads;
-    boost::thread::id m_main_thread_id;
-    critical_section m_threads_lock;
+    std::vector<std::thread> m_threads;
+    std::thread::id m_main_thread_id;
+    std::mutex m_threads_lock;
     std::atomic<uint32_t> m_thread_index;
 
     t_connection_type m_connection_type;
@@ -512,7 +505,7 @@ namespace net_utils
     connection_ptr new_connection_;
     connection_ptr new_connection_ipv6;
 
-    boost::mutex connections_mutex;
+    std::mutex connections_mutex;
     std::set<connection_ptr> connections_;
   }; // class <>boosted_tcp_server
 

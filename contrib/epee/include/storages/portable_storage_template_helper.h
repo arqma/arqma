@@ -27,6 +27,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include "byte_slice.h"
 #include "parserse_base_utils.h"
@@ -41,7 +42,7 @@ namespace epee
   {
     //-----------------------------------------------------------------------------------------------------------
     template<class t_struct>
-    bool load_t_from_json(t_struct& out, const std::string& json_buff)
+    bool load_t_from_json(t_struct& out, std::string_view json_buff)
     {
       portable_storage ps;
       bool rs = ps.load_from_json(json_buff);
@@ -98,9 +99,13 @@ namespace epee
     }
     //-----------------------------------------------------------------------------------------------------------
     template<class t_struct>
-    bool load_t_from_binary(t_struct& out, const std::string& binary_buff)
+    bool load_t_from_binary(t_struct& out, std::string_view binary_buff)
     {
-      return load_t_from_binary(out, epee::strspan<uint8_t>(binary_buff));
+      portable_storage ps;
+      if (!ps.load_from_binary(binary_buff))
+        return false;
+
+      return out.load(ps);
     }
     //-----------------------------------------------------------------------------------------------------------
     template<class t_struct>

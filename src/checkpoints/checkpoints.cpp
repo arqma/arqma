@@ -40,7 +40,6 @@
 #include "cryptonote_core/service_node_rules.h"
 #include <functional>
 #include <vector>
-#include "syncobj.h"
 #include "blockchain_db/blockchain_db.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
 

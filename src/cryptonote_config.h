@@ -36,6 +36,8 @@
 #include <stdexcept>
 #include <chrono>
 
+using namespace std::literals;
+
 #define CRYPTONOTE_DNS_TIMEOUT_MS                       20000
 
 #define CRYPTONOTE_MAX_BLOCK_NUMBER                     500000000
@@ -149,8 +151,8 @@
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
 #define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               20         // seconds
 #define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       // 2 seconds
-#define P2P_DEFAULT_INVOKE_TIMEOUT                      30*1000    // 30 seconds
-#define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
+constexpr auto P2P_DEFAULT_INVOKE_TIMEOUT               = 2min;
+constexpr auto P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT     = 5s;
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST       1
@@ -174,7 +176,6 @@
 #define CRYPTONOTE_BLOCKCHAINDATA_FILENAME              "data.mdb"
 #define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
 #define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
-#define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
 #define HF_VERSION_MIN_MIXIN_10                         13
 

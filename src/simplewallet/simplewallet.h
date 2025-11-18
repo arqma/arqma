@@ -37,6 +37,9 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
 
 #include <boost/optional/optional.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -385,9 +388,9 @@ namespace cryptonote
     refresh_progress_reporter_t m_refresh_progress_reporter;
 
     std::atomic<bool> m_idle_run;
-    boost::thread m_idle_thread;
-    boost::mutex m_idle_mutex;
-    boost::condition_variable m_idle_cond;
+    std::thread m_idle_thread;
+    std::mutex m_idle_mutex;
+    std::condition_variable m_idle_cond;
 
     std::atomic<bool> m_auto_refresh_enabled;
     bool m_auto_refresh_refreshing;

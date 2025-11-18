@@ -99,7 +99,7 @@ namespace misc_utils
     inline std::string transform_to_escape_sequence(const std::string& src)
     {
       static const char escaped[] = "\b\f\n\r\t\v\"\\/";
-      std::string::const_iterator it = std::find_first_of(src.begin(), src.end(), escaped, escaped + sizeof(escaped));
+      auto it = std::find_first_of(src.begin(), src.end(), escaped, escaped + sizeof(escaped));
       if (it == src.end())
         return src;
 
@@ -149,12 +149,13 @@ namespace misc_utils
       \\  Backslash character
 
       */
-      inline void match_string2(std::string::const_iterator& star_end_string, std::string::const_iterator buf_end, std::string& val)
+      template <typename It>
+      inline void match_string2(It& star_end_string, It buf_end, std::string& val)
       {
         bool escape_mode = false;
-        std::string::const_iterator it = star_end_string;
+        auto it = star_end_string;
         ++it;
-        std::string::const_iterator fi = it;
+        auto fi = it;
         while (fi != buf_end && ((lut[(uint8_t)*fi] & 32)) == 0)
           ++fi;
         val.assign(it, fi);
@@ -241,7 +242,8 @@ namespace misc_utils
         }
         ASSERT_MES_AND_THROW("Failed to match string in json entry: " << std::string(star_end_string, buf_end));
       }
-      inline bool match_string(std::string::const_iterator& star_end_string, std::string::const_iterator buf_end, std::string& val)
+      template <typename It>
+      inline bool match_string(It& star_end_string, It buf_end, std::string& val)
       {
         try
         {
@@ -254,13 +256,14 @@ namespace misc_utils
           return false;
         }
       }
-      inline void match_number2(std::string::const_iterator& star_end_string, std::string::const_iterator buf_end, boost::string_ref& val, bool& is_float_val, bool& is_signed_val)
+      template <typename It>
+      inline void match_number2(It& star_end_string, It buf_end, boost::string_ref& val, bool& is_float_val, bool& is_signed_val)
       {
         val.clear();
         uint8_t float_flag = 0;
         is_signed_val = false;
         size_t chars = 0;
-        std::string::const_iterator it = star_end_string;
+        auto it = star_end_string;
         if (it != buf_end && *it == '-')
         {
           is_signed_val = true;
@@ -290,7 +293,8 @@ namespace misc_utils
         }
         ASSERT_MES_AND_THROW("wrong number in json entry: " << std::string(star_end_string, buf_end));
       }
-      inline bool match_number(std::string::const_iterator& star_end_string, std::string::const_iterator buf_end, boost::string_ref& val)
+      template <typename It>
+      inline bool match_number(It& star_end_string, It buf_end, boost::string_ref& val)
       {
         try
         {
@@ -303,11 +307,12 @@ namespace misc_utils
           return false;
         }
       }
-      inline void match_word2(std::string::const_iterator& star_end_string, std::string::const_iterator buf_end, boost::string_ref& val)
+      template <typename It>
+      inline void match_word2(It& star_end_string, It buf_end, boost::string_ref& val)
       {
         val.clear();
 
-        for(std::string::const_iterator it = star_end_string;it != buf_end;++it)
+        for(auto it = star_end_string;it != buf_end;++it)
         {
           if(!(lut[(uint8_t)*it] & 4))
           {
@@ -322,7 +327,8 @@ namespace misc_utils
         }
         ASSERT_MES_AND_THROW("failed to match word number in json entry: " << std::string(star_end_string, buf_end));
       }
-      inline bool match_word(std::string::const_iterator& star_end_string, std::string::const_iterator buf_end, boost::string_ref& val)
+      template <typename It>
+      inline bool match_word(It& star_end_string, It buf_end, boost::string_ref& val)
       {
         try
         {
@@ -334,11 +340,12 @@ namespace misc_utils
           return false;
         }
       }
-      inline bool match_word_with_extrasymb(std::string::const_iterator& star_end_string, std::string::const_iterator buf_end, std::string& val)
+      template <typename It>
+      inline bool match_word_with_extrasymb(It& star_end_string, It buf_end, std::string& val)
       {
         val.clear();
 
-        for(std::string::const_iterator it = star_end_string;it != buf_end;++it)
+        for(auto it = star_end_string;it != buf_end;++it)
         {
           if(!isalnum(*it) && *it != '-' && *it != '_')
           {
@@ -353,11 +360,12 @@ namespace misc_utils
         }
         return false;
       }
-      inline bool match_word_til_equal_mark(std::string::const_iterator& star_end_string, std::string::const_iterator buf_end, std::string::const_iterator& word_end)
+      template <typename It>
+      inline bool match_word_til_equal_mark(It& star_end_string, It buf_end, std::string::const_iterator& word_end)
       {
         word_end = star_end_string;
 
-        for(std::string::const_iterator it = star_end_string;it != buf_end;++it)
+        for(auto it = star_end_string;it != buf_end;++it)
         {
           if(isspace(*it))
           {

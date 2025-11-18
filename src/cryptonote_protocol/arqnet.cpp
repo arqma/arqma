@@ -22,8 +22,6 @@ struct SNNWrapper {
   cryptonote::core &core;
   service_node_list &sn_list;
 
-  boost::shared_mutex mutex;
-
   template <typename... Args>
   SNNWrapper(cryptonote::core &core, service_node_list &sn_list, Args &&...args)
     : snn{std::forward<Args>(args)...}, core{core}, sn_list{sn_list} {}

@@ -362,11 +362,11 @@ namespace net_utils
 	{
     const boost::uuids::uuid m_connection_id;
     const network_address m_remote_address;
-    const bool     m_is_income;
-    const time_t m_started;
-    const bool     m_ssl;
-    time_t m_last_recv;
-    time_t m_last_send;
+    const bool m_is_income;
+    std::chrono::steady_clock::time_point m_started;
+    const bool m_ssl;
+    std::chrono::steady_clock::time_point m_last_recv;
+    std::chrono::steady_clock::time_point m_last_send;
     uint64_t m_recv_cnt;
     uint64_t m_send_cnt;
     double m_current_speed_down;
@@ -376,12 +376,13 @@ namespace net_utils
 
     connection_context_base(boost::uuids::uuid connection_id,
                             const network_address &remote_address, bool is_income, bool ssl,
-                            time_t last_recv = 0, time_t last_send = 0,
+                            std::chrono::steady_clock::time_point last_recv = std::chrono::steady_clock::time_point::min(),
+                            std::chrono::steady_clock::time_point last_send = std::chrono::steady_clock::time_point::min(),
                             uint64_t recv_cnt = 0, uint64_t send_cnt = 0):
                                             m_connection_id(connection_id),
                                             m_remote_address(remote_address),
                                             m_is_income(is_income),
-                                            m_started(time(NULL)),
+                                            m_started(std::chrono::steady_clock::now()),
                                             m_ssl(ssl),
                                             m_last_recv(last_recv),
                                             m_last_send(last_send),
@@ -396,10 +397,10 @@ namespace net_utils
     connection_context_base(): m_connection_id(),
                                m_remote_address(),
                                m_is_income(false),
-                               m_started(time(NULL)),
+                               m_started(std::chrono::steady_clock::now()),
                                m_ssl(false),
-                               m_last_recv(0),
-                               m_last_send(0),
+                               m_last_recv(std::chrono::steady_clock::time_point::min()),
+                               m_last_send(std::chrono::steady_clock::time_point::min()),
                                m_recv_cnt(0),
                                m_send_cnt(0),
                                m_current_speed_down(0),

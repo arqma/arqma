@@ -46,8 +46,8 @@ namespace epee
       {
         ASSERT_MES_AND_THROW("json parse error");
       }*/
-      template<class t_storage>
-      inline void run_handler(typename t_storage::hsection current_section, std::string::const_iterator& sec_buf_begin, std::string::const_iterator buf_end, t_storage& stg, unsigned int recursion)
+      template<typename It, class t_storage>
+      inline void run_handler(typename t_storage::hsection current_section, It& sec_buf_begin, It buf_end, t_storage& stg, unsigned int recursion)
       {
         CHECK_AND_ASSERT_THROW_MES(recursion < EPEE_JSON_RECURSION_LIMIT_INTERNAL, "Wrong JSON data: recursion limitation (" << EPEE_JSON_RECURSION_LIMIT_INTERNAL << ") exceeded");
 
@@ -78,8 +78,7 @@ namespace epee
 
         match_state state = match_state_lookup_for_section_start;
         array_mode array_md = array_mode_undifined;
-        std::string::const_iterator it = sec_buf_begin;
-        for(;it != buf_end;it++)
+        for (auto it = sec_buf_begin; it != buf_end; ++it)
         {
           switch (state)
           {
@@ -391,12 +390,12 @@ namespace epee
 }
 */
       template<class t_storage>
-      inline bool load_from_json(const std::string& buff_json, t_storage& stg)
+      inline bool load_from_json(std::string_view buff_json, t_storage& stg)
       {
-        std::string::const_iterator sec_buf_begin  = buff_json.begin();
         try
         {
-          run_handler(nullptr, sec_buf_begin, buff_json.end(), stg, 0);
+          auto it = buff_json.begin();
+          run_handler(nullptr, it, buff_json.end(), stg, 0);
           return true;
         }
         catch(const std::exception& ex)

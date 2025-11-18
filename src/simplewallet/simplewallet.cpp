@@ -104,7 +104,7 @@ typedef cryptonote::simple_wallet sw;
   /* stop any background refresh, and take over */ \
   m_idle_run = false; \
   m_wallet->stop(); \
-  boost::unique_lock<boost::mutex> lock(m_idle_mutex); \
+  std::unique_lock lock{m_idle_mutex}; \
   m_idle_cond.notify_all(); \
   epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ \
   /* m_idle_mutex is still locked here */ \
@@ -3993,7 +3993,7 @@ bool simple_wallet::close_wallet()
     m_idle_run.store(false, std::memory_order_relaxed);
     m_wallet->stop();
     {
-      boost::unique_lock<boost::mutex> lock(m_idle_mutex);
+      std::unique_lock lock{m_idle_mutex};
       m_idle_cond.notify_one();
     }
     m_idle_thread.join();
@@ -7494,21 +7494,22 @@ bool simple_wallet::rescan_blockchain(const std::vector<std::string> &args_)
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::wallet_idle_thread()
 {
-  const boost::posix_time::ptime start_time = boost::posix_time::microsec_clock::universal_time();
+  const auto start_time = std::chrono::steady_clock::now();
   while (true)
   {
-    boost::unique_lock<boost::mutex> lock(m_idle_mutex);
+    std::unique_lock lock{m_idle_mutex};
     if (!m_idle_run.load(std::memory_order_relaxed))
       break;
 
     // auto refresh
-    const boost::posix_time::ptime now0 = boost::posix_time::microsec_clock::universal_time();
-    const uint64_t dt_actual = (now0 - start_time).total_microseconds() % 1000000;
+    const auto dt_actual = (std::chrono::steady_clock::now() - start_time) % 1s;
+    constexpr auto threshold =
 #ifdef _WIN32
-    static const uint64_t threshold = 10000;
+      10ms;
 #else
-    static const uint64_t threshold = 2000;
+      2ms;
 #endif
+
     if (dt_actual < threshold)
     {
       m_refresh_checker.do_call([this] { check_refresh(); });
@@ -7517,10 +7518,9 @@ void simple_wallet::wallet_idle_thread()
         break;
     }
 
-    const boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
-    const auto dt = (now - start_time).total_microseconds();
-    const auto wait = 1000000 - dt % 1000000;
-    m_idle_cond.wait_for(lock, boost::chrono::microseconds(wait));
+    const auto dt = std::chrono::steady_clock::now() - start_time;
+    const auto wait = 1s - dt % 1s;
+    m_idle_cond.wait_for(lock, wait);
   }
 }
 //----------------------------------------------------------------------------------------------------
@@ -7575,7 +7575,7 @@ bool simple_wallet::run()
   refresh_main(0, ResetNone, true);
 
   m_auto_refresh_enabled = m_wallet->auto_refresh();
-  m_idle_thread = boost::thread([&] { wallet_idle_thread(); });
+  m_idle_thread = std::thread([&] { wallet_idle_thread(); });
 
   message_writer(console_color_green, false) << "Background refresh thread started";
   return m_cmd_binder.run_handling([this](){return get_prompt();}, "");
@@ -8679,9 +8679,7 @@ int main(int argc, char* argv[])
   po::positional_options_description positional_options;
   positional_options.add(arg_command.name, -1);
 
-  boost::optional<po::variables_map> vm;
-  bool should_terminate = false;
-  std::tie(vm, should_terminate) = wallet_args::main(
+  auto [vm, should_terminate] = wallet_args::main(
    argc, argv,
    "arqma-wallet-cli [--wallet-file=<filename>|--generate-new-wallet=<filename>] [<COMMAND>]",
     sw::tr("This is the command line ArQmA Command Line Wallet.\nIt needs to connect to a ArQmA Daemon to work correctly.\nWARNING: Do not reuse your ArQmA keys on an another fork,\nUNLESS this fork has key reuse mitigations built in. Doing so will harm your privacy."),

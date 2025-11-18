@@ -50,7 +50,6 @@ target_link_libraries(wallet
     mnemonics
     net
     lmdb
-    ${Boost_CHRONO_LIBRARY}
     ${Boost_SERIALIZATION_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
@@ -85,7 +84,6 @@ if(NOT IOS)
       version
       daemonizer
       epee
-      ${Boost_CHRONO_LIBRARY}
       ${Boost_PROGRAM_OPTIONS_LIBRARY}
       ${Boost_FILESYSTEM_LIBRARY}
       ${Boost_THREAD_LIBRARY}

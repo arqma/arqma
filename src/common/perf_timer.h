@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 #include <stdio.h>
 #include <memory>
@@ -48,12 +49,13 @@ public:
   void pause();
   void resume();
   void reset();
-  uint64_t value() const;
+  std::chrono::nanoseconds value() const;
+  std::chrono::duration<double> seconds() const { return value(); }
 
 protected:
-  uint64_t ticks;
+  std::optional<std::chrono::steady_clock::time_point> since;
+  std::chrono::nanoseconds elapsed;
   bool started;
-  bool paused;
 };
 
 class LoggingPerformanceTimer: public PerformanceTimer

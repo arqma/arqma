@@ -29,15 +29,16 @@
 
 #include <boost/range/adaptor/reversed.hpp>
 
+#include "common/string_util.h"
 #include "cryptonote_core/service_node_rules.h"
 #include "checkpoints/checkpoints.h"
 #include "string_tools.h"
 #include "blockchain_db.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
-#include "profile_tools.h"
 #include "ringct/rctOps.h"
 
 #include "lmdb/db_lmdb.h"
+#include <chrono>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "blockchain.db"
@@ -178,16 +179,15 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
     throw std::runtime_error("Inconsistent tx/hashes sizes");
 
 
-  TIME_MEASURE_START(time1);
+  auto started = std::chrono::steady_clock::now();
   crypto::hash blk_hash = get_block_hash(blk);
-  TIME_MEASURE_FINISH(time1);
-  time_blk_hash += time1;
+  time_blk_hash += std::chrono::steady_clock::now() - started;
 
   uint64_t prev_height = height();
 
   // call out to add the transactions
 
-  time1 = epee::misc_utils::get_tick_count();
+  started = std::chrono::steady_clock::now();
 
   uint64_t num_rct_outs = 0;
   add_transaction(blk_hash, std::make_pair(blk.miner_tx, tx_to_blob(blk.miner_tx)));
@@ -206,14 +206,12 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
     }
     ++tx_i;
   }
-  TIME_MEASURE_FINISH(time1);
-  time_add_transaction += time1;
+  time_add_transaction += std::chrono::steady_clock::now() - started;
 
   // call out to subclass implementation to add the block & metadata
-  time1 = epee::misc_utils::get_tick_count();
+  started = std::chrono::steady_clock::now();
   add_block(blk, block_weight, long_term_block_weight, cumulative_difficulty, coins_generated, num_rct_outs, blk_hash);
-  TIME_MEASURE_FINISH(time1);
-  time_add_block1 += time1;
+  time_add_block1 += std::chrono::steady_clock::now() - started;
 
   m_hardfork->add(blk, prev_height);
 
@@ -333,32 +331,24 @@ uint64_t BlockchainDB::get_output_unlock_time(const uint64_t amount, const uint6
 void BlockchainDB::reset_stats()
 {
   num_calls = 0;
-  time_blk_hash = 0;
-  time_tx_exists = 0;
-  time_add_block1 = 0;
-  time_add_transaction = 0;
-  time_commit1 = 0;
+  time_blk_hash = 0ns;
+  time_tx_exists = 0ns;
+  time_add_block1 = 0ns;
+  time_add_transaction = 0ns;
+  time_commit1 = 0ns;
 }
 
 void BlockchainDB::show_stats()
 {
-  LOG_PRINT_L1(ENDL
-    << "*********************************"
-    << ENDL
-    << "num_calls: " << num_calls
-    << ENDL
-    << "time_blk_hash: " << time_blk_hash << "ms"
-    << ENDL
-    << "time_tx_exists: " << time_tx_exists << "ms"
-    << ENDL
-    << "time_add_block1: " << time_add_block1 << "ms"
-    << ENDL
-    << "time_add_transaction: " << time_add_transaction << "ms"
-    << ENDL
-    << "time_commit1: " << time_commit1 << "ms"
-    << ENDL
-    << "*********************************"
-    << ENDL
+  LOG_PRINT_L1("\n"
+    << "*********************************\n"
+    << "num_calls: " << num_calls << "\n"
+    << "time_blk_hash: " << tools::friendly_duration(time_blk_hash) << "\n"
+    << "time_tx_exists: " << tools::friendly_duration(time_tx_exists) << "\n"
+    << "time_add_block1: " << tools::friendly_duration(time_add_block1) << "\n"
+    << "time_add_transaction: " << tools::friendly_duration(time_add_transaction) << "\n"
+    << "time_commit1: " << tools::friendly_duration(time_commit1) << "\n"
+    << "*********************************\n"
   );
 }
 

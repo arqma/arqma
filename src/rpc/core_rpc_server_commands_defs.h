@@ -633,7 +633,7 @@ namespace cryptonote
     struct request_t
     {
       std::string miner_address;
-      uint64_t    threads_count;
+      int threads_count;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(miner_address)
@@ -1258,28 +1258,6 @@ namespace cryptonote
         KV_SERIALIZE(status)
         KV_SERIALIZE(gray)
         KV_SERIALIZE(white)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_SET_LOG_HASH_RATE
-  {
-    struct request_t
-    {
-      bool visible;
-
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(visible)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      std::string status;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -2581,31 +2559,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
         KV_SERIALIZE(service_node_ed25519_privkey)
         KV_SERIALIZE(service_node_x25519_privkey)
         KV_SERIALIZE(status)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
-  struct COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST
-  {
-    struct request_t
-    {
-      uint64_t max_height;
-      uint64_t seed;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(max_height)
-        KV_SERIALIZE(seed)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-
-    struct response_t
-    {
-      std::string status;
-      uint64_t res_height;
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(status)
-        KV_SERIALIZE(res_height)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;

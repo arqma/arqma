@@ -80,10 +80,6 @@ public:
 
   bool save_blockchain();
 
-  bool show_hash_rate();
-
-  bool hide_hash_rate();
-
   bool show_difficulty();
 
   bool show_status();

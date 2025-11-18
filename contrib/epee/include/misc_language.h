@@ -24,11 +24,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-
-
 #pragma once
 
-#include <boost/shared_ptr.hpp>
+#include <algorithm>
+#include <memory>
 #include <vector>
 
 namespace epee
@@ -78,10 +77,10 @@ namespace misc_utils
 
   struct call_before_die_base
   {
-    virtual ~call_before_die_base() = default;
+    virtual ~call_before_die_base(){}
   };
 
-  typedef std::shared_ptr<call_before_die_base> auto_scope_leave_caller;
+  using auto_scope_leave_caller = std::shared_ptr<call_before_die_base>;
 
 
   template<class t_scope_leave_handler>

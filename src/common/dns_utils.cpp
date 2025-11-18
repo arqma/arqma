@@ -33,12 +33,12 @@
 #include "unbound.h"
 
 #include <deque>
+#include <mutex>
 #include <set>
 #include <stdlib.h>
 #include "include_base_utils.h"
 #include "common/threadpool.h"
 #include "crypto/crypto.h"
-#include <boost/thread/mutex.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/optional.hpp>
 using namespace epee;
@@ -56,7 +56,7 @@ static const char *DEFAULT_DNS_PUBLIC_ADDR[] =
   "77.88.8.8",    // Yandex
 };
 
-static boost::mutex instance_lock;
+static std::mutex instance_lock;
 
 namespace
 {
@@ -354,7 +354,7 @@ std::string DNSResolver::get_dns_format_from_oa_address(const std::string& oa_ad
 
 DNSResolver& DNSResolver::instance()
 {
-  boost::lock_guard<boost::mutex> lock(instance_lock);
+  std::lock_guard lock{instance_lock};
 
   static DNSResolver staticInstance;
   return staticInstance;

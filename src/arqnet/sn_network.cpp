@@ -8,8 +8,6 @@
 #include <atomic>
 #include <queue>
 #include <map>
-#include <mutex>
-#include <boost/thread/mutex.hpp>
 
 namespace arqnet {
 
@@ -259,7 +257,7 @@ std::atomic<int> next_id{1};
 /// We have one mutex here that is generally used once per thread: to create a thread-local command
 /// socket to talk to the proxy thread's control socket.  We need the proxy thread to also have a
 /// copy of it so that it can close them when it is exiting.
-boost::mutex local_control_mutex;
+std::mutex local_control_mutex;
 
 /// Accesses a thread-local command socket connected to the proxy's command socket used to issue
 /// commands in a thread-safe manner (without requiring a mutex).
@@ -278,7 +276,7 @@ zmq::socket_t &SNNetwork::get_control_socket() {
       return *last.second;
     }
 
-    std::lock_guard<boost::mutex> lock{local_control_mutex};
+    std::lock_guard<std::mutex> lock{local_control_mutex};
     zmq::socket_t foo{context, zmq::socket_type::dealer};
     auto control = std::make_shared<zmq::socket_t>(context, zmq::socket_type::dealer);
     control->setsockopt<int>(ZMQ_LINGER, 0);
@@ -477,7 +475,7 @@ void SNNetwork::proxy_quit() {
     command.setsockopt<int>(ZMQ_LINGER, 0);
     command.close();
     {
-        std::lock_guard<boost::mutex> lock{local_control_mutex};
+        std::lock_guard<std::mutex> lock{local_control_mutex};
         for (auto &control : thread_control_sockets)
             control->close();
     }

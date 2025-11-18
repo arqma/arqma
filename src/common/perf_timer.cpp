@@ -27,26 +27,24 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <chrono>
 #include <vector>
-#include "time_helper.h"
 #include "perf_timer.h"
+
+using namespace std::literals;
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "perf"
 
 #define PERF_LOG_ALWAYS(level, cat, x) \
   el::base::Writer(level, el::Color::Default, __FILE__, __LINE__, ELPP_FUNC, el::base::DispatchAction::FileOnlyLog).construct(cat) << x
-#define PERF_LOG(level, cat, x) \
-  do { \
-    if (ELPP->vRegistry()->allowed(level, cat)) PERF_LOG_ALWAYS(level, cat, x); \
-  } while(0)
 
 namespace tools
 {
 
 el::Level performance_timer_log_level = el::Level::Info;
 
-static thread_local std::vector<LoggingPerformanceTimer*> *performance_timers = NULL;
+static thread_local std::vector<LoggingPerformanceTimer*>* performance_timers = nullptr;
 
 void set_performance_timer_log_level(el::Level level)
 {
@@ -59,12 +57,10 @@ void set_performance_timer_log_level(el::Level level)
   performance_timer_log_level = level;
 }
 
-PerformanceTimer::PerformanceTimer(bool paused): started(true), paused(paused)
+PerformanceTimer::PerformanceTimer(bool paused): started(true)
 {
-  if (paused)
-    ticks = 0;
-  else
-    ticks = epee::misc_utils::get_ns_count();
+  if (!paused)
+    since = std::chrono::steady_clock::now();
 }
 
 LoggingPerformanceTimer::LoggingPerformanceTimer(const std::string &s, const std::string &cat, uint64_t unit, el::Level l): PerformanceTimer(), name(s), cat(cat), unit(unit), level(l)
@@ -79,12 +75,12 @@ LoggingPerformanceTimer::LoggingPerformanceTimer(const std::string &s, const std
   }
   else
   {
-    LoggingPerformanceTimer *pt = performance_timers->back();
-    if (!pt->started && !pt->paused)
+    LoggingPerformanceTimer* pt = performance_timers->back();
+    if (!pt->started && pt->since)
     {
       if (log)
       {
-        size_t size = 0; for (const auto *tmp: *performance_timers) if (!tmp->paused) ++size;
+        size_t size = 0; for (const auto *tmp: *performance_timers) if (tmp->since) ++size;
         PERF_LOG_ALWAYS(pt->level, cat.c_str(), "PERF           " << std::string((size-1) * 2, ' ') << "  " << pt->name);
       }
       pt->started = true;
@@ -101,47 +97,45 @@ LoggingPerformanceTimer::~LoggingPerformanceTimer()
   if (log)
   {
     char s[12];
-    snprintf(s, sizeof(s), "%8llu  ", (unsigned long long)(ticks / (1000000000 / unit)));
-    size_t size = 0; for (const auto *tmp: *performance_timers) if (!tmp->paused || tmp==this) ++size;
+    snprintf(s, sizeof(s), "%8llu  ", static_cast<unsigned long long>(elapsed.count() / (1000000000 / unit)));
+    size_t size = 0; for (const auto *tmp: *performance_timers) if (tmp->since || tmp==this) ++size;
     PERF_LOG_ALWAYS(level, cat.c_str(), "PERF " << s << std::string(size * 2, ' ') << "  " << name);
   }
   if (performance_timers->empty())
   {
     delete performance_timers;
-    performance_timers = NULL;
+    performance_timers = nullptr;
   }
 }
 
 void PerformanceTimer::pause()
 {
-  if (paused)
+  if (!since)
     return;
-  ticks = epee::misc_utils::get_ns_count() - ticks;
-  paused = true;
+  auto now = std::chrono::steady_clock::now();
+  elapsed += now - *since;
+  since.reset();
 }
 
 void PerformanceTimer::resume()
 {
-  if (!paused)
-    return;
-  ticks = epee::misc_utils::get_ns_count() - ticks;
-  paused = false;
+  if (!since)
+    since = std::chrono::steady_clock::now();
 }
 
 void PerformanceTimer::reset()
 {
-  if (paused)
-    ticks = 0;
-  else
-    ticks = epee::misc_utils::get_ns_count();
+  elapsed = 0ns;
+  if (since)
+    since = std::chrono::steady_clock::now();
 }
 
-uint64_t PerformanceTimer::value() const
+std::chrono::nanoseconds PerformanceTimer::value() const
 {
-  uint64_t v = ticks;
-  if (!paused)
-    v = epee::misc_utils::get_ns_count() - v;
-  return v;
+  auto ret = elapsed;
+  if (since)
+    ret += std::chrono::steady_clock::now() - *since;
+  return ret;
 }
 
 }

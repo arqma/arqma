@@ -32,9 +32,11 @@
 #include <boost/format.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/endian/conversion.hpp>
+#include <chrono>
 #include <memory>  // std::unique_ptr
 #include <cstring>  // memcpy
 
+#include "common/string_util.h"
 #include "string_tools.h"
 #include "file_io_utils.h"
 #include "common/arqma.h"
@@ -43,7 +45,6 @@
 #include "cryptonote_config.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "crypto/crypto.h"
-#include "profile_tools.h"
 #include "ringct/rctOps.h"
 
 #include "checkpoints/checkpoints.h"
@@ -612,7 +613,7 @@ void BlockchainLMDB::check_open() const
 void BlockchainLMDB::do_resize(uint64_t increase_size)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
-  CRITICAL_REGION_LOCAL(m_synchronization_lock);
+  std::lock_guard lock{*this};
   const uint64_t add_size = 1LL << 30;
 
   // check disk capacity
@@ -1757,17 +1758,22 @@ std::string BlockchainLMDB::get_db_name() const
   return std::string("lmdb");
 }
 
-bool BlockchainLMDB::lock()
+void BlockchainLMDB::lock()
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
-  check_open();
-  return false;
+  m_synchronization_lock.lock();
+}
+
+bool BlockchainLMDB::try_lock()
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  return m_synchronization_lock.try_lock();
 }
 
 void BlockchainLMDB::unlock()
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
-  check_open();
+  m_synchronization_lock.unlock();
 }
 
 #define TXN_PREFIX(flags) \
@@ -2052,7 +2058,7 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
     throw0(DB_ERROR("Pruning seed not in range"));
   check_open();
 
-  TIME_MEASURE_START(t);
+  auto t = std::chrono::steady_clock::now();
 
   size_t n_total_records = 0, n_prunable_records = 0, n_pruned_records = 0;
   uint64_t n_bytes = 0;
@@ -2077,7 +2083,6 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
     if (mode != prune_mode_prune)
     {
       txn.abort();
-      TIME_MEASURE_FINISH(t);
       MDEBUG("Pruning not enabled, nothing to do");
       return true;
     }
@@ -2267,10 +2272,8 @@ bool BlockchainLMDB::prune_worker(int mode, uint32_t pruning_seed)
 
   txn.commit();
 
-  TIME_MEASURE_FINISH(t);
-
   MINFO((mode == prune_mode_check ? "Checked" : "Pruned") << " blockchain in " <<
-      t << " ms: " << (n_bytes/1024.0f/1024.0f) << " MB (" << db_bytes/1024.0f/1024.0f << " MB) pruned in " <<
+      tools::friendly_duration(std::chrono::steady_clock::now() - t) << " : " << (n_bytes/1024.0f/1024.0f) << " MB (" << db_bytes/1024.0f/1024.0f << " MB) pruned in " <<
       n_pruned_records << " records (" << pages0 - pages1 << "/" << pages0 << " " << db_stats.ms_psize << " byte pages), " <<
       n_prunable_records << "/" << n_total_records << " pruned records");
   return true;
@@ -2979,15 +2982,14 @@ bool BlockchainLMDB::tx_exists(const crypto::hash& h) const
   MDB_val_set(key, h);
   bool tx_found = false;
 
-  TIME_MEASURE_START(time1);
+  auto time1 = std::chrono::steady_clock::now();
   auto get_result = mdb_cursor_get(m_cur_tx_indices, (MDB_val *)&zerokval, &key, MDB_GET_BOTH);
   if (get_result == 0)
     tx_found = true;
   else if (get_result != MDB_NOTFOUND)
     throw0(DB_ERROR(lmdb_error(std::string("DB error attempting to fetch transaction index from hash ") + epee::string_tools::pod_to_hex(h) + ": ", get_result).c_str()));
 
-  TIME_MEASURE_FINISH(time1);
-  time_tx_exists += time1;
+  time_tx_exists += std::chrono::steady_clock::now() - time1;
 
   if (! tx_found)
   {
@@ -3008,10 +3010,9 @@ bool BlockchainLMDB::tx_exists(const crypto::hash& h, uint64_t& tx_id) const
 
   MDB_val_set(v, h);
 
-  TIME_MEASURE_START(time1);
+  auto time1 = std::chrono::steady_clock::now();
   auto get_result = mdb_cursor_get(m_cur_tx_indices, (MDB_val *)&zerokval, &v, MDB_GET_BOTH);
-  TIME_MEASURE_FINISH(time1);
-  time_tx_exists += time1;
+  time_tx_exists += std::chrono::steady_clock::now() - time1;
   if (!get_result) {
     txindex *tip = (txindex *)v.mv_data;
     tx_id = tip->data.tx_id;
@@ -3780,10 +3781,9 @@ void BlockchainLMDB::batch_commit()
   check_open();
 
   LOG_PRINT_L3("batch transaction: committing...");
-  TIME_MEASURE_START(time1);
+  auto time1 = std::chrono::steady_clock::now();
   m_write_txn->commit();
-  TIME_MEASURE_FINISH(time1);
-  time_commit1 += time1;
+  time_commit1 += std::chrono::steady_clock::now() - time1;
   LOG_PRINT_L3("batch transaction: committed");
 
   m_write_txn = nullptr;
@@ -3815,12 +3815,11 @@ void BlockchainLMDB::batch_stop()
     throw1(DB_ERROR("batch transaction owned by other thread"));
   check_open();
   LOG_PRINT_L3("batch transaction: committing...");
-  TIME_MEASURE_START(time1);
+  auto time1 = std::chrono::steady_clock::now();
   try
   {
     m_write_txn->commit();
-    TIME_MEASURE_FINISH(time1);
-    time_commit1 += time1;
+    time_commit1 += std::chrono::steady_clock::now() - time1;
     cleanup_batch();
   }
   catch (const std::exception& e)
@@ -3959,11 +3958,10 @@ void BlockchainLMDB::block_wtxn_stop()
     throw0(DB_ERROR_TXN_START((std::string("Attempted to stop write txn from the wrong thread in ")+__FUNCTION__).c_str()));
   {
     if (! m_batch_active)
-	{
-      TIME_MEASURE_START(time1);
+	  {
+      auto time1 = std::chrono::steady_clock::now();
       m_write_txn->commit();
-      TIME_MEASURE_FINISH(time1);
-      time_commit1 += time1;
+      time_commit1 += std::chrono::steady_clock::now() - time1;
 
       delete m_write_txn;
       m_write_txn = nullptr;
@@ -4299,7 +4297,7 @@ void BlockchainLMDB::get_output_key(const epee::span<const uint64_t> &amounts, c
 	throw0(DB_ERROR("Invalid sizes of amounts and offets"));
 
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
-  TIME_MEASURE_START(db3);
+  auto db3 = std::chrono::steady_clock::now();
   check_open();
   outputs.clear();
   outputs.reserve(offsets.size());
@@ -4342,8 +4340,7 @@ void BlockchainLMDB::get_output_key(const epee::span<const uint64_t> &amounts, c
     }
   }
 
-  TIME_MEASURE_FINISH(db3);
-  LOG_PRINT_L3("db3: " << db3);
+  LOG_PRINT_L3("db3: " << tools::friendly_duration(std::chrono::steady_clock::now() - db3));
 }
 
 void BlockchainLMDB::get_output_tx_and_index(const uint64_t& amount, const std::vector<uint64_t> &offsets, std::vector<tx_out_index> &indices) const
@@ -4373,13 +4370,12 @@ void BlockchainLMDB::get_output_tx_and_index(const uint64_t& amount, const std::
     tx_indices.push_back(okp->output_id);
   }
 
-  TIME_MEASURE_START(db3);
+  auto db3 = std::chrono::steady_clock::now();
   if(tx_indices.size() > 0)
   {
     get_output_tx_and_index_from_global(tx_indices, indices);
   }
-  TIME_MEASURE_FINISH(db3);
-  LOG_PRINT_L3("db3: " << db3);
+  LOG_PRINT_L3("db3: " << tools::friendly_duration(std::chrono::steady_clock::now() - db3));
 }
 
 std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> BlockchainLMDB::get_output_histogram(const std::vector<uint64_t> &amounts, bool unlocked, uint64_t recent_cutoff, uint64_t min_count) const

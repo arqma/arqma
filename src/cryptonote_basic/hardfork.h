@@ -29,8 +29,8 @@
 
 #pragma once
 
-#include "syncobj.h"
 #include "cryptonote_basic/cryptonote_basic.h"
+#include <mutex>
 
 namespace cryptonote
 {
@@ -275,7 +275,7 @@ namespace cryptonote
     unsigned int last_versions[256]; /* count of the block versions in the last N blocks */
     uint32_t current_fork_index;
 
-    mutable epee::critical_section lock;
+    mutable std::recursive_mutex lock;
   };
 
 }  // namespace cryptonote

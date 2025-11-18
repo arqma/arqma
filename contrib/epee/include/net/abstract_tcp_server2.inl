@@ -33,18 +33,18 @@
 #include <boost/asio/post.hpp>
 #include <boost/foreach.hpp>
 #include <boost/uuid/random_generator.hpp>
-#include <boost/chrono.hpp>
 #include <boost/asio/bind_executor.hpp>
-#include <boost/asio/deadline_timer.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/make_shared.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/thread.hpp>
 #include "warnings.h"
 #include "string_tools_lexical.h"
 #include "misc_language.h"
 #include "net/abstract_tcp_server2.h"
 
+#include <chrono>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -60,6 +60,8 @@
 #define AGGRESSIVE_TIMEOUT_THRESHOLD 120  // sockets
 #define NEW_CONNECTION_TIMEOUT_LOCAL 1200000 // 2 minutes
 #define NEW_CONNECTION_TIMEOUT_REMOTE 10000 // 10 seconds
+
+using namespace std::literals;
 
 namespace epee
 {
@@ -307,9 +309,9 @@ namespace net_utils
     auto self = connection<T>::shared_from_this();
     if (m_connection_type != e_connection_type_RPC) {
       auto calc_duration = []{
-        CRITICAL_REGION_LOCAL(
+        std::lock_guard lock{
           network_throttle_manager_t::m_lock_get_global_throttle_in
-        );
+        };
         return std::chrono::duration_cast<connection<T>::duration_t>(
             std::chrono::duration<double, std::chrono::seconds::period>(
               std::min(
@@ -359,14 +361,14 @@ namespace net_utils
             speed
           );
           {
-            CRITICAL_REGION_LOCAL(
+            std::lock_guard lock{
               network_throttle_manager_t::m_lock_get_global_throttle_in
-            );
+            };
             network_throttle_manager_t::get_global_throttle_in(
             ).handle_trafic_exact(bytes_transferred);
           }
           connection_basic::logger_handle_net_read(bytes_transferred);
-          get_context().m_last_recv = time(NULL);
+          get_context().m_last_recv = std::chrono::steady_clock::now();
           get_context().m_recv_cnt += bytes_transferred;
           start_timer(get_timeout_from_bytes_read(bytes_transferred), true);
         }
@@ -426,9 +428,9 @@ namespace net_utils
     auto self = connection<T>::shared_from_this();
     if (m_connection_type != e_connection_type_RPC) {
       auto calc_duration = [this]{
-        CRITICAL_REGION_LOCAL(
+        std::lock_guard lock{
           network_throttle_manager_t::m_lock_get_global_throttle_out
-        );
+        };
         return std::chrono::duration_cast<connection<T>::duration_t>(
             std::chrono::duration<double, std::chrono::seconds::period>(
               std::min(
@@ -483,14 +485,14 @@ namespace net_utils
             speed
           );
           {
-            CRITICAL_REGION_LOCAL(
+            std::lock_guard lock{
               network_throttle_manager_t::m_lock_get_global_throttle_out
-            );
+            };
             network_throttle_manager_t::get_global_throttle_out(
             ).handle_trafic_exact(bytes_transferred);
           }
           connection_basic::logger_handle_net_write(bytes_transferred);
-          get_context().m_last_send = time(NULL);
+          get_context().m_last_send = std::chrono::steady_clock::now();
           get_context().m_send_cnt += bytes_transferred;
 
           start_timer(get_default_timeout(), true);
@@ -539,10 +541,18 @@ namespace net_utils
         m_state.socket.cancel_shutdown = false;
         switch (m_state.status)
         {
-          case status_t::RUNNING: interrupt(); break;
-          case status_t::INTERRUPTED: terminate(); break;
-          case status_t::TERMINATING: on_terminating(); break;
-          default: break;
+          case status_t::RUNNING:
+            interrupt();
+            break;
+          case status_t::INTERRUPTED:
+          case status_t::WASTED:
+            terminate();
+            break;
+          case status_t::TERMINATING:
+            on_terminating();
+            break;
+          default:
+            break;
         }
       }
       else {
@@ -721,15 +731,20 @@ namespace net_utils
     auto wait_consume = [this] {
       auto random_delay = []{
         using engine = std::mt19937;
-        std::random_device dev;
-        std::seed_seq::result_type rand[
-          engine::state_size
-        ]{};
-        std::generate_n(rand, engine::state_size, std::ref(dev));
-        std::seed_seq seed(rand, rand + engine::state_size);
-        engine rng(seed);
+        static bool initialized = false;
+        static engine rng;
+        if (!initialized)
+        {
+          initialized = true;
+          std::random_device dev;
+          std::seed_seq::result_type rand[engine::state_size]{};
+          std::generate_n(rand, engine::state_size, std::ref(dev));
+          std::seed_seq seed(rand, rand + engine::state_size);
+          rng.seed(seed);
+        }
+
         return std::chrono::milliseconds(
-          std::uniform_int_distribution<>(5000, 6000)(rng)
+          std::uniform_int_distribution<>{250, 299}(rng)
         );
       };
       if (m_state.data.write.queue.size() <= ABSTRACT_SERVER_SEND_QUE_MAX_COUNT)
@@ -1021,7 +1036,7 @@ namespace net_utils
   {
     if(connection_basic::m_is_multithreaded) {
       if (!m_io_context.poll_one())
-        misc_utils::sleep_no_w(1);
+        std::this_thread::sleep_for(1ms);
     }
     else {
       if (!m_io_context.run_one())
@@ -1106,8 +1121,8 @@ namespace net_utils
   template<class t_protocol_handler>
   boosted_tcp_server<t_protocol_handler>::~boosted_tcp_server()
   {
-    this->send_stop_signal();
-    timed_wait_server_stop(10000);
+    send_stop_signal();
+    server_stop();
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
@@ -1253,9 +1268,9 @@ namespace net_utils
     TRY_ENTRY();
     const uint32_t local_thr_index = m_thread_index++; // atomically increment, getting value before increment
     std::string thread_name = std::string("[") + m_thread_name_prefix;
-    thread_name += boost::to_string(local_thr_index) + "]";
+    thread_name += std::to_string(local_thr_index) + "]";
     MLOG_SET_THREAD_NAME(thread_name);
-    //   _fact("Thread name: " << m_thread_name_prefix);
+    //   MDEBUG("Thread name: " << m_thread_name_prefix);
     while(!m_stop_signal_sent)
     {
       try
@@ -1265,14 +1280,14 @@ namespace net_utils
       }
       catch(const std::exception& ex)
       {
-        _erro("Exception at server worker thread, what=" << ex.what());
+        MERROR("Exception at server worker thread, what=" << ex.what());
       }
       catch(...)
       {
-        _erro("Exception at server worker thread, unknown execption");
+        MERROR("Exception at server worker thread, unknown execption");
       }
     }
-    //_info("Worker thread finished");
+    //MINFO("Worker thread finished");
     return true;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::worker_thread", false);
   }
@@ -1295,51 +1310,50 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::run_server(size_t threads_count, bool wait, const boost::thread::attributes& attrs)
+  bool boosted_tcp_server<t_protocol_handler>::run_server(size_t threads_count, bool wait)
   {
     TRY_ENTRY();
     m_threads_count = threads_count;
-    m_main_thread_id = boost::this_thread::get_id();
+    m_main_thread_id = std::this_thread::get_id();
     MLOG_SET_THREAD_NAME("[SRV_MAIN]");
     while(!m_stop_signal_sent)
     {
       // Create a pool of threads to run all of the io_contexts.
-      CRITICAL_REGION_BEGIN(m_threads_lock);
-      for (std::size_t i = 0; i < threads_count; ++i)
       {
-        boost::shared_ptr<boost::thread> thread(new boost::thread(attrs, boost::bind(&boosted_tcp_server<t_protocol_handler>::worker_thread, this)));
-        m_threads.push_back(thread);
-        MDEBUG("Run server thread name: " << m_thread_name_prefix);
+        std::lock_guard lock{m_threads_lock};
+        for (std::size_t i = 0; i < threads_count; ++i)
+        {
+          m_threads.emplace_back([this] { worker_thread(); });
+          MDEBUG("Run server thread name: " << m_thread_name_prefix);
+        }
       }
-      CRITICAL_REGION_END();
       // Wait for all threads in the pool to exit.
       if (wait)
       {
 		    MDEBUG("JOINING all threads");
-		    for (std::size_t i = 0; i < m_threads.size(); ++i) {
-          m_threads[i]->join();
-        }
+		    for (auto& th : m_threads)
+		      th.join();
 		    MDEBUG("JOINING all threads - almost");
         m_threads.clear();
         MDEBUG("JOINING all threads - DONE");
 
       }
       else {
-		    _dbg1("Reiniting OK.");
+		    MDEBUG("Reiniting OK.");
         return true;
       }
 
       if(wait && !m_stop_signal_sent)
       {
         //some problems with the listening socket ?..
-        _dbg1("Net service stopped without stop request, restarting...");
+        MDEBUG("Net service stopped without stop request, restarting...");
         if(!this->init_server(m_port, m_address, m_port_ipv6, m_address_ipv6, m_use_ipv6, m_require_ipv4))
         {
-          _dbg1("Reiniting service failed, exit.");
+          MDEBUG("Reiniting service failed, exit.");
           return false;
         }else
         {
-          _dbg1("Reiniting OK.");
+          MDEBUG("Reiniting OK.");
         }
       }
     }
@@ -1351,33 +1365,25 @@ namespace net_utils
   bool boosted_tcp_server<t_protocol_handler>::is_thread_worker()
   {
     TRY_ENTRY();
-    CRITICAL_REGION_LOCAL(m_threads_lock);
-    for(auto &thp : m_threads)
-    {
-      if (thp->get_id() == boost::this_thread::get_id())
+    std::lock_guard lock{m_threads_lock};
+    for (auto& th : m_threads)
+      if (th.get_id() == std::this_thread::get_id())
         return true;
-    }
-    if(m_threads_count == 1 && boost::this_thread::get_id() == m_main_thread_id)
+    if(m_threads_count == 1 && std::this_thread::get_id() == m_main_thread_id)
       return true;
     return false;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::is_thread_worker", false);
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::timed_wait_server_stop(uint64_t wait_mseconds)
+  bool boosted_tcp_server<t_protocol_handler>::server_stop()
   {
     TRY_ENTRY();
-    boost::chrono::milliseconds ms(wait_mseconds);
-    for (std::size_t i = 0; i < m_threads.size(); ++i)
-    {
-      if (m_threads[i]->joinable() && !m_threads[i]->try_join_for(ms))
-      {
-        MDEBUG("Interrupting thread " << m_threads[i]->native_handle());
-        m_threads[i]->interrupt();
-      }
-    }
+    for (auto& th : m_threads)
+      if (th.joinable())
+        th.join();
     return true;
-    CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::timed_wait_server_stop", false);
+    CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::server_stop", false);
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
@@ -1387,13 +1393,12 @@ namespace net_utils
     typename connection<t_protocol_handler>::shared_state *state = static_cast<typename connection<t_protocol_handler>::shared_state*>(m_state.get());
     state->stop_signal_sent = true;
     TRY_ENTRY();
-    connections_mutex.lock();
-    for (auto &c: connections_)
     {
-      c->cancel();
+      std::lock_guard lock{connections_mutex};
+      for (auto &c: connections_)
+        c->cancel();
+      connections_.clear();
     }
-    connections_.clear();
-    connections_mutex.unlock();
     io_context_.stop();
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::send_stop_signal()", void());
   }
@@ -1478,8 +1483,8 @@ namespace net_utils
 
     // error path, if e or exception
     assert(m_state != nullptr); // always set in constructor
-    _erro("Some problems at accept: " << e.message() << ", connections_count = " << m_state->sock_count);
-    misc_utils::sleep_no_w(100);
+    MERROR("Some problems at accept: " << e.message() << ", connections_count = " << m_state->sock_count);
+    std::this_thread::sleep_for(100ms);
     (*current_new_connection).reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, (*current_new_connection)->get_ssl_support()));
     current_acceptor->async_accept((*current_new_connection)->socket(),
       boost::bind(accept_function_pointer, this,
@@ -1536,33 +1541,35 @@ namespace net_utils
     struct local_async_context
     {
       boost::system::error_code ec;
-      boost::mutex connect_mut;
-      boost::condition_variable cond;
+      std::mutex connect_mut;
+      std::condition_variable cond;
     };
 
-    boost::shared_ptr<local_async_context> local_shared_context(new local_async_context());
+    std::shared_ptr<local_async_context> local_shared_context(new local_async_context());
     local_shared_context->ec = boost::asio::error::would_block;
-    boost::unique_lock<boost::mutex> lock(local_shared_context->connect_mut);
-    auto connect_callback = [](boost::system::error_code ec_, boost::shared_ptr<local_async_context> shared_context)
+    std::unique_lock lock{local_shared_context->connect_mut};
+    auto connect_callback = [](boost::system::error_code ec_, std::shared_ptr<local_async_context> shared_context)
     {
-      shared_context->connect_mut.lock(); shared_context->ec = ec_; shared_context->cond.notify_one(); shared_context->connect_mut.unlock();
+      std::lock_guard lock{shared_context->connect_mut};
+      shared_context->ec = ec_;
+      shared_context->cond.notify_one();
     };
 
     sock_.async_connect(remote_endpoint, std::bind<void>(connect_callback, std::placeholders::_1, local_shared_context));
     while(local_shared_context->ec == boost::asio::error::would_block)
     {
-      bool r = local_shared_context->cond.timed_wait(lock, boost::get_system_time() + boost::posix_time::milliseconds(conn_timeout));
+      auto wait_stat = local_shared_context->cond.wait_for(lock, std::chrono::milliseconds{conn_timeout});
       if (m_stop_signal_sent)
       {
         if (sock_.is_open())
           sock_.close();
         return CONNECT_FAILURE;
       }
-      if(local_shared_context->ec == boost::asio::error::would_block && !r)
+      if(local_shared_context->ec == boost::asio::error::would_block && wait_stat == std::cv_status::timeout)
       {
         //timeout
         sock_.close();
-        _dbg3("Failed to connect to " << adr << ":" << port << ", because of timeout (" << conn_timeout << ")");
+        MTRACE("Failed to connect to " << adr << ":" << port << ", because of timeout (" << conn_timeout << ")");
         return CONNECT_FAILURE;
       }
     }
@@ -1570,13 +1577,13 @@ namespace net_utils
 
     if (ec || !sock_.is_open())
     {
-      _dbg3("Some problems at connect, message: " << ec.message());
+      MTRACE("Some problems at connect, message: " << ec.message());
       if (sock_.is_open())
         sock_.close();
       return CONNECT_FAILURE;
     }
 
-    _dbg3("Connected success to " << adr << ':' << port);
+    MTRACE("Connected success to " << adr << ':' << port);
 
     const ssl_support_t ssl_support = new_connection_l->get_ssl_support();
     if (ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled || ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
@@ -1610,12 +1617,13 @@ namespace net_utils
     TRY_ENTRY();
 
     connection_ptr new_connection_l(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, ssl_support) );
-    connections_mutex.lock();
-    connections_.insert(new_connection_l);
-    MDEBUG("connections_ size now " << connections_.size());
-    connections_mutex.unlock();
-    epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ CRITICAL_REGION_LOCAL(connections_mutex); connections_.erase(new_connection_l); });
-    boost::asio::ip::tcp::socket&  sock_ = new_connection_l->socket();
+    {
+      std::lock_guard lock{connections_mutex};
+      connections_.insert(new_connection_l);
+      MDEBUG("connections_ size now " << connections_.size());
+    }
+    epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ std::lock_guard lock{connections_mutex}; connections_.erase(new_connection_l); });
+    boost::asio::ip::tcp::socket& sock_ = new_connection_l->socket();
 
     bool try_ipv6 = false;
 
@@ -1650,7 +1658,7 @@ namespace net_utils
     {
       if (!m_use_ipv6)
       {
-        _erro("Failed to resolve " << adr);
+        MERROR("Failed to resolve " << adr);
         return false;
       }
       else
@@ -1672,7 +1680,7 @@ namespace net_utils
 
       if(results.empty())
       {
-        _erro("Failed to resolve " << adr);
+        MERROR("Failed to resolve " << adr);
         return false;
       }
       else
@@ -1711,9 +1719,10 @@ namespace net_utils
     }
 
     // start adds the connection to the config object's list, so we don't need to have it locally anymore
-    connections_mutex.lock();
-    connections_.erase(new_connection_l);
-    connections_mutex.unlock();
+    {
+      std::lock_guard lock{connections_mutex};
+      connections_.erase(new_connection_l);
+    }
     bool r = new_connection_l->start(false, 1 < m_threads_count);
     if (r)
     {
@@ -1722,7 +1731,7 @@ namespace net_utils
     else
     {
       assert(m_state != nullptr); // always set in constructor
-      _erro("[sock " << new_connection_l->socket().native_handle() << "] Failed to start connection, connections_count = " << m_state->sock_count);
+      MERROR("[sock " << new_connection_l->socket().native_handle() << "] Failed to start connection, connections_count = " << m_state->sock_count);
     }
 
     new_connection_l->save_dbg_log();
@@ -1737,12 +1746,13 @@ namespace net_utils
   {
     TRY_ENTRY();
     connection_ptr new_connection_l(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, ssl_support) );
-    connections_mutex.lock();
-    connections_.insert(new_connection_l);
-    MDEBUG("connections_ size now " << connections_.size());
-    connections_mutex.unlock();
-    epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ CRITICAL_REGION_LOCAL(connections_mutex); connections_.erase(new_connection_l); });
-    boost::asio::ip::tcp::socket&  sock_ = new_connection_l->socket();
+    {
+      std::lock_guard lock{connections_mutex};
+      connections_.insert(new_connection_l);
+      MDEBUG("connections_ size now " << connections_.size());
+    }
+    epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ std::lock_guard lock{connections_mutex}; connections_.erase(new_connection_l); });
+    boost::asio::ip::tcp::socket& sock_ = new_connection_l->socket();
 
     bool try_ipv6 = false;
 
@@ -1775,7 +1785,7 @@ namespace net_utils
     {
       if (!try_ipv6)
       {
-        _erro("Failed to resolve " << adr);
+        MERROR("Failed to resolve " << adr);
         return false;
       }
       else
@@ -1792,7 +1802,7 @@ namespace net_utils
 
       if(results.empty())
       {
-        _erro("Failed to resolve " << adr);
+        MERROR("Failed to resolve " << adr);
         return false;
       }
     }
@@ -1814,14 +1824,14 @@ namespace net_utils
       }
     }
 
-    boost::shared_ptr<boost::asio::deadline_timer> sh_deadline(new boost::asio::deadline_timer(io_context_));
+    std::shared_ptr<boost::asio::steady_timer> sh_deadline(new boost::asio::steady_timer(io_context_));
     //start deadline
-    sh_deadline->expires_from_now(boost::posix_time::milliseconds(conn_timeout));
+    sh_deadline->expires_from_now(std::chrono::milliseconds(conn_timeout));
     sh_deadline->async_wait([=](const boost::system::error_code& error)
       {
           if(error != boost::asio::error::operation_aborted)
           {
-            _dbg3("Failed to connect to " << adr << ':' << port << ", because of timeout (" << conn_timeout << ")");
+            MTRACE("Failed to connect to " << adr << ':' << port << ", because of timeout (" << conn_timeout << ")");
             new_connection_l->socket().close();
           }
       });
@@ -1838,13 +1848,14 @@ namespace net_utils
             cb(conn_context, boost::asio::error::operation_aborted);//this mean that deadline timer already queued callback with cancel operation, rare situation
           }else
           {
-            _dbg3("[sock " << new_connection_l->socket().native_handle() << "] Connected success to " << adr << ':' << port <<
+            MTRACE("[sock " << new_connection_l->socket().native_handle() << "] Connected success to " << adr << ':' << port <<
               " from " << lep.address().to_string() << ':' << lep.port());
 
             // start adds the connection to the config object's list, so we don't need to have it locally anymore
-            connections_mutex.lock();
-            connections_.erase(new_connection_l);
-            connections_mutex.unlock();
+            {
+              std::lock_guard lock{connections_mutex};
+              connections_.erase(new_connection_l);
+            }
             bool r = new_connection_l->start(false, 1 < m_threads_count);
             if (r)
             {
@@ -1853,13 +1864,13 @@ namespace net_utils
             }
             else
             {
-              _dbg3("[sock " << new_connection_l->socket().native_handle() << "] Failed to start connection to " << adr << ':' << port);
+              MTRACE("[sock " << new_connection_l->socket().native_handle() << "] Failed to start connection to " << adr << ':' << port);
               cb(conn_context, boost::asio::error::fault);
             }
           }
         }else
         {
-          _dbg3("[sock " << new_connection_l->socket().native_handle() << "] Failed to connect to " << adr << ':' << port <<
+          MTRACE("[sock " << new_connection_l->socket().native_handle() << "] Failed to connect to " << adr << ':' << port <<
             " from " << lep.address().to_string() << ':' << lep.port() << ": " << ec_.message() << ':' << ec_.value());
           cb(conn_context, ec_);
         }

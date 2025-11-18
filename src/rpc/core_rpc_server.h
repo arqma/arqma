@@ -105,7 +105,6 @@ namespace cryptonote
       MAP_URI_AUTO_JON2_IF("/save_bc",                          on_save_bc,                               COMMAND_RPC_SAVE_BC, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/get_peer_list",                    on_get_peer_list,                         COMMAND_RPC_GET_PEER_LIST, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/get_public_nodes",                 on_get_public_nodes,                      COMMAND_RPC_GET_PUBLIC_NODES, !m_restricted)
-      MAP_URI_AUTO_JON2_IF("/set_log_hash_rate",                on_set_log_hash_rate,                     COMMAND_RPC_SET_LOG_HASH_RATE, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/set_log_level",                    on_set_log_level,                         COMMAND_RPC_SET_LOG_LEVEL, !m_restricted)
       MAP_URI_AUTO_JON2_IF("/set_log_categories",               on_set_log_categories,                    COMMAND_RPC_SET_LOG_CATEGORIES, !m_restricted)
       MAP_URI_AUTO_JON2("/get_transaction_pool",                on_get_transaction_pool,                  COMMAND_RPC_GET_TRANSACTION_POOL)
@@ -176,7 +175,6 @@ namespace cryptonote
         MAP_JON_RPC_WE("get_staking_requirement",                  on_get_staking_requirement,                 COMMAND_RPC_GET_STAKING_REQUIREMENT)
         MAP_JON_RPC_WE("get_checkpoints",                          on_get_checkpoints,                         COMMAND_RPC_GET_CHECKPOINTS)
         MAP_JON_RPC_WE_IF("prune_blockchain",                      on_prune_blockchain,                        COMMAND_RPC_PRUNE_BLOCKCHAIN, !m_restricted)
-        MAP_JON_RPC_WE_IF("perform_blockchain_test",               on_perform_blockchain_test,                 COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST, !m_restricted)
         MAP_JON_RPC_WE_IF("storage_server_ping",                   on_storage_server_ping,                     COMMAND_RPC_STORAGE_SERVER_PING, !m_restricted)
 //        MAP_JON_RPC_WE_IF("arqnet_ping",                           on_arqnet_ping,                             COMMAND_RPC_ARQNET_PING, !m_restricted)
         MAP_JON_RPC_WE("get_service_nodes_states_changes",         on_get_service_nodes_state_changes,         COMMAND_RPC_GET_SN_STATE_CHANGES)
@@ -204,7 +202,6 @@ namespace cryptonote
     bool on_save_bc(const COMMAND_RPC_SAVE_BC::request& req, COMMAND_RPC_SAVE_BC::response& res, const connection_context *ctx = NULL);
     bool on_get_peer_list(const COMMAND_RPC_GET_PEER_LIST::request& req, COMMAND_RPC_GET_PEER_LIST::response& res, const connection_context *ctx = NULL);
     bool on_get_public_nodes(const COMMAND_RPC_GET_PUBLIC_NODES::request& req, COMMAND_RPC_GET_PUBLIC_NODES::response& res, const connection_context *ctx = NULL);
-    bool on_set_log_hash_rate(const COMMAND_RPC_SET_LOG_HASH_RATE::request& req, COMMAND_RPC_SET_LOG_HASH_RATE::response& res, const connection_context *ctx = NULL);
     bool on_set_log_level(const COMMAND_RPC_SET_LOG_LEVEL::request& req, COMMAND_RPC_SET_LOG_LEVEL::response& res, const connection_context *ctx = NULL);
     bool on_set_log_categories(const COMMAND_RPC_SET_LOG_CATEGORIES::request& req, COMMAND_RPC_SET_LOG_CATEGORIES::response& res, const connection_context *ctx = NULL);
     bool on_get_transaction_pool(const COMMAND_RPC_GET_TRANSACTION_POOL::request& req, COMMAND_RPC_GET_TRANSACTION_POOL::response& res, const connection_context *ctx = NULL);
@@ -260,7 +257,6 @@ namespace cryptonote
     bool on_get_all_service_nodes(const COMMAND_RPC_GET_SERVICE_NODES::request& req, COMMAND_RPC_GET_SERVICE_NODES::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_staking_requirement(const COMMAND_RPC_GET_STAKING_REQUIREMENT::request& req, COMMAND_RPC_GET_STAKING_REQUIREMENT::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_prune_blockchain(const COMMAND_RPC_PRUNE_BLOCKCHAIN::request& req, COMMAND_RPC_PRUNE_BLOCKCHAIN::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
-    bool on_perform_blockchain_test(const COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST::request& req, COMMAND_RPC_PERFORM_BLOCKCHAIN_TEST::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_storage_server_ping(const COMMAND_RPC_STORAGE_SERVER_PING::request& req, COMMAND_RPC_STORAGE_SERVER_PING::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
 //    bool on_arqnet_ping(const COMMAND_RPC_ARQNET_PING::request& req, COMMAND_RPC_ARQNET_PING::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);
     bool on_get_checkpoints(const COMMAND_RPC_GET_CHECKPOINTS::request& req, COMMAND_RPC_GET_CHECKPOINTS::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx = NULL);

@@ -32,7 +32,6 @@
 #include <boost/variant.hpp>
 #include <mutex>
 #include <shared_mutex>
-#include <boost/thread/shared_mutex.hpp>
 #include "serialization/serialization.h"
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "cryptonote_core/service_node_rules.h"
@@ -291,7 +290,7 @@ namespace service_nodes
     void init() override;
     bool validate_miner_tx(const crypto::hash& prev_id, const cryptonote::transaction& miner_tx, uint64_t height, uint8_t hard_fork_version, cryptonote::block_reward_parts const &base_reward) const override;
     bool alt_block_added(const cryptonote::block& block, const std::vector<cryptonote::transaction>& txs, cryptonote::checkpoint_t const *checkpoint) override;
-    block_winner get_block_winner() const { boost::lock_guard<boost::recursive_mutex> lock(m_sn_mutex); return m_state.get_block_winner(); }
+    block_winner get_block_winner() const { std::lock_guard lock{m_sn_mutex}; return m_state.get_block_winner(); }
 
     bool is_service_node(const crypto::public_key& pubkey, bool require_cative = true) const;
     bool is_key_image_locked(crypto::key_image const &check_image, uint64_t *unlock_height = nullptr, service_node_info::contribution_t *the_locked_contribution = nullptr) const;
@@ -306,7 +305,7 @@ namespace service_nodes
     template <typename Func>
     void access_proof(const crypto::public_key &pubkey, Func f) const
     {
-      boost::unique_lock<boost::recursive_mutex> lock;
+      std::unique_lock lock{m_sn_mutex};
       auto it = proofs.find(pubkey);
       if (it != proofs.end())
         f(it->second);
@@ -320,7 +319,7 @@ namespace service_nodes
     void for_each_service_node_info_and_proof(It begin, It end, Func f) const
     {
       static const proof_info empty_proof{};
-      boost::lock_guard<boost::recursive_mutex> lock(m_sn_mutex);
+      std::lock_guard lock{m_sn_mutex};
       for (auto sni_end = m_state.service_nodes_infos.end(); begin != end; ++begin)
       {
         auto it = m_state.service_nodes_infos.find(*begin);
@@ -446,11 +445,11 @@ namespace service_nodes
     void reset(bool delete_db_entry = false);
     bool load(uint64_t current_height);
 
-    mutable boost::recursive_mutex m_sn_mutex;
+    mutable std::recursive_mutex m_sn_mutex;
     cryptonote::Blockchain& m_blockchain;
     const service_node_keys *m_service_node_keys;
     uint64_t m_store_quorum_history = 0;
-    mutable boost::shared_mutex m_x25519_map_mutex;
+    mutable std::shared_mutex m_x25519_map_mutex;
 
     std::unordered_map<crypto::x25519_public_key, std::pair<crypto::public_key, time_t>> x25519_to_pub;
     time_t x25519_map_last_pruned = 0;

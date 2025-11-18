@@ -50,6 +50,7 @@
 #include "version.h"
 
 using namespace epee;
+using namespace std::literals;
 
 #include <functional>
 
@@ -142,12 +143,12 @@ bool t_daemon::run(bool interactive)
   }
 
   std::atomic<bool> stop(false), shutdown(false);
-  boost::thread stop_thread = boost::thread([&stop, &shutdown, this] {
+  std::thread stop_thread{[&stop, &shutdown, this] {
     while (!stop)
-      epee::misc_utils::sleep_no_w(100);
+      std::this_thread::sleep_for(100ms);
     if (shutdown)
       this->stop_p2p();
-  });
+  }};
   epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){
     stop = true;
     stop_thread.join();

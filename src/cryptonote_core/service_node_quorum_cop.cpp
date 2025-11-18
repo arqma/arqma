@@ -271,7 +271,7 @@ namespace service_nodes
             {
               auto worker_states = m_core.get_service_node_list_state(quorum->workers);
               auto worker_it = worker_states.begin();
-              CRITICAL_REGION_LOCAL(m_lock);
+              std::unique_lock lock{m_lock};
               int good = 0, total = 0;
               for (size_t node_index = 0; node_index < quorum->workers.size(); ++worker_it, ++node_index)
               {

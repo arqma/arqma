@@ -36,10 +36,6 @@
 #include <string>
 #include <cstdint>
 
-#ifndef OUT
-  #define OUT
-#endif
-
 #ifdef WINDOWS_PLATFORM
   #pragma comment (lib, "Rpcrt4.lib")
 #endif

@@ -39,7 +39,6 @@
 #include <boost/serialization/version.hpp>
 
 #include "string_tools.h"
-#include "syncobj.h"
 #include "common/periodic_task.h"
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "cryptonote_basic/verification_context.h"
@@ -206,10 +205,6 @@ namespace cryptonote
     void unlock() const { m_transactions_lock.unlock(); }
 
     bool try_lock() const { return m_transactions_lock.try_lock(); }
-
-    void lock() { m_transactions_lock.lock(); }
-    void unlock() { m_transactions_lock.unlock(); }
-    bool try_lock() { return m_transactions_lock.try_lock(); }
 
     // load/store operations
 
@@ -518,7 +513,7 @@ namespace cryptonote
      */
     typedef std::unordered_map<crypto::key_image, std::unordered_set<crypto::hash>> key_images_container;
 
-    mutable boost::recursive_mutex m_transactions_lock;  //!< mutex for the pool
+    mutable std::recursive_mutex m_transactions_lock;  //!< mutex for the pool
 
     //! container for spent key images from the transactions in the pool
     key_images_container m_spent_key_images;
