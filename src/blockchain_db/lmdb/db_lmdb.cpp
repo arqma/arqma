@@ -5784,7 +5784,7 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
           if (ret == MDB_NOTFOUND) break;
           if (ret) throw0(DB_ERROR(lmdb_error("Failed to enumerate transactions: ", ret).c_str()));
 
-          const crypto::hash &hash = tx_index->key;
+          [[maybe_unused]] const crypto::hash &hash = tx_index->key;
           tx_index                 = (txindex const *)val.mv_data;
           key.mv_data              = (void *)&tx_index->data.tx_id;
           key.mv_size              = sizeof(tx_index->data.tx_id);
@@ -5831,7 +5831,7 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
     add_output_blacklist(global_output_indexes);
   }
 
-  if (auto res = mdb_dbi_open(txn, LMDB_ALT_BLOCKS, 0, &m_alt_blocks)) return;
+  if (auto res = mdb_dbi_open(txn, LMDB_ALT_BLOCKS, 0, &m_alt_blocks)) { (void)res; return; }
 
   MDB_cursor *cursor;
   if (auto ret = mdb_cursor_open(txn, m_alt_blocks, &cursor))
@@ -5905,8 +5905,7 @@ void BlockchainLMDB::migrate_5_6()
     if (result) throw0(DB_ERROR(lmdb_error("Failed to create a transaction for thr db: ", result).c_str()));
   }
 
-  if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
-    return;
+  if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints)) { (void)res; return; }
 
   MDB_cursor *cursor;
   if (auto ret = mdb_cursor_open(txn, m_block_checkpoints, &cursor))
@@ -5944,10 +5943,10 @@ void BlockchainLMDB::migrate_5_6()
 
     bool unaligned_checkpoint = false;
     {
-      std::array<int, service_nodes::CHECKPOINT_QUORUM_SIZE> vote_set = {};
+      [[maybe_unused]] std::array<int, service_nodes::CHECKPOINT_QUORUM_SIZE> vote_set = {};
       for (size_t i = 0; i < num_sigs; i++)
       {
-        auto const &entry = aligned_signatures[i];
+        [[maybe_unused]] auto const &entry = aligned_signatures[i];
         size_t const actual_num_bytes_for_signature = val.mv_size - sizeof(*header);
         size_t const expected_num_bytes_for_signature = sizeof(service_nodes::voter_to_signature) * num_sigs;
         if (actual_num_bytes_for_signature != expected_num_bytes_for_signature)
@@ -6003,7 +6002,7 @@ void BlockchainLMDB::migrate_6_7()
     if (auto result = mdb_txn_begin(m_env, NULL, 0, txn))
       throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
 
-    if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints)) return;
+    if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints)) { (void)res; return; }
     MDB_cursor *cursor;
     if (auto ret = mdb_cursor_open(txn, m_block_checkpoints, &cursor))
       throw0(DB_ERROR(lmdb_error("Failed to open a cursor for block checkpoints: ", ret).c_str()));

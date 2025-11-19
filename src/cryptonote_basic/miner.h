@@ -105,7 +105,6 @@ namespace cryptonote
     std::atomic<uint32_t> m_starter_nonce;
     difficulty_type m_diffic = 0;;
     uint64_t m_height = 0;
-    std::atomic<uint32_t> m_thread_index;
     std::atomic<int> m_threads_total = 0;
     std::atomic<int> m_pausers_count = 0;
     std::mutex m_miners_count_mutex;

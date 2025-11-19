@@ -39,6 +39,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include "thread_with_stack.h"
 
 namespace tools
 {
@@ -99,7 +100,7 @@ public:
     std::deque<entry> queue;
     std::condition_variable has_work;
     std::mutex mutex;
-    std::vector<std::thread> threads;
+    std::vector<thread_with_stack> threads;
     unsigned int active;
     unsigned int max;
     bool running;

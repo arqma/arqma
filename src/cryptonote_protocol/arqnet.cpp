@@ -193,7 +193,7 @@ public:
     {
       auto &v = (*qit)->validators;
       int my_pos = -1;
-      for (int i = 0; i < v.size(); i++)
+      for (size_t i = 0; i < v.size(); i++)
       {
         if (v[i] == my_pubkey)
           my_pos = 1;

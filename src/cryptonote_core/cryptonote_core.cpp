@@ -1419,7 +1419,6 @@ namespace cryptonote
     if (m_mempool.get_relayable_transactions(txs) && !txs.empty())
     {
       cryptonote_connection_context fake_context;
-      tx_verification_context tvc{};
       NOTIFY_NEW_TRANSACTIONS::request r;
       for (auto it = txs.begin(); it != txs.end(); ++it)
       {

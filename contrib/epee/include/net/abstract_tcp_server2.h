@@ -51,6 +51,7 @@
 #include "net_utils_base.h"
 #include "connection_basic.hpp"
 #include "network_throttle-detail.hpp"
+#include "thread_with_stack.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
@@ -494,7 +495,7 @@ namespace net_utils
     bool m_require_ipv4;
     std::string m_thread_name_prefix; //TODO: change to enum server_type, now used
     size_t m_threads_count;
-    std::vector<std::thread> m_threads;
+    std::vector<thread_with_stack> m_threads;
     std::thread::id m_main_thread_id;
     std::mutex m_threads_lock;
     std::atomic<uint32_t> m_thread_index;

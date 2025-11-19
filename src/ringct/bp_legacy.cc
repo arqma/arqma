@@ -85,7 +85,6 @@ static void addKeys3acc_p3(ge_p3 *aAbB, const key &a, const ge_dsmp A, const key
 {
     ge_p3 rv;
     ge_p1p1 p1;
-    ge_p2 p2;
     ge_double_scalarmult_precomp_vartime2_p3(&rv, a.bytes, A, b.bytes, B);
     ge_cached cached;
     ge_p3_to_cached(&cached, aAbB);

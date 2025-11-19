@@ -148,7 +148,9 @@ void send_control(zmq::socket_t &sock, const std::string &cmd, const bt_dict &da
 /// then appending the command and optional data.  (This is needed when sending the control message
 /// to a router socket, i.e. inside the proxy thread).
 static void route_control(zmq::socket_t &sock, const std::string &identity, const std::string &cmd, const bt_dict &data = {}) {
-    sock.send(zmq::message_t{identity.begin(), identity.end()}, zmq::send_flags::sndmore);
+//    sock.send(zmq::message_t{identity.begin(), identity.end()}, zmq::send_flags::sndmore);
+    zmq::message_t msg{identity.begin(), identity.end()};
+    sock.send(std::move(msg), zmq::send_flags::sndmore);
     detail::send_control(sock, cmd, data);
 }
 
@@ -179,8 +181,10 @@ bool recv_message_parts(zmq::socket_t &sock, OutputIt it, const zmq::recv_flags 
 template <typename It>
 void send_message_parts(zmq::socket_t &sock, It begin, It end) {
     while (begin != end) {
-        zmq::message_t &msg = *begin++;
-        sock.send(msg, begin == end ? zmq::send_flags::none : zmq::send_flags::sndmore);
+        //zmq::message_t &msg = *begin++;
+        //sock.send(msg, begin == end ? zmq::send_flags::none : zmq::send_flags::sndmore);
+        zmq::message_t msg = std::move(*begin++);
+        sock.send(std::move(msg), begin == end ? zmq::send_flags::none : zmq::send_flags::sndmore);
     }
 }
 
@@ -943,8 +947,9 @@ void SNNetwork::proxy_to_worker(size_t conn_index, std::list<zmq::message_t> &&p
     try
     {
       const char *pubkey_hex = parts.back().gets("User-Id");
-      auto len = std::strlen(pubkey_hex);
-      assert(len == 66 && (pubkey_hex[0] == 'S' || pubkey_hex[0] == 'C') && pubkey_hex[1] == ':');
+      //auto len = std::strlen(pubkey_hex);
+      //assert(len == 66 && (pubkey_hex[0] == 'S' || pubkey_hex[0] == 'C') && pubkey_hex[1] == ':');
+      assert(std::strlen(pubkey_hex) == 66 && (pubkey_hex[0] == 'S' || pubkey_hex[0] == 'C') && pubkey_hex[1] == ':');
       pubkey = from_hex(pubkey_hex + 2, pubkey_hex + 66);
       remote_is_sn = pubkey_hex[0] == 'S';
     }

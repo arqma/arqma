@@ -1323,7 +1323,11 @@ namespace net_utils
         std::lock_guard lock{m_threads_lock};
         for (std::size_t i = 0; i < threads_count; ++i)
         {
-          m_threads.emplace_back([this] { worker_thread(); });
+#ifdef __APPLE__
+          m_threads.emplace_back(THREAD_STACK_SIZE, [this] { worker_thread(); });
+#else
+          m_threads.emplace_back(0, [this] { worker_thread(); });
+#endif
           MDEBUG("Run server thread name: " << m_thread_name_prefix);
         }
       }

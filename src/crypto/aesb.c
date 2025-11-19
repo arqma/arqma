@@ -32,6 +32,7 @@ extern "C"
 #define AES_BLOCK_SIZE  16
 #define RC_LENGTH       (5 * (AES_BLOCK_SIZE / 4 - 2))
 
+#undef ALIGN
 #if defined(_MSC_VER)
 #define ALIGN __declspec(align(TABLE_ALIGN))
 #elif defined(__GNUC__)

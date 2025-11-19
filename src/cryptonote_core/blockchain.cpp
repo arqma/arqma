@@ -2256,7 +2256,6 @@ bool Blockchain::get_output_distribution(uint64_t amount, uint64_t from_height, 
   if (to_height > 0 && to_height < from_height)
     return false;
 
-  const uint64_t real_start_height = start_height;
   if (from_height > start_height)
     start_height = from_height;
 
@@ -2438,7 +2437,7 @@ std::vector<uint64_t> Blockchain::get_transactions_heights(const std::vector<cry
   auto heights = m_db->get_tx_block_heights(txs_ids);
   for (auto &h : heights)
     if (h == std::numeric_limits<uint64_t>::max())
-      h == 0;
+      h = 0;
 
   return heights;
 }
@@ -4263,7 +4262,6 @@ bool Blockchain::update_next_cumulative_weight_limit(uint64_t *long_term_effecti
   const uint64_t db_height = m_db->height();
   const uint8_t hf_version = get_current_hard_fork_version();
   uint64_t full_reward_zone = get_min_block_weight(hf_version);
-  uint64_t long_term_block_weight;
 
   if (hf_version < HF_VERSION_LONG_TERM_BLOCK_WEIGHT)
   {
@@ -4851,7 +4849,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
         } while(0); \
 
   // generate sorted tables for all amounts and absolute offsets
-  size_t tx_index = 0, block_index = 0;
+  size_t tx_index = 0;
   for (const auto &entry : blocks_entry)
   {
     if (m_cancel)
@@ -4916,7 +4914,6 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
 
       }
     }
-    ++block_index;
   }
 
   // sort and remove duplicate absolute_offsets in offset_map
@@ -4956,7 +4953,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
 
   // now generate a table for each tx_prefix and k_image hashes
   tx_index = 0;
-  for (const auto &entry : blocks_entry)
+  for ([[maybe_unused]] const auto &entry : blocks_entry)
   {
     if (m_cancel)
       return false;

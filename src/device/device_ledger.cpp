@@ -287,7 +287,6 @@ namespace hw {
 
     int device_ledger::set_command_header(unsigned char ins, unsigned char p1, unsigned char p2) {
       reset_buffer();
-      int offset = 0;
       this->buffer_send[0] = PROTOCOL_VERSION;
       this->buffer_send[1] = ins;
       this->buffer_send[2] = p1;

@@ -35,6 +35,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "int-util.h"
 #include "hash-ops.h"
@@ -58,7 +59,7 @@ extern void aesb_single_round(const uint8_t *in, uint8_t *out, const uint8_t *ex
 extern void aesb_pseudo_round(const uint8_t *in, uint8_t *out, const uint8_t *expandedKey);
 
 #if defined(__x86_64__) || defined(__aarch64__)
-static inline int force_software_aes(void)
+__attribute__((unused)) static inline int force_software_aes(void)
 {
   static int use = -1;
 
@@ -1082,19 +1083,19 @@ STATIC INLINE void aes_pseudo_round_xor(const uint8_t *in, uint8_t *out, const u
 	}
 }
 
-#ifdef FORCE_USE_HEAP
-STATIC INLINE void* aligned_malloc(size_t size, size_t align)
+STATIC INLINE void* aligned_malloc_helper(size_t size, size_t align)
 {
-    void *result;
+    void *result = NULL;
 #ifdef _MSC_VER
     result = _aligned_malloc(size, align);
 #else
-    if (posix_memalign(&result, align, size)) result = NULL;
+    int err = posix_memalign(&result, align, size);
+    if (err != 0) { result = NULL; }
 #endif
     return result;
 }
 
-STATIC INLINE void aligned_free(void *ptr)
+STATIC INLINE void aligned_free_helper(void *ptr)
 {
 #ifdef _MSC_VER
     _aligned_free(ptr);
@@ -1102,6 +1103,10 @@ STATIC INLINE void aligned_free(void *ptr)
     free(ptr);
 #endif
 }
+
+#ifdef FORCE_USE_HEAP
+#define aligned_malloc aligned_malloc_helper
+#define aligned_free aligned_free_helper
 #endif /* FORCE_USE_HEAP */
 
 STATIC INLINE void xor_blocks(uint8_t* a, const uint8_t* b)
@@ -1119,11 +1124,35 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
 
   RDATA_ALIGN16 uint8_t expandedKey[240];
 
+  uint8_t *hp_state = NULL;
+  int hp_state_allocated = 0;
+
+#ifdef __aarch64__
+  hp_state = (uint8_t *)aligned_malloc_helper(page_size, 16);
+  if (hp_state == NULL)
+  {
+    abort();
+  }
+
+  if (((uintptr_t)hp_state) % 16 != 0)
+  {
+    aligned_free_helper(hp_state);
+    abort();
+  }
+  hp_state_allocated = 2;
+#else
+
 #ifndef FORCE_USE_HEAP
   RDATA_ALIGN16 uint8_t hp_state[page_size];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvla"
+  RDATA_ALIGN16 uint8_t hp_state_stack[page_size];
+  hp_state = hp_state_stack;
+#pragma GCC diagnostic pop
 #else
-#warning "ACTIVATING FORCE_USE_HEAP IN aarch64 + crypto in slow-hash.c"
-  uint8_t *hp_state = (uint8_t *)aligned_malloc(page_size, 16);
+  hp_state = (uint8_t *)aligned_malloc_helper(page_size, 16);
+  hp_state_allocated = 2;
+#endif
 #endif
 
   uint8_t text[INIT_SIZE_BYTE];
@@ -1256,9 +1285,14 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
   hash_permutation(&state.hs);
   extra_hashes[state.hs.b[0] & 3](&state, 200, hash);
 
-#ifdef FORCE_USE_HEAP
-  aligned_free(hp_state);
-#endif
+  if (hp_state_allocated == 2)
+  {
+    aligned_free_helper(hp_state);
+  }
+  else if (hp_state_allocated == 1)
+  {
+    free(hp_state);
+  }
 }
 #else /* aarch64 && crypto */
 
@@ -1388,7 +1422,7 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
   uint8_t c[AES_BLOCK_SIZE];
   uint8_t c1[AES_BLOCK_SIZE];
   uint8_t d[AES_BLOCK_SIZE];
-  uint8_t aes_key[AES_KEY_SIZE];
+  [[maybe_unused]] uint8_t aes_key[AES_KEY_SIZE];
   RDATA_ALIGN16 uint8_t expandedKey[256];
 
   union cn_slow_hash_state state;
@@ -1402,7 +1436,10 @@ void cn_slow_hash(const void *data, size_t length, char *hash, int light, int va
   };
 
 #ifndef FORCE_USE_HEAP
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvla"
   uint8_t long_state[page_size];
+#pragma GCC diagnostic pop
 #else
 #warning "ACTIVATING FORCE_USE_HEAP IN aarch64 && !crypto in slow-hash.c"
   uint8_t *long_state = (uint8_t *)malloc(page_size);

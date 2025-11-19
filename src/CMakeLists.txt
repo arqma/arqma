@@ -59,6 +59,10 @@ function(arqma_add_executable name)
   set_property(TARGET "${name}" PROPERTY RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
   enable_stack_trace("${name}")
 
+  if (APPLE)
+    set_target_properties("${name}" PROPERTIES LINK_FLAGS "-Wl,-w")
+  endif()
+
   arqma_set_target_no_relink("${name}")
   arqma_set_target_strip("${name}")
 endfunction()
