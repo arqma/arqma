@@ -239,6 +239,7 @@ namespace net_utils
       throttle_t throttle;
     };
 
+    std::mutex m_shutdown_lock;
     io_context_t &m_io_context;
     t_connection_type m_connection_type;
     strand_t m_strand;

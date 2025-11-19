@@ -533,9 +533,9 @@ namespace net_utils
     if (m_state.socket.wait_shutdown)
       return;
     auto self = connection<T>::shared_from_this();
+    std::lock_guard lock{m_shutdown_lock};
     m_state.socket.wait_shutdown = true;
     auto on_shutdown = [this, self](const ec_t &ec){
-      std::lock_guard<std::mutex> guard(m_state.lock);
       m_state.socket.wait_shutdown = false;
       if (m_state.socket.cancel_shutdown) {
         m_state.socket.cancel_shutdown = false;
@@ -545,7 +545,6 @@ namespace net_utils
             interrupt();
             break;
           case status_t::INTERRUPTED:
-          case status_t::WASTED:
             terminate();
             break;
           case status_t::TERMINATING:
