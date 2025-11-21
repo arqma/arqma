@@ -453,6 +453,19 @@ namespace cryptonote
     m_txpool_max_weight = bytes;
   }
   //---------------------------------------------------------------------------------
+  void tx_memory_pool::decrease_txpool_weight(size_t weight)
+  {
+    if (weight > m_txpool_weight)
+    {
+      MERROR("Attempted to substract " << weight << " bytes from txpool weight " << m_txpool_weight << "; resetting to 0");
+      m_txpool_weight = 0;
+    }
+    else
+    {
+      m_txpool_weight -= weight;
+    }
+  }
+  //---------------------------------------------------------------------------------
   bool tx_memory_pool::remove_tx(const crypto::hash &txid, const txpool_tx_meta_t *meta, const sorted_tx_container::iterator *stc_it)
   {
     const auto it = stc_it ? *stc_it : find_tx_in_sorted_container(txid);
@@ -486,7 +499,7 @@ namespace cryptonote
     const uint64_t tx_fee = std::get<1>(it->first);
     MINFO("Removing tx " << txid << " from txpool: weight: " << meta->weight << ", fee/byte: " << tx_fee);
     m_blockchain.remove_txpool_tx(txid);
-    m_txpool_weight -= meta->weight;
+    decrease_txpool_weight(meta->weight);
     remove_transaction_keyimages(tx, txid);
     m_txs_by_fee_and_receive_time.erase(it);
 
@@ -643,7 +656,7 @@ namespace cryptonote
 
       // remove first, in case this throws, so key images aren't removed
       m_blockchain.remove_txpool_tx(id);
-      m_txpool_weight -= tx_weight;
+      decrease_txpool_weight(tx_weight);
       remove_transaction_keyimages(tx, id);
       lock.commit();
     }
@@ -719,7 +732,7 @@ namespace cryptonote
           {
             // remove first, so we only remove key images if the tx removal succeeds
             m_blockchain.remove_txpool_tx(txid);
-            m_txpool_weight -= entry.second;
+            decrease_txpool_weight(entry.second);
             remove_transaction_keyimages(tx, txid);
           }
         }
@@ -1548,7 +1561,7 @@ namespace cryptonote
           }
           // remove tx from db first
           m_blockchain.remove_txpool_tx(txid);
-          m_txpool_weight -= get_transaction_weight(tx, txblob.size());
+          decrease_txpool_weight(get_transaction_weight(tx, txblob.size()));
           remove_transaction_keyimages(tx, txid);
           auto sorted_it = find_tx_in_sorted_container(txid);
           if (sorted_it == m_txs_by_fee_and_receive_time.end())

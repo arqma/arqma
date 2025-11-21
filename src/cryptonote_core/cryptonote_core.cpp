@@ -231,13 +231,13 @@ namespace cryptonote
   {
     throw std::logic_error("Internal error: arqnet::init_core_callbacks() should have been called");
   }
-  void *(*arqnet_new)(core &, service_nodes::service_node_list &, const std::string &bind);
-  void (*arqnet_delete)(void *self);
+  void *(*arqnet_new)(core &, const std::string &bind);
+  void (*arqnet_delete)(void *&self);
   void (*arqnet_relay_obligation_votes)(void *self, const std::vector<service_nodes::quorum_vote_t> &);
   static bool init_core_callback_stubs()
   {
-    arqnet_new = [](core &, service_nodes::service_node_list &, const std::string &) -> void * { need_core_init(); };
-    arqnet_delete = [](void *) { need_core_init(); };
+    arqnet_new = [](core &, const std::string &) -> void * { need_core_init(); };
+    arqnet_delete = [](void *&) { need_core_init(); };
     arqnet_relay_obligation_votes = [](void *, const std::vector<service_nodes::quorum_vote_t> &) { need_core_init(); };
     return false;
   }
@@ -788,11 +788,12 @@ namespace cryptonote
 
     if (m_service_node_keys)
     {
+      std::lock_guard<std::mutex> lock{m_arqnet_init_mutex};
       std::string listen_ip = vm["p2p-bind-ip"].as<std::string>();
       if (listen_ip.empty())
         listen_ip = "0.0.0.0";
       std::string arqnet_listen = "tcp://" + listen_ip + ":" + std::to_string(m_arqnet_port);
-      m_arqnet_obj = arqnet_new(*this, m_service_node_list, arqnet_listen);
+      m_arqnet_obj = arqnet_new(*this, arqnet_listen);
     }
 
 #ifdef ENABLE_SYSTEMD

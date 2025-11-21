@@ -8,6 +8,7 @@
 #include <atomic>
 #include <queue>
 #include <map>
+#include <cerrno>
 
 namespace arqnet {
 
@@ -132,14 +133,30 @@ namespace detail {
 // Control messages between proxy and threads and between proxy and workers are command codes in the
 // first frame followed by an optional bt-serialized dict in the second frame (if specified and
 // non-empty).
+bool send_msg(zmq::socket_t &sock, zmq::message_t &msg, zmq::send_flags flags)
+{
+  try
+  {
+    auto result = sock.send(msg, flags | zmq::send_flags::dontwait);
+    return static_cast<bool>(result);
+  }
+  catch (const zmq::error_t &e)
+  {
+    if (e.num() == EAGAIN)
+      return false;
+    throw;
+  }
+}
+
 void send_control(zmq::socket_t &sock, const std::string &cmd, const bt_dict &data) {
     zmq::message_t c{cmd.begin(), cmd.end()};
     if (data.empty()) {
-        sock.send(c, zmq::send_flags::none);
+      send_msg(sock, c, zmq::send_flags::none);
     } else {
         zmq::message_t d{arqnet::bt_serialize(data)};
-        sock.send(c, zmq::send_flags::sndmore);
-        sock.send(d, zmq::send_flags::none);
+        if (!send_msg(sock, c, zmq::send_flags::sndmore))
+          return;
+        send_msg(sock, d, zmq::send_flags::none);
     }
 }
 }

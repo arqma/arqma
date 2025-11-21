@@ -47,8 +47,6 @@
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "rpc/message_data_structs.h"
 
-namespace service_nodes { class service_node_list; };
-
 namespace cryptonote
 {
   class Blockchain;
@@ -550,6 +548,7 @@ namespace cryptonote
 
     size_t m_txpool_max_weight;
     size_t m_txpool_weight;
+    void decrease_txpool_weight(size_t weight);
 
     mutable std::unordered_map<crypto::hash, std::tuple<bool, tx_verification_context, uint64_t, crypto::hash>> m_input_cache;
 
