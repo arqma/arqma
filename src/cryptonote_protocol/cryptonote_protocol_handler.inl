@@ -416,16 +416,9 @@ namespace cryptonote
       Nz. */
       int64_t diff = static_cast<int64_t>(hshd.current_height) - static_cast<int64_t>(m_core.get_current_blockchain_height());
       uint64_t abs_diff = std::abs(diff);
-      uint64_t max_block_height = std::max(hshd.current_height,m_core.get_current_blockchain_height());
-      // Need to be fill in when we will know correct fork values
-//      uint64_t last_block_v10 = m_core.get_nettype() == TESTNET ? 30 : m_core.get_nettype() == MAINNET ? 61250 : 500;
-//      uint64_t last_block_v15 = m_core.get_nettype() == TESTNET ? 90 : m_core.get_nettype() == MAINNET ? (uint64_t)-1 : 12800;
-//      uint64_t diff_v11 = max_block_height > last_block_v10 ? std::min(abs_diff, max_block_height - last_block_v10) : 0;
-//      uint64_t diff_v16 = max_block_height > last_block_v15 ? std::min(abs_diff, max_block_height - last_block_v15) : 0;
 
       MCLOG(is_initial ? el::Level::Info : el::Level::Debug, "global", el::Color::Yellow, context <<  "Sync data returned a new top block candidate: " << m_core.get_current_blockchain_height() << " -> " << hshd.current_height
             << " [Your Node is " << abs_diff << " blocks (" << (abs_diff / (24 * 60 * 60 / DIFFICULTY_TARGET_V16)) << " days) "
-//            << " [Your node is " << abs_diff << " blocks (" << (((abs_diff - diff_v16) / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)) + (diff_v16 / (24 * 60 * 60 / DIFFICULTY_TARGET_V16)) + ((diff_v16 - diff_v11) / (24 * 60 * 60 / DIFFICULTY_TARGET_V2)) + (diff_v11 / (24 * 60 * 60 / DIFFICULTY_TARGET_V11)))  << " days) "
             << (0 <= diff ? std::string("behind") : std::string("ahead"))
             << "] " << ENDL << "SYNCHRONIZATION started");
 
@@ -2304,7 +2297,7 @@ skip:
     for (auto& tx_blob : arg.txs)
       relayed_txes.push_back(m_core.on_transaction_relayed(tx_blob));
 
-    m_p2p->send_txs(std::move(arg.txs), exclude_context.m_remote_address.get_zone(), exclude_context.m_connection_id, m_core.pad_transactions());
+    m_p2p->send_txs(std::move(arg.txs), exclude_context.m_remote_address.get_zone(), exclude_context.m_connection_id);
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------

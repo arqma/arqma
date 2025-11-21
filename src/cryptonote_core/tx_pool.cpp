@@ -67,7 +67,6 @@ namespace cryptonote
     //      will work correctly.
     time_t const MIN_RELAY_TIME = (30 * 3); // only start re-relaying transactions after that many seconds
     time_t const MAX_RELAY_TIME = (60 * 3); // at most that many seconds between resends
-    float const ACCEPT_THRESHOLD = 1.0f;
 
     // a kind of increasing backoff within min/max bounds
     uint64_t get_relay_delay(time_t now, time_t received)
@@ -435,7 +434,6 @@ namespace cryptonote
   bool tx_memory_pool::add_tx(transaction &tx, tx_verification_context& tvc, const tx_pool_options &opts, uint8_t hard_fork_version)
   {
     crypto::hash h = null_hash;
-    size_t blob_size = 0;
     cryptonote::blobdata bl;
     t_serializable_object_to_blob(tx, bl);
     if(bl.size() == 0 || !get_transaction_hash(tx, h))

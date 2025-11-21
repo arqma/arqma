@@ -86,7 +86,7 @@ namespace levin
     {}
 
     //! Construct an instance with available notification `zones`.
-    explicit notify(boost::asio::io_context& service, std::shared_ptr<connections> p2p, epee::byte_slice noise, bool is_public);
+    explicit notify(boost::asio::io_context& service, std::shared_ptr<connections> p2p, epee::byte_slice noise, epee::net_utils::zone zone, bool pad_txs);
 
     notify(const notify&) = delete;
     notify(notify&&) = default;
@@ -102,11 +102,16 @@ namespace levin
     //! Probe for new outbound connection - skips if not needed.
     void new_out_connection();
 
+    void on_handshake_complete(const boost::uuids::uuid &id, bool is_income);
+    void on_connection_close(const boost::uuids::uuid &id);
+
     //! Run the logic for the next epoch immediately. Only use in testing.
     void run_epoch();
 
     //! Run the logic for the next stem timeout imemdiately. Only use in  testing.
     void run_stems();
+
+    void run_fluff();
 
     /*! Send txs using `cryptonote_protocol_defs.h` payload format wrapped in a
         levin header. The message will be sent in a "discreet" manner if
@@ -126,7 +131,7 @@ namespace levin
           construction.
 
       \return True iff the notification is queued for sending. */
-    bool send_txs(std::vector<blobdata> txs, const boost::uuids::uuid& source, bool pad_txs);
+    bool send_txs(std::vector<blobdata> txs, const boost::uuids::uuid& source);
   };
 } // levin
 } // net

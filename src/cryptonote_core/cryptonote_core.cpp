@@ -162,11 +162,6 @@ namespace cryptonote
   , "Check for new versions of arqma: [disabled|notify|download|update]"
   , "notify"
   };
-  static const command_line::arg_descriptor<bool> arg_pad_transactions = {
-    "pad-transactions"
-  , "Pad relayed transactions to help defend against traffic volume analysis"
-  , false
-  };
   static const command_line::arg_descriptor<size_t> arg_max_txpool_weight = {
     "max-txpool-weight"
   , "Set maximum txpool weight in bytes."
@@ -177,11 +172,13 @@ namespace cryptonote
   , "Run a program for each new block, '%s' will be replaced by the block hash"
   , ""
   };
+#if 0
   static const command_line::arg_descriptor<bool> arg_prune_blockchain = {
     "prune-blockchain"
   , "Prune Blockchain"
   , false
   };
+#endif
   static const command_line::arg_descriptor<std::string> arg_reorg_notify = {
     "reorg-notify"
   , "Run a program for each reorg, '%s' will be replaced by the split height, "
@@ -261,9 +258,8 @@ namespace cryptonote
               m_update_download(0),
               m_nettype(UNDEFINED),
               m_update_available(false),
-              m_last_storage_server_ping(0),
+              m_last_storage_server_ping(0)
               /*m_last_arqnet_ping(0),*/
-              m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
     set_cryptonote_protocol(pprotocol);
@@ -334,7 +330,6 @@ namespace cryptonote
     command_line::add_arg(desc, arg_offline);
     command_line::add_arg(desc, arg_block_download_max_size);
     command_line::add_arg(desc, arg_max_txpool_weight);
-    command_line::add_arg(desc, arg_pad_transactions);
     command_line::add_arg(desc, arg_block_notify);
 #if 0
     command_line::add_arg(desc, arg_prune_blockchain);
@@ -363,7 +358,6 @@ namespace cryptonote
     m_config_folder = command_line::get_arg(vm, arg_data_dir);
 
     test_drop_download_height(command_line::get_arg(vm, arg_test_drop_download_height));
-    m_pad_transactions = get_arg(vm, arg_pad_transactions);
     m_offline = get_arg(vm, arg_offline);
 
     if (command_line::get_arg(vm, arg_test_drop_download) == true)
@@ -1143,7 +1137,6 @@ namespace cryptonote
   {
     uint8_t hard_fork_version = m_blockchain_storage.get_current_hard_fork_version();
     bool ok = true;
-    tx_pool_options tx_opts;
     for (size_t i = 0; i < parsed_txs.size(); i++)
     {
       auto &info = parsed_txs[i];

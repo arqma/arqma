@@ -30,7 +30,10 @@
 #pragma once
 
 #include "cryptonote_basic/cryptonote_basic.h"
+#include <chrono>
 #include <mutex>
+
+using namespace std::literals;
 
 namespace cryptonote
 {
@@ -53,7 +56,7 @@ namespace cryptonote
       Ready
     } State;
 
-    static const time_t DEFAULT_FORKED_TIME = 31557600; // a year in seconds
+    constexpr const static auto DEFAULT_FORKED_TIME = 31557600s; // a year in seconds
     static const uint64_t DEFAULT_WINDOW_SIZE = 10080; // supermajority window check length - a week
     static const uint8_t DEFAULT_THRESHOLD_PERCENT = 80;
 
@@ -76,7 +79,7 @@ namespace cryptonote
      * @param window_size the size of the window in blocks to consider for version voting
      * @param default_threshold_percent the size of the majority in percents
      */
-    HardFork(cryptonote::BlockchainDB &db, uint8_t original_version = 1, time_t forked_time = DEFAULT_FORKED_TIME, uint64_t window_size = DEFAULT_WINDOW_SIZE, uint8_t default_threshold_percent = DEFAULT_THRESHOLD_PERCENT);
+    HardFork(cryptonote::BlockchainDB &db, uint8_t original_version = 1, std::chrono::seconds forked_time = DEFAULT_FORKED_TIME, uint64_t window_size = DEFAULT_WINDOW_SIZE, uint8_t default_threshold_percent = DEFAULT_THRESHOLD_PERCENT);
 
     /**
      * @brief add a new hardfork height
@@ -263,7 +266,7 @@ namespace cryptonote
 
     BlockchainDB &db;
 
-    time_t forked_time;
+    std::chrono::seconds forked_time;
     uint64_t window_size;
     uint8_t default_threshold_percent;
 

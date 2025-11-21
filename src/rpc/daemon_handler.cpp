@@ -714,7 +714,6 @@ namespace rpc
         return;
       }
     }
-    uint64_t seed_height;
     size_t reserved_offset;
     crypto::hash seed_hash, next_seed_hash;
     if(!get_block_template(info.address, req.prev_block.empty() ? NULL : &prev_block, blob_reserve, reserved_offset, res.difficulty, res.height, res.expected_reward, b, res.seed_height, seed_hash, next_seed_hash, res))

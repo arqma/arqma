@@ -1842,8 +1842,6 @@ namespace cryptonote
       std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>> txs;
       std::vector<COMMAND_RPC_GET_BLOCKS_RANGE::blocks_transaction_entry> txs_entries;
 
-      bool r = m_core.get_split_transactions_blobs(blk.tx_hashes, txs, missed_txs);
-
       std::vector<crypto::hash>::const_iterator vhi = blk.tx_hashes.begin();
       for(auto& tx: txs)
       {
@@ -2827,7 +2825,7 @@ namespace cryptonote
       args.push_back(std::to_string(portions_cut));
     }
 
-    for(const auto contrib : req.contributions)
+    for(const auto& contrib : req.contributions)
     {
       uint64_t num_portions = service_nodes::get_portions_to_make_amount(staking_requirement, contrib.amount);
       args.push_back(contrib.address);
@@ -2950,7 +2948,7 @@ namespace cryptonote
     res.height = height - 1;
     res.block_hash = string_tools::pod_to_hex(m_core.get_block_id_by_height(res.height));
 
-    for(const auto &pubkey_info : pubkey_info_list)
+    for(auto &pubkey_info : pubkey_info_list)
     {
       COMMAND_RPC_GET_SERVICE_NODES::response::entry entry = {};
       fill_sn_response_entry(entry, pubkey_info, height);

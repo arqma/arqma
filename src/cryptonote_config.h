@@ -123,6 +123,8 @@ using namespace std::literals;
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) // seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 // seconds, one week
 
+#define CRYPTONOTE_DANDELIONPP_FLUSH_AVERAGE            5
+
 #define CRYPTONOTE_NOISE_MIN_EPOCH                      5      // minutes
 #define CRYPTONOTE_NOISE_EPOCH_RANGE                    30     // seconds
 #define CRYPTONOTE_NOISE_MIN_DELAY                      10     // seconds

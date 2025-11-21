@@ -50,9 +50,9 @@ public:
 
   template <typename Function, typename... Args>
   void start(size_t stack_size, Function&& f, Args&&... args) {
-    auto bound = std::bind(std::forward<Function>(f), std::forward<Args>(args)...);
-    auto task_ptr = new decltype(bound)(std::move(bound));
-    auto pack = new std::pair<decltype(bound)*, id*>(task_ptr, &id_);
+    std::function<void()> bound = std::bind(std::forward<Function>(f), std::forward<Args>(args)...);
+    auto task_ptr = new std::function<void()>(std::move(bound));
+    auto pack = new std::pair<std::function<void()>*, id*>(task_ptr, &id_);
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -61,7 +61,7 @@ public:
 
     int rc = pthread_create(&thread_, &attr,
       [](void* p) -> void* {
-        auto pack = static_cast<std::pair<decltype(bound)*, id*>*>(p);
+        auto pack = static_cast<std::pair<std::function<void()>*, id*>*>(p);
         *(pack->second) = std::this_thread::get_id();
         (*(pack->first))();
         delete pack->first;

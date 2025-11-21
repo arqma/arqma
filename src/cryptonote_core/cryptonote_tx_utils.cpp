@@ -709,7 +709,6 @@ namespace cryptonote
         {
           tx_extra_tx_key_image_proofs::proof proof = {};
           keypair ephemeral_keys = {};
-          const subaddress_index zeroth_address = {};
           if(!generate_key_image_helper(sender_account_keys, subaddresses, out_eph_public_key, txkey_pub, additional_tx_public_keys, output_index, ephemeral_keys, proof.key_image, hwdev))
           {
             LOG_ERROR("Key image generation failed for staking TX!");

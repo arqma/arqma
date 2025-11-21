@@ -4958,7 +4958,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
     if (m_cancel)
       return false;
 
-    for (const auto &tx_blob : entry.txs)
+    for ([[maybe_unused]] const auto &tx_blob : entry.txs)
     {
       if (tx_index >= txes.size())
         SCAN_TABLE_QUIT("tx_index is out of sync");

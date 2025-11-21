@@ -147,7 +147,7 @@ namespace service_nodes
     uint64_t last_reward_block_height = 0;
     uint32_t last_reward_transaction_index = 0;
     uint32_t decommission_count = 0;
-    uint64_t active_since_height = 0;
+    int64_t active_since_height = 0;
     uint64_t last_decommission_height = 0;
     std::vector<contributor_t> contributors;
     uint64_t total_contributed = 0;

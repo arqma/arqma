@@ -659,13 +659,6 @@ namespace cryptonote
      bool is_update_available() const { return m_update_available; }
 
      /**
-      * @brief get whether transaction relay should be padded
-      *
-      * @return whether transaction relay should be padded
-      */
-     bool pad_transactions() const { return m_pad_transactions; }
-
-     /**
       * @brief check a set of hashes against the precompiled hash set
       *
       * @return number of usable blocks
@@ -966,7 +959,6 @@ namespace cryptonote
      std::mutex m_update_mutex;
 
      bool m_offline;
-     bool m_pad_transactions;
    };
 }
 

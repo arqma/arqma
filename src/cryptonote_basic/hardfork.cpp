@@ -127,7 +127,7 @@ HardFork::ParamsIterator HardFork::get_hardcoded_hard_forks(network_type nettype
   return {nullptr, nullptr};
 }
 
-HardFork::HardFork(cryptonote::BlockchainDB &db, uint8_t original_version, time_t forked_time, uint64_t window_size, uint8_t default_threshold_percent):
+HardFork::HardFork(cryptonote::BlockchainDB &db, uint8_t original_version, std::chrono::seconds forked_time, uint64_t window_size, uint8_t default_threshold_percent):
   db(db),
   forked_time(forked_time),
   window_size(window_size),

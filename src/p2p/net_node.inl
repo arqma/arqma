@@ -114,6 +114,7 @@ namespace nodetool
     command_line::add_arg(desc, arg_limit_rate_down);
     command_line::add_arg(desc, arg_limit_rate);
     command_line::add_arg(desc, arg_max_connections_per_ip);
+    command_line::add_arg(desc, arg_pad_transactions);
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -345,6 +346,7 @@ namespace nodetool
   {
     bool testnet = command_line::get_arg(vm, cryptonote::arg_testnet_on);
     bool stagenet = command_line::get_arg(vm, cryptonote::arg_stagenet_on);
+    const bool pad_txs = command_line::get_arg(vm, arg_pad_transactions);
     m_nettype = testnet ? cryptonote::TESTNET : stagenet ? cryptonote::STAGENET : cryptonote::MAINNET;
 
     network_zone& public_zone = m_network_zones[epee::net_utils::zone::public_];
@@ -389,7 +391,7 @@ namespace nodetool
     m_use_ipv6 = command_line::get_arg(vm, arg_p2p_use_ipv6);
     m_require_ipv4 = !command_line::get_arg(vm, arg_p2p_ignore_ipv4);
     public_zone.m_notifier = cryptonote::levin::notify{
-      public_zone.m_net_server.get_io_context(), public_zone.m_net_server.get_config_shared(), nullptr, true
+      public_zone.m_net_server.get_io_context(), public_zone.m_net_server.get_config_shared(), nullptr, epee::net_utils::zone::public_, pad_txs
     };
 
     if (command_line::has_arg(vm, arg_p2p_add_peer))
@@ -532,7 +534,7 @@ namespace nodetool
       }
 
       zone.m_notifier = cryptonote::levin::notify{
-        zone.m_net_server.get_io_context(), zone.m_net_server.get_config_shared(), std::move(this_noise), false
+        zone.m_net_server.get_io_context(), zone.m_net_server.get_config_shared(), std::move(this_noise), proxy.zone, pad_txs
       };
     }
 
@@ -1296,6 +1298,7 @@ namespace nodetool
     ape.first_seen = first_seen_stamp ? first_seen_stamp : time(nullptr);
 
     zone.m_peerlist.append_with_peer_anchor(ape);
+    zone.m_notifier.on_handshake_complete(con->m_connection_id, con->m_is_income);
     zone.m_notifier.new_out_connection();
 
     LOG_DEBUG_CC(*con, "CONNECTION HANDSHAKED OK.");
@@ -1821,7 +1824,8 @@ namespace nodetool
     if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls))
       return true;
 
-    unsigned good = 0, bad = 0;
+    unsigned good = 0;
+    [[maybe_unused]] unsigned bad = 0;
     for (const auto& record : records)
     {
       std::vector<std::string> ips;
@@ -2008,13 +2012,13 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  epee::net_utils::zone node_server<t_payload_net_handler>::send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, const bool pad_txs)
+  epee::net_utils::zone node_server<t_payload_net_handler>::send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source)
   {
     namespace enet = epee::net_utils;
 
-    const auto send = [&txs, &source, pad_txs] (std::pair<const enet::zone, network_zone>& network)
+    const auto send = [&txs, &source] (std::pair<const enet::zone, network_zone>& network)
     {
-      if (network.second.m_notifier.send_txs(std::move(txs), source, (pad_txs || network.first != enet::zone::public_)))
+      if (network.second.m_notifier.send_txs(std::move(txs), source))
         return network.first;
       return enet::zone::invalid;
     };
@@ -2300,6 +2304,8 @@ namespace nodetool
       return 1;
     }
 
+    zone.m_notifier.on_handshake_complete(context.m_connection_id, context.m_is_income);
+
     if(has_too_many_connections(context.m_remote_address))
     {
       LOG_PRINT_CCONTEXT_L1("CONNECTION FROM " << context.m_remote_address.host_str() << " REFUSED, too many connections from the same address");
@@ -2420,6 +2426,10 @@ namespace nodetool
       na = context.m_remote_address;
 
       zone.m_peerlist.remove_from_peer_anchor(na);
+    }
+
+    if (!zone.m_net_server.is_stop_signal_sent()) {
+      zone.m_notifier.on_connection_close(context.m_connection_id);
     }
 
     m_payload_handler.on_connection_close(context);

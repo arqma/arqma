@@ -38,6 +38,7 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <chrono>
 #include <functional>
 #include <utility>
 #include <vector>
@@ -110,7 +111,11 @@ namespace nodetool
   template<class base_type>
   struct p2p_connection_context_t: base_type //t_payload_net_handler::connection_context //public net_utils::connection_context_base
   {
-    p2p_connection_context_t(bool is_ping = false): peer_id(0), support_flags(0), m_in_timedsync(false) {}
+    p2p_connection_context_t(bool is_ping = false)
+      : peer_id(0)
+      , support_flags(0)
+      , m_in_timedsync(false)
+    {}
 
     static constexpr int handshake_command() noexcept { return 1001; }
 
@@ -326,7 +331,7 @@ namespace nodetool
     virtual void callback(p2p_connection_context& context);
     //----------------- i_p2p_endpoint -------------------------------------------------------------
     virtual bool relay_notify_to_list(int command, epee::levin::message_writer message, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections) final;
-    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source, const bool pad_txs);
+    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source);
     virtual bool invoke_notify_to_peer(int command, epee::levin::message_writer message, const epee::net_utils::connection_context_base& context) final;
     virtual bool drop_connection(const epee::net_utils::connection_context_base& context);
     virtual void request_callback(const epee::net_utils::connection_context_base& context);
@@ -529,6 +534,7 @@ namespace nodetool
     extern const command_line::arg_descriptor<int64_t> arg_limit_rate_down;
     extern const command_line::arg_descriptor<int64_t> arg_limit_rate;
     extern const command_line::arg_descriptor<uint32_t> arg_max_connections_per_ip;
+    extern const command_line::arg_descriptor<bool> arg_pad_transactions;
 }
 
 POP_WARNINGS

@@ -252,7 +252,6 @@ void do_prepare_file_names(const std::string& file_path, std::string& keys_file,
 {
   keys_file = file_path;
   wallet_file = file_path;
-  boost::system::error_code e;
   if(string_tools::get_extension(keys_file) == "keys")
   {//provided keys file name
     wallet_file = string_tools::cut_off_extension(wallet_file);
@@ -6558,7 +6557,6 @@ bool wallet2::load_tx(const std::string &signed_filename, std::vector<tools::wal
 bool wallet2::parse_tx_from_str(const std::string &signed_tx_st, std::vector<tools::wallet2::pending_tx> &ptx, std::function<bool(const signed_tx_set &)> accept_func)
 {
   std::string s = signed_tx_st;
-  boost::system::error_code errcode;
   signed_tx_set signed_txs;
 
   const size_t magiclen = strlen(SIGNED_TX_PREFIX) - 1;
@@ -7541,7 +7539,6 @@ wallet2::stake_result wallet2::create_stake_tx(const crypto::public_key& service
   dsts.push_back(de);
 
   std::string err, err2;
-  const uint64_t bc_height = std::max(get_daemon_blockchain_height(err), get_daemon_blockchain_target_height(err2));
 
   if(!err.empty() || !err2.empty())
   {
@@ -9304,8 +9301,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   // the destination, and one for change.
   LOG_PRINT_L2("checking preferred");
   std::vector<size_t> preferred_inputs;
-  uint64_t rct_outs_needed = 2 * (fake_outs_count + 1);
-  rct_outs_needed += 100; // some fudge factor since we don't know how many are locked
+  [[maybe_unused]] uint64_t rct_outs_needed = 2 * (fake_outs_count + 1) + 100; // some fudge factor since we don't know how many are locked
   {
     // this is used to build a tx that's 1 or 2 inputs, and 2 outputs, which
     // will get us a known fee.

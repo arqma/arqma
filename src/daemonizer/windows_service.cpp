@@ -226,8 +226,8 @@ bool start_service(
 {
   tools::msg_writer() << "Starting service";
 
-  SERVICE_STATUS_PROCESS service_status = {};
-  DWORD unused = 0;
+  [[maybe_unused]] SERVICE_STATUS_PROCESS service_status = {};
+  [[maybe_unused]] DWORD unused = 0;
 
   service_handle p_manager{
     OpenSCManager(
@@ -355,7 +355,6 @@ bool uninstall_service(
     return false;
   }
 
-  SERVICE_STATUS status = {};
   if (!DeleteService(p_service.get()))
   {
     tools::fail_msg_writer() << "Couldn't uninstall service: " << get_last_error();

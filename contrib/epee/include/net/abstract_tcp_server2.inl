@@ -349,8 +349,22 @@ namespace net_utils
         m_state.socket.cancel_read = false;
         state_status_check();
       }
-      else if (ec.value())
+      else if (ec.value()) {
+        if (ec == boost::asio::error::eof ||
+            ec == boost::asio::error::connection_reset ||
+            ec == boost::asio::error::connection_aborted)
+        {
+          if (m_state.socket.connected)
+          {
+            ec_t close_ec;
+            connection_basic::socket_.next_layer().cancel(close_ec);
+            connection_basic::socket_.next_layer().shutdown(socket_t::shutdown_both, close_ec);
+            connection_basic::socket_.next_layer().close(close_ec);
+            m_state.socket.connected = false;
+          }
+        }
         terminate();
+      }
       else {
         {
           m_state.stat.in.throttle.handle_trafic_exact(bytes_transferred);
@@ -687,30 +701,40 @@ namespace net_utils
   void connection<T>::on_terminating()
   {
     assert(m_state.status == status_t::TERMINATING);
-    if (m_state.timers.general.wait_expire)
+
+    if (!m_state.socket.connected) {
+      m_state.status = status_t::WASTED;
       return;
-    if (m_state.socket.wait_handshake)
+    }
+
+    bool can_close_immediately =
+      !m_state.timers.general.wait_expire &&
+      !m_state.socket.wait_handshake &&
+      !m_state.timers.throttle.in.wait_expire &&
+      !m_state.socket.wait_read &&
+      !m_state.socket.handle_read &&
+      !m_state.timers.throttle.out.wait_expire &&
+      !m_state.socket.wait_write &&
+      !m_state.socket.wait_shutdown &&
+      !m_state.protocol.wait_init &&
+      !m_state.protocol.wait_callback &&
+      !m_state.protocol.wait_release;
+
+    if (can_close_immediately) {
+      ec_t ec;
+      connection_basic::socket_.next_layer().shutdown(
+        socket_t::shutdown_both,
+        ec
+      );
+      connection_basic::socket_.next_layer().close(ec);
+      m_state.socket.connected = false;
+      m_state.status = status_t::WASTED;
       return;
-    if (m_state.timers.throttle.in.wait_expire)
-      return;
-    if (m_state.socket.wait_read)
-      return;
-    if (m_state.socket.handle_read)
-      return;
-    if (m_state.timers.throttle.out.wait_expire)
-      return;
-    if (m_state.socket.wait_write)
-      return;
-    if (m_state.socket.wait_shutdown)
-      return;
-    if (m_state.protocol.wait_init)
-      return;
-    if (m_state.protocol.wait_callback)
-      return;
-    if (m_state.protocol.wait_release)
-      return;
+    }
+
     if (m_state.socket.connected) {
       ec_t ec;
+      connection_basic::socket_.next_layer().cancel(ec);
       connection_basic::socket_.next_layer().shutdown(
         socket_t::shutdown_both,
         ec
