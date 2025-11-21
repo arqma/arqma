@@ -394,7 +394,7 @@ namespace levin
 
         if (next_flush == std::chrono::steady_clock::time_point::max())
           MWARNING("Unable to send transaction(s). no available connections");
-        else if (!zone->flush_callbacks || next_flush < zone->flush_txs.expires_at())
+        else if (!zone->flush_callbacks || next_flush < zone->flush_txs.expiry())
           fluff_flush::queue(std::move(zone), next_flush);
       }
     };
