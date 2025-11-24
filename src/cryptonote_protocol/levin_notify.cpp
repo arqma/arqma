@@ -39,7 +39,6 @@
 #include <stdexcept>
 #include <utility>
 
-#include "byte_slice.h"
 #include "common/expect.h"
 #include "common/varint.h"
 #include "cryptonote_config.h"
@@ -118,7 +117,7 @@ namespace levin
       return outs;
     }
 
-    epee::levin::message_writer make_tx_message(std::vector<blobdata>&& txs, const bool pad)
+    std::string make_tx_payload(std::vector<blobdata>&& txs, const bool pad)
     {
       NOTIFY_NEW_TRANSACTIONS::request request{};
       request.txs = std::move(txs);
@@ -139,7 +138,7 @@ namespace levin
           padding -= overhead;
         request._ = std::string(padding, ' ');
 
-        epee::byte_slice arg_buff;
+        std::string arg_buff;
         epee::serialization::store_t_to_binary(request, arg_buff);
 
         // we probably lowballed the payload size a bit, so added a but too much. Fix this now.
@@ -151,17 +150,21 @@ namespace levin
         // if the size of _ moved enough, we might lose byte in size encoding, we don't care
       }
 
-      epee::levin::message_writer out;
-      if (!epee::serialization::store_t_to_binary(request, out.buffer))
+      std::string fullBlob;
+      if (!epee::serialization::store_t_to_binary(request, fullBlob))
         throw std::runtime_error{"Failed to serialize to epee binary format"};
 
-      return out;
+      return fullBlob;
     }
 
     bool make_payload_send_txs(connections& p2p, std::vector<blobdata>&& txs, const boost::uuids::uuid& destination, const bool pad)
     {
-      epee::byte_slice blob = make_tx_message(std::move(txs), pad).finalize_notify(NOTIFY_NEW_TRANSACTIONS::ID);
-      return p2p.send(std::move(blob), destination);
+      const cryptonote::blobdata blob = make_tx_payload(std::move(txs), pad);
+      p2p.for_connection(destination, [&blob](detail::p2p_context& context) {
+        on_levin_traffic(context, true, true, false, blob.size(), NOTIFY_NEW_TRANSACTIONS::ID);
+        return true;
+      });
+      return p2p.notify(NOTIFY_NEW_TRANSACTIONS::ID, epee::strspan<std::uint8_t>(blob), destination);
     }
 
     /* The current design uses `asio::strand`s. The documentation isn't as clear
@@ -549,6 +552,10 @@ namespace levin
           else
             message = zone_->noise.clone();
 
+          zone_->p2p->for_connection(channel.connection, [&](detail::p2p_context& context) {
+            on_levin_traffic(context, true, true, false, message.size(), "noise");
+            return true;
+          });
           if (zone_->p2p->send(std::move(message), channel.connection))
           {
             if (!channel.queue.empty() && channel.active.empty())
@@ -707,8 +714,9 @@ namespace levin
       );
 
       // padding is not useful when using noise mode
+      const std::string payload = make_tx_payload(std::move(txs), false);
       epee::byte_slice message = epee::levin::make_fragmented_notify(
-        zone_->noise.size(), NOTIFY_NEW_TRANSACTIONS::ID, make_tx_message(std::move(txs), false)
+        zone_->noise, NOTIFY_NEW_TRANSACTIONS::ID, epee::strspan<std::uint8_t>(payload)
       );
       if (CRYPTONOTE_MAX_FRAGMENTS * zone_->noise.size() < message.size())
       {

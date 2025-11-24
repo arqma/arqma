@@ -27,6 +27,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <atomic>
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <limits>
@@ -34,7 +35,6 @@
 #include <utility>
 
 #include "byte_slice.h"
-#include "byte_stream.h"
 
 namespace
 {
@@ -55,16 +55,12 @@ namespace epee
     std::atomic<std::size_t> ref_count;
   };
 
-  void release_byte_slice::call(void*, void* ptr) noexcept
+  void release_byte_slice::operator()(byte_slice_data* ptr) const noexcept
   {
-    if (ptr)
+    if (ptr && --(ptr->ref_count) == 0)
     {
-      byte_slice_data* self = static_cast<byte_slice_data*>(ptr);
-      if (--(self->ref_count) == 0)
-      {
-        self->~byte_slice_data();
-        free(self);
-      }
+      ptr->~byte_slice_data();
+      free(ptr);
     }
   }
 
@@ -123,12 +119,6 @@ namespace epee
     }
   } // anonymous
 
-  void release_byte_buffer::operator()(std::uint8_t* buf) const noexcept
-  {
-    if (buf)
-      std::free(buf - sizeof(raw_byte_slice));
-  }
-
   byte_slice::byte_slice(byte_slice_data* storage, span<const std::uint8_t> portion) noexcept
     : storage_(storage), portion_(portion)
   {
@@ -182,30 +172,6 @@ namespace epee
     : byte_slice(adapt_buffer{}, std::move(buffer))
   {}
 
-  byte_slice::byte_slice(byte_stream&& stream, const bool shrink)
-    : storage_(nullptr), portion_(stream.data(), stream.size())
-  {
-    if (portion_.size())
-    {
-      byte_buffer buf;
-      if (shrink && page_size <= stream.available())
-      {
-          buf = byte_buffer_resize(stream.take_buffer(), portion_.size());
-          if (!buf)
-            throw std::bad_alloc{};
-          portion_ = {buf.get(), portion_.size()};
-      }
-      else // no need to shrink buffer
-        buf = stream.take_buffer();
-
-      std::uint8_t* const data = buf.release() - sizeof(raw_byte_slice);
-      new (data) raw_byte_slice{};
-      storage_.reset(reinterpret_cast<raw_byte_slice*>(data));
-    }
-    else
-      portion_ = nullptr;
-  }
-
   byte_slice::byte_slice(byte_slice&& source) noexcept
     : storage_(std::move(source.storage_)), portion_(source.portion_)
   {
@@ -256,37 +222,5 @@ namespace epee
     if (begin == end)
       return {};
     return {storage_.get(), {portion_.begin() + begin, end - begin}};
-  }
-
-  std::unique_ptr<byte_slice_data, release_byte_slice> byte_slice::take_buffer() noexcept
-  {
-    std::unique_ptr<byte_slice_data, release_byte_slice> out{std::move(storage_)};
-    portion_ = nullptr;
-    return out;
-  }
-
-  byte_buffer byte_buffer_resize(byte_buffer buf, const std::size_t length) noexcept
-  {
-    if (std::numeric_limits<std::size_t>::max() - sizeof(raw_byte_slice) < length)
-      return nullptr;
-
-    std::uint8_t* data = buf.get();
-    if (data != nullptr)
-      data -= sizeof(raw_byte_slice);
-
-    data = static_cast<std::uint8_t*>(std::realloc(data, sizeof(raw_byte_slice) + length));
-    if (data == nullptr)
-      return nullptr;
-
-    buf.release();
-    buf.reset(data + sizeof(raw_byte_slice));
-    return buf;
-  }
-
-  byte_buffer byte_buffer_increase(byte_buffer buf, const std::size_t current, const std::size_t more)
-  {
-    if (std::numeric_limits<std::size_t>::max() - current < more)
-      throw std::range_error{"byte_buffer_increase size_t overflow"};
-    return byte_buffer_resize(std::move(buf), current + more);
   }
 } // epee

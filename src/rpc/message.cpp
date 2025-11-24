@@ -63,7 +63,7 @@ const rapidjson::Value& get_method_field(const rapidjson::Value& src)
 }
 }
 
-void Message::toJson(rapidjson::Writer<epee::byte_stream>& dest) const
+void Message::toJson(rapidjson::Writer<rapidjson::StringBuffer>& dest) const
 {
   dest.StartObject();
   INSERT_INTO_JSON_OBJECT(dest, status, status);
@@ -150,11 +150,11 @@ cryptonote::rpc::error FullMessage::getError()
   return err;
 }
 
-epee::byte_slice FullMessage::getRequest(const std::string& request, const Message& message, const unsigned id)
+std::string FullMessage::getRequest(const std::string& request, const Message& message, const unsigned id)
 {
-  epee::byte_stream buffer;
+  rapidjson::StringBuffer buffer;
   {
-    rapidjson::Writer<epee::byte_stream> dest{buffer};
+    rapidjson::Writer<rapidjson::StringBuffer> dest{buffer};
 
     dest.StartObject();
     INSERT_INTO_JSON_OBJECT(dest, jsonrpc, (boost::string_ref{"2.0", 3}));
@@ -173,14 +173,14 @@ epee::byte_slice FullMessage::getRequest(const std::string& request, const Messa
     if (!dest.IsComplete())
       throw std::logic_error{"Invalid JSON tree generated"};
   }
-  return epee::byte_slice{std::move(buffer)};
+  return std::string{buffer.GetString(), buffer.GetSize()};
 }
 
-epee::byte_slice FullMessage::getResponse(const Message& message, const rapidjson::Value& id)
+std::string FullMessage::getResponse(const Message& message, const rapidjson::Value& id)
 {
-  epee::byte_stream buffer;
+  rapidjson::StringBuffer buffer;
   {
-    rapidjson::Writer<epee::byte_stream> dest{buffer};
+    rapidjson::Writer<rapidjson::StringBuffer> dest{buffer};
 
     dest.StartObject();
     INSERT_INTO_JSON_OBJECT(dest, jsonrpc, (boost::string_ref{"2.0", 3}));
@@ -207,17 +207,17 @@ epee::byte_slice FullMessage::getResponse(const Message& message, const rapidjso
     if (!dest.IsComplete())
       throw std::logic_error{"Invalid JSON tree generated"};
   }
-  return epee::byte_slice{std::move(buffer)};
+  return std::string{buffer.GetString(), buffer.GetSize()};
 }
 
 // convenience functions for bad input
-epee::byte_slice BAD_REQUEST(const std::string& request)
+std::string BAD_REQUEST(const std::string& request)
 {
   rapidjson::Value invalid;
   return BAD_REQUEST(request, invalid);
 }
 
-epee::byte_slice BAD_REQUEST(const std::string& request, const rapidjson::Value& id)
+std::string BAD_REQUEST(const std::string& request, const rapidjson::Value& id)
 {
   Message fail;
   fail.status = Message::STATUS_BAD_REQUEST;
@@ -225,7 +225,7 @@ epee::byte_slice BAD_REQUEST(const std::string& request, const rapidjson::Value&
   return FullMessage::getResponse(fail, id);
 }
 
-epee::byte_slice BAD_JSON(const std::string& error_details)
+std::string BAD_JSON(const std::string& error_details)
 {
   rapidjson::Value invalid;
   Message fail;

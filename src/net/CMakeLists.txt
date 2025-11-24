@@ -34,8 +34,7 @@ set(net_sources
   parse.cpp
   socks.cpp
   socks_connect.cpp
-  tor_address.cpp
-  zmq.cpp)
+  tor_address.cpp)
 
 arqma_find_all_headers(net_headers "${CMAKE_CURRENT_SOURCE_DIR}")
 

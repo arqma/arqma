@@ -497,7 +497,7 @@ namespace service_nodes
   {
     if (votes.size() < CHECKPOINT_MIN_VOTES)
     {
-      LOG_PRINT_L2("Don't have enough votes yet to submit a checkpoint: have " << votes.size() << " of " << CHECKPOINT_MIN_VOTES << " required");
+      LOG_PRINT_L2("Don't have enough votes yet to submit a checkpoint for height: " << vote.block_height << ", have " << votes.size() << " of " << CHECKPOINT_MIN_VOTES << " votes required");
       return true;
     }
 

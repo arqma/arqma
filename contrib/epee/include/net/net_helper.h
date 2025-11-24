@@ -34,7 +34,6 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/utility/string_ref.hpp>
 #include <future>
 #include <functional>
 #include "net/net_utils_base.h"
@@ -257,7 +256,7 @@ namespace net_utils
 
 
 		inline
-		bool send(const boost::string_ref buff, std::chrono::milliseconds timeout)
+		bool send(const std::string& buff, std::chrono::milliseconds timeout)
 		{
 			try
 			{
@@ -270,7 +269,7 @@ namespace net_utils
 				// ec indicates completion.
 				boost::system::error_code ec = boost::asio::error::would_block;
 
-				async_write(buff.data(), buff.size(), ec);
+				async_write(buff.c_str(), buff.size(), ec);
 
 				// Block until the asynchronous operation has completed.
 				while (ec == boost::asio::error::would_block)

@@ -464,7 +464,7 @@ namespace cryptonote
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
-  bool t_cryptonote_protocol_handler<t_core>::get_payload_sync_data(epee::byte_slice& data)
+  bool t_cryptonote_protocol_handler<t_core>::get_payload_sync_data(blobdata& data)
   {
     CORE_SYNC_DATA hsd = {};
     get_payload_sync_data(hsd);
@@ -2255,10 +2255,10 @@ skip:
       return true;
     });
 
-    epee::levin::message_writer fluffyBlob{32 * 1024};
+    std::string fluffyBlob;
     if (arg.b.txs.size())
     {
-      epee::serialization::store_t_to_binary(arg, fluffyBlob.buffer);
+      epee::serialization::store_t_to_binary(arg, fluffyBlob);
     }
     else
     {
@@ -2266,10 +2266,10 @@ skip:
       NOTIFY_NEW_FLUFFY_BLOCK::request arg_without_tx_blobs = {};
       arg_without_tx_blobs.current_blockchain_height = arg.current_blockchain_height;
       arg_without_tx_blobs.b.block = arg.b.block;
-      epee::serialization::store_t_to_binary(arg_without_tx_blobs, fluffyBlob.buffer);
+      epee::serialization::store_t_to_binary(arg_without_tx_blobs, fluffyBlob);
     }
 
-    m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, std::move(fluffyBlob), std::move(fluffyConnections));
+    m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, epee::strspan<uint8_t>(fluffyBlob), std::move(fluffyConnections));
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------

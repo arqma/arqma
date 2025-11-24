@@ -29,11 +29,11 @@
 
 #pragma once
 
+#include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <unordered_map>
 #include <vector>
 
-#include "byte_stream.h"
 #include "message.h"
 #include "cryptonote_protocol/cryptonote_protocol_defs.h"
 #include "rpc/message_data_structs.h"
@@ -51,7 +51,7 @@ class classname \
       public: \
         Request() { } \
         ~Request() { } \
-        void doToJson(rapidjson::Writer<epee::byte_stream>& dest) const override final; \
+        void doToJson(rapidjson::Writer<rapidjson::StringBuffer>& dest) const override final; \
         void fromJson(const rapidjson::Value& val) override final;
 
 #define BEGIN_RPC_MESSAGE_RESPONSE \
@@ -60,7 +60,7 @@ class classname \
       public: \
         Response() { } \
         ~Response() { } \
-        void doToJson(rapidjson::Writer<epee::byte_stream>& dest) const override final; \
+        void doToJson(rapidjson::Writer<rapidjson::StringBuffer>& dest) const override final; \
         void fromJson(const rapidjson::Value& val) override final;
 
 #define END_RPC_MESSAGE_REQUEST };

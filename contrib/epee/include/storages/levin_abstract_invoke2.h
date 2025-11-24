@@ -27,9 +27,7 @@
 #pragma once
 
 #include "portable_storage_template_helper.h"
-#include <boost/utility/string_ref.hpp>
 #include <functional>
-#include "byte_slice.h"
 #include "span.h"
 #include "net/levin_base.h"
 
@@ -39,11 +37,22 @@
 namespace pl = std::placeholders;
 using namespace std::literals;
 
-template<typename context_t>
-void on_levin_traffic(const context_t &context, bool initiator, bool sent, bool error, size_t bytes, const char *category);
-
-template<typename context_t>
-void on_levin_traffic(const context_t &context, bool initiator, bool sent, bool error, size_t bytes, int command);
+namespace
+{
+  template<typename context_t>
+  void on_levin_traffic(const context_t &context, bool initiator, bool sent, bool error, size_t bytes, const char *category)
+  {
+    MCINFO("net.p2p.traffic", context << bytes << " bytes " << (sent ? "sent" : "received") << (error ? "/corrupt" : "")
+      << " for category " << category << " initiated by " << (initiator ? "us" : "peer"));
+  }
+  template<typename context_t>
+  void on_levin_traffic(const context_t &context, bool initiator, bool sent, bool error, size_t bytes, int command)
+  {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "command-%u", command);
+    return on_levin_traffic(context, initiator, sent, error, bytes, buf);
+  }
+}
 
 namespace epee
 {
@@ -55,9 +64,10 @@ namespace epee
       const boost::uuids::uuid &conn_id = context.m_connection_id;
       typename serialization::portable_storage stg;
       const_cast<t_arg&>(out_struct).store(stg);//TODO: add true const support to searilzation
-      levin::message_writer to_send{16 * 1024};
-      stg.store_to_binary(to_send.buffer);
-      int res = transport.invoke_async(command, std::move(to_send), conn_id, [cb, command](int code, const epee::span<const uint8_t> buff, typename t_transport::connection_context& context)->bool
+      std::string buff_to_send;
+      stg.store_to_binary(buff_to_send);
+      on_levin_traffic(context, true, true, false, buff_to_send.size(), command);
+      int res = transport.invoke_async(command, epee::strspan<uint8_t>(buff_to_send), conn_id, [cb, command](int code, const epee::span<const uint8_t> buff, typename t_transport::connection_context& context)->bool
       {
         t_result result_struct{};
         if(code <= 0)
@@ -101,10 +111,11 @@ namespace epee
       const boost::uuids::uuid &conn_id = context.m_connection_id;
       serialization::portable_storage stg;
       out_struct.store(stg);
-      levin::message_writer to_send;
-      stg.store_to_binary(to_send.buffer);
+      std::string buff_to_send;
+      stg.store_to_binary(buff_to_send);
 
-      int res = transport.send(to_send.finalize_notify(command), conn_id);
+      on_levin_traffic(context, true, true, false, buff_to_send.size(), command);
+      int res = transport.notify(command, epee::strspan<uint8_t>(buff_to_send), conn_id);
       if(res <= 0)
       {
         MERROR("Failed to notify command " << command << " return code " << res);
@@ -114,7 +125,7 @@ namespace epee
     }
     //----------------------------------------------------------------------------------------------------
     template<class t_owner, class t_in_type, class t_out_type, class t_context, class callback_t>
-    int buff_to_t_adapter(int command, const epee::span<const uint8_t> in_buff, byte_stream& buff_out, callback_t cb, t_context& context)
+    int buff_to_t_adapter(int command, const epee::span<const uint8_t> in_buff, std::string& buff_out, callback_t cb, t_context& context)
     {
       serialization::portable_storage strg;
       if(!strg.load_from_binary(in_buff))
@@ -142,6 +153,7 @@ namespace epee
         LOG_ERROR("Failed to store_to_binary in command" << command);
         return -1;
       }
+      on_levin_traffic(context, false, true, false, buff_out.size(), command);
 
       return res;
     }
@@ -168,7 +180,7 @@ namespace epee
     }
 
 #define CHAIN_LEVIN_INVOKE_MAP2(context_type) \
-  int invoke(int command, const epee::span<const uint8_t> in_buff, epee::byte_stream& buff_out, context_type& context) \
+  int invoke(int command, const epee::span<const uint8_t> in_buff, std::string& buff_out, context_type& context) \
   { \
     bool handled = false; \
     return handle_invoke_map(false, command, in_buff, buff_out, context, handled); \
@@ -177,12 +189,12 @@ namespace epee
 #define CHAIN_LEVIN_NOTIFY_MAP2(context_type) \
   int notify(int command, const epee::span<const uint8_t> in_buff, context_type& context) \
   { \
-    bool handled = false; epee::byte_stream fake_str; \
+    bool handled = false; std::string fake_str; \
     return handle_invoke_map(true, command, in_buff, fake_str, context, handled); \
   }
 
 #define BEGIN_INVOKE_MAP2(owner_type) \
-  template <class t_context> int handle_invoke_map(bool is_notify, int command, const epee::span<const uint8_t> in_buff, epee::byte_stream& buff_out, t_context& context, bool& handled) \
+  template <class t_context> int handle_invoke_map(bool is_notify, int command, const epee::span<const uint8_t> in_buff, std::string& buff_out, t_context& context, bool& handled) \
   { \
   try { \
   typedef owner_type internal_owner_type_name;

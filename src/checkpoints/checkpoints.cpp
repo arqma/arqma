@@ -156,9 +156,10 @@ namespace cryptonote
   bool checkpoints::update_checkpoint(checkpoint_t const &checkpoint)
   {
     bool result = true;
+    bool batch_started = false;
     try
     {
-      auto guard = db_wtxn_guard(m_db);
+      batch_started = m_db->batch_start();
       m_db->update_block_checkpoint(checkpoint);
     }
     catch (const std::exception& e)
@@ -167,6 +168,7 @@ namespace cryptonote
       result = false;
     }
 
+    if (batch_started) m_db->batch_stop();
     return result;
   }
   //---------------------------------------------------------------------------
