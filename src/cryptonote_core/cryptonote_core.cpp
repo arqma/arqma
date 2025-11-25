@@ -274,9 +274,6 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------
   bool core::update_checkpoints_from_json_file()
   {
-    if (m_nettype != MAINNET)
-      return true;
-
     if (m_checkpoints_updating.test_and_set()) return true;
 
     bool res = true;

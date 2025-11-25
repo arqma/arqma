@@ -54,7 +54,6 @@ target_link_libraries(checkpoints
   PUBLIC
     common
     cncrypto
-    cryptonote_basic
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SERIALIZATION_LIBRARY}
