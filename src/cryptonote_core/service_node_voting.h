@@ -35,7 +35,6 @@
 
 #include "crypto/crypto.h"
 #include "cryptonote_basic/cryptonote_basic.h"
-#include "cryptonote_basic/blobdatatype.h"
 #include "cryptonote_basic/tx_extra.h"
 
 #include "string_tools.h"

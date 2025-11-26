@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
   else
   {
     const crypto::hash block_hash = db->get_block_hash_from_height(opt_height);
-    const cryptonote::blobdata bd = db->get_block_blob(block_hash);
+    const std::string bd = db->get_block_blob(block_hash);
     cryptonote::block b;
     if (!cryptonote::parse_and_validate_block_from_blob(bd, b))
     {
@@ -205,7 +205,7 @@ int main(int argc, char* argv[])
       std::vector<crypto::hash> new_txids;
       for (const crypto::hash &txid: txids)
       {
-        cryptonote::blobdata bd;
+        std::string bd;
         if (!db->get_pruned_tx_blob(txid, bd))
         {
           LOG_PRINT_L0("Failed to get txid " << txid << " from db");

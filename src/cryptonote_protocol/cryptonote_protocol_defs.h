@@ -35,17 +35,14 @@
 #include "serialization/keyvalue_serialization.h"
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "net/net_utils_base.h"
-#include "cryptonote_basic/blobdatatype.h"
 
 namespace service_nodes
 {
-  struct legacy_deregister_vote;
   struct quorum_vote_t;
 };
 
 namespace cryptonote
 {
-
 
 #define BC_COMMANDS_POOL_BASE 2000
 
@@ -82,8 +79,6 @@ namespace cryptonote
 
     uint64_t avg_upload;
     uint64_t current_upload;
-
-    uint32_t support_flags;
 
     std::string connection_id;
 
@@ -126,7 +121,6 @@ namespace cryptonote
       KV_SERIALIZE(current_download)
       KV_SERIALIZE(avg_upload)
       KV_SERIALIZE(current_upload)
-      KV_SERIALIZE(support_flags)
       KV_SERIALIZE(connection_id)
       KV_SERIALIZE(height)
       KV_SERIALIZE(pruning_seed)
@@ -139,9 +133,9 @@ namespace cryptonote
   /************************************************************************/
   struct block_complete_entry
   {
-    blobdata block;
-    std::vector<blobdata> txs;
-    blobdata checkpoint;
+    std::string block;
+    std::vector<std::string> txs;
+    std::string checkpoint;
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(block)
       KV_SERIALIZE(txs)
@@ -158,7 +152,7 @@ namespace cryptonote
 
     struct request
     {
-      std::vector<blobdata> txs;
+      std::vector<std::string> txs;
       bool requested = false;
       std::string _; // padding
 
@@ -245,7 +239,7 @@ namespace cryptonote
       uint64_t total_height;
       uint64_t cumulative_difficulty;
       std::vector<crypto::hash> m_block_ids;
-      cryptonote::blobdata first_block;
+      std::string first_block;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(start_height)

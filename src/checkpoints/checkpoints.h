@@ -30,7 +30,6 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
-#include <map>
 #include <vector>
 
 #include "misc_log_ex.h"
@@ -39,8 +38,6 @@
 #include "cryptonote_core/service_node_voting.h"
 #include "cryptonote_basic/cryptonote_basic_impl.h"
 #include "string_tools.h"
-
-#include <boost/serialization/base_object.hpp>
 
 #define ADD_CHECKPOINT(h, hash)  CHECK_AND_ASSERT(add_checkpoint(h,  hash), false);
 #define JSON_HASH_FILE_NAME "checkpoints.json"
@@ -51,7 +48,7 @@ namespace cryptonote
   {
     hardcoded,
     service_node,
-    count
+    count,
   };
 
   struct checkpoint_t

@@ -34,7 +34,6 @@
 #include <vector>
 
 #include "byte_slice.h"
-#include "cryptonote_basic/blobdatatype.h"
 #include "net/enums.h"
 #include "span.h"
 
@@ -131,7 +130,7 @@ namespace levin
           construction.
 
       \return True iff the notification is queued for sending. */
-    bool send_txs(std::vector<blobdata> txs, const boost::uuids::uuid& source);
+    bool send_txs(std::vector<std::string> txs, const boost::uuids::uuid& source);
   };
 } // levin
 } // net

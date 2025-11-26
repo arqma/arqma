@@ -168,9 +168,6 @@ constexpr auto P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT     = 5s;
 #define P2P_IP_FAILS_BEFORE_BLOCK                       10
 #define P2P_IDLE_CONNECTION_KILL_INTERVAL               30     // 30 seconds
 
-#define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
-#define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
-
 #define CRYPTONOTE_NAME                                 "arqma"
 #define CRYPTONOTE_POOLDATA_FILENAME                    "poolstate.bin"
 #define CRYPTONOTE_BLOCKCHAINDATA_FILENAME              "data.mdb"
@@ -346,13 +343,11 @@ namespace arqma
   {
     "node5.arqma.com", //Malbit
     "node1.arqma.com", //ArqTras
-    "node6.arqma.com", //Malbit US
+    "node6.arqma.com", //Malbit
     "node2.arqma.com", //ArqTras
-    "node7.arqma.com", //Malbit Contabo
+    "node7.arqma.com", //Malbit
     "node3.arqma.com", //ArqTras
     "node4.arqma.com", //ArqTras
-    "node8.arqma.com", //Malbit Asia
-    "it-support.mal-bit.com"
   };
 
   const char *const testnet_core_nodes[] =

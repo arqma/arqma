@@ -76,7 +76,7 @@ void BlockchainDB::pop_block()
   pop_block(blk, txs);
 }
 
-void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
+void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, std::string>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
 {
   const transaction &tx = txp.first;
 
@@ -164,12 +164,12 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
   add_tx_amount_output_indices(tx_id, amount_output_indices);
 }
 
-uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
+uint64_t BlockchainDB::add_block( const std::pair<block, std::string>& blck
                                 , size_t block_weight
                                 , uint64_t long_term_block_weight
                                 , const difficulty_type& cumulative_difficulty
                                 , const uint64_t& coins_generated
-                                , const std::vector<std::pair<transaction, blobdata>>& txs
+                                , const std::vector<std::pair<transaction, std::string>>& txs
                                 )
 {
   const block &blk = blck.first;
@@ -195,7 +195,7 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
     num_rct_outs += blk.miner_tx.vout.size();
   int tx_i = 0;
   crypto::hash tx_hash = crypto::null_hash;
-  for (const std::pair<transaction, blobdata>& tx : txs)
+  for (const std::pair<transaction, std::string>& tx : txs)
   {
     tx_hash = blk.tx_hashes[tx_i];
     add_transaction(blk_hash, tx, &tx_hash);
@@ -265,7 +265,7 @@ void BlockchainDB::remove_transaction(const crypto::hash& tx_hash)
 
 block BlockchainDB::get_block_from_height(const uint64_t& height) const
 {
-  blobdata bd = get_block_blob_from_height(height);
+  std::string bd = get_block_blob_from_height(height);
   block b;
   if (!parse_and_validate_block_from_blob(bd, b))
     throw DB_ERROR("Failed to parse block from blob retrieved from the db");
@@ -275,7 +275,7 @@ block BlockchainDB::get_block_from_height(const uint64_t& height) const
 
 block BlockchainDB::get_block(const crypto::hash& h) const
 {
-  blobdata bd = get_block_blob(h);
+  std::string bd = get_block_blob(h);
   block b;
   if (!parse_and_validate_block_from_blob(bd, b))
     throw DB_ERROR("Failed to parse block from blob retrieved from the db");
@@ -285,7 +285,7 @@ block BlockchainDB::get_block(const crypto::hash& h) const
 
 bool BlockchainDB::get_tx(const crypto::hash& h, cryptonote::transaction &tx) const
 {
-  blobdata bd;
+  std::string bd;
   if (!get_tx_blob(h, bd))
     return false;
   if (!parse_and_validate_tx_from_blob(bd, tx))
@@ -296,7 +296,7 @@ bool BlockchainDB::get_tx(const crypto::hash& h, cryptonote::transaction &tx) co
 
 bool BlockchainDB::get_pruned_tx(const crypto::hash& h, cryptonote::transaction &tx) const
 {
-  blobdata bd;
+  std::string bd;
   if (!get_pruned_tx_blob(h, bd))
     return false;
   if (!parse_and_validate_tx_base_from_blob(bd, tx))

@@ -737,7 +737,6 @@ bool t_rpc_command_executor::print_connections() {
       << std::setw(8)  << "Type"
       << std::setw(6)  << "SSL"
       << std::setw(20) << "Peer id"
-      << std::setw(20) << "Support Flags"
       << std::setw(30) << "Recv/Sent (inactive,sec)"
       << std::setw(25) << "State"
       << std::setw(20) << "Livetime(sec)"
@@ -757,7 +756,6 @@ bool t_rpc_command_executor::print_connections() {
      << std::setw(host_field_width) << std::left << address
      << std::setw(6)  << (info.ssl ? "yes" : "no")
      << std::setw(20) << epee::string_tools::pad_string(info.peer_id, 16, '0', true)
-     << std::setw(20) << info.support_flags
      << std::setw(30) << std::to_string(info.recv_count) + "("  + std::to_string(count_seconds(info.recv_idle_time)) + ")/" + std::to_string(info.send_count) + "(" + std::to_string(count_seconds(info.send_idle_time)) + ")"
      << std::setw(25) << info.state
      << std::setw(20) << std::to_string(count_seconds(info.live_time))
@@ -1129,7 +1127,7 @@ bool t_rpc_command_executor::print_transaction(crypto::hash transaction_hash,
     if (include_json)
     {
       cryptonote::transaction tx;
-      cryptonote::blobdata blob;
+      std::string blob;
       std::string source = as_hex.empty() ? pruned_as_hex + prunable_as_hex : as_hex;
       bool pruned = !pruned_as_hex.empty() && prunable_as_hex.empty();
       if (!epee::string_tools::parse_hexstr_to_binbuff(source, blob))
@@ -2509,8 +2507,6 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
 
   if(is_registered) // Print Service Node tests
   {
-    epee::console_colors uptime_proof_color = (entry.last_uptime_proof == 0) ? epee::console_color_red : epee::console_color_green;
-
     stream << indent2;
     if(entry.last_uptime_proof == 0)
     {
@@ -2912,7 +2908,6 @@ bool t_rpc_command_executor::prepare_registration(bool force_registration)
   }
 
   uint64_t block_height = 0;
-  uint8_t hard_fork_version = cryptonote::network_version_16;
   cryptonote::network_type nettype = cryptonote::UNDEFINED;
   {
     std::string const info_fail_message = "Could not get current blockchain info";
@@ -2950,7 +2945,6 @@ bool t_rpc_command_executor::prepare_registration(bool force_registration)
       nettype = m_rpc_server->nettype();
     }
 
-    hard_fork_version = hf_res.version;
     block_height = std::max(res.height, res.target_height);
   }
 

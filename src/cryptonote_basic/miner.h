@@ -34,12 +34,10 @@
 #include <boost/program_options.hpp>
 #include <atomic>
 #include <thread>
-#include "cryptonote_basic/blobdatatype.h"
 #include "cryptonote_basic/cryptonote_basic.h"
 #include "cryptonote_basic/verification_context.h"
 #include "cryptonote_basic/difficulty.h"
 #include "common/periodic_task.h"
-#include "cryptonote_basic/blobdatatype.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -51,7 +49,7 @@ namespace cryptonote
   struct i_miner_handler
   {
     virtual bool handle_block_found(block& b, block_verification_context &bvc) = 0;
-    virtual bool get_block_template(block &b, const account_public_address &adr, difficulty_type &diffic, uint64_t &height, uint64_t &expected_reward, const blobdata &ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash) = 0;
+    virtual bool get_block_template(block &b, const account_public_address &adr, difficulty_type &diffic, uint64_t &height, uint64_t &expected_reward, const std::string &ex_nonce, uint64_t &seed_height, crypto::hash &seed_hash) = 0;
   protected:
     ~i_miner_handler(){};
   };

@@ -113,14 +113,12 @@ namespace nodetool
   {
     p2p_connection_context_t(bool is_ping = false)
       : peer_id(0)
-      , support_flags(0)
       , m_in_timedsync(false)
     {}
 
     static constexpr int handshake_command() noexcept { return 1001; }
 
     peerid_type peer_id;
-    uint32_t support_flags;
     bool m_in_timedsync;
     std::set<epee::net_utils::network_address> sent_addresses;
   };
@@ -149,13 +147,11 @@ namespace nodetool
     {
       config_t()
         : m_net_config(),
-          m_peer_id(crypto::rand<uint64_t>()),
-          m_support_flags(0)
+          m_peer_id(crypto::rand<uint64_t>())
       {}
 
       network_config m_net_config;
       uint64_t m_peer_id;
-      uint32_t m_support_flags;
     };
     typedef epee::misc_utils::struct_init<config_t> config;
 
@@ -224,7 +220,6 @@ namespace nodetool
         m_config.m_net_config.connection_timeout = P2P_DEFAULT_CONNECTION_TIMEOUT;
         m_config.m_net_config.ping_connection_timeout = P2P_DEFAULT_PING_CONNECTION_TIMEOUT;
         m_config.m_net_config.send_peerlist_sz = P2P_DEFAULT_PEERS_IN_HANDSHAKE;
-        m_config.m_support_flags = 0; // only set in public zone
       }
     };
 
@@ -309,6 +304,7 @@ namespace nodetool
       HANDLE_INVOKE_T2(COMMAND_HANDSHAKE, handle_handshake)
       HANDLE_INVOKE_T2(COMMAND_TIMED_SYNC, handle_timed_sync)
       HANDLE_INVOKE_T2(COMMAND_PING, handle_ping)
+      // TODO: remove after Hard-Fork
       HANDLE_INVOKE_T2(COMMAND_REQUEST_SUPPORT_FLAGS, handle_get_support_flags)
       CHAIN_INVOKE_MAP_TO_OBJ_FORCE_CONTEXT(m_payload_handler, typename t_payload_net_handler::connection_context&)
     END_INVOKE_MAP2()
@@ -319,6 +315,7 @@ namespace nodetool
     int handle_handshake(int command, typename COMMAND_HANDSHAKE::request& arg, typename COMMAND_HANDSHAKE::response& rsp, p2p_connection_context& context);
     int handle_timed_sync(int command, typename COMMAND_TIMED_SYNC::request& arg, typename COMMAND_TIMED_SYNC::response& rsp, p2p_connection_context& context);
     int handle_ping(int command, COMMAND_PING::request& arg, COMMAND_PING::response& rsp, p2p_connection_context& context);
+    // TODO: remove after Hard-Fork
     int handle_get_support_flags(int command, COMMAND_REQUEST_SUPPORT_FLAGS::request& arg, COMMAND_REQUEST_SUPPORT_FLAGS::response& rsp, p2p_connection_context& context);
     bool init_config();
     bool make_default_peer_id();
@@ -331,13 +328,13 @@ namespace nodetool
     virtual void callback(p2p_connection_context& context);
     //----------------- i_p2p_endpoint -------------------------------------------------------------
     virtual bool relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections);
-    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source);
+    virtual epee::net_utils::zone send_txs(std::vector<std::string> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source);
     virtual bool invoke_command_to_peer(int command, const epee::span<const uint8_t> req_buff, std::string& resp_buff, const epee::net_utils::connection_context_base& context);
     virtual bool invoke_notify_to_peer(int command, const epee::span<const uint8_t> req_buff, const epee::net_utils::connection_context_base& context);
     virtual bool drop_connection(const epee::net_utils::connection_context_base& context);
     virtual void request_callback(const epee::net_utils::connection_context_base& context);
-    virtual void for_each_connection(std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type, uint32_t)> f);
-    virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type, uint32_t)> f);
+    virtual void for_each_connection(std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type)> f);
+    virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type)> f);
     virtual bool add_host_fail(const epee::net_utils::network_address &address, unsigned int score = 1);
     //----------------- i_connection_filter  --------------------------------------------------------
     virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address, time_t *t = NULL);
@@ -376,7 +373,6 @@ namespace nodetool
     void delete_upnp_port_mapping(uint32_t port);
     template<class t_callback>
     bool try_ping(basic_node_data& node_data, p2p_connection_context& context, const t_callback &cb);
-    bool try_get_support_flags(const p2p_connection_context& context, std::function<void(p2p_connection_context&, const uint32_t&)> f);
     bool make_expected_connections_count(network_zone& zone, PeerType peer_type, size_t expected_connections);
     void cache_connect_fail_info(const epee::net_utils::network_address& addr);
     bool is_addr_recently_failed(const epee::net_utils::network_address& addr);

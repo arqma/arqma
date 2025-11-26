@@ -109,7 +109,7 @@ namespace service_nodes
       return;
 
     MGINFO("Recalculating service nodes list, scanning blockchain from height " << m_state.height << " to: " << current_height);
-    std::vector<std::pair<cryptonote::blobdata, cryptonote::block>> blocks;
+    std::vector<std::pair<std::string, cryptonote::block>> blocks;
     std::vector<cryptonote::transaction> txs;
     std::vector<crypto::hash> missed_txs;
     auto work_start = std::chrono::high_resolution_clock::now();
@@ -194,7 +194,7 @@ namespace service_nodes
   {
     std::vector<pubkey_and_sninfo> result;
     if (reserve) result.reserve(sns_infos.size());
-    for (const pubkey_and_sninfo &key_info : sns_infos)
+    for (const auto &key_info : sns_infos)
       if (p(*key_info.second))
         result.push_back(key_info);
 
@@ -252,7 +252,7 @@ namespace service_nodes
 
     if (alt_quorums)
     {
-      for (std::pair<crypto::hash, state_t> const &hash_to_state : m_transient.alt_state)
+      for (const auto& hash_to_state : m_transient.alt_state)
       {
         state_t const &alt_state = hash_to_state.second;
         if (alt_state.height == height)
@@ -493,7 +493,7 @@ namespace service_nodes
     if (!verify_tx_state_change(state_change, cryptonote::get_block_height(block), tvc, *quorums->obligations, hard_fork_version))
     {
       quorums = nullptr;
-      for (std::pair<crypto::hash, state_t> const &entry : alt_states)
+      for (const auto& entry : alt_states)
       {
         state_t const &alt_state = entry.second;
         if (alt_state.height != state_change.block_height)

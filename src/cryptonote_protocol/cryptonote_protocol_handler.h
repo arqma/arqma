@@ -88,9 +88,9 @@ namespace cryptonote
     bool init(const boost::program_options::variables_map& vm);
     bool deinit();
     void set_p2p_endpoint(nodetool::i_p2p_endpoint<connection_context>* p2p);
-    //bool process_handshake_data(const blobdata& data, cryptonote_connection_context& context);
+    //bool process_handshake_data(const std::string& data, cryptonote_connection_context& context);
     bool process_payload_sync_data(const CORE_SYNC_DATA& hshd, cryptonote_connection_context& context, bool is_initial);
-    bool get_payload_sync_data(blobdata& data);
+    bool get_payload_sync_data(std::string& data);
     bool get_payload_sync_data(CORE_SYNC_DATA& hshd);
     bool on_callback(cryptonote_connection_context& context);
     t_core& get_core(){return m_core;}
@@ -125,7 +125,7 @@ namespace cryptonote
     {
       LOG_PRINT_L2("[" << epee::net_utils::print_connection_context_short(exclude_context) << "] post relay " << typeid(T).name() << " -->");
       std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections;
-      m_p2p->for_each_connection([&exclude_context, &connections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
+      m_p2p->for_each_connection([&exclude_context, &connections](connection_context& context, nodetool::peerid_type peer_id)
       {
         if (context.m_state > cryptonote_connection_context::state_synchronizing)
         {

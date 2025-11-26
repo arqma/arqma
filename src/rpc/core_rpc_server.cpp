@@ -332,7 +332,7 @@ namespace cryptonote
     }
 
     size_t max_blocks = COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT;
-    std::vector<std::pair<std::pair<cryptonote::blobdata, crypto::hash>, std::vector<std::pair<crypto::hash, cryptonote::blobdata>>>> bs;
+    std::vector<std::pair<std::pair<std::string, crypto::hash>, std::vector<std::pair<crypto::hash, std::string>>>> bs;
     if(!m_core.find_blockchain_supplement(req.start_height, req.block_ids, bs, res.current_height, res.start_height, req.prune, !req.no_miner_tx, max_blocks, COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT))
     {
       res.status = "Failed";
@@ -354,7 +354,7 @@ namespace cryptonote
       if (req.no_miner_tx)
         res.output_indices.back().indices.push_back(COMMAND_RPC_GET_BLOCKS_FAST::tx_output_indices());
       res.blocks.back().txs.reserve(bd.second.size());
-      for (std::vector<std::pair<crypto::hash, cryptonote::blobdata>>::iterator i = bd.second.begin(); i != bd.second.end(); ++i)
+      for (std::vector<std::pair<crypto::hash, std::string>>::iterator i = bd.second.begin(); i != bd.second.end(); ++i)
       {
         unpruned_size += i->second.size();
         res.blocks.back().txs.push_back(std::move(i->second));
@@ -567,7 +567,7 @@ namespace cryptonote
     std::vector<crypto::hash> vh;
     for(const auto& tx_hex_str: req.txs_hashes)
     {
-      blobdata b;
+      std::string b;
       if(!string_tools::parse_hexstr_to_binbuff(tx_hex_str, b))
       {
         res.status = "Failed to parse hex representation of transaction hash";
@@ -581,7 +581,7 @@ namespace cryptonote
       vh.push_back(*reinterpret_cast<const crypto::hash*>(b.data()));
     }
     std::vector<crypto::hash> missed_txs;
-    std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>> txs;
+    std::vector<std::tuple<crypto::hash, std::string, crypto::hash, std::string>> txs;
     bool r = m_core.get_split_transactions_blobs(vh, txs, missed_txs);
     if(!r)
     {
@@ -602,7 +602,7 @@ namespace cryptonote
       if(r)
       {
         // sort to match original request
-        std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>> sorted_txs;
+        std::vector<std::tuple<crypto::hash, std::string, crypto::hash, std::string>> sorted_txs;
         unsigned txs_processed = 0;
         for (const crypto::hash &h: vh)
         {
@@ -641,7 +641,7 @@ namespace cryptonote
               res.status = "Failed to serialize transaction base";
               return true;
             }
-            const cryptonote::blobdata pruned = ss.str();
+            const std::string pruned = ss.str();
             sorted_txs.emplace_back(h, pruned, get_transaction_prunable_hash(tx), std::string(ptx_it->tx_blob, pruned.size()));
             missed_txs.erase(missed_it);
             per_tx_pool_tx_info.emplace(h, *ptx_it);
@@ -671,7 +671,7 @@ namespace cryptonote
           e.prunable_as_hex = string_tools::buff_to_hex_nodelimer(std::get<3>(tx));
         if (req.decode_as_json)
         {
-          cryptonote::blobdata tx_data;
+          std::string tx_data;
           cryptonote::transaction t;
           if (req.prune || std::get<3>(tx).empty())
           {
@@ -704,7 +704,7 @@ namespace cryptonote
       }
       else
       {
-      cryptonote::blobdata tx_data = std::get<1>(tx) + std::get<3>(tx);
+      std::string tx_data = std::get<1>(tx) + std::get<3>(tx);
       e.as_hex = string_tools::buff_to_hex_nodelimer(tx_data);
         if (req.decode_as_json)
         {
@@ -776,7 +776,7 @@ namespace cryptonote
     std::vector<crypto::key_image> key_images;
     for(const auto& ki_hex_str: req.key_images)
     {
-      blobdata b;
+      std::string b;
       if(!string_tools::parse_hexstr_to_binbuff(ki_hex_str, b))
       {
         res.status = "Failed to parse hex representation of key image";
@@ -1250,7 +1250,7 @@ namespace cryptonote
     return 0;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const cryptonote::blobdata &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, epee::json_rpc::error &error_resp)
+  bool core_rpc_server::get_block_template(const account_public_address &address, const crypto::hash *prev_block, const std::string &extra_nonce, size_t &reserved_offset, cryptonote::difficulty_type &difficulty, uint64_t &height, uint64_t &expected_reward, block &b, uint64_t &seed_height, crypto::hash &seed_hash, crypto::hash &next_seed_hash, epee::json_rpc::error &error_resp)
   {
     b = {};
     if(!m_core.get_block_template(b, prev_block, address, difficulty, height, expected_reward, extra_nonce, seed_height, seed_hash))
@@ -1260,7 +1260,7 @@ namespace cryptonote
       LOG_ERROR("Failed to create block template");
       return false;
     }
-    blobdata block_blob = t_serializable_object_to_blob(b);
+    std::string block_blob = t_serializable_object_to_blob(b);
     crypto::public_key tx_pub_key = cryptonote::get_tx_pub_key_from_extra(b.miner_tx);
     if(tx_pub_key == crypto::null_pkey)
     {
@@ -1353,7 +1353,7 @@ namespace cryptonote
     }
 
     block b;
-    cryptonote::blobdata blob_reserve;
+    std::string blob_reserve;
     size_t reserved_offset;
     if(!req.extra_nonce.empty())
     {
@@ -1384,8 +1384,8 @@ namespace cryptonote
       res.next_seed_hash = string_tools::pod_to_hex(next_seed_hash);
 
     res.reserved_offset = reserved_offset;
-    blobdata block_blob = t_serializable_object_to_blob(b);
-    blobdata hashing_blob = get_block_hashing_blob(b);
+    std::string block_blob = t_serializable_object_to_blob(b);
+    std::string hashing_blob = get_block_hashing_blob(b);
     res.prev_hash = string_tools::pod_to_hex(b.prev_id);
     res.blocktemplate_blob = string_tools::buff_to_hex_nodelimer(block_blob);
     res.blockhashing_blob = string_tools::buff_to_hex_nodelimer(hashing_blob);
@@ -1411,7 +1411,7 @@ namespace cryptonote
       error_resp.message = "Wrong param";
       return false;
     }
-    blobdata blockblob;
+    std::string blockblob;
     if(!string_tools::parse_hexstr_to_binbuff(req[0], blockblob))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_WRONG_BLOCKBLOB;
@@ -1485,7 +1485,7 @@ namespace cryptonote
 
       if (!r) return false;
 
-      blobdata blockblob;
+      std::string blockblob;
       if(!string_tools::parse_hexstr_to_binbuff(template_res.blocktemplate_blob, blockblob))
       {
         error_resp.code = CORE_RPC_ERROR_CODE_WRONG_BLOCKBLOB;
@@ -1839,7 +1839,7 @@ namespace cryptonote
       std::rotate(blk.tx_hashes.rbegin(), blk.tx_hashes.rbegin() + 1, blk.tx_hashes.rend());
 
       std::vector<crypto::hash> missed_txs;
-      std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>> txs;
+      std::vector<std::tuple<crypto::hash, std::string, crypto::hash, std::string>> txs;
       std::vector<COMMAND_RPC_GET_BLOCKS_RANGE::blocks_transaction_entry> txs_entries;
 
       std::vector<crypto::hash>::const_iterator vhi = blk.tx_hashes.begin();
@@ -1850,7 +1850,7 @@ namespace cryptonote
 
         e.tx_hash = epee::string_tools::pod_to_hex(*vhi++);
 
-        cryptonote::blobdata tx_data;
+        std::string tx_data;
         cryptonote::transaction t;
         tx_data = std::get<1>(tx) + std::get<3>(tx);
         if (cryptonote::parse_and_validate_tx_from_blob(tx_data, t))
@@ -2126,7 +2126,7 @@ namespace cryptonote
     {
       for (const auto &str: req.txids)
       {
-        cryptonote::blobdata txid_data;
+        std::string txid_data;
         if(!epee::string_tools::parse_hexstr_to_binbuff(str, txid_data))
         {
           failed = true;
@@ -2600,7 +2600,7 @@ namespace cryptonote
     res.status = "";
     for (const auto &str: req.txids)
     {
-      cryptonote::blobdata txid_data;
+      std::string txid_data;
       if(!epee::string_tools::parse_hexstr_to_binbuff(str, txid_data))
       {
         if (!res.status.empty()) res.status += ", ";
@@ -2610,7 +2610,7 @@ namespace cryptonote
       }
       crypto::hash txid = *reinterpret_cast<const crypto::hash*>(txid_data.data());
 
-      cryptonote::blobdata txblob;
+      std::string txblob;
       bool r = m_core.get_pool().get_transaction(txid, txblob);
       if (r)
       {
@@ -3145,7 +3145,7 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_service_nodes_state_changes(const COMMAND_RPC_GET_SN_STATE_CHANGES::request &req, COMMAND_RPC_GET_SN_STATE_CHANGES::response &res, epee::json_rpc::error& error_resp, const connection_context *ctx)
   {
-    using blob_t = cryptonote::blobdata;
+    using blob_t = std::string;
     using block_pair_t = std::pair<blob_t, block>;
     std::vector<block_pair_t> blocks;
 

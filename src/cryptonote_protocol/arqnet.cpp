@@ -376,7 +376,7 @@ void relay_obligation_votes(void *obj, const std::vector<service_nodes::quorum_v
   auto &snw = SNNWrapper::from(obj);
   auto my_keys_ptr = snw.core.get_service_node_keys();
   assert(my_keys_ptr);
-  const auto &my_keys = *my_keys_ptr;
+  [[maybe_unused]] const auto &my_keys = *my_keys_ptr;
 
   MDEBUG("Starting relay of " << votes.size() << " votes");
   std::vector<service_nodes::quorum_vote_t> relayed_votes;

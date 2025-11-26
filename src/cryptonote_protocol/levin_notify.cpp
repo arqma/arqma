@@ -117,7 +117,7 @@ namespace levin
       return outs;
     }
 
-    std::string make_tx_payload(std::vector<blobdata>&& txs, const bool pad)
+    std::string make_tx_payload(std::vector<std::string>&& txs, const bool pad)
     {
       NOTIFY_NEW_TRANSACTIONS::request request{};
       request.txs = std::move(txs);
@@ -157,9 +157,9 @@ namespace levin
       return fullBlob;
     }
 
-    bool make_payload_send_txs(connections& p2p, std::vector<blobdata>&& txs, const boost::uuids::uuid& destination, const bool pad)
+    bool make_payload_send_txs(connections& p2p, std::vector<std::string>&& txs, const boost::uuids::uuid& destination, const bool pad)
     {
-      const cryptonote::blobdata blob = make_tx_payload(std::move(txs), pad);
+      const std::string blob = make_tx_payload(std::move(txs), pad);
       p2p.for_connection(destination, [&blob](detail::p2p_context& context) {
         on_levin_traffic(context, true, true, false, blob.size(), NOTIFY_NEW_TRANSACTIONS::ID);
         return true;
@@ -248,7 +248,7 @@ namespace levin
       boost::asio::steady_timer flush_txs;
       boost::asio::io_context::strand strand;
       struct context_t {
-        std::vector<cryptonote::blobdata> fluff_txs;
+        std::vector<std::string> fluff_txs;
         std::chrono::steady_clock::time_point flush_time;
         bool m_is_income;
       };
@@ -325,7 +325,7 @@ namespace levin
 
         const auto now = std::chrono::steady_clock::now();
         auto next_flush = std::chrono::steady_clock::time_point::max();
-        std::vector<std::pair<std::vector<blobdata>, boost::uuids::uuid>> connections{};
+        std::vector<std::pair<std::vector<std::string>, boost::uuids::uuid>> connections{};
         for (auto &e : zone_->contexts)
         {
           auto &id = e.first;
@@ -359,7 +359,7 @@ namespace levin
     struct fluff_notify
     {
       std::shared_ptr<detail::zone> zone_;
-      std::vector<blobdata> txs_;
+      std::vector<std::string> txs_;
       boost::uuids::uuid source_;
 
       void operator()()
@@ -367,7 +367,7 @@ namespace levin
         run(std::move(zone_), epee::to_span(txs_), source_);
       }
 
-      static void run(std::shared_ptr<detail::zone> zone, epee::span<const blobdata> txs, const boost::uuids::uuid& source)
+      static void run(std::shared_ptr<detail::zone> zone, epee::span<const std::string> txs, const boost::uuids::uuid& source)
       {
         if (!zone || !zone->p2p || txs.empty())
           return;
@@ -695,7 +695,7 @@ namespace levin
     zone_->flush_txs.cancel();
   }
 
-  bool notify::send_txs(std::vector<blobdata> txs, const boost::uuids::uuid& source)
+  bool notify::send_txs(std::vector<std::string> txs, const boost::uuids::uuid& source)
   {
     if (txs.empty())
       return true;

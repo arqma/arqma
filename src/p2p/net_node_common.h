@@ -34,7 +34,6 @@
 #include <boost/uuid/uuid.hpp>
 #include <utility>
 #include <vector>
-#include "cryptonote_basic/blobdatatype.h"
 #include "net/enums.h"
 #include "net/levin_base.h"
 #include "net/net_utils_base.h"
@@ -49,14 +48,14 @@ namespace nodetool
   struct i_p2p_endpoint
   {
     virtual bool relay_notify_to_list(int command, const epee::span<const uint8_t> data_buff, std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections)=0;
-    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source)=0;
+    virtual epee::net_utils::zone send_txs(std::vector<std::string> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source)=0;
     virtual bool invoke_command_to_peer(int command, const epee::span<const uint8_t> req_buff, std::string& resp_buff, const epee::net_utils::connection_context_base& context)=0;
     virtual bool invoke_notify_to_peer(int command, const epee::span<const uint8_t> req_buff, const epee::net_utils::connection_context_base& context)=0;
     virtual bool drop_connection(const epee::net_utils::connection_context_base& context)=0;
     virtual void request_callback(const epee::net_utils::connection_context_base& context)=0;
     virtual uint64_t get_public_connections_count()=0;
-    virtual void for_each_connection(std::function<bool(t_connection_context&, peerid_type, uint32_t)> f)=0;
-    virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(t_connection_context&, peerid_type, uint32_t)> f)=0;
+    virtual void for_each_connection(std::function<bool(t_connection_context&, peerid_type)> f)=0;
+    virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(t_connection_context&, peerid_type)> f)=0;
     virtual bool block_host(epee::net_utils::network_address address, time_t seconds = 0, bool add_only = false)=0;
     virtual bool unblock_host(const epee::net_utils::network_address &address)=0;
     virtual std::map<std::string, time_t> get_blocked_hosts()=0;
@@ -74,7 +73,7 @@ namespace nodetool
     {
       return false;
     }
-    virtual epee::net_utils::zone send_txs(std::vector<cryptonote::blobdata> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source)
+    virtual epee::net_utils::zone send_txs(std::vector<std::string> txs, const epee::net_utils::zone origin, const boost::uuids::uuid& source)
     {
       return epee::net_utils::zone::invalid;
     }
@@ -94,11 +93,11 @@ namespace nodetool
     {
 
     }
-    virtual void for_each_connection(std::function<bool(t_connection_context&,peerid_type,uint32_t)> f)
+    virtual void for_each_connection(std::function<bool(t_connection_context&,peerid_type)> f)
     {
 
     }
-    virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(t_connection_context&,peerid_type,uint32_t)> f)
+    virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(t_connection_context&,peerid_type)> f)
     {
       return false;
     }

@@ -36,11 +36,6 @@
 
 #include "byte_slice.h"
 
-namespace
-{
-  const std::size_t page_size = 4096;
-}
-
 namespace epee
 {
   struct byte_slice_data

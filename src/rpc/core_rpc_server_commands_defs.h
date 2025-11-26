@@ -910,8 +910,8 @@ namespace cryptonote
       uint64_t seed_height;
       std::string seed_hash;
       std::string next_seed_hash;
-      blobdata blocktemplate_blob;
-      blobdata blockhashing_blob;
+      std::string blocktemplate_blob;
+      std::string blockhashing_blob;
       std::string status;
       bool untrusted;
 

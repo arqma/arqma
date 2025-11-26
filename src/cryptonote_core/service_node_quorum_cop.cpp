@@ -474,7 +474,7 @@ namespace service_nodes
       state_change_tx.tx_type = cryptonote::txtype::state_change;
 
       cryptonote::tx_verification_context tvc{};
-      cryptonote::blobdata const tx_blob = cryptonote::tx_to_blob(state_change_tx);
+      std::string const tx_blob = cryptonote::tx_to_blob(state_change_tx);
 
       bool result = core.handle_incoming_tx(tx_blob, tvc, cryptonote::tx_pool_options::new_tx());
       if (!result || tvc.m_verification_failed)

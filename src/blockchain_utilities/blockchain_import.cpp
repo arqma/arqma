@@ -401,12 +401,12 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
 
         if (opt_verify)
         {
-          cryptonote::blobdata block;
+          std::string block;
           cryptonote::block_to_blob(bp.block, block);
-          std::vector<cryptonote::blobdata> txs;
+          std::vector<std::string> txs;
           for (const auto &tx: bp.txs)
           {
-            txs.push_back(cryptonote::blobdata());
+            txs.push_back(std::string());
             cryptonote::tx_to_blob(tx, txs.back());
           }
           blocks.push_back({block, txs});
@@ -419,7 +419,7 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
         }
         else
         {
-          std::vector<std::pair<transaction, blobdata>> txs;
+          std::vector<std::pair<transaction, std::string>> txs;
           std::vector<transaction> archived_txs;
 
           archived_txs = bp.txs;

@@ -383,7 +383,7 @@ static bool for_all_transactions(const std::string &filename, uint64_t &start_id
       continue;
 
     cryptonote::transaction_prefix tx;
-    blobdata bd;
+    std::string bd;
     bd.assign(reinterpret_cast<char*>(v.mv_data), v.mv_size);
     std::stringstream ss;
     ss << bd;
@@ -466,7 +466,7 @@ static bool for_all_transactions(const std::string &filename, const uint64_t &st
     if (k.mv_size != sizeof(uint64_t))
       throw std::runtime_error("Bad key size");
     uint64_t height = *(const uint64_t*)k.mv_data;
-    blobdata bd;
+    std::string bd;
     bd.assign(reinterpret_cast<char*>(v.mv_data), v.mv_size);
     block b;
     if (!parse_and_validate_block_from_blob(bd, b))

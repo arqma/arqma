@@ -264,7 +264,9 @@ namespace tools
     try
     {
       res.balance = req.all_accounts ? m_wallet->balance_all(req.strict) : m_wallet->balance(req.account_index, req.strict);
-      res.unlocked_balance = req.all_accounts ? m_wallet->unlocked_balance_all(&res.blocks_to_unlock) : m_wallet->unlocked_balance(req.account_index, &res.blocks_to_unlock);
+      res.unlocked_balance = req.all_accounts
+        ? m_wallet->unlocked_balance_all(req.strict, &res.blocks_to_unlock)
+        : m_wallet->unlocked_balance(req.account_index, req.strict, &res.blocks_to_unlock);
       res.multisig_import_needed = m_wallet->multisig() && m_wallet->has_multisig_partial_key_images();
       std::map<uint32_t, std::map<uint32_t, uint64_t>> balance_per_subaddress_per_account;
       std::map<uint32_t, std::map<uint32_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress_per_account;
@@ -880,7 +882,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.unsigned_txset, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -970,7 +972,7 @@ namespace tools
       try
       {
         tools::wallet2::unsigned_tx_set exported_txs;
-        cryptonote::blobdata blob;
+        std::string blob;
         if(!epee::string_tools::parse_hexstr_to_binbuff(req.unsigned_txset, blob))
         {
           er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -997,7 +999,7 @@ namespace tools
       try
       {
         tools::wallet2::multisig_tx_set exported_txs;
-        cryptonote::blobdata blob;
+        std::string blob;
         if(!epee::string_tools::parse_hexstr_to_binbuff(req.multisig_txset, blob))
         {
           er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -1158,7 +1160,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.tx_data_hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -1360,7 +1362,7 @@ namespace tools
   {
     if (!m_wallet) return not_open(er);
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -1520,7 +1522,7 @@ namespace tools
     if (!m_wallet) return not_open(er);
     crypto::hash payment_id;
     crypto::hash8 payment_id8;
-    cryptonote::blobdata payment_id_blob;
+    std::string payment_id_blob;
     if(!epee::string_tools::parse_hexstr_to_binbuff(req.payment_id, payment_id_blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
@@ -1595,7 +1597,7 @@ namespace tools
     {
       crypto::hash payment_id;
       crypto::hash8 payment_id8;
-      cryptonote::blobdata payment_id_blob;
+      std::string payment_id_blob;
 
       // TODO - should the whole thing fail because of one bad id?
 
@@ -1882,7 +1884,7 @@ namespace tools
     std::list<std::string>::const_iterator i = req.txids.begin();
     while (i != req.txids.end())
     {
-      cryptonote::blobdata txid_blob;
+      std::string txid_blob;
       if(!epee::string_tools::parse_hexstr_to_binbuff(*i++, txid_blob) || txid_blob.size() != sizeof(crypto::hash))
       {
         er.code = WALLET_RPC_ERROR_CODE_WRONG_TXID;
@@ -1913,7 +1915,7 @@ namespace tools
     std::list<std::string>::const_iterator i = req.txids.begin();
     while (i != req.txids.end())
     {
-      cryptonote::blobdata txid_blob;
+      std::string txid_blob;
       if(!epee::string_tools::parse_hexstr_to_binbuff(*i++, txid_blob) || txid_blob.size() != sizeof(crypto::hash))
       {
         er.code = WALLET_RPC_ERROR_CODE_WRONG_TXID;
@@ -2322,7 +2324,7 @@ namespace tools
     }
 
     crypto::hash txid;
-    cryptonote::blobdata txid_blob;
+    std::string txid_blob;
     if(!epee::string_tools::parse_hexstr_to_binbuff(req.txid, txid_blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_WRONG_TXID;
@@ -2442,7 +2444,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.outputs_data_hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -2508,7 +2510,7 @@ namespace tools
       ski.resize(req.signed_key_images.size());
       for (size_t n = 0; n < ski.size(); ++n)
       {
-        cryptonote::blobdata bd;
+        std::string bd;
 
         if(!epee::string_tools::parse_hexstr_to_binbuff(req.signed_key_images[n].key_image, bd) || bd.size() != sizeof(crypto::key_image))
         {
@@ -2644,9 +2646,6 @@ namespace tools
         er.message = "Separate payment ID given with integrated address";
         return false;
       }
-
-      crypto::hash long_payment_id;
-      crypto::hash8 short_payment_id;
 
       if (!wallet2::parse_long_payment_id(req.payment_id, payment_id))
       {
@@ -2887,7 +2886,10 @@ namespace tools
     cryptonote::COMMAND_RPC_GET_HEIGHT::request hreq;
     cryptonote::COMMAND_RPC_GET_HEIGHT::response hres;
     hres.height = 0;
-    bool r = wal->invoke_http_json("/getheight", hreq, hres);
+    if (!wal->invoke_http_json("/getheight", hreq, hres))
+    {
+      MWARNING("Failed to query daemon height while generating wallet. Continuing with defaults");
+    }
     wal->set_refresh_from_block_height(hres.height);
     crypto::secret_key dummy_key;
     try {
@@ -3570,7 +3572,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata info;
+    std::string info;
     try
     {
       info = m_wallet->export_multisig();
@@ -3618,7 +3620,7 @@ namespace tools
       return false;
     }
 
-    std::vector<cryptonote::blobdata> info;
+    std::vector<std::string> info;
     info.resize(req.info.size());
     for (size_t n = 0; n < info.size(); ++n)
     {
@@ -3784,7 +3786,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.tx_data_hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -3853,7 +3855,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.tx_data_hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;

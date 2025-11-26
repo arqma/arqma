@@ -243,7 +243,7 @@ static bool is_v1_tx(MDB_cursor *c_txs_pruned, MDB_val *tx_id)
     throw std::runtime_error("Failed to find transaction pruned data: " + std::string(mdb_strerror(ret)));
   if (v.mv_size == 0)
     throw std::runtime_error("Invalid transaction pruned data");
-  return cryptonote::is_v1_tx(cryptonote::blobdata_ref{(const char*)v.mv_data, v.mv_size});
+  return cryptonote::is_v1_tx(std::string_view{(const char*)v.mv_data, v.mv_size});
 }
 
 static void prune(MDB_env *env0, MDB_env *env1)

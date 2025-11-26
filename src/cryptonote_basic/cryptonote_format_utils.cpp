@@ -30,6 +30,7 @@
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #include <atomic>
+#include <string_view>
 #include <boost/algorithm/string.hpp>
 #include "wipeable_string.h"
 #include "common/i18n.h"
@@ -224,7 +225,7 @@ namespace cryptonote
 #endif
 
   //---------------------------------------------------------------
-  bool parse_and_validate_tx_from_blob(const blobdata& tx_blob, transaction& tx)
+  bool parse_and_validate_tx_from_blob(const std::string& tx_blob, transaction& tx)
   {
     BINARY_ARCHIVE_STREAM(is, tx_blob);
     binary_archive<false> ba(is);
@@ -236,7 +237,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool parse_and_validate_tx_base_from_blob(const blobdata& tx_blob, transaction& tx)
+  bool parse_and_validate_tx_base_from_blob(const std::string& tx_blob, transaction& tx)
   {
     BINARY_ARCHIVE_STREAM(is, tx_blob);
     binary_archive<false> ba(is);
@@ -247,7 +248,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool parse_and_validate_tx_prefix_from_blob(const blobdata& tx_blob, transaction_prefix& tx)
+  bool parse_and_validate_tx_prefix_from_blob(const std::string& tx_blob, transaction_prefix& tx)
   {
     BINARY_ARCHIVE_STREAM(is, tx_blob);
     binary_archive<false> ba(is);
@@ -256,7 +257,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool parse_and_validate_tx_from_blob(const blobdata& tx_blob, transaction& tx, crypto::hash& tx_hash)
+  bool parse_and_validate_tx_from_blob(const std::string& tx_blob, transaction& tx, crypto::hash& tx_hash)
   {
     BINARY_ARCHIVE_STREAM(is, tx_blob);
     binary_archive<false> ba(is);
@@ -269,7 +270,7 @@ namespace cryptonote
     return get_transaction_hash(tx, tx_hash);
   }
   //-----------------------------------------------------------------------------
-  bool parse_and_validate_tx_from_blob(const blobdata& tx_blob, transaction& tx, crypto::hash& tx_hash, crypto::hash& tx_prefix_hash)
+  bool parse_and_validate_tx_from_blob(const std::string& tx_blob, transaction& tx, crypto::hash& tx_hash, crypto::hash& tx_prefix_hash)
   {
     if (!parse_and_validate_tx_from_blob(tx_blob, tx, tx_hash))
       return false;
@@ -277,7 +278,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool is_v1_tx(const blobdata_ref& tx_blob)
+  bool is_v1_tx(std::string_view tx_blob)
   {
     uint8_t version;
     const char* begin = static_cast<const char*>(tx_blob.data());
@@ -286,11 +287,6 @@ namespace cryptonote
     if (read <= 0)
       throw std::runtime_error("Internal error getting transaction version");
     return version <= 1;
-  }
-  //---------------------------------------------------------------
-  bool is_v1_tx(const blobdata& tx_blob)
-  {
-    return is_v1_tx(blobdata_ref{tx_blob.data(), tx_blob.size()});
   }
   //---------------------------------------------------------------
   bool generate_key_image_helper(const account_keys& ack, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, const crypto::public_key& out_key, const crypto::public_key& tx_public_key, const std::vector<crypto::public_key>& additional_tx_public_keys, size_t real_output_index, keypair& in_ephemeral, crypto::key_image& ki, hw::device &hwdev)
@@ -732,7 +728,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool add_extra_nonce_to_tx_extra(std::vector<uint8_t>& tx_extra, const blobdata& extra_nonce)
+  bool add_extra_nonce_to_tx_extra(std::vector<uint8_t>& tx_extra, const std::string& extra_nonce)
   {
     CHECK_AND_ASSERT_MES(extra_nonce.size() <= TX_EXTRA_NONCE_MAX_COUNT, false, "extra nonce could be 255 bytes max");
     size_t start_pos = tx_extra.size();
@@ -929,7 +925,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  void set_payment_id_to_tx_extra_nonce(blobdata& extra_nonce, const crypto::hash& payment_id)
+  void set_payment_id_to_tx_extra_nonce(std::string& extra_nonce, const crypto::hash& payment_id)
   {
     extra_nonce.clear();
     extra_nonce.push_back(TX_EXTRA_NONCE_PAYMENT_ID);
@@ -937,7 +933,7 @@ namespace cryptonote
     std::copy(payment_id_ptr, payment_id_ptr + sizeof(payment_id), std::back_inserter(extra_nonce));
   }
   //---------------------------------------------------------------
-  void set_encrypted_payment_id_to_tx_extra_nonce(blobdata& extra_nonce, const crypto::hash8& payment_id)
+  void set_encrypted_payment_id_to_tx_extra_nonce(std::string& extra_nonce, const crypto::hash8& payment_id)
   {
     extra_nonce.clear();
     extra_nonce.push_back(TX_EXTRA_NONCE_ENCRYPTED_PAYMENT_ID);
@@ -945,7 +941,7 @@ namespace cryptonote
     std::copy(payment_id_ptr, payment_id_ptr + sizeof(payment_id), std::back_inserter(extra_nonce));
   }
   //---------------------------------------------------------------
-  bool get_payment_id_from_tx_extra_nonce(const blobdata& extra_nonce, crypto::hash& payment_id)
+  bool get_payment_id_from_tx_extra_nonce(const std::string& extra_nonce, crypto::hash& payment_id)
   {
     if(sizeof(crypto::hash) + 1 != extra_nonce.size())
       return false;
@@ -955,7 +951,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool get_encrypted_payment_id_from_tx_extra_nonce(const blobdata& extra_nonce, crypto::hash8& payment_id)
+  bool get_encrypted_payment_id_from_tx_extra_nonce(const std::string& extra_nonce, crypto::hash8& payment_id)
   {
     if(sizeof(crypto::hash8) + 1 != extra_nonce.size())
       return false;
@@ -1210,7 +1206,7 @@ namespace cryptonote
     cn_fast_hash(blob.data(), blob.size(), res);
   }
   //---------------------------------------------------------------
-  void get_blob_hash(const blobdata& blob, crypto::hash& res)
+  void get_blob_hash(const std::string& blob, crypto::hash& res)
   {
     cn_fast_hash(blob.data(), blob.size(), res);
   }
@@ -1268,7 +1264,7 @@ namespace cryptonote
     return s;
   }
   //---------------------------------------------------------------
-  crypto::hash get_blob_hash(const blobdata& blob)
+  crypto::hash get_blob_hash(const std::string& blob)
   {
     crypto::hash h = null_hash;
     get_blob_hash(blob, h);
@@ -1295,7 +1291,7 @@ namespace cryptonote
     return get_transaction_hash(t, res, NULL);
   }
   //---------------------------------------------------------------
-  bool calculate_transaction_prunable_hash(const transaction& t, const cryptonote::blobdata *blob, crypto::hash& res)
+  bool calculate_transaction_prunable_hash(const transaction& t, const std::string *blob, crypto::hash& res)
   {
     if (t.version == txversion::v1)
       return false;
@@ -1321,7 +1317,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  crypto::hash get_transaction_prunable_hash(const transaction& t, const cryptonote::blobdata *blobdata)
+  crypto::hash get_transaction_prunable_hash(const transaction& t, const std::string *blobdata)
   {
     crypto::hash res;
     CHECK_AND_ASSERT_THROW_MES(calculate_transaction_prunable_hash(t, blobdata, res), "Failed to calculate tx prunable hash");
@@ -1378,7 +1374,7 @@ namespace cryptonote
     // prefix
     get_transaction_prefix_hash(t, hashes[0]);
 
-    const blobdata blob = tx_to_blob(t);
+    const std::string blob = tx_to_blob(t);
 
     // base rct
     if (t.is_transfer())
@@ -1502,9 +1498,9 @@ namespace cryptonote
     return get_transaction_hash(t, res, &blob_size);
   }
   //---------------------------------------------------------------
-  blobdata get_block_hashing_blob(const block& b)
+  std::string get_block_hashing_blob(const block& b)
   {
-    blobdata blob = t_serializable_object_to_blob(static_cast<block_header>(b));
+    std::string blob = t_serializable_object_to_blob(static_cast<block_header>(b));
     crypto::hash tree_root_hash = get_tx_tree_hash(b);
     blob.append(reinterpret_cast<const char*>(&tree_root_hash), sizeof(tree_root_hash));
     blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
@@ -1564,7 +1560,7 @@ namespace cryptonote
     return res;
   }
   //---------------------------------------------------------------
-  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash *block_hash)
+  bool parse_and_validate_block_from_blob(const std::string& b_blob, block& b, crypto::hash *block_hash)
   {
     std::stringstream ss;
     ss << b_blob;
@@ -1583,32 +1579,32 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b)
+  bool parse_and_validate_block_from_blob(const std::string& b_blob, block& b)
   {
     return parse_and_validate_block_from_blob(b_blob, b, NULL);
   }
   //---------------------------------------------------------------
-  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash &block_hash)
+  bool parse_and_validate_block_from_blob(const std::string& b_blob, block& b, crypto::hash &block_hash)
   {
     return parse_and_validate_block_from_blob(b_blob, b, &block_hash);
   }
   //---------------------------------------------------------------
-  blobdata block_to_blob(const block& b)
+  std::string block_to_blob(const block& b)
   {
     return t_serializable_object_to_blob(b);
   }
   //---------------------------------------------------------------
-  bool block_to_blob(const block& b, blobdata& b_blob)
+  bool block_to_blob(const block& b, std::string& b_blob)
   {
     return t_serializable_object_to_blob(b, b_blob);
   }
   //---------------------------------------------------------------
-  blobdata tx_to_blob(const transaction& tx)
+  std::string tx_to_blob(const transaction& tx)
   {
     return t_serializable_object_to_blob(tx);
   }
   //---------------------------------------------------------------
-  bool tx_to_blob(const transaction& tx, blobdata& b_blob)
+  bool tx_to_blob(const transaction& tx, std::string& b_blob)
   {
     return t_serializable_object_to_blob(tx, b_blob);
   }

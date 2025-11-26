@@ -139,7 +139,7 @@ bool BootstrapFile::initialize_file()
 
   uint32_t bd_size = 0;
 
-  blobdata bd = t_serializable_object_to_blob(bfi);
+  std::string bd = t_serializable_object_to_blob(bfi);
   MDEBUG("bootstrap::file_info size: " << bd.size());
   bd_size = bd.size();
 
@@ -246,7 +246,7 @@ void BootstrapFile::write_block(block& block)
     bp.coins_generated = coins_generated;
   }
 
-  blobdata bd = t_serializable_object_to_blob(bp);
+  std::string bd = t_serializable_object_to_blob(bp);
   m_output_stream->write((const char*)bd.data(), bd.size());
 }
 

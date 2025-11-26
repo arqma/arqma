@@ -283,6 +283,8 @@ std::mutex local_control_mutex;
 /// Accesses a thread-local command socket connected to the proxy's command socket used to issue
 /// commands in a thread-safe manner (without requiring a mutex).
 zmq::socket_t &SNNetwork::get_control_socket() {
+    assert(proxy_thread.joinable());
+
     // Maps the SNNetwork unique ID to a local thread command socket.
     static thread_local std::map<int, std::shared_ptr<zmq::socket_t>> control_sockets;
     static thread_local std::pair<int, std::shared_ptr<zmq::socket_t>> last{-1, nullptr};
@@ -308,7 +310,6 @@ zmq::socket_t &SNNetwork::get_control_socket() {
     last.second = std::move(control);
     return *last.second;
 }
-
 
 SNNetwork::SNNetwork(
         std::string pubkey_, std::string privkey_,
@@ -1120,6 +1121,9 @@ void SNNetwork::process_zap_requests(zmq::socket_t &zap_auth) {
 }
 
 SNNetwork::~SNNetwork() {
+    if (!proxy_thread.joinable())
+      return;
+
     SN_LOG(info, "SNNetwork shutting down proxy thread");
     detail::send_control(get_control_socket(), "QUIT");
     proxy_thread.join();
