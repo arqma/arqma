@@ -1121,12 +1121,10 @@ void SNNetwork::process_zap_requests(zmq::socket_t &zap_auth) {
 }
 
 SNNetwork::~SNNetwork() {
-    if (!proxy_thread.joinable())
-      return;
-
     SN_LOG(info, "SNNetwork shutting down proxy thread");
     detail::send_control(get_control_socket(), "QUIT");
-    proxy_thread.join();
+    if (proxy_thread.joinable())
+      proxy_thread.join();
     SN_LOG(info, "SNNetwork proxy thread has stopped");
 }
 

@@ -73,8 +73,8 @@ namespace cryptonote
   extern const command_line::arg_descriptor<bool> arg_offline;
   extern const command_line::arg_descriptor<size_t> arg_block_download_max_size;
 
-  extern void *(*arqnet_new)(core &core, const std::string &bind);
-  extern void (*arqnet_delete)(void *&self);
+  extern void *(*arqnet_new)(core &core, service_nodes::service_node_list &sn_list, const std::string &bind);
+  extern void (*arqnet_delete)(void *self);
   extern void (*arqnet_relay_obligation_votes)(void *self, const std::vector<service_nodes::quorum_vote_t> &votes);
   extern bool init_core_callback_complete;
 
@@ -100,10 +100,9 @@ namespace cryptonote
        *
        * @param pprotocol pre-constructed protocol object to store and use
        */
-     explicit core(i_cryptonote_protocol* pprotocol);
+     core(i_cryptonote_protocol* pprotocol);
 
-     core(const core &) = delete;
-     core &operator=(const core &) = delete;
+     bool handle_get_blocks(NOTIFY_REQUEST_GET_BLOCKS::request& arg, NOTIFY_RESPONSE_GET_BLOCKS::request& rsp, cryptonote_connection_context& context);
 
      /**
       * @brief calls various idle routines
@@ -139,24 +138,7 @@ namespace cryptonote
       */
      bool handle_incoming_tx(const std::string& tx_blob, tx_verification_context& tvc, const tx_pool_options &opts);
 
-     struct tx_verification_batch_info
-     {
-       tx_verification_context tvc{};
-       bool parsed = false;
-       bool result = false;
-       bool already_have = false;
-       const std::string *blob = nullptr;
-       crypto::hash tx_hash;
-       transaction tx;
-     };
-
-     auto incoming_tx_lock() { return std::unique_lock{m_incoming_tx_lock}; }
-
-     std::vector<tx_verification_batch_info> parse_incoming_txs(const std::vector<std::string>& tx_blobs, const tx_pool_options &opts);
-
-     bool handle_parsed_txs(std::vector<tx_verification_batch_info> &parsed_txs, const tx_pool_options &opts);
-
-     std::vector<tx_verification_batch_info> handle_incoming_txs(const std::vector<std::string>& tx_blobs, const tx_pool_options &opts);
+     bool handle_incoming_txs(const std::vector<std::string>& tx_blobs, std::vector<tx_verification_context>& tvc, const tx_pool_options &opts);
 
      /**
       * @brief handles an incoming block
@@ -232,7 +214,7 @@ namespace cryptonote
      /**
       * @brief called when a transaction is relayed
       */
-     virtual crypto::hash on_transaction_relayed(const std::string& tx);
+     virtual void on_transaction_relayed(const std::string& tx);
 
      /**
       * @brief gets the miner instance
@@ -420,6 +402,16 @@ namespace cryptonote
       */
      void set_cryptonote_protocol(i_cryptonote_protocol* pprotocol);
 
+     bool pool_has_tx(const crypto::hash &txid) const;
+     bool get_pool_transactions(std::vector<transaction>& txs, bool include_unrelayed_txes = true) const;
+     bool get_txpool_backlog(std::vector<tx_backlog_entry>& backlog) const;
+     bool get_pool_transaction_hashes(std::vector<crypto::hash>& txs, bool include_unrelayed_txes = true) const;
+     bool get_pool_transaction_stats(struct txpool_stats& stats, bool include_unrelayed_txes = true) const;
+     bool get_pool_transaction(const crypto::hash& id, std::string& tx) const;
+     bool get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_unrelayed_txes = true) const;
+     bool get_pool_for_rpc(std::vector<cryptonote::rpc::tx_in_pool>& tx_infos, cryptonote::rpc::key_images_with_tx_hashes& key_image_infos) const;
+     size_t get_pool_transactions_count() const;
+
      /**
       * @copydoc Blockchain::get_total_transactions
       *
@@ -433,6 +425,8 @@ namespace cryptonote
       * @note see Blockchain::have_block
       */
      bool have_block(const crypto::hash& id) const;
+
+     bool get_short_chain_history(std::list<crypto::hash>& ids) const;
 
      /**
       * @copydoc Blockchain::find_blockchain_supplement(const std::list<crypto::hash>&, NOTIFY_RESPONSE_CHAIN_ENTRY::request&) const
@@ -516,9 +510,6 @@ namespace cryptonote
 
      const service_nodes::service_node_list &get_service_node_list() const { return m_service_node_list; }
      service_nodes::service_node_list &get_service_node_list() { return m_service_node_list; }
-
-     const tx_memory_pool &get_pool() const { return m_mempool; }
-     tx_memory_pool &get_pool() { return m_mempool; }
 
      /**
       * @copydoc miner::on_synchronized
@@ -793,9 +784,9 @@ namespace cryptonote
      /// Time point at which the storage server last pinged us
      std::atomic<time_t> m_last_storage_server_ping; //, m_last_arqnet_ping;
 
-     bool relay_txpool_transactions();
-
    private:
+
+     bool add_new_tx(transaction& tx, const crypto::hash& tx_hash, const std::string &blob, size_t tx_weight, tx_verification_context& tvc, const tx_pool_options& opts);
 
      /**
       * @copydoc Blockchain::add_new_block
@@ -823,8 +814,9 @@ namespace cryptonote
      bool check_tx_semantic(const transaction& tx, bool kept_by_block) const;
      void set_semantics_failed(const crypto::hash &tx_hash);
 
-     void parse_incoming_tx_pre(tx_verification_batch_info &tx_info);
-     void parse_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool kept_by_block);
+     bool handle_incoming_tx_pre(const std::string& tx_blob, tx_verification_context& tvc, cryptonote::transaction &tx, crypto::hash &tx_hash, const tx_pool_options &opts);
+     struct tx_verification_batch_info { const cryptonote::transaction *tx; crypto::hash tx_hash; tx_verification_context &tvc; bool &result; };
+     bool handle_incoming_tx_accumulated_batch(std::vector<tx_verification_batch_info> &tx_info, bool kept_by_block);
 
      /**
       * @brief act on a set of command line options given
@@ -862,6 +854,8 @@ namespace cryptonote
       * @return false if any key image is not in the valid domain, otherwise true
       */
      bool check_tx_inputs_keyimages_domain(const transaction& tx) const;
+
+     bool relay_txpool_transactions();
 
      /**
       * @brief checks DNS versions
@@ -942,7 +936,6 @@ namespace cryptonote
 
      std::string m_arqnet_bind_ip;
      void *m_arqnet_obj = nullptr;
-     std::mutex m_arqnet_init_mutex;
 
      size_t block_sync_size;
 
