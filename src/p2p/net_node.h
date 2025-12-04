@@ -354,7 +354,7 @@ namespace nodetool
     bool peer_sync_idle_maker();
     bool do_handshake_with_peer(peerid_type& pi, p2p_connection_context& context, bool just_take_peerlist = false);
     bool do_peer_timed_sync(const epee::net_utils::connection_context_base& context, peerid_type peer_id);
-    bool update_dns_blocklist();
+    bool update_dns_banlist();
 
     bool make_new_connection_from_anchor_peerlist(const std::vector<anchor_peerlist_entry>& anchor_peerlist);
     bool make_new_connection_from_peerlist(network_zone& zone, bool use_white_list);
@@ -453,7 +453,7 @@ namespace nodetool
     tools::periodic_task m_peerlist_store_interval{30min};
     tools::periodic_task m_gray_peerlist_housekeeping_interval{1min};
     tools::periodic_task m_incoming_connections_interval{1h};
-    tools::periodic_task m_dns_blocklist_interval{116h};
+    tools::periodic_task m_dns_banlist_interval{116h};
 
     std::list<epee::net_utils::network_address>   m_priority_peers;
     std::vector<epee::net_utils::network_address> m_exclusive_peers;
@@ -495,7 +495,7 @@ namespace nodetool
 
     epee::net_utils::ssl_support_t m_ssl_support;
 
-    bool m_enable_dns_blocklist;
+    bool m_enable_dns_banlist;
 
     uint32_t max_connections;
   };
@@ -518,7 +518,7 @@ namespace nodetool
     extern const command_line::arg_descriptor<std::vector<std::string>> arg_anonymous_inbound;
     extern const command_line::arg_descriptor<bool> arg_p2p_hide_my_port;
     extern const command_line::arg_descriptor<std::string> arg_ban_list;
-    extern const command_line::arg_descriptor<bool> arg_enable_dns_blocklist;
+    extern const command_line::arg_descriptor<bool> arg_enable_dns_banlist;
 
     extern const command_line::arg_descriptor<bool> arg_no_igd;
     extern const command_line::arg_descriptor<std::string> arg_igd;

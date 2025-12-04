@@ -229,7 +229,7 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 #define STORAGE_SERVER_PING_LIFETIME                    UPTIME_PROOF_FREQUENCY_IN_SECONDS
 //#define ARQNET_PING_LIFETIME                            UPTIME_PROOF_FREQUENCY_IN_SECONDS
 
-#define DNS_BLOCKLIST_LIFETIME                          (86400 * 8) // 8 days
+#define DNS_BANLIST_LIFETIME                          (86400 * 8) // 8 days
 
 namespace config
 {

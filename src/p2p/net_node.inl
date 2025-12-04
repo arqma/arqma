@@ -104,7 +104,7 @@ namespace nodetool
     command_line::add_arg(desc, arg_anonymous_inbound);
     command_line::add_arg(desc, arg_p2p_hide_my_port);
     command_line::add_arg(desc, arg_ban_list);
-    command_line::add_arg(desc, arg_enable_dns_blocklist);
+    command_line::add_arg(desc, arg_enable_dns_banlist);
     command_line::add_arg(desc, arg_no_igd);
     command_line::add_arg(desc, arg_igd);
     command_line::add_arg(desc, arg_out_peers);
@@ -481,7 +481,7 @@ namespace nodetool
     if(command_line::has_arg(vm, arg_p2p_hide_my_port))
       m_hide_my_port = true;
 
-    m_enable_dns_blocklist = command_line::get_arg(vm, arg_enable_dns_blocklist);
+    m_enable_dns_banlist = command_line::get_arg(vm, arg_enable_dns_banlist);
 
     if ( !set_max_out_peers(public_zone, command_line::get_arg(vm, arg_out_peers) ) )
       return false;
@@ -1796,20 +1796,20 @@ namespace nodetool
     m_gray_peerlist_housekeeping_interval.do_call([this] { return gray_peerlist_housekeeping(); });
     m_peerlist_store_interval.do_call([this] { return store_config(); });
     m_incoming_connections_interval.do_call([this] { return check_incoming_connections(); });
-    m_dns_blocklist_interval.do_call([this] { return update_dns_blocklist(); });
+    m_dns_banlist_interval.do_call([this] { return update_dns_banlist(); });
     return true;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::update_dns_blocklist()
+  bool node_server<t_payload_net_handler>::update_dns_banlist()
   {
-    if (!m_enable_dns_blocklist)
+    if (!m_enable_dns_banlist)
       return true;
     if (m_nettype != cryptonote::MAINNET)
       return true;
 
     static const std::vector<std::string> dns_urls = {
-      "blocklist.arqma.com"
+      "banlist.arqma.com"
     };
 
     std::vector<std::string> records;
@@ -1817,7 +1817,7 @@ namespace nodetool
       return true;
 
     unsigned good = 0;
-    [[maybe_unused]] unsigned bad = 0;
+    unsigned bad = 0;
     for (const auto& record : records)
     {
       std::vector<std::string> ips;
@@ -1827,16 +1827,16 @@ namespace nodetool
         const expect<epee::net_utils::network_address> parsed_addr = net::get_network_address(ip, 0);
         if (!parsed_addr)
         {
-          MWARNING("Invalid IP address from DNS blocklist: " << ip << " - " << parsed_addr.error());
+          MWARNING("Invalid IP address from DNS ban list: " << ip << " - " << parsed_addr.error());
           ++bad;
           continue;
         }
-        block_host(*parsed_addr, DNS_BLOCKLIST_LIFETIME, true);
+        block_host(*parsed_addr, DNS_BANLIST_LIFETIME, true);
         ++good;
       }
     }
     if (good > 0)
-      MINFO(good << " addresses added to the blocklist");
+      MINFO(good << " addresses added to the ban list");
     return true;
   }
   //-----------------------------------------------------------------------------------

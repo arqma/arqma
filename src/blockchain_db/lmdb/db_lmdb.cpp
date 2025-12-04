@@ -5784,7 +5784,7 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
           if (ret == MDB_NOTFOUND) break;
           if (ret) throw0(DB_ERROR(lmdb_error("Failed to enumerate transactions: ", ret).c_str()));
 
-          [[maybe_unused]] const crypto::hash &hash = tx_index->key;
+          const crypto::hash &hash = tx_index->key;
           tx_index                 = (txindex const *)val.mv_data;
           key.mv_data              = (void *)&tx_index->data.tx_id;
           key.mv_size              = sizeof(tx_index->data.tx_id);
@@ -5831,7 +5831,7 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
     add_output_blacklist(global_output_indexes);
   }
 
-  if (auto res = mdb_dbi_open(txn, LMDB_ALT_BLOCKS, 0, &m_alt_blocks))
+  if (mdb_dbi_open(txn, LMDB_ALT_BLOCKS, 0, &m_alt_blocks))
     return;
 
   MDB_cursor *cursor;
@@ -5898,7 +5898,7 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
 void BlockchainLMDB::migrate_6_7()
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
-  MGINFO_YELLOW("Migrating blockchain from DB Version 5 to 6 - this may take a while");
+  MGINFO_YELLOW("Migrating blockchain from DB Version to v7 - this may take a while");
 
   mdb_txn_safe txn(false);
   {
@@ -5906,7 +5906,7 @@ void BlockchainLMDB::migrate_6_7()
     if (result) throw0(DB_ERROR(lmdb_error("Failed to create a transaction for thr db: ", result).c_str()));
   }
 
-  if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
+  if (mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
     return;
 
   MDB_cursor *cursor;
@@ -5966,7 +5966,7 @@ void BlockchainLMDB::migrate_6_7()
       {
         auto const &unaligned = unaligned_signatures[i];
         service_nodes::voter_to_signature aligned = {};
-        aligned.voter_index                       = unaligned.voter_index;
+        aligned.voter_index = unaligned.voter_index;
         memcpy(aligned.signature.c.data, unaligned.signature.c, sizeof(aligned.signature.c));
         memcpy(aligned.signature.r.data, unaligned.signature.r, sizeof(aligned.signature.r));
         checkpoint.signatures.push_back(aligned);
@@ -5995,7 +5995,7 @@ void BlockchainLMDB::migrate_6_7()
     if (auto result = mdb_txn_begin(m_env, NULL, 0, txn))
       throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
 
-    if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
+    if (mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
       return;
     MDB_cursor *cursor;
     if (auto ret = mdb_cursor_open(txn, m_block_checkpoints, &cursor))
