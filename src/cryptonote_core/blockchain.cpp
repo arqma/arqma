@@ -4780,7 +4780,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
         } while(0); \
 
   // generate sorted tables for all amounts and absolute offsets
-  size_t tx_index = 0;
+  size_t tx_index = 0, block_index = 0;
   for (const auto &entry : blocks_entry)
   {
     if (m_cancel)
@@ -4845,6 +4845,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
 
       }
     }
+    ++block_index;
   }
 
   // sort and remove duplicate absolute_offsets in offset_map
@@ -4884,12 +4885,12 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::vector<block_complete
 
   // now generate a table for each tx_prefix and k_image hashes
   tx_index = 0;
-  for ([[maybe_unused]] const auto &entry : blocks_entry)
+  for (const auto &entry : blocks_entry)
   {
     if (m_cancel)
       return false;
 
-    for ([[maybe_unused]] const auto &tx_blob : entry.txs)
+    for (const auto &tx_blob : entry.txs)
     {
       if (tx_index >= txes.size())
         SCAN_TABLE_QUIT("tx_index is out of sync");

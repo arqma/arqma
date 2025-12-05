@@ -40,6 +40,7 @@
 #include "cryptonote_core/service_node_list.h"
 #include "cryptonote_config.h"
 #include "blockchain.h"
+#include "blockchain_db/locked_txn.h"
 #include "blockchain_db/blockchain_db.h"
 #include "common/lock.h"
 #include "int-util.h"
@@ -80,29 +81,6 @@ namespace cryptonote
     {
       return amount;
     }
-
-    // This class is meant to create a batch when none currently exists.
-    // If a batch exists, it can't be from another thread, since we can
-    // only be called with the txpool lock taken, and it is held during
-    // the whole prepare/handle/cleanup incoming block sequence.
-    class LockedTXN {
-    public:
-      LockedTXN(Blockchain &b): m_db{b.get_db()}
-      {
-        m_batch = m_db.batch_start();
-      }
-      LockedTXN(const LockedTXN &) = delete;
-      LockedTXN &operator=(const LockedTXN &) = delete;
-      LockedTXN(LockedTXN &&o) : m_db{o.m_db}, m_batch{o.m_batch} { o.m_batch = false; }
-      LockedTXN &operator=(LockedTXN &&) = delete;
-
-      void commit() { try { if (m_batch) { m_db.batch_stop(); m_batch = false; } } catch (const std::exception &e) { MWARNING("LockedTXN::commit filtering exception: " << e.what()); } }
-      void abort() { try { if (m_batch) { m_db.batch_abort(); m_batch = false; } } catch (const std::exception &e) { MWARNING("LockedTXN::abort filtering exception: " << e.what()); } }
-      ~LockedTXN() { this->abort(); }
-    private:
-      BlockchainDB &m_db;
-      bool m_batch;
-    };
   }
   //---------------------------------------------------------------------------------
   tx_memory_pool::tx_memory_pool(Blockchain& bchs): m_blockchain(bchs), m_cookie(0), m_txpool_max_weight(config::blockchain_settings::DEFAULT_TXPOOL_MAX_WEIGHT), m_txpool_weight(0)
@@ -354,7 +332,7 @@ namespace cryptonote
         {
           m_parsed_tx_cache.insert(std::make_pair(id, tx));
           std::unique_lock b_lock{m_blockchain};
-          LockedTXN lock(m_blockchain);
+          LockedTXN lock(m_blockchain.get_db());
           m_blockchain.add_txpool_tx(id, blob, meta);
           if(!insert_key_images(tx, id, opts.kept_by_block))
             return false;
@@ -399,7 +377,7 @@ namespace cryptonote
         if(opts.kept_by_block)
           m_parsed_tx_cache.insert(std::make_pair(id, tx));
         std::unique_lock b_lock{m_blockchain};
-        LockedTXN lock(m_blockchain);
+        LockedTXN lock(m_blockchain.get_db());
         m_blockchain.remove_txpool_tx(id);
         m_blockchain.add_txpool_tx(id, blob, meta);
         if(!insert_key_images(tx, id, opts.kept_by_block))
@@ -512,7 +490,7 @@ namespace cryptonote
     std::unique_lock tx_lock{*this, std::defer_lock};
     std::unique_lock bc_lock{m_blockchain, std::defer_lock};
     std::lock(tx_lock, bc_lock);
-    LockedTXN lock(m_blockchain);
+    LockedTXN lock(m_blockchain.get_db());
     bool changed = false;
 
     auto try_pruning = [this, &changed](auto &it, bool forward) -> bool {
@@ -625,7 +603,7 @@ namespace cryptonote
 
     try
     {
-      LockedTXN lock(m_blockchain);
+      LockedTXN lock(m_blockchain.get_db());
       txpool_tx_meta_t meta;
       if(!m_blockchain.get_txpool_tx_meta(id, meta))
       {
@@ -714,7 +692,7 @@ namespace cryptonote
 
     if(!remove.empty())
     {
-      LockedTXN lock(m_blockchain);
+      LockedTXN lock(m_blockchain.get_db());
       for(const std::pair<crypto::hash, uint64_t> &entry: remove)
       {
         const crypto::hash &txid = entry.first;
@@ -808,7 +786,7 @@ namespace cryptonote
     auto locks = tools::unique_locks(m_transactions_lock, m_blockchain);
 
     const time_t now = time(NULL);
-    LockedTXN lock(m_blockchain);
+    LockedTXN lock(m_blockchain.get_db());
     for (auto it = txs.begin(); it != txs.end(); ++it)
     {
       try
@@ -1335,7 +1313,7 @@ namespace cryptonote
     auto locks = tools::unique_locks(m_transactions_lock, m_blockchain);
 
     bool changed = false;
-    LockedTXN lock(m_blockchain);
+    LockedTXN lock(m_blockchain.get_db());
     for(size_t i = 0; i!= tx.vin.size(); i++)
     {
       CHECKED_GET_SPECIFIC_VARIANT(tx.vin[i], const txin_to_key, itk, void());
@@ -1396,7 +1374,7 @@ namespace cryptonote
 
     LOG_PRINT_L2("Filling block template, median weight " << median_weight << ", " << m_txs_by_fee_and_receive_time.size() << " txes in the pool");
 
-    LockedTXN lock(m_blockchain);
+    LockedTXN lock(m_blockchain.get_db());
 
     auto sorted_it = m_txs_by_fee_and_receive_time.begin();
     for (; sorted_it != m_txs_by_fee_and_receive_time.end(); ++sorted_it)
@@ -1509,7 +1487,7 @@ namespace cryptonote
     size_t n_removed = 0;
     if (!remove.empty())
     {
-      LockedTXN lock(m_blockchain);
+      LockedTXN lock(m_blockchain.get_db());
       for (const crypto::hash &txid: remove)
       {
         try
@@ -1590,7 +1568,7 @@ namespace cryptonote
     }
     if(!remove.empty())
     {
-      LockedTXN lock(m_blockchain);
+      LockedTXN lock(m_blockchain.get_db());
       for(const auto &txid: remove)
       {
         try

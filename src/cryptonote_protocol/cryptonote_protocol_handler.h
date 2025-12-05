@@ -93,8 +93,8 @@ namespace cryptonote
     bool get_payload_sync_data(std::string& data);
     bool get_payload_sync_data(CORE_SYNC_DATA& hshd);
     bool on_callback(cryptonote_connection_context& context);
-    t_core& get_core(){return m_core;}
-    bool is_synchronized(){return m_synchronized;}
+    t_core& get_core() { return m_core; }
+    bool is_synchronized() { return m_synchronized; }
     void log_connections();
     std::list<connection_info> get_connections();
     const block_queue &get_block_queue() const { return m_block_queue; }
@@ -123,26 +123,19 @@ namespace cryptonote
     bool relay_to_synchronized_peers(typename T::request& arg, cryptonote_connection_context& exclude_context)
     {
       LOG_PRINT_L2("[" << epee::net_utils::print_connection_context_short(exclude_context) << "] post relay " << typeid(T).name() << " -->");
+      std::string out;
+      epee::serialization::store_t_to_binary(arg, out);
+
       std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections;
       m_p2p->for_each_connection([&exclude_context, &connections](connection_context& context, nodetool::peerid_type peer_id)
       {
-        if (context.m_state > cryptonote_connection_context::state_synchronizing)
-        {
-          epee::net_utils::zone zone = context.m_remote_address.get_zone();
-          if (peer_id && exclude_context.m_connection_id != context.m_connection_id)
-            connections.push_back({zone, context.m_connection_id});
-        }
+        epee::net_utils::zone zone = context.m_remote_address.get_zone();
+        if (peer_id && exclude_context.m_connection_id != context.m_connection_id)
+          connections.push_back({zone, context.m_connection_id});
         return true;
       });
 
-      if (connections.size())
-      {
-        std::string out;
-        epee::serialization::store_t_to_binary(arg, out);
-        return m_p2p->relay_notify_to_list(T::ID, epee::strspan<uint8_t>(out), std::move(connections));
-      }
-
-      return true;
+      return m_p2p->relay_notify_to_list(T::ID, epee::strspan<uint8_t>(out), std::move(connections));
     }
 
     virtual bool relay_block(NOTIFY_NEW_FLUFFY_BLOCK::request& arg, cryptonote_connection_context& exclude_context);
