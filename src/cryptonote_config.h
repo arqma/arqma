@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <string>
 #include <boost/uuid/uuid.hpp>
 #include <stdexcept>
