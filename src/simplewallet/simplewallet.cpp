@@ -2885,9 +2885,9 @@ bool simple_wallet::ask_wallet_create_if_needed()
           bool ok = true;
           if (!m_restoring)
           {
-            std::string prompt = tr("No wallet found with that name. Confirm creation of new wallet named: ");
-            prompt += "\"" + wallet_path + "\"";
-            confirm_creation = input_line(prompt, true);
+            message_writer() << tr("Looking for filename: ") << boost::filesystem::complete(wallet_path);
+            message_writer() << tr("No wallet found with that name. Confirm creation of new wallet named: ") << wallet_path;
+            confirm_creation = input_line("", true);
             if(std::cin.eof())
             {
               LOG_ERROR("Unexpected std::cin.eof() - Exited simple_wallet::ask_wallet_create_if_needed()");
@@ -3738,6 +3738,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     "your current session's state. Otherwise, you might need to synchronize \n"
     "your wallet again (your wallet keys are NOT at risk in any case).\n")
   ;
+  success_msg_writer() << tr("Filename: ") << boost::filesystem::complete(m_wallet->get_keys_file());
 
   if (!two_random)
   {
