@@ -145,8 +145,6 @@ namespace nodetool
     const command_line::arg_descriptor<std::string> arg_ban_list = {"ban-list", "Specify ban list file, one IP address per line"};
     const command_line::arg_descriptor<bool> arg_enable_dns_banlist = {"enable-dns-banlist", "Apply realtime ban list from DNS", false};
 
-    const command_line::arg_descriptor<bool> arg_no_igd  = {"no-igd", "Disable UPnP port mapping"};
-    const command_line::arg_descriptor<std::string> arg_igd = {"igd", "UPnP port mapping (disabled, enabled, delayed)", "delayed"};
     const command_line::arg_descriptor<bool> arg_p2p_use_ipv6 = {"p2p-use-ipv6", "Enable IPv6 for p2p", false};
     const command_line::arg_descriptor<bool> arg_p2p_ignore_ipv4 = {"p2p-ignore-ipv4", "Ignore unsuccessful IPv4 bind for p2p", false};
     const command_line::arg_descriptor<int64_t> arg_out_peers = {"out-peers", "set max number of out peers", -1};

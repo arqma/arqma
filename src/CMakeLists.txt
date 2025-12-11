@@ -31,7 +31,6 @@
 
 if(WIN32 OR STATIC)
   add_definitions(-DSTATICLIB)
-  add_definitions(-DMINIUPNP_STATICLIB)
 endif()
 
 function(arqma_private_headers group)
