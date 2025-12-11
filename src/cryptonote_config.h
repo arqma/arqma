@@ -123,8 +123,6 @@ using namespace std::literals;
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) // seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 // seconds, one week
 
-#define CRYPTONOTE_DANDELIONPP_FLUSH_AVERAGE            5
-
 #define CRYPTONOTE_NOISE_MIN_EPOCH                      5      // minutes
 #define CRYPTONOTE_NOISE_EPOCH_RANGE                    30     // seconds
 #define CRYPTONOTE_NOISE_MIN_DELAY                      10     // seconds
@@ -298,7 +296,7 @@ namespace config
     static const uint8_t ARQMA_DECIMALS = 9;
     const uint64_t PREMINE = 7500000000000000; // Premine Reward (already burned).
     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
-    const uint64_t DEFAULT_TXPOOL_MAX_WEIGHT = 10485760;
+    const uint64_t DEFAULT_TXPOOL_MAX_WEIGHT = 78643200;
     const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2097152; // It is set to 2048kB (2MB)
     const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1048576; // It is set to 1024kB (1MB)
     static const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;

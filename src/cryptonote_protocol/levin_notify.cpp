@@ -65,26 +65,6 @@ namespace levin
     constexpr const std::chrono::seconds noise_min_delay{CRYPTONOTE_NOISE_MIN_DELAY};
     constexpr const std::chrono::seconds noise_delay_range{CRYPTONOTE_NOISE_DELAY_RANGE};
 
-    using fluff_stepsize = std::chrono::duration<std::chrono::milliseconds::rep, std::ratio<1, 4>>;
-    constexpr const std::chrono::seconds fluff_average_in{CRYPTONOTE_DANDELIONPP_FLUSH_AVERAGE};
-
-    constexpr const fluff_stepsize fluff_average_out{fluff_stepsize{fluff_average_in} / 2};
-
-    class random_poisson
-    {
-      std::poisson_distribution<fluff_stepsize::rep> dist;
-    public:
-      explicit random_poisson(fluff_stepsize average)
-        : dist(average.count() < 0 ? 0 : average.count())
-      {}
-
-      fluff_stepsize operator()()
-      {
-        crypto::random_device rand{};
-        return fluff_stepsize{dist(rand)};
-      }
-    };
-
     /*! Select a randomized duration from 0 to `range`. The precision will be to
         the systems `steady_clock`. As an example, supplying 3 seconds to this
         function will select a duration from [0, 3] seconds, and the increments
@@ -157,16 +137,6 @@ namespace levin
       return fullBlob;
     }
 
-    bool make_payload_send_txs(connections& p2p, std::vector<std::string>&& txs, const boost::uuids::uuid& destination, const bool pad)
-    {
-      const std::string blob = make_tx_payload(std::move(txs), pad);
-      p2p.for_connection(destination, [&blob](detail::p2p_context& context) {
-        on_levin_traffic(context, true, true, false, blob.size(), NOTIFY_NEW_TRANSACTIONS::ID);
-        return true;
-      });
-      return p2p.notify(NOTIFY_NEW_TRANSACTIONS::ID, epee::strspan<std::uint8_t>(blob), destination);
-    }
-
     /* The current design uses `asio::strand`s. The documentation isn't as clear
        as it should be - a `strand` has an internal `mutex` and `bool`. The
        `mutex` synchronizes thread access and the `bool` is set when a thread is
@@ -182,7 +152,7 @@ namespace levin
        `dispatch` is used heavily, which means "execute immediately in _this_
        thread if the strand is not in use, otherwise queue the callback to be
        executed immediately after the strand completes its current task".
-       `post` is used where deferred execution to an `asio::io_context::run`
+       `post` is used where deferred execution to an `asio::io_service::run`
        thread is preferred.
 
        The strand per "zone" is useful because the levin
@@ -199,7 +169,7 @@ namespace levin
     //! A queue of levin messages for a noise i2p/tor link
     struct noise_channel
     {
-      explicit noise_channel(boost::asio::io_context& io_service)
+      explicit noise_channel(boost::asio::io_service& io_service)
         : active(nullptr),
           queue(),
           strand(io_service),
@@ -207,7 +177,7 @@ namespace levin
           connection(boost::uuids::nil_uuid())
       {}
 
-      // `asio::io_context::strand` cannot be copied or moved
+      // `asio::io_service::strand` cannot be copied or moved
       noise_channel(const noise_channel&) = delete;
       noise_channel& operator=(const noise_channel&) = delete;
 
@@ -215,7 +185,7 @@ namespace levin
 
       epee::byte_slice active;
       std::deque<epee::byte_slice> queue;
-      boost::asio::io_context::strand strand;
+      boost::asio::io_service::strand strand;
       boost::asio::steady_timer next_noise;
       boost::uuids::uuid connection;
     };
@@ -225,18 +195,15 @@ namespace levin
   {
     struct zone
     {
-      explicit zone(boost::asio::io_context& io_service, std::shared_ptr<connections> p2p, epee::byte_slice noise_in, epee::net_utils::zone zone, bool pad_txs)
+      explicit zone(boost::asio::io_service& io_service, std::shared_ptr<connections> p2p, epee::byte_slice noise_in, epee::net_utils::zone zone)
         : p2p(std::move(p2p)),
           noise(std::move(noise_in)),
           next_epoch(io_service),
-          flush_txs(io_service),
           strand(io_service),
           map(),
           channels(),
           connection_count(0),
-          flush_callbacks(0),
-          nzone(zone),
-          pad_txs(pad_txs)
+          nzone(zone)
       {
         for (std::size_t count = 0; !noise.empty() && count < CRYPTONOTE_NOISE_CHANNELS; ++count)
           channels.emplace_back(io_service);
@@ -245,20 +212,11 @@ namespace levin
       const std::shared_ptr<connections> p2p;
       const epee::byte_slice noise; //!< `!empty()` means zone is using noise channels
       boost::asio::steady_timer next_epoch;
-      boost::asio::steady_timer flush_txs;
-      boost::asio::io_context::strand strand;
-      struct context_t {
-        std::vector<std::string> fluff_txs;
-        std::chrono::steady_clock::time_point flush_time;
-        bool m_is_income;
-      };
-      boost::unordered_map<boost::uuids::uuid, context_t> contexts;
+      boost::asio::io_service::strand strand;
       net::dandelionpp::connection_map map;//!< Tracks outgoing uuid's for noise channels or Dandelion++ stems
       std::deque<noise_channel> channels;  //!< Never touch after init; only update elements on `noise_channel.strand`
       std::atomic<std::size_t> connection_count; //!< Only update in strand, can be read at any time
-      std::uint32_t flush_callbacks;
       const epee::net_utils::zone nzone;
-      const bool pad_txs;
     };
   } // detail
 
@@ -292,113 +250,42 @@ namespace levin
 
         if (!channel.connection.is_nil())
           channel.queue.push_back(std::move(message_));
-        else if (destination_ == 0 && zone_->connection_count == 0)
-          MWARNING("Unable to send transaction(s) to " << epee::net_utils::zone_to_string(zone_->nzone) << " - no available outbound connections");
       }
     };
 
-    struct fluff_flush
+    class flood_notify
     {
       std::shared_ptr<detail::zone> zone_;
+      epee::byte_slice message_;
+      boost::uuids::uuid source_;
 
-      static void queue(std::shared_ptr<detail::zone> zone, const std::chrono::steady_clock::time_point flush_time)
+    public:
+      explicit flood_notify(std::shared_ptr<detail::zone> zone, epee::byte_slice message, const boost::uuids::uuid& source)
+        : zone_(std::move(zone)), message_(message.clone()), source_(source)
+      {}
+
+      flood_notify(flood_notify&&) = default;
+      flood_notify(const flood_notify& source)
+        : zone_(source.zone_), message_(source.message_.clone()), source_(source.source_)
+      {}
+
+      void operator()()
       {
-        assert(zone != nullptr);
-        assert(zone->strand.running_in_this_thread());
-
-        detail::zone& this_zone = *zone;
-        ++this_zone.flush_callbacks;
-        this_zone.flush_txs.expires_at(flush_time);
-        this_zone.flush_txs.async_wait(this_zone.strand.wrap(fluff_flush{std::move(zone)}));
-      }
-
-      void operator()(const boost::system::error_code error)
-      {
-        if (!zone_ || !zone_->flush_callbacks || --zone_->flush_callbacks || !zone_->p2p)
+        if (!zone_ || !zone_->p2p)
           return;
 
         assert(zone_->strand.running_in_this_thread());
 
-        const bool timer_error = bool(error);
-        if (timer_error && error != boost::system::errc::operation_canceled)
-            throw boost::system::system_error{error, "fluff_flush timer failed"};
+        std::vector<boost::uuids::uuid> connections;
+        connections.reserve(connection_id_reserve_size);
+        zone_->p2p->foreach_connection([this, &connections] (detail::p2p_context& context) {
+          if (this->source_ != context.m_connection_id && (this->zone_->nzone == epee::net_utils::zone::public_ || !context.m_is_income))
+            connections.emplace_back(context.m_connection_id);
+          return true;
+        });
 
-        const auto now = std::chrono::steady_clock::now();
-        auto next_flush = std::chrono::steady_clock::time_point::max();
-        std::vector<std::pair<std::vector<std::string>, boost::uuids::uuid>> connections{};
-        for (auto &e : zone_->contexts)
-        {
-          auto &id = e.first;
-          auto &context = e.second;
-          if (!context.fluff_txs.empty())
-          {
-            if (context.flush_time <= now || timer_error)
-            {
-              context.flush_time = std::chrono::steady_clock::time_point::max();
-              connections.emplace_back(std::move(context.fluff_txs), id);
-              context.fluff_txs.clear();
-            }
-            else
-              next_flush = std::min(next_flush, context.flush_time);
-          }
-          else
-            context.flush_time = std::chrono::steady_clock::time_point::max();
-        }
-
-        for (auto& connection : connections)
-        {
-          std::sort(connection.first.begin(), connection.first.end());
-          make_payload_send_txs(*zone_->p2p, std::move(connection.first), connection.second, zone_->pad_txs);
-        }
-
-        if (next_flush != std::chrono::steady_clock::time_point::max())
-          fluff_flush::queue(std::move(zone_), next_flush);
-      }
-    };
-
-    struct fluff_notify
-    {
-      std::shared_ptr<detail::zone> zone_;
-      std::vector<std::string> txs_;
-      boost::uuids::uuid source_;
-
-      void operator()()
-      {
-        run(std::move(zone_), epee::to_span(txs_), source_);
-      }
-
-      static void run(std::shared_ptr<detail::zone> zone, epee::span<const std::string> txs, const boost::uuids::uuid& source)
-      {
-        if (!zone || !zone->p2p || txs.empty())
-          return;
-
-        assert(zone->strand.running_in_this_thread());
-
-        const auto now = std::chrono::steady_clock::now();
-        auto next_flush = std::chrono::steady_clock::time_point::max();
-
-        random_poisson in_duration(fluff_average_in);
-        random_poisson out_duration(fluff_average_out);
-
-        for (auto &e : zone->contexts)
-        {
-          auto &id = e.first;
-          auto &context = e.second;
-          if (source != id && (zone->nzone == epee::net_utils::zone::public_ || !context.m_is_income))
-          {
-            if (context.fluff_txs.empty())
-              context.flush_time = now + (context.m_is_income ? in_duration() : out_duration());
-
-            next_flush = std::min(next_flush, context.flush_time);
-            context.fluff_txs.reserve(context.fluff_txs.size() + txs.size());
-            context.fluff_txs.insert(context.fluff_txs.end(), txs.begin(), txs.end());
-          }
-        }
-
-        if (next_flush == std::chrono::steady_clock::time_point::max())
-          MWARNING("Unable to send transaction(s). no available connections");
-        else if (!zone->flush_callbacks || next_flush < zone->flush_txs.expiry())
-          fluff_flush::queue(std::move(zone), next_flush);
+        for (const boost::uuids::uuid& connection : connections)
+          zone_->p2p->send(message_.clone(), connection);
       }
     };
 
@@ -451,30 +338,21 @@ namespace levin
 
         zone->connection_count = zone->map.size();
 
-        if (zone->noise.empty())
-          return;
-
         for (auto id = zone->map.begin(); id != zone->map.end(); ++id)
         {
           const std::size_t i = id - zone->map.begin();
-          boost::asio::post(zone->channels[i].strand, update_channel{zone, i, *id});
+          zone->channels[i].strand.post(update_channel{zone, i, *id}, std::allocator<void>{});
         }
       }
 
-      static void run(std::shared_ptr<detail::zone> zone, std::vector<boost::uuids::uuid> out_connections)
-      {
-        if (!zone)
-          return;
-
-        assert(zone->strand.running_in_this_thread());
-        if (zone->map.update(std::move(out_connections)))
-          post(std::move(zone));
-      }
-
-      //! \pre Called within `zone_->strand`.
       void operator()()
       {
-        run(std::move(zone_), std::move(out_connections_));
+        if (!zone_)
+          return;
+
+        assert(zone_->strand.running_in_this_thread());
+        if (zone_->map.update(std::move(out_connections_)))
+          post(std::move(zone_));
       }
     };
 
@@ -565,13 +443,8 @@ namespace levin
           {
             channel.active = nullptr;
             channel.connection = boost::uuids::nil_uuid();
-
-            auto connections = get_out_connections(*zone_->p2p);
-            if (connections.empty())
-              MWARNING("Lost all outbound connections to anonymity network - currently unable to send transaction(s)");
-
-            boost::asio::post(zone_->strand,
-              update_channels{zone_, std::move(connections)}
+            zone_->strand.post(
+              update_channels{zone_, get_out_connections(*zone_->p2p)}, std::allocator<void>{}
             );
           }
         }
@@ -599,8 +472,8 @@ namespace levin
           throw boost::system::system_error{error, "start_epoch timer failed"};
 
         const auto start = std::chrono::steady_clock::now();
-        boost::asio::dispatch(zone_->strand,
-          change_channels{zone_, net::dandelionpp::connection_map{get_out_connections(*(zone_->p2p)), count_}}
+        zone_->strand.dispatch(
+          change_channels{zone_, net::dandelionpp::connection_map{get_out_connections(*(zone_->p2p)), count_}}, std::allocator<void>{}
         );
 
         detail::zone& alias = *zone_;
@@ -610,8 +483,8 @@ namespace levin
     };
   } // anonymous
 
-  notify::notify(boost::asio::io_context& service, std::shared_ptr<connections> p2p, epee::byte_slice noise, epee::net_utils::zone zone, const bool pad_txs)
-    : zone_(std::make_shared<detail::zone>(service, std::move(p2p), std::move(noise), zone, pad_txs))
+  notify::notify(boost::asio::io_service& service, std::shared_ptr<connections> p2p, epee::byte_slice noise, epee::net_utils::zone zone)
+    : zone_(std::make_shared<detail::zone>(service, std::move(p2p), std::move(noise), zone))
   {
     if (!zone_->p2p)
       throw std::logic_error{"cryptonote::levin::notify cannot have nullptr p2p argument"};
@@ -641,35 +514,9 @@ namespace levin
     if (!zone_ || zone_->noise.empty() || CRYPTONOTE_NOISE_CHANNELS <= zone_->connection_count)
       return;
 
-    boost::asio::dispatch(zone_->strand,
-      update_channels{zone_, get_out_connections(*(zone_->p2p))}
+    zone_->strand.dispatch(
+      update_channels{zone_, get_out_connections(*(zone_->p2p))}, std::allocator<void>{}
     );
-  }
-
-  void notify::on_handshake_complete(const boost::uuids::uuid &id, bool is_income)
-  {
-    if (!zone_)
-      return;
-
-    auto& zone = zone_;
-    boost::asio::dispatch(zone_->strand, [zone, id, is_income] {
-      zone->contexts[id] = {
-        .fluff_txs = {},
-        .flush_time = std::chrono::steady_clock::time_point::max(),
-        .m_is_income = is_income,
-      };
-    });
-  }
-
-  void notify::on_connection_close(const boost::uuids::uuid &id)
-  {
-    if (!zone_)
-      return;
-
-    auto& zone = zone_;
-    boost::asio::dispatch(zone_->strand, [zone, id] {
-      zone->contexts.erase(id);
-    });
   }
 
   void notify::run_epoch()
@@ -688,14 +535,7 @@ namespace levin
       channel.next_noise.cancel();
   }
 
-  void notify::run_fluff()
-  {
-    if (!zone_)
-      return;
-    zone_->flush_txs.cancel();
-  }
-
-  bool notify::send_txs(std::vector<std::string> txs, const boost::uuids::uuid& source)
+  bool notify::send_txs(std::vector<std::string> txs, const boost::uuids::uuid& source, const bool pad_txs)
   {
     if (txs.empty())
       return true;
@@ -726,10 +566,18 @@ namespace levin
 
       for (std::size_t channel = 0; channel < zone_->channels.size(); ++channel)
       {
-        boost::asio::dispatch(zone_->channels[channel].strand,
-          queue_covert_notify{zone_, message.clone(), channel}
+        zone_->channels[channel].strand.dispatch(
+          queue_covert_notify{zone_, message.clone(), channel}, std::allocator<void>{}
         );
       }
+    }
+    else
+    {
+      const std::string payload = make_tx_payload(std::move(txs), pad_txs);
+      epee::byte_slice message =
+        epee::levin::make_notify(NOTIFY_NEW_TRANSACTIONS::ID, epee::strspan<std::uint8_t>(payload));
+
+      zone_->strand.dispatch(flood_notify{zone_, std::move(message), source}, std::allocator<void>{});
     }
 
     return true;

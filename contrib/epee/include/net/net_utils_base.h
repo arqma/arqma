@@ -48,10 +48,14 @@
   #define MAKE_IP( a1, a2, a3, a4 )	(a1|(a2<<8)|(a3<<16)|(((uint32_t)a4)<<24))
 #endif
 
+namespace boost::asio {
+  using io_service = io_context;
+}
+
 #if BOOST_VERSION >= 107000
-  #define ARQMA_GET_EXECUTOR(type) type.get_executor()
+  #define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
 #else
-  #define ARQMA_GET_EXECUTOR(type) type.get_io_context()
+  #define GET_IO_SERVICE(s) ((s).get_io_service())
 #endif
 
 namespace net
@@ -94,16 +98,7 @@ namespace net_utils
 		static constexpr bool is_blockable() noexcept { return true; }
 
 		BEGIN_KV_SERIALIZE_MAP()
-		  if (is_store)
-		  {
-		    uint32_t ip = SWAP32LE(this_ref.m_ip);
-		    epee::serialization::selector<is_store>::serialize(ip, stg, hparent_section, "m_ip");
-		  }
-		  else
-		  {
-			  KV_SERIALIZE(m_ip)
-				const_cast<ipv4_network_address&>(this_ref).m_ip = SWAP32LE(this_ref.m_ip);
-			}
+			KV_SERIALIZE(m_ip)
 			KV_SERIALIZE(m_port)
 		END_KV_SERIALIZE_MAP()
 	};
@@ -441,27 +436,11 @@ namespace net_utils
     virtual bool send_done() = 0;
     virtual bool call_run_once_service_io() = 0;
     virtual bool request_callback() = 0;
-    virtual boost::asio::io_context& get_io_context() = 0;
+    virtual boost::asio::io_service& get_io_service() = 0;
+    virtual bool add_ref() = 0;
+    virtual bool release() = 0;
   protected:
     virtual ~i_service_endpoint() noexcept(false) {}
-	};
-
-	template<typename t_protocol_handler>
-	struct service_endpoint : i_service_endpoint
-	{
-	  typedef typename t_protocol_handler::connection_context t_connection_context;
-
-	  service_endpoint(typename t_protocol_handler::config_type& config)
-	    : i_service_endpoint(), context(), m_protocol_handler(this, config, context)
-	  {}
-
-	  t_connection_context context;
-
-	  t_protocol_handler m_protocol_handler;
-
-	protected:
-	  virtual ~service_endpoint() noexcept(false)
-	  {}
 	};
 
   //some helpers

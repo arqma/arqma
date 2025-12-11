@@ -4136,9 +4136,7 @@ bool BlockchainLMDB::get_block_checkpoint_internal(uint64_t height, checkpoint_t
   MDB_val value = {};
   int ret = mdb_cursor_get(m_cursors->block_checkpoints, &key, &value, op);
   if(ret == MDB_SUCCESS)
-  {
     checkpoint = convert_mdb_val_to_checkpoint(value);
-  }
 
   if(ret != MDB_SUCCESS && ret != MDB_NOTFOUND)
     throw0(DB_ERROR(lmdb_error("Failed to get block checkpoint: ", ret).c_str()));
@@ -5831,7 +5829,7 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
     add_output_blacklist(global_output_indexes);
   }
 
-  if (mdb_dbi_open(txn, LMDB_ALT_BLOCKS, 0, &m_alt_blocks))
+  if (auto res = mdb_dbi_open(txn, LMDB_ALT_BLOCKS, 0, &m_alt_blocks))
     return;
 
   MDB_cursor *cursor;
@@ -5895,10 +5893,10 @@ void BlockchainLMDB::migrate_4_5(cryptonote::network_type nettype)
     throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
 }
 
-void BlockchainLMDB::migrate_6_7()
+void BlockchainLMDB::migrate_5_6()
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
-  MGINFO_YELLOW("Migrating blockchain from DB Version to v7 - this may take a while");
+  MGINFO_YELLOW("Migrating blockchain from DB Version 5 to 6 - this may take a while");
 
   mdb_txn_safe txn(false);
   {
@@ -5906,7 +5904,7 @@ void BlockchainLMDB::migrate_6_7()
     if (result) throw0(DB_ERROR(lmdb_error("Failed to create a transaction for thr db: ", result).c_str()));
   }
 
-  if (mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
+  if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
     return;
 
   MDB_cursor *cursor;
@@ -5988,6 +5986,15 @@ void BlockchainLMDB::migrate_6_7()
   }
   txn.commit();
 
+  if (int result = write_db_version(m_env, m_properties, (uint32_t)lmdb_version::v6))
+    throw0(DB_ERROR(lmdb_error("Failed to update version for the db: ", result).c_str()));
+}
+
+void BlockchainLMDB::migrate_6_7()
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  MGINFO_YELLOW("Migrating blockchain from DB version 6 to 7 - this may take a while");
+
   std::vector<checkpoint_t> checkpoints;
   checkpoints.reserve(1024);
   {
@@ -5995,7 +6002,7 @@ void BlockchainLMDB::migrate_6_7()
     if (auto result = mdb_txn_begin(m_env, NULL, 0, txn))
       throw0(DB_ERROR(lmdb_error("Failed to create a transaction for the db: ", result).c_str()));
 
-    if (mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
+    if (auto res = mdb_dbi_open(txn, LMDB_BLOCK_CHECKPOINTS, 0, &m_block_checkpoints))
       return;
     MDB_cursor *cursor;
     if (auto ret = mdb_cursor_open(txn, m_block_checkpoints, &cursor))
@@ -6062,6 +6069,7 @@ void BlockchainLMDB::migrate(const uint32_t oldversion, cryptonote::network_type
     case 4:
       migrate_4_5(nettype); /* FALLTHRU */
     case 5:
+      migrate_5_6(); /* FALLTHRU */
     case 6:
       migrate_6_7(); /* FALLTHRU */
     default:

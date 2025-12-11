@@ -27,7 +27,6 @@
 #pragma once
 
 #include <string>
-#include <string_view>
 
 #include "parserse_base_utils.h"
 #include "portable_storage.h"
@@ -40,7 +39,7 @@ namespace epee
   {
     //-----------------------------------------------------------------------------------------------------------
     template<class t_struct>
-    bool load_t_from_json(t_struct& out, std::string_view json_buff)
+    bool load_t_from_json(t_struct& out, const std::string& json_buff)
     {
       portable_storage ps;
       bool rs = ps.load_from_json(json_buff);

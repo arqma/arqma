@@ -112,15 +112,9 @@ class ssl_options_t
     //! Search against internal fingerprints. Always false if `behavior() != user_certificate_check`.
     bool has_fingerprint(boost::asio::ssl::verify_context &ctx) const;
 
-    void configure(
-      boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket,
-      boost::asio::ssl::stream_base::handshake_type type,
-      const std::string& host = {}) const;
-
     boost::asio::ssl::context create_context() const;
 
     bool handshake(
-      boost::asio::io_context& io_context,
       boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket,
       boost::asio::ssl::stream_base::handshake_type type,
       boost::asio::const_buffer buffer = {},

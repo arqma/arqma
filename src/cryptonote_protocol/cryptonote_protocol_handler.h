@@ -74,8 +74,8 @@ namespace cryptonote
 
     BEGIN_INVOKE_MAP2(cryptonote_protocol_handler)
       HANDLE_NOTIFY_T2(NOTIFY_NEW_TRANSACTIONS, handle_notify_new_transactions)
-      HANDLE_NOTIFY_T2(NOTIFY_REQUEST_GET_BLOCKS, handle_request_get_blocks)
-      HANDLE_NOTIFY_T2(NOTIFY_RESPONSE_GET_BLOCKS, handle_response_get_blocks)
+      HANDLE_NOTIFY_T2(NOTIFY_REQUEST_GET_OBJECTS, handle_request_get_objects)
+      HANDLE_NOTIFY_T2(NOTIFY_RESPONSE_GET_OBJECTS, handle_response_get_objects)
       HANDLE_NOTIFY_T2(NOTIFY_REQUEST_CHAIN, handle_request_chain)
       HANDLE_NOTIFY_T2(NOTIFY_RESPONSE_CHAIN_ENTRY, handle_response_chain_entry)
       HANDLE_NOTIFY_T2(NOTIFY_NEW_FLUFFY_BLOCK, handle_notify_new_fluffy_block)
@@ -109,8 +109,8 @@ namespace cryptonote
   private:
     //----------------- commands handlers ----------------------------------------------
     int handle_notify_new_transactions(int command, NOTIFY_NEW_TRANSACTIONS::request& arg, cryptonote_connection_context& context);
-    int handle_request_get_blocks(int command, NOTIFY_REQUEST_GET_BLOCKS::request& arg, cryptonote_connection_context& context);
-    int handle_response_get_blocks(int command, NOTIFY_RESPONSE_GET_BLOCKS::request& arg, cryptonote_connection_context& context);
+    int handle_request_get_objects(int command, NOTIFY_REQUEST_GET_OBJECTS::request& arg, cryptonote_connection_context& context);
+    int handle_response_get_objects(int command, NOTIFY_RESPONSE_GET_OBJECTS::request& arg, cryptonote_connection_context& context);
     int handle_request_chain(int command, NOTIFY_REQUEST_CHAIN::request& arg, cryptonote_connection_context& context);
     int handle_response_chain_entry(int command, NOTIFY_RESPONSE_CHAIN_ENTRY::request& arg, cryptonote_connection_context& context);
     int handle_notify_new_fluffy_block(int command, NOTIFY_NEW_FLUFFY_BLOCK::request& arg, cryptonote_connection_context& context);
@@ -123,19 +123,26 @@ namespace cryptonote
     bool relay_to_synchronized_peers(typename T::request& arg, cryptonote_connection_context& exclude_context)
     {
       LOG_PRINT_L2("[" << epee::net_utils::print_connection_context_short(exclude_context) << "] post relay " << typeid(T).name() << " -->");
-      std::string out;
-      epee::serialization::store_t_to_binary(arg, out);
-
       std::vector<std::pair<epee::net_utils::zone, boost::uuids::uuid>> connections;
       m_p2p->for_each_connection([&exclude_context, &connections](connection_context& context, nodetool::peerid_type peer_id)
       {
-        epee::net_utils::zone zone = context.m_remote_address.get_zone();
-        if (peer_id && exclude_context.m_connection_id != context.m_connection_id)
-          connections.push_back({zone, context.m_connection_id});
+        if (context.m_state > cryptonote_connection_context::state_synchronizing)
+        {
+          epee::net_utils::zone zone = context.m_remote_address.get_zone();
+          if (peer_id && exclude_context.m_connection_id != context.m_connection_id)
+            connections.push_back({zone, context.m_connection_id});
+        }
         return true;
       });
 
-      return m_p2p->relay_notify_to_list(T::ID, epee::strspan<uint8_t>(out), std::move(connections));
+      if (connections.size())
+      {
+        std::string arg_buff;
+        epee::serialization::store_t_to_binary(arg, arg_buff);
+        return m_p2p->relay_notify_to_list(T::ID, epee::strspan<uint8_t>(arg_buff), std::move(connections));
+      }
+
+      return true;
     }
 
     virtual bool relay_block(NOTIFY_NEW_FLUFFY_BLOCK::request& arg, cryptonote_connection_context& exclude_context);

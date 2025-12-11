@@ -28,9 +28,11 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "message.h"
-
 #include "daemon_rpc_version.h"
 #include "serialization/json_object.h"
+
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 namespace cryptonote
 {
@@ -52,6 +54,7 @@ constexpr const char method_field[] = "method";
 constexpr const char params_field[] = "params";
 constexpr const char result_field[] = "result";
 
+/*
 const rapidjson::Value& get_method_field(const rapidjson::Value& src)
 {
   const auto member = src.FindMember(method_field);
@@ -61,23 +64,61 @@ const rapidjson::Value& get_method_field(const rapidjson::Value& src)
     throw cryptonote::json::WRONG_TYPE{"Expected string"};
   return member->value;
 }
+*/
 }
 
-void Message::toJson(rapidjson::Writer<rapidjson::StringBuffer>& dest) const
+rapidjson::Value Message::toJson(rapidjson::Document& doc) const
 {
-  dest.StartObject();
-  INSERT_INTO_JSON_OBJECT(dest, status, status);
-  INSERT_INTO_JSON_OBJECT(dest, error_details, error_details);
-  INSERT_INTO_JSON_OBJECT(dest, rpc_version, DAEMON_RPC_VERSION_ZMQ);
-  doToJson(dest);
-  dest.EndObject();
+  rapidjson::Value val(rapidjson::kObjectType);
+
+  auto& al = doc.GetAllocator();
+
+  val.AddMember("status", rapidjson::StringRef(status.c_str()), al);
+  val.AddMember("error_details", rapidjson::StringRef(error_details.c_str()), al);
+  INSERT_INTO_JSON_OBJECT(val, doc, rpc_version, DAEMON_RPC_VERSION_ZMQ);
+
+  return val;
 }
 
-void Message::fromJson(const rapidjson::Value& val)
+void Message::fromJson(rapidjson::Value& val)
 {
   GET_FROM_JSON_OBJECT(val, status, status);
   GET_FROM_JSON_OBJECT(val, error_details, error_details);
   GET_FROM_JSON_OBJECT(val, rpc_version, rpc_version);
+}
+
+
+FullMessage::FullMessage(const std::string& request, Message* message)
+{
+  doc.SetObject();
+
+  doc.AddMember(method_field, rapidjson::StringRef(request.c_str()), doc.GetAllocator());
+  doc.AddMember(params_field, message->toJson(doc), doc.GetAllocator());
+
+  // required by JSON-RPC 2.0 spec
+  doc.AddMember("jsonrpc", rapidjson::Value("2.0"), doc.GetAllocator());
+}
+
+FullMessage::FullMessage(Message* message)
+{
+  doc.SetObject();
+
+  // required by JSON-RPC 2.0 spec
+  doc.AddMember("jsonrpc", "2.0", doc.GetAllocator());
+
+  if (message->status == Message::STATUS_OK)
+  {
+    doc.AddMember(result_field, message->toJson(doc), doc.GetAllocator());
+  }
+  else
+  {
+    cryptonote::rpc::error err;
+
+    err.error_str = message->status;
+    err.message = message->error_details;
+
+    INSERT_INTO_JSON_OBJECT(doc, doc, error, err);
+  }
 }
 
 FullMessage::FullMessage(const std::string& json_string, bool request)
@@ -92,7 +133,8 @@ FullMessage::FullMessage(const std::string& json_string, bool request)
 
   if (request)
   {
-    get_method_field(doc); // it will throw on errors
+    //get_method_field(doc); // it will throw on errors
+    OBJECT_HAS_MEMBER_OR_THROW(doc, method_field)
     OBJECT_HAS_MEMBER_OR_THROW(doc, params_field)
   }
   else
@@ -104,12 +146,31 @@ FullMessage::FullMessage(const std::string& json_string, bool request)
   }
 }
 
-std::string FullMessage::getRequestType() const
+std::string FullMessage::getJson()
 {
-  return get_method_field(doc).GetString();
+
+  if (!doc.HasMember(id_field))
+  {
+    doc.AddMember(id_field, rapidjson::Value("unused"), doc.GetAllocator());
+  }
+
+  rapidjson::StringBuffer buf;
+
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+
+  doc.Accept(writer);
+
+  return std::string(buf.GetString(), buf.GetSize());
 }
 
-const rapidjson::Value& FullMessage::getMessage() const
+std::string FullMessage::getRequestType() const
+{
+  //return get_method_field(doc).GetString();
+  OBJECT_HAS_MEMBER_OR_THROW(doc, method_field)
+  return doc[method_field].GetString();
+}
+
+rapidjson::Value& FullMessage::getMessage()
 {
   if (doc.HasMember(params_field))
   {
@@ -128,13 +189,28 @@ const rapidjson::Value& FullMessage::getMessage() const
 
 rapidjson::Value FullMessage::getMessageCopy()
 {
-  return rapidjson::Value(getMessage(), doc.GetAllocator());
+  rapidjson::Value& val = getMessage();
+
+  return rapidjson::Value(val, doc.GetAllocator());
 }
 
-const rapidjson::Value& FullMessage::getID() const
+rapidjson::Value& FullMessage::getID()
 {
   OBJECT_HAS_MEMBER_OR_THROW(doc, id_field)
   return doc[id_field];
+}
+
+void FullMessage::setID(rapidjson::Value& id)
+{
+  auto itr = doc.FindMember(id_field);
+  if (itr != doc.MemberEnd())
+  {
+    itr->value = id;
+  }
+  else
+  {
+    doc.AddMember(id_field, id, doc.GetAllocator());
+  }
 }
 
 cryptonote::rpc::error FullMessage::getError()
@@ -150,88 +226,82 @@ cryptonote::rpc::error FullMessage::getError()
   return err;
 }
 
-std::string FullMessage::getRequest(const std::string& request, const Message& message, const unsigned id)
+FullMessage FullMessage::requestMessage(const std::string& request, Message* message)
 {
-  rapidjson::StringBuffer buffer;
-  {
-    rapidjson::Writer<rapidjson::StringBuffer> dest{buffer};
-
-    dest.StartObject();
-    INSERT_INTO_JSON_OBJECT(dest, jsonrpc, (boost::string_ref{"2.0", 3}));
-
-    dest.Key(id_field);
-    json::toJsonValue(dest, id);
-
-    dest.Key(method_field);
-    json::toJsonValue(dest, request);
-
-    dest.Key(params_field);
-    message.toJson(dest);
-
-    dest.EndObject();
-
-    if (!dest.IsComplete())
-      throw std::logic_error{"Invalid JSON tree generated"};
-  }
-  return std::string{buffer.GetString(), buffer.GetSize()};
+  return FullMessage(request, message);
 }
 
-std::string FullMessage::getResponse(const Message& message, const rapidjson::Value& id)
+FullMessage FullMessage::requestMessage(const std::string& request, Message* message, rapidjson::Value& id)
 {
-  rapidjson::StringBuffer buffer;
-  {
-    rapidjson::Writer<rapidjson::StringBuffer> dest{buffer};
+  auto mes = requestMessage(request, message);
+  mes.setID(id);
+  return mes;
+}
 
-    dest.StartObject();
-    INSERT_INTO_JSON_OBJECT(dest, jsonrpc, (boost::string_ref{"2.0", 3}));
+FullMessage FullMessage::responseMessage(Message* message)
+{
+  return FullMessage(message);
+}
 
-    dest.Key(id_field);
-    json::toJsonValue(dest, id);
+FullMessage FullMessage::responseMessage(Message* message, rapidjson::Value& id)
+{
+  auto mes = responseMessage(message);
+  mes.setID(id);
+  return mes;
+}
 
-    if (message.status == Message::STATUS_OK)
-    {
-      dest.Key(result_field);
-      message.toJson(dest);
-    }
-    else
-    {
-      cryptonote::rpc::error err;
+FullMessage* FullMessage::timeoutMessage()
+{
+  auto *full_message = new FullMessage();
 
-      err.error_str = message.status;
-      err.message = message.error_details;
+  auto& doc = full_message->doc;
+  auto& al = full_message->doc.GetAllocator();
 
-      INSERT_INTO_JSON_OBJECT(dest, error, err);
-    }
-    dest.EndObject();
+  doc.SetObject();
 
-    if (!dest.IsComplete())
-      throw std::logic_error{"Invalid JSON tree generated"};
-  }
-  return std::string{buffer.GetString(), buffer.GetSize()};
+  // required by JSON-RPC 2.0 spec
+  doc.AddMember("jsonrpc", "2.0", al);
+
+  cryptonote::rpc::error err;
+
+  err.error_str = "RPC request timed out.";
+  INSERT_INTO_JSON_OBJECT(doc, doc, err, err);
+
+  return full_message;
 }
 
 // convenience functions for bad input
 std::string BAD_REQUEST(const std::string& request)
 {
-  rapidjson::Value invalid;
-  return BAD_REQUEST(request, invalid);
+  Message fail;
+  fail.status = Message::STATUS_BAD_REQUEST;
+  fail.error_details = std::string("\"") + request + "\" is not a valid request.";
+
+  FullMessage fail_response = FullMessage::responseMessage(&fail);
+
+  return fail_response.getJson();
 }
 
-std::string BAD_REQUEST(const std::string& request, const rapidjson::Value& id)
+std::string BAD_REQUEST(const std::string& request, rapidjson::Value& id)
 {
   Message fail;
   fail.status = Message::STATUS_BAD_REQUEST;
   fail.error_details = std::string("\"") + request + "\" is not a valid request.";
-  return FullMessage::getResponse(fail, id);
+
+  FullMessage fail_response = FullMessage::responseMessage(&fail, id);
+
+  return fail_response.getJson();
 }
 
 std::string BAD_JSON(const std::string& error_details)
 {
-  rapidjson::Value invalid;
   Message fail;
   fail.status = Message::STATUS_BAD_JSON;
   fail.error_details = error_details;
-  return FullMessage::getResponse(fail, invalid);
+
+  FullMessage fail_response = FullMessage::responseMessage(&fail);
+
+  return fail_response.getJson();
 }
 
 

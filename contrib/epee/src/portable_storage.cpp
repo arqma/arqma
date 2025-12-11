@@ -65,7 +65,7 @@ namespace serialization
     CATCH_ENTRY("portable_storage::dump_as_json", false)
   }
 
-  bool portable_storage::load_from_json(std::string_view source)
+  bool portable_storage::load_from_json(const std::string& source)
   {
     TRY_ENTRY();
     return json::load_from_json(source, *this);

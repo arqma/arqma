@@ -43,6 +43,8 @@
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "common/arqma.h"
 
+using namespace epee;
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "checkpoints"
 
@@ -88,14 +90,12 @@ namespace cryptonote
     if (nettype != MAINNET)
       return result;
 
-    if (nettype == MAINNET)
-    {
-      uint64_t last_index = arqma::array_count(HARDCODED_MAINNET_CHECKPOINTS) - 1;
-      height_to_hash const &entry = HARDCODED_MAINNET_CHECKPOINTS[last_index];
+    uint64_t last_index = arqma::array_count(HARDCODED_MAINNET_CHECKPOINTS) - 1;
+    height_to_hash const &entry = HARDCODED_MAINNET_CHECKPOINTS[last_index];
 
-      if(epee::string_tools::hex_to_pod(entry.hash, result))
-        *height = entry.height;
-    }
+    if(epee::string_tools::hex_to_pod(entry.hash, result))
+      *height = entry.height;
+
     return result;
   }
   //---------------------------------------------------------------------------
@@ -303,14 +303,11 @@ namespace cryptonote
     return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::init(network_type nettype, BlockchainDB *db)
+  bool checkpoints::init(network_type nettype, class BlockchainDB *db)
   {
     *this = {};
     m_db = db;
     m_nettype = nettype;
-
-    if (db->is_read_only())
-      return true;
 
     if(nettype == MAINNET)
     {

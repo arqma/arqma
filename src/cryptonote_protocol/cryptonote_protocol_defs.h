@@ -164,7 +164,7 @@ namespace cryptonote
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
-  struct NOTIFY_REQUEST_GET_BLOCKS
+  struct NOTIFY_REQUEST_GET_OBJECTS
   {
     const static int ID = BC_COMMANDS_POOL_BASE + 3;
 
@@ -179,7 +179,7 @@ namespace cryptonote
     };
   };
 
-  struct NOTIFY_RESPONSE_GET_BLOCKS
+  struct NOTIFY_RESPONSE_GET_OBJECTS
   {
     const static int ID = BC_COMMANDS_POOL_BASE + 4;
 

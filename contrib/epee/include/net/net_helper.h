@@ -43,6 +43,9 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
+namespace boost::asio {
+  using io_service = io_context;
+}
 using namespace std::chrono_literals;
 
 namespace epee
@@ -152,7 +155,7 @@ namespace net_utils
 					// SSL Options
 					if(m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled || m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
 					{
-						if(!m_ssl_options.handshake(m_io_service, *m_ssl_socket, boost::asio::ssl::stream_base::client, {}, addr, timeout))
+						if(!m_ssl_options.handshake(*m_ssl_socket, boost::asio::ssl::stream_base::client, {}, addr, timeout))
 						{
 							if(m_ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
 							{
@@ -439,7 +442,7 @@ namespace net_utils
 				// asynchronous operations are cancelled. This allows the blocked
 				// connect(), read_line() or write_line() functions to return.
 				LOG_PRINT_L3("Timed out socket");
-                m_connected = false;
+        m_connected = false;
 				m_ssl_socket->next_layer().close();
 
 				// There is no longer an active deadline. The expiry is set to positive
@@ -488,7 +491,7 @@ namespace net_utils
 		}
 
 	protected:
-		boost::asio::io_context m_io_service;
+		boost::asio::io_service m_io_service;
     boost::asio::ssl::context m_ctx;
 		std::shared_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> m_ssl_socket;
     connect_func m_connector;

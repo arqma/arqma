@@ -47,11 +47,6 @@
 #include "rpc/core_rpc_server_commands_defs.h"
 #include "rpc/message_data_structs.h"
 
-namespace service_nodes
-{
-  class service_node_list;
-};
-
 namespace cryptonote
 {
   class Blockchain;
@@ -102,7 +97,7 @@ namespace cryptonote
    *   helping create a new block template by choosing transactions for it
    *
    */
-  class tx_memory_pool : boost::noncopyable
+  class tx_memory_pool
   {
   public:
     /**
@@ -111,6 +106,9 @@ namespace cryptonote
      * @param bchs a Blockchain class instance, for getting chain info
      */
     tx_memory_pool(Blockchain& bchs);
+
+    tx_memory_pool(const tx_memory_pool &) = delete;
+    tx_memory_pool &operator=(const tx_memory_pool &) = delete;
 
     /**
      * @copydoc add_tx(transaction&, tx_verification_context&, const tx_pool_options &, uint8_t)
@@ -164,6 +162,8 @@ namespace cryptonote
      * @return true if the transaction is in the pool, otherwise false
      */
     bool have_tx(const crypto::hash &id) const;
+
+    std::vector<uint8_t> have_txs(const std::vector<crypto::hash> &hashes) const;
 
     /**
      * @brief action to take when notified of a block added to the blockchain
@@ -338,6 +338,8 @@ namespace cryptonote
      * @return true
      */
     bool get_relayable_transactions(std::vector<std::pair<crypto::hash, std::string>>& txs) const;
+
+    int set_relayable(const std::vector<crypto::hash> &tx_hashes);
 
     /**
      * @brief tell the pool that certain transactions were just relayed

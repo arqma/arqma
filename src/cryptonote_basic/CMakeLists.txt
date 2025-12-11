@@ -66,6 +66,8 @@ arqma_add_library(cryptonote_basic
 target_link_libraries(cryptonote_basic
   PUBLIC
     common
+    cncrypto
+    checkpoints
     cryptonote_format_utils_basic
     device
     ${Boost_PROGRAM_OPTIONS_LIBRARY}

@@ -243,7 +243,7 @@ namespace cryptonote
     }
 
     res.tx_count = m_core.get_blockchain_storage().get_total_transactions() - res.height; //without coinbase
-    res.tx_pool_size = m_core.get_pool_transactions_count();
+    res.tx_pool_size = m_core.get_pool().get_transactions_count();
     res.alt_blocks_count = restricted ? 0 : m_core.get_blockchain_storage().get_alternative_blocks_count();
     uint64_t total_conn =  m_p2p.get_public_connections_count();
     res.outgoing_connections_count =  m_p2p.get_public_outgoing_connections_count();
@@ -597,7 +597,7 @@ namespace cryptonote
     {
       std::vector<tx_info> pool_tx_info;
       std::vector<spent_key_image_info> pool_key_image_info;
-      bool r = m_core.get_pool_transactions_and_spent_keys_info(pool_tx_info, pool_key_image_info);
+      bool r = m_core.get_pool().get_transactions_and_spent_keys_info(pool_tx_info, pool_key_image_info);
       if(r)
       {
         // sort to match original request
@@ -801,7 +801,7 @@ namespace cryptonote
     // check the pool too
     std::vector<cryptonote::tx_info> txs;
     std::vector<cryptonote::spent_key_image_info> ki;
-    r = m_core.get_pool_transactions_and_spent_keys_info(txs, ki, !request_has_rpc_origin || !restricted);
+    r = m_core.get_pool().get_transactions_and_spent_keys_info(txs, ki, !request_has_rpc_origin || !restricted);
     if(!r)
     {
       res.status = "Failed";
@@ -1101,7 +1101,7 @@ namespace cryptonote
 
     const bool restricted = m_restricted && ctx;
     const bool request_has_rpc_origin = ctx != NULL;
-    m_core.get_pool_transactions_and_spent_keys_info(res.transactions, res.spent_key_images, !request_has_rpc_origin || !restricted);
+    m_core.get_pool().get_transactions_and_spent_keys_info(res.transactions, res.spent_key_images, !request_has_rpc_origin || !restricted);
     for(tx_info& txi : res.transactions)
       txi.tx_blob = epee::string_tools::buff_to_hex_nodelimer(txi.tx_blob);
 
@@ -1118,7 +1118,7 @@ namespace cryptonote
 
     const bool restricted = m_restricted && ctx;
     const bool request_has_rpc_origin = ctx != NULL;
-    m_core.get_pool_transaction_hashes(res.tx_hashes, !request_has_rpc_origin || !restricted);
+    m_core.get_pool().get_transaction_hashes(res.tx_hashes, !request_has_rpc_origin || !restricted);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -1133,7 +1133,7 @@ namespace cryptonote
     const bool restricted = m_restricted && ctx;
     const bool request_has_rpc_origin = ctx != NULL;
     std::vector<crypto::hash> tx_hashes;
-    m_core.get_pool_transaction_hashes(tx_hashes, !request_has_rpc_origin || !restricted);
+    m_core.get_pool().get_transaction_hashes(tx_hashes, !request_has_rpc_origin || !restricted);
     res.tx_hashes.reserve(tx_hashes.size());
     for (const crypto::hash &tx_hash: tx_hashes)
       res.tx_hashes.push_back(epee::string_tools::pod_to_hex(tx_hash));
@@ -1151,7 +1151,7 @@ namespace cryptonote
 
     const bool restricted = m_restricted && ctx;
     const bool request_has_rpc_origin = ctx != NULL;
-    m_core.get_pool_transaction_stats(res.pool_stats, !request_has_rpc_origin || !restricted);
+    m_core.get_pool().get_transaction_stats(res.pool_stats, !request_has_rpc_origin || !restricted);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -2115,12 +2115,7 @@ namespace cryptonote
     if (req.txids.empty())
     {
       std::vector<transaction> pool_txs;
-      bool r = m_core.get_pool_transactions(pool_txs);
-      if (!r)
-      {
-        res.status = "Failed to get txpool contents";
-        return true;
-      }
+      m_core.get_pool().get_transactions(pool_txs);
       for (const auto &tx: pool_txs)
       {
         txids.push_back(cryptonote::get_transaction_hash(tx));
@@ -2615,7 +2610,7 @@ namespace cryptonote
       crypto::hash txid = *reinterpret_cast<const crypto::hash*>(txid_data.data());
 
       std::string txblob;
-      bool r = m_core.get_pool_transaction(txid, txblob);
+      bool r = m_core.get_pool().get_transaction(txid, txblob);
       if (r)
       {
         cryptonote_connection_context fake_context{};
@@ -2678,13 +2673,7 @@ namespace cryptonote
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_TRANSACTION_POOL_BACKLOG>(invoke_http_mode::JON_RPC, "get_txpool_backlog", req, res, r))
       return r;
 
-    if (!m_core.get_txpool_backlog(res.backlog))
-    {
-      error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
-      error_resp.message = "Failed to get txpool backlog";
-      return false;
-    }
-
+    m_core.get_pool().get_transaction_backlog(res.backlog);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }

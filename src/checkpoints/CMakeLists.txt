@@ -51,10 +51,14 @@ arqma_add_library(checkpoints
   ${checkpoints_headers}
   ${checkpoints_private_headers})
 target_link_libraries(checkpoints
-  PRIVATE
+  PUBLIC
     common
-    cryptonote_basic
+    cncrypto
+    ${Boost_DATE_TIME_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SERIALIZATION_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+  PRIVATE
     ${EXTRA_LIBRARIES})

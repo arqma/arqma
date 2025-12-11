@@ -250,6 +250,12 @@ namespace net_utils
 				return false;
 			}
 			//---------------------------------------------------------------------------
+			inline bool invoke_post(const boost::string_ref uri, const std::string& body, std::chrono::milliseconds timeout, const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) override
+			{
+				std::lock_guard lock{m_lock};
+				return invoke(uri, "POST", body, timeout, ppresponse_info, additional_params);
+			}
+			//---------------------------------------------------------------------------
 			bool test(const std::string &s, std::chrono::milliseconds timeout) // TEST FUNC ONLY
 			{
 			  std::lock_guard lock{m_lock};

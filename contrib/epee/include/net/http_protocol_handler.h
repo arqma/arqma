@@ -54,12 +54,6 @@ namespace net_utils
 			std::vector<std::string> m_access_control_origins;
 			boost::optional<login> m_user;
 			std::mutex m_config_mutex;
-
-			template<typename T>
-			static constexpr bool after_init_connection(const std::shared_ptr<T>&) noexcept
-			{
-			  return true;
-			}
 		};
 
 		/************************************************************************/
@@ -88,6 +82,10 @@ namespace net_utils
 			virtual bool thread_deinit()
 			{
 				return true;
+			}
+			bool after_init_connection()
+			{
+			  return true;
 			}
 			virtual bool handle_recv(const void* ptr, size_t cb);
 			virtual bool handle_request(const http::http_request_info& query_info, http_response_info& response);
@@ -210,6 +208,10 @@ namespace net_utils
 			}
 			void handle_qued_callback()
 			{}
+			bool after_init_connection()
+			{
+			  return true;
+			}
 
 		private:
 			//simple_http_connection_handler::config_type m_stub_config;

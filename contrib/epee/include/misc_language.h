@@ -77,7 +77,7 @@ namespace misc_utils
 
   struct call_before_die_base
   {
-    virtual ~call_before_die_base(){}
+    virtual ~call_before_die_base() = default;
   };
 
   using auto_scope_leave_caller = std::shared_ptr<call_before_die_base>;
