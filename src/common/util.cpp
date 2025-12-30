@@ -48,13 +48,6 @@
 #include <string>
 #endif
 
-//tools::is_hdd
-#ifdef __GLIBC__
-  #include <sstream>
-  #include <sys/sysmacros.h>
-  #include <fstream>
-#endif
-
 #include "unbound.h"
 
 #include "include_base_utils.h"
@@ -69,6 +62,7 @@ using namespace epee;
 #include "memwipe.h"
 #include "net/http_client.h"                        // epee::net_utils::...
 #include "readline_buffer.h"
+#include "string_util.h"
 
 #ifdef WIN32
 #ifndef STRSAFE_NO_DEPRECATE
@@ -85,9 +79,13 @@ using namespace epee;
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
-#include <openssl/evp.h>
 #include "i18n.h"
 #include <mutex>
+
+extern "C" {
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+}
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "util"
@@ -556,44 +554,6 @@ namespace tools
 #endif
   }
 
-  boost::optional<bool> is_hdd(const char *file_path)
-  {
-#ifdef __GLIBC__
-struct stat st;
-std::string prefix;
-if(stat(file_path, &st) == 0)
-{
-  std::ostringstream s;
-  s << "/sys/dev/block/" << major(st.st_dev) << ":" << minor(st.st_dev);
-  prefix = s.str();
-}
-else
-{
-  return boost::none;
-}
-std::string attr_path = prefix + "/queue/rotational";
-std::ifstream f(attr_path, std::ios_base::in);
-if(not f.is_open())
-{
-  attr_path = prefix + "/../queue/rotational";
-  f.open(attr_path, std::ios_base::in);
-  if(not f.is_open())
-      {
-        return boost::none;
-      }
-    }
-    unsigned short val = 0xdead;
-    f >> val;
-    if(not f.fail())
-    {
-      return (val == 1);
-    }
-    return boost::none;
-#else
-    return boost::none;
-#endif
-  }
-
   namespace
   {
     std::mutex max_concurrency_lock;
@@ -619,6 +579,12 @@ if(not f.is_open())
 
   bool is_local_address(const std::string &address)
   {
+    if (tools::ends_with(address, ".onion") || tools::ends_with(address, ".i2p"))
+    {
+      MDEBUG("Address '" << address << "' is Tor/I2P, non local");
+      return false;
+    }
+
     // extract host
     epee::net_utils::http::url_content u_c;
     if (!epee::net_utils::parse_url(address, u_c))
@@ -632,7 +598,7 @@ if(not f.is_open())
       return false;
     }
 
-    if (u_c.host == "localhost" || boost::ends_with(u_c.host, ".localhost"))
+    if (u_c.host == "localhost" || tools::ends_with(u_c.host, ".localhost"))
     {
       MDEBUG("Address '" << address << "' is local");
       return true;
@@ -673,12 +639,12 @@ if(not f.is_open())
     return 0;
   }
 
-  bool sha256sum(const uint8_t *data, size_t len, crypto::hash &hash)
+  bool sha256sum_str(std::string_view data, crypto::hash &hash)
   {
-    return EVP_Digest(data, len, (unsigned char*) hash.data, NULL, EVP_sha256(), NULL) != 0;
+    return EVP_Digest(data.data(), data.size(), reinterpret_cast<unsigned char*>(hash.data), NULL, EVP_sha256(), NULL) != 0;
   }
 
-  bool sha256sum(const std::string &filename, crypto::hash &hash)
+  bool sha256sum_file(const std::string &filename, crypto::hash &hash)
   {
     if (!epee::file_io_utils::is_file_exist(filename))
       return false;

@@ -15,8 +15,8 @@ namespace lmdb
     {
         char const* const name;
         const unsigned flags;
-        MDB_cmp_func * const key_cmp;
-        MDB_cmp_func * const value_cmp;
+        MDB_cmp_func* const key_cmp;
+        MDB_cmp_func* const value_cmp;
 
         //! \pre `name != nullptr` \return Open table.
         expect<MDB_dbi> open(MDB_txn& write_txn) const noexcept;
@@ -55,7 +55,7 @@ namespace lmdb
         static expect<F> get_value(MDB_val value) noexcept
         {
             static_assert(std::is_same<U, V>(), "bad ARQMA_FIELD?");
-            static_assert(std::is_pod<F>(), "F must be POD");
+            static_assert(std::is_trivially_copyable<F>(), "F must be memcpy safe");
             static_assert(sizeof(F) + offset <= sizeof(U), "bad field type and/or offset");
 
             if (value.mv_size != sizeof(U))

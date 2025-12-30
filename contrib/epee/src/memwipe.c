@@ -38,6 +38,9 @@
 #endif
 #include "memwipe.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+
 #if defined(_MSC_VER)
 #define SCARECROW \
     __asm;
@@ -111,5 +114,7 @@ void *memwipe(void *ptr, size_t n)
   SCARECROW
   return ptr;
 }
+
+#pragma GCC diagnostic pop
 
 #endif

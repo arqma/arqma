@@ -49,6 +49,8 @@ extern "C" int64_t __wrap___divmoddi4(int64_t u, int64_t v, int64_t* rp)
 }
 #endif
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
 /* glibc-internal users use __explicit_bzero_chk, and explicit_bzero
    redirects to that.  */
 #undef explicit_bzero
@@ -73,6 +75,7 @@ __explicit_bzero_chk (void *dst, size_t len, size_t dstlen)
   /* Compiler barrier.  */
   asm volatile ("" ::: "memory");
 }
+#pragma GCC diagnostic pop
 /* libc-internal references use the hidden
    __explicit_bzero_chk_internal symbol.  This is necessary if
    __explicit_bzero_chk is implemented as an IFUNC because some

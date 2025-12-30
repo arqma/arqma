@@ -34,6 +34,7 @@
 #include <boost/algorithm/string.hpp>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <cstdint>
 
 #ifdef WINDOWS_PLATFORM
@@ -42,6 +43,7 @@
 
 namespace epee
 {
+using namespace std::literals;
 namespace string_tools
 {
   //----------------------------------------------------------------------------
@@ -50,14 +52,14 @@ namespace string_tools
     return to_hex::string(to_byte_span(to_span(src)));
   }
   //----------------------------------------------------------------------------
-  inline bool parse_hexstr_to_binbuff(const boost::string_ref s, std::string& res)
+  inline bool parse_hexstr_to_binbuff(const std::string_view s, std::string& res)
   {
     return from_hex::to_string(res, s);
   }
   //----------------------------------------------------------------------------
   std::string get_ip_string_from_int32(uint32_t ip);
   bool get_ip_int32_from_string(uint32_t& ip, const std::string& ip_str);
-  bool parse_peer_from_string(uint32_t& ip, uint16_t& port, const std::string& address);
+  bool parse_peer_from_string(uint32_t& ip, uint16_t& port, std::string_view address);
   std::string num_to_string_fast(int64_t val);
 
   bool compare_no_case(const std::string& str1, const std::string& str2);
@@ -89,7 +91,7 @@ namespace string_tools
   }
   //----------------------------------------------------------------------------
   template<class t_pod_type>
-  bool hex_to_pod(const boost::string_ref hex_str, t_pod_type& s)
+  bool hex_to_pod(const std::string_view hex_str, t_pod_type& s)
   {
     static_assert(std::is_standard_layout<t_pod_type>(), "expected standard layout type");
     static_assert(std::has_unique_object_representations_v<t_pod_type>, "type may have padding");
@@ -97,13 +99,13 @@ namespace string_tools
   }
   //----------------------------------------------------------------------------
   template<class t_pod_type>
-  bool hex_to_pod(const boost::string_ref hex_str, tools::scrubbed<t_pod_type>& s)
+  bool hex_to_pod(const std::string_view hex_str, tools::scrubbed<t_pod_type>& s)
   {
     return hex_to_pod(hex_str, unwrap(s));
   }
   //----------------------------------------------------------------------------
   template<class t_pod_type>
-  bool hex_to_pod(const boost::string_ref hex_str, epee::mlocked<t_pod_type>& s)
+  bool hex_to_pod(const std::string_view hex_str, epee::mlocked<t_pod_type>& s)
   {
     return hex_to_pod(hex_str, unwrap(s));
   }

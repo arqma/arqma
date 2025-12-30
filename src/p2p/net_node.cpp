@@ -32,9 +32,9 @@
 #include <boost/endian/conversion.hpp>
 #include <boost/optional/optional.hpp>
 #include <future>
-#include <boost/utility/string_ref.hpp>
 #include <chrono>
 #include <utility>
+#include <string_view>
 
 #include "common/command_line.h"
 #include "cryptonote_core/cryptonote_core.h"
@@ -55,7 +55,7 @@ namespace
     constexpr const std::chrono::milliseconds future_poll_interval = 500ms;
     constexpr const std::chrono::seconds socks_connect_timeout{P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT};
 
-    std::int64_t get_max_connections(const boost::iterator_range<boost::string_ref::const_iterator> value) noexcept
+    std::int64_t get_max_connections(const boost::iterator_range<std::string_view::const_iterator> value) noexcept
     {
         // -1 is default, 0 is error
         if (value.empty())
@@ -68,7 +68,7 @@ namespace
     }
 
     template<typename T>
-    epee::net_utils::network_address get_address(const boost::string_ref value)
+    epee::net_utils::network_address get_address(std::string_view value)
     {
         expect<T> address = T::make(value);
         if (!address)
@@ -165,17 +165,17 @@ namespace nodetool
         const std::vector<std::string> args = command_line::get_arg(vm, arg_proxy);
         proxies.reserve(args.size());
 
-        for (const boost::string_ref arg : args)
+        for (std::string_view arg : args)
         {
             proxies.emplace_back();
 
             auto next = boost::algorithm::make_split_iterator(arg, boost::algorithm::first_finder(","));
             CHECK_AND_ASSERT_MES(!next.eof() && !next->empty(), boost::none, "No network type for --" << arg_proxy.name);
-            const boost::string_ref zone{next->begin(), next->size()};
+            std::string_view zone{next->begin(), next->size()};
 
             ++next;
             CHECK_AND_ASSERT_MES(!next.eof() && !next->empty(), boost::none, "No ipv4:port given for --" << arg_proxy.name);
-            const boost::string_ref proxy{next->begin(), next->size()};
+            std::string_view proxy{next->begin(), next->size()};
 
             ++next;
             for (unsigned count = 0; !next.eof(); ++count, ++next)
@@ -232,17 +232,17 @@ namespace nodetool
         const std::vector<std::string> args = command_line::get_arg(vm, arg_anonymous_inbound);
         inbounds.reserve(args.size());
 
-        for (const boost::string_ref arg : args)
+        for (std::string_view arg : args)
         {
             inbounds.emplace_back();
 
             auto next = boost::algorithm::make_split_iterator(arg, boost::algorithm::first_finder(","));
             CHECK_AND_ASSERT_MES(!next.eof() && !next->empty(), boost::none, "No inbound address for --" << arg_anonymous_inbound.name);
-            const boost::string_ref address{next->begin(), next->size()};
+            std::string_view address{next->begin(), next->size()};
 
             ++next;
             CHECK_AND_ASSERT_MES(!next.eof() && !next->empty(), boost::none, "No local ipv4:port given for --" << arg_anonymous_inbound.name);
-            const boost::string_ref bind{next->begin(), next->size()};
+            std::string_view bind{next->begin(), next->size()};
 
             const std::size_t colon = bind.find_first_of(':');
             CHECK_AND_ASSERT_MES(colon < bind.size(), boost::none, "No local port given for --" << arg_anonymous_inbound.name);

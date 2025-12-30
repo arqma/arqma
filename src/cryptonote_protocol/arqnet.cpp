@@ -39,7 +39,7 @@ std::string get_data_as_string(const T &key)
   return {reinterpret_cast<const char *>(&key), sizeof(key)};
 }
 
-crypto::x25519_public_key x25519_from_string(const std::string &pubkey)
+crypto::x25519_public_key x25519_from_string(std::string_view pubkey)
 {
   crypto::x25519_public_key x25519_pub = crypto::x25519_public_key::null();
   if (pubkey.size() == sizeof(crypto::x25519_public_key))

@@ -32,7 +32,6 @@
 #include "storages/portable_storage_to_bin.h"
 #include "storages/portable_storage_from_bin.h"
 
-#include <boost/utility/string_ref.hpp>
 #include <string>
 #include <sstream>
 
@@ -40,7 +39,7 @@ namespace epee
 {
 namespace serialization
 {
-  bool portable_storage::store_to_binary(binarybuffer& target)
+  bool portable_storage::store_to_binary(std::string& target)
   {
     TRY_ENTRY();
     std::stringstream ss;
@@ -48,7 +47,7 @@ namespace serialization
     sbh.m_signature_a = SWAP32LE(PORTABLE_STORAGE_SIGNATUREA);
     sbh.m_signature_b = SWAP32LE(PORTABLE_STORAGE_SIGNATUREB);
     sbh.m_ver = PORTABLE_STORAGE_FORMAT_VER;
-    ss.write((const char*)&sbh, sizeof(storage_block_header));
+    ss.write(reinterpret_cast<const char*>(&sbh), sizeof(storage_block_header));
     pack_entry_to_buff(ss, m_root);
     target = ss.str();
     return true;
@@ -65,14 +64,14 @@ namespace serialization
     CATCH_ENTRY("portable_storage::dump_as_json", false)
   }
 
-  bool portable_storage::load_from_json(const std::string& source)
+  bool portable_storage::load_from_json(std::string_view source)
   {
     TRY_ENTRY();
     return json::load_from_json(source, *this);
     CATCH_ENTRY("portable_storage::load_from_json", false)
   }
 
-  bool portable_storage::load_from_binary(const std::string& target)
+  bool portable_storage::load_from_binary(std::string_view target)
   {
     return load_from_binary(epee::strspan<uint8_t>(target));
   }

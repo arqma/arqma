@@ -45,7 +45,7 @@ namespace epee
     public:
       typedef epee::serialization::hsection hsection;
       typedef epee::serialization::harray  harray;
-//      typedef storage_entry meta_entry;
+      typedef storage_entry meta_entry;
 
       portable_storage(){}
       virtual ~portable_storage(){}
@@ -76,14 +76,14 @@ namespace epee
       bool        delete_entry(const std::string& pentry_name, hsection hparent_section = nullptr);
 
       //-------------------------------------------------------------------------------
-      bool		store_to_binary(binarybuffer& target);
+      bool		store_to_binary(std::string& target);
       bool		load_from_binary(const epee::span<const uint8_t> target);
-      bool		load_from_binary(const std::string& target);
+      bool		load_from_binary(std::string_view target);
 
       template<class trace_policy>
       bool		  dump_as_xml(std::string& targetObj, const std::string& root_name = "");
       bool		  dump_as_json(std::string& targetObj, size_t indent = 0, bool insert_newlines = true);
-      bool		  load_from_json(const std::string& source);
+      bool		  load_from_json(std::string_view source);
 
     private:
       section m_root;

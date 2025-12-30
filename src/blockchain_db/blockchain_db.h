@@ -611,7 +611,7 @@ public:
    *
    * @return true if open/ready, otherwise false
    */
-  bool is_open() const;
+  bool is_open() const { return m_open; }
 
   /**
    * @brief close the BlockchainDB
@@ -1831,7 +1831,6 @@ public:
   void set_auto_remove_logs(bool auto_remove) { m_auto_remove_logs = auto_remove; }
 
   bool m_open;  //!< Whether or not the BlockchainDB is open/ready for use
-
 };  // class BlockchainDB
 
 class db_txn_guard
@@ -1841,7 +1840,7 @@ public:
   {
     if(readonly)
     {
-	  active = db.block_rtxn_start();
+	    active = db.block_rtxn_start();
     }
     else
     {

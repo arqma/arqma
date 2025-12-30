@@ -104,7 +104,7 @@ namespace cryptonote
    *
    * @return checkpoints data, empty span if there ain't any checkpoints for specific network type
    */
-  typedef std::function<const epee::span<const unsigned char>(cryptonote::network_type network)> GetCheckpointsCallback;
+  using GetCheckpointsCallback = std::function<std::string_view(cryptonote::network_type network)>;
 
   /************************************************************************/
   /*                                                                      */
@@ -401,7 +401,7 @@ namespace cryptonote
      *
      * @return true
      */
-    bool get_short_chain_history(std::list<crypto::hash>& ids) const;
+    void get_short_chain_history(std::list<crypto::hash>& ids) const;
 
     /**
      * @brief get recent block hashes for a foreign chain
@@ -468,7 +468,7 @@ namespace cryptonote
      */
     bool find_blockchain_supplement(const uint64_t req_start_block, const std::list<crypto::hash>& qblock_ids, std::vector<std::pair<std::pair<std::string, crypto::hash>, std::vector<std::pair<crypto::hash, std::string> > > >& blocks, uint64_t& total_height, uint64_t& start_height, bool pruned, bool get_miner_tx_hash, size_t max_block_count, size_t max_tx_count) const;
 
-    bool handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NOTIFY_RESPONSE_GET_OBJECTS::request& rsp);;
+    bool handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NOTIFY_RESPONSE_GET_OBJECTS::request& rsp);
 
     /**
      * @brief get number of outputs of an amount past the minimum spendable age
@@ -699,7 +699,6 @@ namespace cryptonote
     bool get_split_transactions_blobs(const std::vector<crypto::hash>& txs_ids, std::vector<std::tuple<crypto::hash, std::string, crypto::hash, std::string>>& txs, std::vector<crypto::hash>& missed_txs) const;
     bool get_transactions(const std::vector<crypto::hash>& txs_ids, std::vector<transaction>& txs, std::vector<crypto::hash>& missed_txs) const;
 
-    std::vector<uint64_t> get_transactions_heights(const std::vector<crypto::hash>& txs_ids) const;
     /**
      * @brief loads new checkpoints from a file
      *
@@ -1189,20 +1188,6 @@ namespace cryptonote
      * @return the block removed
      */
     block pop_block_from_blockchain();
-
-    /**
-     * @brief validate and add a new block to the end of the blockchain
-     *
-     * This function is merely a convenience wrapper around the other
-     * of the same name.  This one passes the block's hash to the other
-     * as well as the block and verification context.
-     *
-     * @param bl the block to be added
-     * @param bvc metadata concerning the block's validity
-     *
-     * @return true if the block was added successfully, otherwise false
-     */
-    bool handle_block_to_main_chain(const block& bl, block_verification_context& bvc);
 
     /**
      * @brief validate and add a new block to the end of the blockchain

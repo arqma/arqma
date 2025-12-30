@@ -76,6 +76,8 @@ class Serialization_portability_wallet_Test;
 
 namespace tools
 {
+  using namespace std::literals;
+
   static const char *ERR_MSG_NETWORK_VERSION_QUERY_FAILED = "Could not query the current network version, try later";
   static const char *ERR_MSG_NETWORK_HEIGHT_QUERY_FAILED = "Could not query the current network block height, try later: ";
   static const char *ERR_MSG_SERVICE_NODE_LIST_QUERY_FAILED = "Failed to query daemon for service node list";
@@ -306,7 +308,7 @@ private:
     friend class ::Serialization_portability_wallet_Test;
     friend class wallet_keys_unlocker;
   public:
-    static constexpr const std::chrono::seconds rpc_timeout = std::chrono::minutes(3) + std::chrono::seconds(30);
+    static constexpr const std::chrono::seconds rpc_timeout = 3min + 30s;
 
     enum RefreshType {
       RefreshFull,
@@ -1197,7 +1199,7 @@ private:
      * \param  spent                    [OUT] the sum of spent funds included in the signature
      * \return                          true if the signature verifies correctly
      */
-    bool check_reserve_proof(const cryptonote::account_public_address &address, const std::string &message, const std::string &sig_str, uint64_t &total, uint64_t &spent);
+    bool check_reserve_proof(const cryptonote::account_public_address &address, const std::string &message, const std::string_view sig_str, uint64_t &total, uint64_t &spent);
 
    /*!
     * \brief GUI Address book get/store
@@ -1352,21 +1354,21 @@ private:
     crypto::public_key get_multisig_signing_public_key(const crypto::secret_key &skey) const;
 
     template<class t_request, class t_response>
-    inline bool invoke_http_json(const boost::string_ref uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST")
+    inline bool invoke_http_json(const std::string_view uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = 15s, std::string_view http_method = "POST"sv)
     {
       if(m_offline) return false;
       std::lock_guard lock{m_daemon_rpc_mutex};
       return epee::net_utils::invoke_http_json(uri, req, res, *m_http_client, timeout, http_method);
     }
     template<class t_request, class t_response>
-    inline bool invoke_http_bin(const boost::string_ref uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST")
+    inline bool invoke_http_bin(std::string_view uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = 15s, std::string_view http_method = "POST"sv)
     {
       if(m_offline) return false;
       std::lock_guard lock{m_daemon_rpc_mutex};
       return epee::net_utils::invoke_http_bin(uri, req, res, *m_http_client, timeout, http_method);
     }
     template<class t_request, class t_response>
-    inline bool invoke_http_json_rpc(const boost::string_ref uri, const std::string& method_name, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST", const std::string& req_id = "0")
+    inline bool invoke_http_json_rpc(std::string_view uri, const std::string& method_name, const t_request& req, t_response& res, std::chrono::milliseconds timeout = 15s, std::string_view http_method = "POST"sv, const std::string& req_id = "0")
     {
       if(m_offline) return false;
       std::lock_guard lock{m_daemon_rpc_mutex};

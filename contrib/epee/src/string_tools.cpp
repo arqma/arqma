@@ -38,11 +38,11 @@
 #include <cstdlib>
 #include <string>
 #include <type_traits>
+#include <string_view>
 #include <system_error>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/utility/string_ref.hpp>
 #include <boost/filesystem.hpp>
 #include "misc_log_ex.h"
 #include "storages/parserse_base_utils.h"
@@ -63,6 +63,7 @@
 
 namespace epee
 {
+using namespace std::literals;
 namespace string_tools
 {
   std::string get_ip_string_from_int32(uint32_t ip)
@@ -85,23 +86,23 @@ namespace string_tools
     return true;
   }
   //----------------------------------------------------------------------------
-  bool parse_peer_from_string(uint32_t& ip, uint16_t& port, const std::string& addres)
+  bool parse_peer_from_string(uint32_t& ip, uint16_t& port, std::string_view address)
   {
     //parse ip and address
-    std::string::size_type p = addres.find(':');
-    std::string ip_str, port_str;
-    if(p == std::string::npos)
+    auto p = address.find(':');
+    std::string_view ip_str, port_str;
+    if(p == std::string_view::npos)
     {
       port = 0;
-      ip_str = addres;
+      ip_str = address;
     }
     else
     {
-      ip_str = addres.substr(0, p);
-      port_str = addres.substr(p+1, addres.size());
+      ip_str = address.substr(0, p);
+      port_str = address.substr(p+1);
     }
 
-    if(!get_ip_int32_from_string(ip, ip_str))
+    if(!get_ip_int32_from_string(ip, std::string{ip_str}))
     {
       return false;
     }

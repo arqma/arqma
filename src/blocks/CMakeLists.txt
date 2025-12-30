@@ -27,19 +27,12 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-add_custom_command(OUTPUT checkpoints.c MAIN_DEPENDENCY checkpoints.dat
-    COMMAND
-      cd ${CMAKE_CURRENT_BINARY_DIR} &&
-      echo "'#include\t<stddef.h>'" > checkpoints.c &&
-      echo "'const\tunsigned\tchar\tcheckpoints[]={'" >> checkpoints.c &&
-      od -v -An -tx1 ${CMAKE_CURRENT_SOURCE_DIR}/checkpoints.dat | sed -e "'s/[0-9a-fA-F]\\{1,\\}/0x&,/g'" -e "'$$s/.$$//'" >> checkpoints.c &&
-      echo "'};'" >> checkpoints.c &&
-      echo "'const\tsize_t\tcheckpoints_len\t=\tsizeof(checkpoints);'" >> checkpoints.c)
+foreach(NET checkpoints)
+  file(READ "${NET}.dat" ${NET}_data HEX)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "\\\\x\\1" ${NET}_data "${${NET}_data}")
+endforeach()
 
-arqma_add_library(blocks
-  blocks.cpp
-  checkpoints.c)
+configure_file(blocks.cpp.in blocks.cpp @ONLY)
+arqma_add_library(blocks "${CMAKE_CURRENT_BINARY_DIR}/blocks.cpp")
 
-target_link_libraries(blocks
-  PRIVATE
-    ${EXTRA_LIBRARIES})
+target_link_libraries(blocks PRIVATE ${EXTRA_LIBRARIES})

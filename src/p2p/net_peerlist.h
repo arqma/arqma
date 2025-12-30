@@ -42,8 +42,6 @@
 #include <boost/multi_index/identity.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/optional/optional.hpp>
-#include <boost/range/adaptor/reversed.hpp>
-
 
 #include "crypto/crypto.h"
 #include "cryptonote_config.h"
@@ -105,7 +103,7 @@ namespace nodetool
     bool init(peerlist_types&& peers, bool allow_local_ip);
     size_t get_white_peers_count() { std::lock_guard lock{m_peerlist_lock }; return m_peers_white.size(); }
     size_t get_gray_peers_count() { std::lock_guard lock{m_peerlist_lock }; return m_peers_gray.size(); }
-    bool merge_peerlist(const std::vector<peerlist_entry>& outer_bs);
+    bool merge_peerlist(const std::vector<peerlist_entry>& outer_bs, const std::function<bool(const peerlist_entry&)> &f = NULL);
     bool get_peerlist_head(std::vector<peerlist_entry>& bs_head, bool anonymize, uint32_t depth = P2P_DEFAULT_PEERS_IN_HANDSHAKE);
     void get_peerlist(std::vector<peerlist_entry>& pl_gray, std::vector<peerlist_entry>& pl_white);
     void get_peerlist(peerlist_types& peers);
@@ -116,7 +114,6 @@ namespace nodetool
     bool append_with_peer_gray(const peerlist_entry& pr);
     bool append_with_peer_anchor(const anchor_peerlist_entry& ple);
     bool set_peer_just_seen(peerid_type peer, const epee::net_utils::network_address& addr, uint32_t pruning_seed, uint16_t rpc_port);
-    bool set_peer_unreachable(const peerlist_entry& pr);
     bool is_host_allowed(const epee::net_utils::network_address &address);
     bool get_random_gray_peer(peerlist_entry& pe);
     bool remove_from_peer_gray(const peerlist_entry& pe);
@@ -217,12 +214,13 @@ namespace nodetool
   }
   //--------------------------------------------------------------------------------------------------
   inline
-  bool peerlist_manager::merge_peerlist(const std::vector<peerlist_entry>& outer_bs)
+  bool peerlist_manager::merge_peerlist(const std::vector<peerlist_entry>& outer_bs, const std::function<bool(const peerlist_entry&)> &f)
   {
     std::unique_lock lock{m_peerlist_lock};
     for(const peerlist_entry& be: outer_bs)
     {
-      append_with_peer_gray(be);
+      if (!f || f(be))
+        append_with_peer_gray(be);
     }
     // delete extra elements
     trim_gray_peerlist();
@@ -270,7 +268,7 @@ namespace nodetool
   bool peerlist_manager::get_peerlist_head(std::vector<peerlist_entry>& bs_head, bool anonymize, uint32_t depth)
   {
     std::unique_lock lock{m_peerlist_lock};
-    peers_indexed::index<by_time>::type& by_time_index=m_peers_white.get<by_time>();
+    auto& by_time_index=m_peers_white.get<by_time>();
     uint32_t cnt = 0;
 
     // picks a random set of peers within the whole set, rather pick the first depth elements.
@@ -284,12 +282,12 @@ namespace nodetool
     // so its last_seen is old.
     const uint32_t pick_depth = anonymize ? m_peers_white.size() : depth;
     bs_head.reserve(pick_depth);
-    for(const peers_indexed::value_type& vl: boost::adaptors::reverse(by_time_index))
+    for(auto it = by_time_index.rbegin(); it != by_time_index.rend(); ++it)
     {
       if(cnt++ >= pick_depth)
         break;
 
-      bs_head.push_back(vl);
+      bs_head.push_back(*it);
     }
 
     if (anonymize)
@@ -304,13 +302,13 @@ namespace nodetool
     return true;
   }
   //--------------------------------------------------------------------------------------------------
-  template<typename F> inline
+  template<typename F>
   bool peerlist_manager::foreach(bool white, const F &f)
   {
     std::lock_guard lock{m_peerlist_lock};
-    peers_indexed::index<by_time>::type& by_time_index = white ? m_peers_white.get<by_time>() : m_peers_gray.get<by_time>();
-    for(const peers_indexed::value_type& vl: boost::adaptors::reverse(by_time_index))
-      if (!f(vl))
+    auto& by_time_index = white ? m_peers_white.get<by_time>() : m_peers_gray.get<by_time>();
+    for (auto it = by_time_index.rbegin(); it != by_time_index.rend(); ++it)
+      if (!f(*it))
         return false;
     return true;
   }

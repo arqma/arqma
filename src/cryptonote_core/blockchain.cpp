@@ -34,8 +34,10 @@
 #include <boost/asio/dispatch.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/adaptor/reversed.hpp>
+#include <boost/endian/conversion.hpp>
 
 #include "common/rules.h"
+#include "common/hex.h"
 #include "include_base_utils.h"
 #include "common/string_util.h"
 #include "cryptonote_basic/cryptonote_basic_impl.h"
@@ -564,15 +566,15 @@ void Blockchain::pop_blocks(uint64_t nblocks)
     if (blockchain_height > 0)
       nblocks = std::min(nblocks, blockchain_height - 1);
 
-    uint64_t constexpr PROGRESS_UPDATE = 10;
-    uint64_t const blocks_per_update = (nblocks / PROGRESS_UPDATE);
+    uint64_t constexpr progress_update = 10;
+    uint64_t const blocks_per_update = (nblocks / progress_update);
 
     tools::PerformanceTimer timer;
     for (int progress = 0; i < nblocks; ++i)
     {
       if (nblocks >= BLOCKS_EXPECTED_IN_HOURS(24) && (i != 0 && (i % blocks_per_update == 0)))
       {
-        MGINFO("... popping blocks " << (++progress * PROGRESS_UPDATE) << "% completed, height: " << (blockchain_height - i) << " (" << tools::friendly_duration(timer.value()) << "s)");
+        MGINFO("... popping blocks " << (++progress * progress_update) << "% completed, height: " << (blockchain_height - i) << " (" << tools::friendly_duration(timer.value()) << "s)");
         timer.reset();
       }
 
@@ -645,7 +647,7 @@ block Blockchain::pop_block_from_blockchain()
     }
     if (!is_coinbase(tx))
     {
-      cryptonote::tx_verification_context tvc{};
+      cryptonote::tx_verification_context tvc = {};
 
       // FIXME: HardFork
       // Besides the below, popping a block should also remove the last entry
@@ -657,7 +659,7 @@ block Blockchain::pop_block_from_blockchain()
       // that might not be always true. Unlikely though, and always relaying
       // these again might cause a spike of traffic as many nodes re-relay
       // all the transactions in a popped block when a reorg happens.
-      bool r = m_tx_pool.add_tx(tx, tvc, tx_pool_options::from_block(), version);
+      const bool r = m_tx_pool.add_tx(tx, tvc, tx_pool_options::from_block(), version);
       if (!r)
       {
         LOG_ERROR("Error returning transaction to tx_pool");
@@ -723,46 +725,24 @@ crypto::hash Blockchain::get_tail_id() const
  *   - base-2 exponential drop off from there, so: H-13, H-17, H-25, etc... (going down to, at smallest, height 1)
  *   - the genesis block (height 0)
  */
-bool Blockchain::get_short_chain_history(std::list<crypto::hash>& ids) const
+void Blockchain::get_short_chain_history(std::list<crypto::hash>& ids) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   std::unique_lock lock{*this};
-  uint64_t i = 0;
-  uint64_t current_multiplier = 1;
   uint64_t sz = m_db->height();
 
   if(!sz)
-    return true;
+    return;
 
   db_rtxn_guard rtxn_guard(m_db);
-  bool genesis_included = false;
-  uint64_t current_back_offset = 1;
-  while (current_back_offset < sz)
+  for (uint64_t i = 0, decr = 1, offset = 1; offset < sz; ++i)
   {
-    ids.push_back(m_db->get_block_hash_from_height(sz - current_back_offset));
-
-    if (sz-current_back_offset == 0)
-    {
-      genesis_included = true;
-    }
-    if (i < 10)
-    {
-      ++current_back_offset;
-    }
-    else
-    {
-      current_multiplier *= 2;
-      current_back_offset += current_multiplier;
-    }
-    ++i;
+    ids.push_back(m_db->get_block_hash_from_height(sz - offset));
+    if (i >= 10) decr *= 2;
+    offset += decr;
   }
 
-  if (!genesis_included)
-  {
-    ids.push_back(m_db->get_block_hash_from_height(0));
-  }
-
-  return true;
+  ids.push_back(m_db->get_block_hash_from_height(0));
 }
 //------------------------------------------------------------------
 crypto::hash Blockchain::get_block_id_by_height(uint64_t height) const
@@ -2081,7 +2061,7 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
   std::unique_lock lock{*this};
   db_rtxn_guard rtxn_guard(m_db);
   rsp.current_blockchain_height = get_current_blockchain_height();
-  std::vector<std::pair<std::string,block>> blocks;
+  std::vector<std::pair<std::string, block>> blocks;
   get_blocks(arg.blocks, blocks, rsp.missed_ids);
 
   uint64_t const top_height = (m_db->height() - 1);
@@ -2089,6 +2069,8 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
 
   for(auto& bl : blocks)
   {
+    std::vector<crypto::hash> missed_tx_ids;
+
     auto &block_blob = bl.first;
     auto &block = bl.second;
 
@@ -2117,15 +2099,17 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
 
     // FIXME: s/rsp.missed_ids/missed_tx_id/ ?  Seems like rsp.missed_ids
     //        is for missed blocks, not missed transactions as well.
-    std::vector<crypto::hash> missed_tx_ids;
     get_transactions_blobs(block.tx_hashes, block_entry.txs, missed_tx_ids);
 
     if (missed_tx_ids.size() != 0)
     {
-      LOG_ERROR("Error retrieving blocks, missed " << missed_tx_ids.size()
+      if (tools::has_unpruned_block(get_block_height(block), get_current_blockchain_height(), get_blockchain_pruning_seed()))
+      {
+        LOG_ERROR("Error retrieving blocks, missed " << missed_tx_ids.size()
           << " transactions for block with hash: " << get_block_hash(bl.second)
           << std::endl
-      );
+        );
+      }
 
       rsp.missed_ids.insert(rsp.missed_ids.end(), missed_tx_ids.begin(), missed_tx_ids.end());
       return false;
@@ -2134,6 +2118,7 @@ bool Blockchain::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NO
     //pack block
     block_entry.block = std::move(block_blob);
   }
+  //get and pack other transactions, if needed
   get_transactions_blobs(arg.txs, rsp.txs, rsp.missed_ids);
 
   return true;
@@ -2431,19 +2416,6 @@ bool Blockchain::get_transactions_blobs(const std::vector<crypto::hash>& txs_ids
   return true;
 }
 //------------------------------------------------------------------
-std::vector<uint64_t> Blockchain::get_transactions_heights(const std::vector<crypto::hash>& txs_ids) const
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  std::unique_lock lock{*this};
-
-  auto heights = m_db->get_tx_block_heights(txs_ids);
-  for (auto &h : heights)
-    if (h == std::numeric_limits<uint64_t>::max())
-      h = 0;
-
-  return heights;
-}
-//------------------------------------------------------------------
 size_t get_transaction_version(const std::string &bd)
 {
   size_t version;
@@ -2633,13 +2605,6 @@ bool Blockchain::have_block(const crypto::hash& id) const
   }
 
   return false;
-}
-//------------------------------------------------------------------
-bool Blockchain::handle_block_to_main_chain(const block& bl, block_verification_context& bvc)
-{
-    LOG_PRINT_L3("Blockchain::" << __func__);
-    crypto::hash id = get_block_hash(bl);
-    return handle_block_to_main_chain(bl, id, bvc, nullptr /*checkpoint*/);
 }
 //------------------------------------------------------------------
 size_t Blockchain::get_total_transactions() const
@@ -5166,14 +5131,13 @@ void Blockchain::cancel()
 }
 
 #if defined(PER_BLOCK_CHECKPOINT)
-static const char expected_block_hashes_hash[] = "6833e818ea6b2949bcbfd8e289ce284f310d7f61164bd05748c74d1527024336";
 void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get_checkpoints)
 {
-  if (get_checkpoints == nullptr || !m_fast_sync)
+  if (!get_checkpoints || !m_fast_sync)
   {
     return;
   }
-  const epee::span<const unsigned char> &checkpoints = get_checkpoints(m_nettype);
+  std::string_view checkpoints = get_checkpoints(m_nettype);
   if (!checkpoints.empty())
   {
     MINFO("Loading precomputed blocks (" << checkpoints.size() << " bytes)");
@@ -5181,19 +5145,22 @@ void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get
     {
       // first check hash
       crypto::hash hash;
-      if (!tools::sha256sum(checkpoints.data(), checkpoints.size(), hash))
+      if (!tools::sha256sum_str(checkpoints, hash))
       {
         MERROR("Failed to hash precomputed blocks data");
         return;
       }
-      MINFO("precomputed blocks hash: " << hash << ", expected " << expected_block_hashes_hash);
-      std::string expected_hash_data;
-      if (!epee::string_tools::parse_hexstr_to_binbuff(std::string(expected_block_hashes_hash), expected_hash_data) || expected_hash_data.size() != sizeof(crypto::hash))
+
+      constexpr auto EXPECTED_SHA256_HASH = "4fb5fb2538dd034dcfaf42ab10e5f43bdf2f1d6e658ccd9c99d8fca4c730f0e5"sv;
+      MINFO("precomputed blocks hash: " << hash << ", expected " << EXPECTED_SHA256_HASH);
+
+      crypto::hash expected_hash;
+      if (!tools::hex_to_type(EXPECTED_SHA256_HASH, expected_hash))
       {
         MERROR("Failed to parse expected block hashes hash");
         return;
       }
-      const crypto::hash expected_hash = *reinterpret_cast<const crypto::hash*>(expected_hash_data.data());
+
       if (hash != expected_hash)
       {
         MERROR("Block hash data does not match expected hash");
@@ -5203,8 +5170,9 @@ void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get
 
     if (checkpoints.size() > 4)
     {
-      const unsigned char *p = checkpoints.data();
-      const uint32_t nblocks = *p | ((*(p+1))<<8) | ((*(p+2))<<16) | ((*(p+3))<<24);
+      uint32_t nblocks;
+      std::memcpy(&nblocks, checkpoints.data(), 4);
+      boost::endian::little_to_native_inplace(nblocks);
       if (nblocks > (std::numeric_limits<uint32_t>::max() - 4) / sizeof(hash))
       {
         MERROR("Block hash data is too large");
@@ -5218,14 +5186,13 @@ void Blockchain::load_compiled_in_block_hashes(const GetCheckpointsCallback& get
       }
       else if(nblocks > 0 && nblocks > (m_db->height() + HASH_OF_HASHES_STEP - 1) / HASH_OF_HASHES_STEP)
       {
-        p += sizeof(uint32_t);
+        checkpoints.remove_prefix(4);
         m_blocks_hash_of_hashes.reserve(nblocks);
         for (uint32_t i = 0; i < nblocks; i++)
         {
-          crypto::hash hash;
-          memcpy(hash.data, p, sizeof(hash.data));
-          p += sizeof(hash.data);
-          m_blocks_hash_of_hashes.push_back(hash);
+          crypto::hash& hash = m_blocks_hash_of_hashes.emplace_back();
+          std::memcpy(hash.data, checkpoints.data(), sizeof(hash.data));
+          checkpoints.remove_prefix(sizeof(hash.data));
         }
         m_blocks_hash_check.resize(m_blocks_hash_of_hashes.size() * HASH_OF_HASHES_STEP, crypto::null_hash);
         MINFO(nblocks << " block hashes loaded");

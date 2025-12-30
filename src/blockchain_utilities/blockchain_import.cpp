@@ -43,7 +43,6 @@
 #include "blocks/blocks.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "serialization/binary_utils.h" // dump_binary(), parse_binary()
-#include "serialization/json_utils.h" // dump_json()
 #include "include_base_utils.h"
 #include "cryptonote_core/cryptonote_core.h"
 
@@ -62,7 +61,7 @@ bool opt_stagenet = true;
 // number of blocks per batch transaction
 // adjustable through command-line argument according to available RAM
 #if ARCH_WIDTH != 32
-uint64_t db_batch_size = 2000;
+uint64_t db_batch_size = 20000;
 #else
 // set a lower default batch size, pending possible LMDB issue with large transaction size
 uint64_t db_batch_size = 100;
@@ -70,7 +69,7 @@ uint64_t db_batch_size = 100;
 
 // when verifying, use a smaller default batch size so progress is more
 // frequently saved
-uint64_t db_batch_size_verify = 250;
+uint64_t db_batch_size_verify = 5000;
 
 std::string refresh_string = "\r                                    \r";
 }
@@ -99,7 +98,8 @@ int pop_blocks(cryptonote::core& core, int num_blocks)
 {
   bool use_batch = opt_batch;
 
-  if (use_batch) core.get_blockchain_storage().get_db().batch_start();
+  if (use_batch)
+    core.get_blockchain_storage().get_db().batch_start();
 
   try
   {
@@ -110,9 +110,9 @@ int pop_blocks(cryptonote::core& core, int num_blocks)
       core.get_blockchain_storage().get_db().show_stats();
     }
   }
-  catch(const std::exception &e)
+  catch (const std::exception &e)
   {
-    // don't commit
+
   }
 
   return num_blocks;
@@ -137,7 +137,7 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
     if (!parse_and_validate_block_from_blob(b.block, block))
     {
       MERROR("Failed to parse block: "
-          << epee::string_tools::pod_to_hex(get_blob_hash(b.block)));
+          << epee::string_tools::buff_to_hex_nodelimer(b.block));
       core.cleanup_handle_incoming_blocks();
       return 1;
     }
@@ -168,8 +168,11 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
       core.handle_incoming_tx(tx_blob, tvc, tx_pool_options::from_block());
       if(tvc.m_verification_failed)
       {
-        MERROR("transaction verification failed, tx_id = "
-            << epee::string_tools::pod_to_hex(get_blob_hash(tx_blob)));
+        cryptonote::transaction transaction;
+        if (cryptonote::parse_and_validate_tx_from_blob(tx_blob, transaction))
+          MERROR("Transaction verification failed, tx_id = " << cryptonote::get_transaction_hash(transaction));
+        else
+          MERROR("Transaction verification failed, transaction is unparsable");
         core.cleanup_handle_incoming_blocks();
         return 1;
       }
@@ -183,8 +186,11 @@ int check_flush(cryptonote::core &core, std::vector<block_complete_entry> &block
 
     if(bvc.m_verification_failed)
     {
-      MERROR("Block verification failed, id = "
-          << epee::string_tools::pod_to_hex(get_blob_hash(block_entry.block)));
+      cryptonote::block block;
+      if (cryptonote::parse_and_validate_block_from_blob(block_entry.block, block))
+        MERROR("Block verification failed, id = " << cryptonote::get_block_hash(block));
+      else
+        MERROR("Block verification failed, block is unparsable");
       core.cleanup_handle_incoming_blocks();
       return 1;
     }

@@ -587,7 +587,7 @@ namespace net_utils
 		if ((response.m_body.size() && (query_info.m_http_method != http::http_method_head)) || (query_info.m_http_method == http::http_method_options))
 		  response_data += response.m_body;
 
-		m_psnd_hndlr->do_send(byte_slice{std::move(response_data)});
+		m_psnd_hndlr->do_send(shared_sv{std::move(response_data)});
 		m_psnd_hndlr->send_done();
 		return res;
 	}

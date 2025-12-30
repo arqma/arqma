@@ -33,7 +33,7 @@
 #include <memory>
 #include <vector>
 
-#include "byte_slice.h"
+#include "shared_sv.h"
 #include "net/enums.h"
 #include "span.h"
 
@@ -89,7 +89,7 @@ namespace levin
     {}
 
     //! Construct an instance with available notification `zones`.
-    explicit notify(boost::asio::io_service& service, std::shared_ptr<connections> p2p, epee::byte_slice noise, epee::net_utils::zone zone);
+    explicit notify(boost::asio::io_service& service, std::shared_ptr<connections> p2p, epee::shared_sv noise, epee::net_utils::zone zone);
 
     notify(const notify&) = delete;
     notify(notify&&) = default;

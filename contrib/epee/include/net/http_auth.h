@@ -28,10 +28,10 @@
 #pragma once
 
 #include <boost/optional/optional.hpp>
-#include <boost/utility/string_ref.hpp>
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include "wipeable_string.h"
 #include "http_base.h"
@@ -105,7 +105,7 @@ namespace net_utils
         struct keys
         {
           using algorithm =
-            std::function<std::string(const session&, boost::string_ref, boost::string_ref)>;
+            std::function<std::string(const session&, std::string_view, std::string_view)>;
 
           keys() : nonce(), opaque(), realm(), generator() {}
           keys(std::string nonce_, std::string opaque_, std::string realm_, algorithm generator_)
@@ -155,7 +155,7 @@ namespace net_utils
           returned `kSuccess`.
       */
       boost::optional<std::pair<std::string, std::string>> get_auth_field(
-        const boost::string_ref method, const boost::string_ref uri)
+        std::string_view method, std::string_view uri)
       {
         if (user)
           return do_get_auth_field(method, uri);
@@ -164,7 +164,7 @@ namespace net_utils
 
     private:
       status do_handle_401(const http_response_info&);
-      boost::optional<std::pair<std::string, std::string>> do_get_auth_field(boost::string_ref, boost::string_ref);
+      boost::optional<std::pair<std::string, std::string>> do_get_auth_field(std::string_view, std::string_view);
 
       boost::optional<session> user;
     };

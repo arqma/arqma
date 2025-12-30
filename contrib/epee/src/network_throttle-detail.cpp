@@ -42,7 +42,6 @@
 
 #include "net/net_utils_base.h"
 #include "misc_log_ex.h"
-#include <boost/chrono.hpp>
 #include "misc_language.h"
 #include <sstream>
 #include <iomanip>
@@ -129,7 +128,7 @@ network_throttle::network_throttle(const std::string &nameshort, const std::stri
 	m_start_time = 0;
 	m_any_packet_yet = false;
 	m_slot_size = 1.0; // hard coded in few places
-	m_target_speed = 16 * 1024; // other defaults are probably defined in the command-line parsing code when this class is used e.g. as main global throttle
+	m_target_speed = 1024 * 1024; // other defaults are probably defined in the command-line parsing code when this class is used e.g. as main global throttle
 	m_last_sample_time = 0;
 	m_history.resize(m_window_size);
 	m_total_packets = 0;

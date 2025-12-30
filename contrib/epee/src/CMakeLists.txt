@@ -32,7 +32,6 @@ set(epee_include_dir "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 arqma_find_all_headers(epee_headers_public "${epee_include_dir}")
 
 add_library(epee
-    byte_slice.cpp
     hex.cpp
     abstract_http_client.cpp
     http_auth.cpp
@@ -80,7 +79,6 @@ target_link_libraries(epee
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_CHRONO_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
     ${Boost_REGEX_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${OPENSSL_LIBRARIES}

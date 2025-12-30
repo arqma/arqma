@@ -98,31 +98,4 @@ namespace epee { namespace net_utils
     ss << ctx.m_remote_address.str() << (ctx.m_is_income ? " INC":" OUT");
     return ss.str();
   }
-
-  const char* zone_to_string(zone value) noexcept
-  {
-    switch (value)
-    {
-    case zone::public_:
-      return "public";
-    case zone::i2p:
-      return "i2p";
-    case zone::tor:
-      return "tor";
-    default:
-      break;
-    }
-    return "invalid";
-  }
-
-  zone zone_from_string(const boost::string_ref value) noexcept
-  {
-    if (value == "public")
-      return zone::public_;
-    if (value == "i2p")
-      return zone::i2p;
-    if (value == "tor")
-      return zone::tor;
-    return zone::invalid;
-  }
 }}

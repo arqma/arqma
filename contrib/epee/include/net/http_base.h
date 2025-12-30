@@ -29,9 +29,8 @@
 #pragma once
 #include "memwipe.h"
 
-#include <boost/utility/string_ref.hpp>
-
 #include <string>
+#include <string_view>
 #include <utility>
 #include <list>
 #include <stdint.h>
@@ -41,6 +40,7 @@
 
 namespace epee
 {
+using namespace std::literals;
 namespace net_utils
 {
 	namespace http
@@ -66,10 +66,9 @@ namespace net_utils
 
 		typedef std::list<std::pair<std::string, std::string>> fields_list;
 
-		static inline void add_field(std::string& out, const boost::string_ref name, const boost::string_ref value)
+		static inline void add_field(std::string& out, std::string_view name, std::string_view value)
 		{
-			out.append(name.data(), name.size()).append(": ");
-			out.append(value.data(), value.size()).append("\r\n");
+			out.append(name).append(": "sv).append(value).append("\r\n"sv);
 		}
 		static inline void add_field(std::string& out, const std::pair<std::string, std::string>& field)
 		{

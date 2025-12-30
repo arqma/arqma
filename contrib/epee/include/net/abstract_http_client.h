@@ -52,8 +52,8 @@ namespace net_utils
   int get_index(const char *s, char c);
   std::string hex_to_dec_2bytes(const char *s);
   std::string convert(char val);
-  std::string conver_to_url_format(const std::string& uri);
-  std::string convert_from_url_format(const std::string& uri);
+  std::string convert_to_url_format(std::string_view uri);
+  std::string convert_from_url_format(std::string_view uri);
 
 namespace http
 {
@@ -68,9 +68,9 @@ namespace http
     virtual bool connect(std::chrono::milliseconds timeout) = 0;
     virtual bool disconnect() = 0;
     virtual bool is_connected(bool *ssl = NULL) = 0;
-    virtual bool invoke(const boost::string_ref uri, const boost::string_ref method, const std::string& body, std::chrono::milliseconds timeout, const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) = 0;
-    virtual bool invoke_get(const boost::string_ref uri, std::chrono::milliseconds timeout, const std::string& body = std::string(), const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) = 0;
-    virtual bool invoke_post(const boost::string_ref uri, const std::string& body, std::chrono::milliseconds timeout, const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) = 0;
+    virtual bool invoke(std::string_view uri, std::string_view method, const std::string& body, std::chrono::milliseconds timeout, const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) = 0;
+    virtual bool invoke_get(std::string_view uri, std::chrono::milliseconds timeout, const std::string& body = std::string(), const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) = 0;
+    virtual bool invoke_post(std::string_view uri, const std::string& body, std::chrono::milliseconds timeout, const http_response_info** ppresponse_info = NULL, const fields_list& additional_params = fields_list()) = 0;
     virtual uint64_t get_bytes_sent() const = 0;
     virtual uint64_t get_bytes_received() const = 0;
   };

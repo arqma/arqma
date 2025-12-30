@@ -2392,7 +2392,7 @@ namespace cryptonote
     }
 
     crypto::hash file_hash;
-    if (!tools::sha256sum(path.string(), file_hash) || (hash != epee::string_tools::pod_to_hex(file_hash)))
+    if (!tools::sha256sum_file(path.string(), file_hash) || (hash != epee::string_tools::pod_to_hex(file_hash)))
     {
       MDEBUG("We don't have that file already, downloading");
       if (!tools::download(path.string(), res.auto_uri))
@@ -2400,7 +2400,7 @@ namespace cryptonote
         MERROR("Failed to download " << res.auto_uri);
         return false;
       }
-      if (!tools::sha256sum(path.string(), file_hash))
+      if (!tools::sha256sum_file(path.string(), file_hash))
       {
         MERROR("Failed to hash " << path);
         return false;

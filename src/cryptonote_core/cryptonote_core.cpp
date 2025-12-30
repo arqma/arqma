@@ -230,7 +230,8 @@ namespace cryptonote
     "store-quorum-history"
   , "Store the Service Node Quorum history for the last N blocks. "
     "Specify the number of blocks or 1 to store the entire history."
-  , 0};
+  , 0
+  };
   //-----------------------------------------------------------------------------------------------
   [[noreturn]] static void need_core_init()
   {
@@ -786,7 +787,7 @@ namespace cryptonote
     if (prune_blockchain)
     {
       // display a message if the blockchain is not pruned yet
-      if (m_blockchain_storage.get_current_blockchain_height() > 1 && !m_blockchain_storage.get_blockchain_pruning_seed())
+      if (!m_blockchain_storage.get_blockchain_pruning_seed())
         MGINFO("Pruning blockchain...");
       CHECK_AND_ASSERT_MES(m_blockchain_storage.prune_blockchain(), false, "Failed to prune blockchain");
     }
@@ -1551,7 +1552,10 @@ namespace cryptonote
     for (const auto &tx_hash: b.tx_hashes)
     {
       std::string txblob;
-      CHECK_AND_ASSERT_THROW_MES(pool.get_transaction(tx_hash, txblob), "Transaction not found in pool");
+      if (!pool.get_transaction(tx_hash, txblob) || txblob.size() == 0)
+      {
+        MERROR("Transaction " << tx_hash << " not found in pool");
+      }
       bce.txs.push_back(txblob);
     }
     return bce;
@@ -1584,20 +1588,20 @@ namespace cryptonote
     }
 
     CHECK_AND_ASSERT_MES(!bvc.m_verification_failed, false, "mined block failed verification");
-    if(bvc.m_added_to_main_chain)
+    if (bvc.m_added_to_main_chain)
     {
       std::vector<crypto::hash> missed_txs;
       std::vector<std::string> txs;
       m_blockchain_storage.get_transactions_blobs(b.tx_hashes, txs, missed_txs);
-      if(missed_txs.size() &&  m_blockchain_storage.get_block_id_by_height(get_block_height(b)) != get_block_hash(b))
+      if(missed_txs.size() && m_blockchain_storage.get_block_id_by_height(get_block_height(b)) != get_block_hash(b))
       {
         LOG_PRINT_L1("Block found but, seems that reorganize just happened after that, do not relay this block");
         return true;
       }
-      CHECK_AND_ASSERT_MES(txs.size() == b.tx_hashes.size() && !missed_txs.size(), false, "can't find some transactions in found block:" << get_block_hash(b) << " txs.size()=" << txs.size() << " b.tx_hashes.size()=" << b.tx_hashes.size() << ", missed_txs.size()" << missed_txs.size());
+      CHECK_AND_ASSERT_MES(!missed_txs.size(), false, "can't find some transactions in found block:" << get_block_hash(b) << " b.tx_hashes.size()=" << b.tx_hashes.size() << ", missed_txs.size()" << missed_txs.size());
 
       cryptonote_connection_context exclude_context{};
-      NOTIFY_NEW_FLUFFY_BLOCK::request arg{};
+      NOTIFY_NEW_FLUFFY_BLOCK::request arg = {};
       arg.current_blockchain_height = m_blockchain_storage.get_current_blockchain_height();
       arg.b = blocks[0];
 
@@ -1716,16 +1720,6 @@ namespace cryptonote
   bool core::have_block(const crypto::hash& id) const
   {
     return m_blockchain_storage.have_block(id);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_short_chain_history(std::list<crypto::hash>& ids) const
-  {
-    return m_blockchain_storage.get_short_chain_history(ids);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::handle_get_objects(NOTIFY_REQUEST_GET_OBJECTS::request& arg, NOTIFY_RESPONSE_GET_OBJECTS::request& rsp, cryptonote_connection_context& context)
-  {
-    return m_blockchain_storage.handle_get_objects(arg, rsp);
   }
   //-----------------------------------------------------------------------------------------------
   crypto::hash core::get_block_id_by_height(uint64_t height) const
@@ -1914,7 +1908,7 @@ namespace cryptonote
     }
 
     crypto::hash file_hash;
-    if (!tools::sha256sum(path.string(), file_hash) || (hash != epee::string_tools::pod_to_hex(file_hash)))
+    if (!tools::sha256sum_file(path.string(), file_hash) || (hash != epee::string_tools::pod_to_hex(file_hash)))
     {
       MCDEBUG("updates", "We don't have that file already, downloading");
       const std::string tmppath = path.string() + ".tmp";
@@ -1928,7 +1922,7 @@ namespace cryptonote
         if (success)
         {
           crypto::hash file_hash;
-          if (!tools::sha256sum(tmppath, file_hash))
+          if (!tools::sha256sum_file(tmppath, file_hash))
           {
             MCERROR("updates", "Failed to hash " << tmppath);
             remove = true;

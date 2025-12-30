@@ -239,6 +239,8 @@ namespace nodetool
       peerlist_entry pe{};
       pe.adr = addr;
       zone.second.m_peerlist.remove_from_peer_white(pe);
+      zone.second.m_peerlist.remove_from_peer_gray(pe);
+      zone.second.m_peerlist.remove_from_peer_anchor(addr);
 
       for (const auto &c : conns)
         zone.second.m_net_server.get_config_object().close(c);
@@ -353,7 +355,7 @@ namespace nodetool
     m_use_ipv6 = command_line::get_arg(vm, arg_p2p_use_ipv6);
     m_require_ipv4 = !command_line::get_arg(vm, arg_p2p_ignore_ipv4);
     public_zone.m_notifier = cryptonote::levin::notify{
-      public_zone.m_net_server.get_io_service(), public_zone.m_net_server.get_config_shared(), nullptr, epee::net_utils::zone::public_
+      public_zone.m_net_server.get_io_service(), public_zone.m_net_server.get_config_shared(), {}, epee::net_utils::zone::public_
     };
 
     if (command_line::has_arg(vm, arg_p2p_add_peer))
@@ -399,9 +401,9 @@ namespace nodetool
 
     if (command_line::has_arg(vm, arg_p2p_seed_node))
     {
-      std::unique_lock lock{m_seed_nodes_mutex};
+      std::unique_lock lock{public_zone.m_seed_nodes_mutex};
 
-      if (!parse_peers_and_add_to_container(vm, arg_p2p_seed_node, m_seed_nodes))
+      if (!parse_peers_and_add_to_container(vm, arg_p2p_seed_node, public_zone.m_seed_nodes))
         return false;
     }
 
@@ -466,7 +468,7 @@ namespace nodetool
     if ( !set_rate_limit(vm, command_line::get_arg(vm, arg_limit_rate) ) )
       return false;
 
-    epee::byte_slice noise = nullptr;
+    epee::shared_sv noise;
     auto proxies = get_proxies(vm);
     if (!proxies)
       return false;
@@ -485,14 +487,14 @@ namespace nodetool
       if (!set_max_out_peers(zone, proxy.max_connections))
         return false;
 
-      epee::byte_slice this_noise = nullptr;
+      epee::shared_sv this_noise;
       if (proxy.noise)
       {
         static_assert(sizeof(epee::levin::bucket_head2) < CRYPTONOTE_NOISE_BYTES, "noise bytes too small");
-        if (noise.empty())
-          noise = epee::levin::make_noise_notify(CRYPTONOTE_NOISE_BYTES);
+        if (noise.view.empty())
+          noise = epee::shared_sv{epee::levin::make_noise_notify(CRYPTONOTE_NOISE_BYTES)};
 
-        this_noise = noise.clone();
+        this_noise = noise;
       }
 
       zone.m_notifier = cryptonote::levin::notify{
@@ -552,9 +554,22 @@ namespace nodetool
   {
     using namespace boost::asio;
 
-    std::string host;
-    std::string port = std::to_string(default_port);
-    net::get_network_address_host_and_port(addr, host, port);
+    bool has_colon = addr.find_last_of(':') != std::string::npos;
+    bool has_dot = addr.find_last_of('.') != std::string::npos;
+    bool has_square_bracket = addr.find('[') != std::string::npos;
+
+    std::string host, port;
+
+    if ((has_colon && has_dot) || has_square_bracket)
+    {
+      std::tie(host, port) = net::get_network_address_host_and_port(addr);
+    }
+    else
+    {
+      host = addr;
+      port = std::to_string(default_port);
+    }
+
     MINFO("Resolving node address: host=" << host << ", port=" << port);
 
     boost::system::error_code ec;
@@ -584,20 +599,20 @@ namespace nodetool
 
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  std::set<std::string> node_server<t_payload_net_handler>::get_seed_nodes(cryptonote::network_type nettype) const
+  std::set<std::string> node_server<t_payload_net_handler>::get_ip_seed_nodes() const
   {
     std::set<std::string> full_addrs;
-    if (nettype == cryptonote::TESTNET)
+    if (m_nettype == cryptonote::TESTNET)
     {
       for(const auto &m_seed_nodes : arqma::testnet_core_nodes)
         full_addrs.insert(m_seed_nodes);
     }
-    else if (nettype == cryptonote::STAGENET)
+    else if (m_nettype == cryptonote::STAGENET)
     {
       for(const auto &m_seed_nodes : arqma::stagenet_core_nodes)
         full_addrs.insert(m_seed_nodes);
     }
-    else if (nettype == cryptonote::FAKECHAIN)
+    else if (m_nettype == cryptonote::FAKECHAIN)
     {
     }
     else
@@ -609,7 +624,7 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  std::set<std::string> node_server<t_payload_net_handler>::get_seed_nodes()
+  std::set<std::string> node_server<t_payload_net_handler>::get_dns_seed_nodes()
   {
     if (!m_exclusive_peers.empty() || m_offline)
     {
@@ -617,11 +632,11 @@ namespace nodetool
     }
     if (m_nettype == cryptonote::TESTNET)
     {
-      return get_seed_nodes(cryptonote::TESTNET);
+      return get_ip_seed_nodes();
     }
     if (m_nettype == cryptonote::STAGENET)
     {
-      return get_seed_nodes(cryptonote::STAGENET);
+      return get_ip_seed_nodes();
     }
 
     std::set<std::string> full_addrs;
@@ -694,12 +709,25 @@ namespace nodetool
       else
         MINFO("Not enough DNS seed nodes found, using fallback defaults too");
 
-      for (const auto &peer: get_seed_nodes(cryptonote::MAINNET))
+      for (const auto &peer: get_ip_seed_nodes())
         full_addrs.insert(peer);
       m_fallback_seed_nodes_added.test_and_set();
     }
 
     return full_addrs;
+  }
+  //-----------------------------------------------------------------------------------
+  template<class t_payload_net_handler>
+  std::set<std::string> node_server<t_payload_net_handler>::get_seed_nodes(epee::net_utils::zone zone)
+  {
+    switch (zone)
+    {
+      case epee::net_utils::zone::public_: return get_dns_seed_nodes();
+      case epee::net_utils::zone::tor:     return {};
+      case epee::net_utils::zone::i2p:     return {};
+      default: break;
+    }
+    throw std::logic_error{"Bad zone given to get_seed_nodes"};
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -1200,7 +1228,7 @@ namespace nodetool
     {
       bool is_priority = is_priority_node(na);
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, bool(con), " Connect failed to " << na.str()/*<< ", try " << try_count*/);
-      //m_peerlist.set_peer_unreachable(pe);
+      record_addr_failed(na);
       return false;
     }
 
@@ -1213,6 +1241,7 @@ namespace nodetool
       bool is_priority = is_priority_node(na);
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, *con, " Failed to HANDSHAKE with peer: " << na.str()/*<< ", try " << try_count*/);
       zone.m_net_server.get_config_object().close(con->m_connection_id);
+      record_addr_failed(na);
       return false;
     }
 
@@ -1259,7 +1288,7 @@ namespace nodetool
     {
       bool is_priority = is_priority_node(na);
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, p2p_connection_context{}, " Connect failed to " << na.str());
-      zone.m_net_server.get_config_object().close(con->m_connection_id);
+      record_addr_failed(na);
       return false;
     }
 
@@ -1271,6 +1300,8 @@ namespace nodetool
       bool is_priority = is_priority_node(na);
 
       LOG_PRINT_CC_PRIORITY_NODE(is_priority, *con, " Failed to HANDSHAKE with peer: " << na.str());
+      zone.m_net_server.get_config_object().close(con->m_connection_id);
+      record_addr_failed(na);
       return false;
     }
 
@@ -1283,6 +1314,13 @@ namespace nodetool
 
 #undef LOG_PRINT_CC_PRIORITY_NODE
 
+  //-----------------------------------------------------------------------------------
+  template<class t_payload_net_handler>
+  void node_server<t_payload_net_handler>::record_addr_failed(const epee::net_utils::network_address& addr)
+  {
+    std::shared_lock lock{m_conn_fails_cache_lock};
+    m_conn_fails_cache[addr.host_str()] = time(NULL);
+  }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::is_addr_recently_failed(const epee::net_utils::network_address& addr)
@@ -1478,57 +1516,59 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::connect_to_seed()
+  bool node_server<t_payload_net_handler>::connect_to_seed(epee::net_utils::zone zone)
   {
-    if (!m_seed_nodes_initialized)
+    network_zone& server = m_network_zones.at(zone);
+    if (!server.m_seed_nodes_initialized)
     {
-      std::unique_lock lock{m_seed_nodes_mutex};
-      if (!m_seed_nodes_initialized)
+      std::unique_lock lock{server.m_seed_nodes_mutex};
+      if (!server.m_seed_nodes_initialized)
       {
-        for (const auto& full_addr : get_seed_nodes())
+        const std::uint16_t default_port = cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT;
+        server.m_seed_nodes_initialized = true;
+        for (const auto& full_addr : get_seed_nodes(zone))
         {
           MDEBUG("Seed node: " << full_addr);
-          append_net_address(m_seed_nodes, full_addr, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
+          server.m_seed_nodes.push_back(ARQMA_UNWRAP(net::get_network_address(full_addr, default_port)));
         }
-        MDEBUG("Number of seed nodes: " << m_seed_nodes.size());
-        m_seed_nodes_initialized = true;
+        MDEBUG("Number of seed nodes: " << server.m_seed_nodes.size());
       }
     }
 
-    std::shared_lock shlock{m_seed_nodes_mutex};
+    std::shared_lock shlock{server.m_seed_nodes_mutex};
 
-    if(m_seed_nodes.empty() || m_offline || !m_exclusive_peers.empty())
+    if (server.m_seed_nodes.empty() || m_offline || !m_exclusive_peers.empty())
       return true;
 
     size_t try_count = 0;
-    size_t current_index = crypto::rand_idx(m_seed_nodes.size());
-    const net_server& server = m_network_zones.at(epee::net_utils::zone::public_).m_net_server;
+    size_t current_index = crypto::rand_idx(server.m_seed_nodes.size());
     while(true)
     {
-      if(server.is_stop_signal_sent())
+      if(server.m_net_server.is_stop_signal_sent())
         return false;
 
-      if(try_to_connect_and_handshake_with_new_peer(m_seed_nodes[current_index], true))
+      if(try_to_connect_and_handshake_with_new_peer(server.m_seed_nodes[current_index], true))
         break;
-      if(++try_count > m_seed_nodes.size())
+
+      if(++try_count > server.m_seed_nodes.size())
       {
-        if(!m_fallback_seed_nodes_added.test_and_set())
+        if(zone == epee::net_utils::zone::public_ && !m_fallback_seed_nodes_added.test_and_set())
         {
           MWARNING("Failed to connect to any of seed peers, trying fallback seeds");
-          current_index = m_seed_nodes.size() - 1;
+          current_index = server.m_seed_nodes.size() - 1;
           {
             shlock.unlock();
             {
-              std::unique_lock lock{m_seed_nodes_mutex};
-              for (const auto &peer: get_seed_nodes(m_nettype))
+              std::unique_lock lock{server.m_seed_nodes_mutex};
+              for (const auto &peer: get_ip_seed_nodes())
               {
                 MDEBUG("Fallback seed node: " << peer);
-                append_net_address(m_seed_nodes, peer, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
+                append_net_address(server.m_seed_nodes, peer, cryptonote::get_config(m_nettype).P2P_DEFAULT_PORT);
               }
             }
             shlock.lock();
           }
-          if(current_index == m_seed_nodes.size() - 1)
+          if(current_index == server.m_seed_nodes.size() - 1)
           {
             MWARNING("No fallback seeds, continuing without seeds");
             break;
@@ -1541,7 +1581,7 @@ namespace nodetool
           break;
         }
       }
-      if(++current_index >= m_seed_nodes.size())
+      if(++current_index >= server.m_seed_nodes.size())
         current_index = 0;
     }
     return true;
@@ -1557,19 +1597,19 @@ namespace nodetool
 
     if (!m_exclusive_peers.empty()) return true;
 
-    // ONLY have seeds in the public zone at the moment!
-
-    size_t start_conn_count = get_public_outgoing_connections_count();
-    if(!get_public_white_peers_count() && !connect_to_seed())
+    bool one_succeeded = false;
+    for (auto& zone : m_network_zones)
     {
-      return false;
-    }
+      size_t start_conn_count = get_outgoing_connections_count(zone.second);
+      if (!zone.second.m_peerlist.get_white_peers_count() && !connect_to_seed(zone.first))
+      {
+        continue;
+      }
 
-    if (!connect_to_peerlist(m_priority_peers)) return false;
+      if (zone.first == zone_type::public_ && !connect_to_peerlist(m_priority_peers))
+        continue;
 
-    for(auto& zone : m_network_zones)
-    {
-      size_t base_expected_white_connections = ((zone.second.m_config.m_net_config.max_out_connection_count * P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT) / 100);
+      size_t base_expected_white_connections = (zone.second.m_config.m_net_config.max_out_connection_count * P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT) / 100;
 
       size_t conn_count = get_outgoing_connections_count(zone.second);
       while(conn_count < zone.second.m_config.m_net_config.max_out_connection_count)
@@ -1606,15 +1646,17 @@ namespace nodetool
         }
         conn_count = new_conn_count;
       }
+
+      if (start_conn_count == get_outgoing_connections_count(zone.second) && start_conn_count < zone.second.m_config.m_net_config.max_out_connection_count)
+      {
+        MINFO("Failed to connect to any, trying seeds");
+        if (!connect_to_seed(zone.first))
+          continue;
+      }
+      one_succeeded = true;
     }
 
-    if (start_conn_count == get_public_outgoing_connections_count() && start_conn_count < m_network_zones.at(zone_type::public_).m_config.m_net_config.max_out_connection_count)
-    {
-      MINFO("Failed to connect to any, trying seeds");
-      if (!connect_to_seed())
-        return false;
-    }
-    return true;
+    return one_succeeded;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -1873,6 +1915,11 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::handle_remote_peerlist(const std::vector<peerlist_entry>& peerlist, const epee::net_utils::connection_context_base& context)
   {
+    if (peerlist.size() > P2P_MAX_PEERS_IN_HANDSHAKE)
+    {
+      MWARNING(context << "peer sent " << peerlist.size() << " peers, considered spamming");
+      return false;
+    }
     std::vector<peerlist_entry> peerlist_ = peerlist;
     if(!sanitize_peerlist(peerlist_))
       return false;
@@ -1887,9 +1934,9 @@ namespace nodetool
       }
     }
     LOG_DEBUG_CC(context, "REMOTE PEERLIST: remote peerlist size=" << peerlist_.size());
-    LOG_DEBUG_CC(context, "REMOTE PEERLIST: " <<  ENDL << print_peerlist_to_string(peerlist_));
-    std::lock_guard lock{m_blocked_hosts_lock};
-    return m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.merge_peerlist(peerlist_);
+    LOG_DEBUG_CC(context, "REMOTE PEERLIST:\n" << print_peerlist_to_string(peerlist_));
+    //std::lock_guard lock{m_blocked_hosts_lock};
+    return m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.merge_peerlist(peerlist_, [this](const peerlist_entry &pe) { return !is_addr_recently_failed(pe.adr) && is_remote_host_allowed(pe.adr); });
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -1950,7 +1997,7 @@ namespace nodetool
 
     const auto send = [&txs, &source, pad_txs] (std::pair<const enet::zone, network_zone>& network)
     {
-      if (network.second.m_notifier.send_txs(std::move(txs), source, pad_txs))
+      if (network.second.m_notifier.send_txs(std::move(txs), source, (pad_txs || network.first != enet::zone::public_)))
         return network.first;
       return enet::zone::invalid;
     };

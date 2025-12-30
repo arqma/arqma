@@ -76,6 +76,7 @@ using namespace epee;
 #include "common/dns_utils.h"
 #include "common/notify.h"
 #include "common/perf_timer.h"
+#include "common/string_util.h"
 #include "ringct/rctSigs.h"
 #include "ringdb.h"
 #include "net/socks_connect.h"
@@ -363,10 +364,10 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   }
 
   if (daemon_address.empty())
-    daemon_address = std::string("http://") + daemon_host + ":" + std::to_string(daemon_port);
+    daemon_address = "http://" + daemon_host + ":" + std::to_string(daemon_port);
 
   {
-    const boost::string_ref real_daemon = boost::string_ref{daemon_address}.substr(0, daemon_address.rfind(':'));
+    auto real_daemon = std::string_view{daemon_address}.substr(0, daemon_address.rfind(':'));
 
     /* If SSL or proxy is enabled, then a specific cert, CA or fingerprint must
        be specified. This is specific to the wallet. */
@@ -388,12 +389,12 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
 
     const auto proxy_address = command_line::get_arg(vm, opts.proxy);
 
-    boost::string_ref proxy_port{proxy_address};
-    boost::string_ref proxy_host = proxy_port.substr(0, proxy_port.rfind(":"));
+    std::string_view proxy_port{proxy_address};
+    std::string_view proxy_host = proxy_port.substr(0, proxy_port.rfind(":"));
     if (proxy_port.size() == proxy_host.size())
       proxy_host = "127.0.0.1";
     else
-      proxy_port = proxy_port.substr(proxy_host.size() + 1);
+      proxy_port.remove_prefix(proxy_host.size() + 1);
 
     uint16_t port_value = 0;
     THROW_WALLET_EXCEPTION_IF(
@@ -10382,7 +10383,7 @@ std::string wallet2::get_spend_proof(const crypto::hash &txid, const std::string
   std::string sig_str = "SpendProofV1";
   for (const std::vector<crypto::signature>& ring_sig : signatures)
     for (const crypto::signature& sig : ring_sig)
-       sig_str += tools::base58::encode(std::string((const char *)&sig, sizeof(crypto::signature)));
+       sig_str += tools::base58::encode(tools::view_guts(sig));
   return sig_str;
 }
 //----------------------------------------------------------------------------------------------------
@@ -10422,7 +10423,7 @@ bool wallet2::check_spend_proof(const crypto::hash &txid, const std::string &mes
       num_sigs += in_key->key_offsets.size();
   }
   std::vector<std::vector<crypto::signature>> signatures = { std::vector<crypto::signature>(1) };
-  const size_t sig_len = tools::base58::encode(std::string((const char *)&signatures[0][0], sizeof(crypto::signature))).size();
+  const size_t sig_len = tools::base58::encode(tools::view_guts(signatures[0][0])).size();
   THROW_WALLET_EXCEPTION_IF(sig_str.size() != header_len + num_sigs * sig_len,
     error::wallet_internal_error, "incorrect signature size");
 
@@ -10756,9 +10757,10 @@ std::string wallet2::get_tx_proof(const cryptonote::transaction &tx, const crypt
 
   // concatenate all signature strings
   for (size_t i = 0; i < num_sigs; ++i)
-    sig_str +=
-      tools::base58::encode(std::string((const char *)&shared_secret[i], sizeof(crypto::public_key))) +
-      tools::base58::encode(std::string((const char *)&sig[i], sizeof(crypto::signature)));
+  {
+    sig_str += tools::base58::encode(tools::view_guts(shared_secret[i]));
+    sig_str += tools::base58::encode(tools::view_guts(sig[i]));
+  }
   return sig_str;
 }
 
@@ -10822,8 +10824,8 @@ bool wallet2::check_tx_proof(const cryptonote::transaction &tx, const cryptonote
   // decode base58
   std::vector<crypto::public_key> shared_secret(1);
   std::vector<crypto::signature> sig(1);
-  const size_t pk_len = tools::base58::encode(std::string((const char *)&shared_secret[0], sizeof(crypto::public_key))).size();
-  const size_t sig_len = tools::base58::encode(std::string((const char *)&sig[0], sizeof(crypto::signature))).size();
+  const size_t pk_len = tools::base58::encode(tools::view_guts(shared_secret[0])).size();
+  const size_t sig_len = tools::base58::encode(tools::view_guts(sig[0])).size();
   const size_t num_sigs = (sig_str.size() - header_len) / (pk_len + sig_len);
   THROW_WALLET_EXCEPTION_IF(sig_str.size() != header_len + num_sigs * (pk_len + sig_len), error::wallet_internal_error,
     "Wrong signature size");
@@ -11022,18 +11024,18 @@ std::string wallet2::get_reserve_proof(const boost::optional<std::pair<uint32_t,
   return "ReserveProofV1" + tools::base58::encode(oss.str());
 }
 
-bool wallet2::check_reserve_proof(const cryptonote::account_public_address &address, const std::string &message, const std::string &sig_str, uint64_t &total, uint64_t &spent)
+bool wallet2::check_reserve_proof(const cryptonote::account_public_address &address, const std::string &message, const std::string_view sig_str, uint64_t &total, uint64_t &spent)
 {
   uint32_t rpc_version;
   THROW_WALLET_EXCEPTION_IF(!check_connection(&rpc_version), error::wallet_internal_error, "Failed to connect to daemon: " + get_daemon_address());
   THROW_WALLET_EXCEPTION_IF(rpc_version < MAKE_CORE_RPC_VERSION(1, 0), error::wallet_internal_error, "Daemon RPC version is too old");
 
-  static constexpr char header[] = "ReserveProofV1";
-  THROW_WALLET_EXCEPTION_IF(!boost::string_ref{sig_str}.starts_with(header), error::wallet_internal_error,
+  static constexpr auto header = "ReserveProofV1"sv;
+  THROW_WALLET_EXCEPTION_IF(!tools::starts_with(sig_str, header), error::wallet_internal_error,
     "Signature header check error");
 
   std::string sig_decoded;
-  THROW_WALLET_EXCEPTION_IF(!tools::base58::decode(sig_str.substr(std::strlen(header)), sig_decoded), error::wallet_internal_error,
+  THROW_WALLET_EXCEPTION_IF(!tools::base58::decode(sig_str.substr(header.size()), sig_decoded), error::wallet_internal_error,
     "Signature decoding error");
 
   std::istringstream iss(sig_decoded);
@@ -11309,7 +11311,7 @@ std::string wallet2::sign(const std::string &data) const
   const cryptonote::account_keys &keys = m_account.get_keys();
   crypto::signature signature;
   crypto::generate_signature(hash, keys.m_account_address.m_spend_public_key, keys.m_spend_secret_key, signature);
-  return std::string("SigV1") + tools::base58::encode(std::string((const char *)&signature, sizeof(signature)));
+  return std::string("SigV1") + tools::base58::encode(tools::view_guts(signature));
 }
 
 bool wallet2::verify(const std::string &data, const cryptonote::account_public_address &address, const std::string &signature) const
@@ -11344,7 +11346,7 @@ std::string wallet2::sign_multisig_participant(const std::string& data) const
   const cryptonote::account_keys &keys = m_account.get_keys();
   crypto::signature signature;
   crypto::generate_signature(hash, get_multisig_signer_public_key(), keys.m_spend_secret_key, signature);
-  return MULTISIG_SIGNATURE_MAGIC + tools::base58::encode(std::string((const char *)&signature, sizeof(signature)));
+  return MULTISIG_SIGNATURE_MAGIC + tools::base58::encode(tools::view_guts(signature));
 }
 
 bool wallet2::verify_with_public_key(const std::string &data, const crypto::public_key &public_key, const std::string &signature) const
@@ -12487,12 +12489,12 @@ std::string wallet2::make_uri(const std::string &address, const std::string &pay
 
   if (!recipient_name.empty())
   {
-    uri += (n_fields++ ? "&" : "?") + std::string("recipient_name=") + epee::net_utils::conver_to_url_format(recipient_name);
+    uri += (n_fields++ ? "&" : "?") + std::string("recipient_name=") + epee::net_utils::convert_to_url_format(recipient_name);
   }
 
   if (!tx_description.empty())
   {
-    uri += (n_fields++ ? "&" : "?") + std::string("tx_description=") + epee::net_utils::conver_to_url_format(tx_description);
+    uri += (n_fields++ ? "&" : "?") + std::string("tx_description=") + epee::net_utils::convert_to_url_format(tx_description);
   }
 
   return uri;

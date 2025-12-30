@@ -29,7 +29,7 @@
 
 #include <cstdint>
 
-#include "byte_slice.h"
+#include "shared_sv.h"
 #include "net_utils_base.h"
 #include "span.h"
 
@@ -122,9 +122,9 @@ namespace levin
   }
 
   bucket_head2 make_header(uint32_t command, uint64_t msg_size, uint32_t flags, bool expect_response) noexcept;
-  byte_slice make_notify(int command, epee::span<const std::uint8_t> payload);
-  byte_slice make_noise_notify(std::size_t noise_bytes);
-  byte_slice make_fragmented_notify(const byte_slice& noise, int command, epee::span<const std::uint8_t> payload);
+  std::string make_notify(int command, epee::span<const std::uint8_t> payload);
+  std::string make_noise_notify(std::size_t noise_bytes);
+  std::string make_fragmented_notify(const std::string_view noise, int command, epee::span<const std::uint8_t> payload);
 }
 }
 

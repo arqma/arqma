@@ -35,7 +35,7 @@
 // bounds checking is done before writing to buffer, but buffer size
 // should be a sensible maximum
 #define BUFFER_SIZE (4 * 1024 * 1024)
-#define CHUNK_SIZE_WARNING_THRESHOLD 500000
+#define CHUNK_SIZE_WARNING_THRESHOLD 2097152
 #define NUM_BLOCKS_PER_CHUNK 1
 #define BLOCKCHAIN_RAW "blockchain.raw"
 #define BLOCKSDAT_FILE "checkpoints.dat"

@@ -539,15 +539,18 @@ namespace service_nodes
         else
           LOG_PRINT_L1("Deregistration for service node: " << key);
 
-        for (const auto& contributor : info.contributors)
+        if (hard_fork_version >= cryptonote::network_version_16)
         {
-          for (const auto& contribution : contributor.locked_contributions)
+          for (const auto& contributor : info.contributors)
           {
-            key_image_blacklist.emplace_back();
-            key_image_blacklist_entry &entry = key_image_blacklist.back();
-            entry.key_image = contribution.key_image;
-            entry.unlock_height = block_height + staking_num_lock_blocks(nettype);
-            entry.amount = contribution.amount;
+            for (const auto& contribution : contributor.locked_contributions)
+            {
+              key_image_blacklist.emplace_back();
+              key_image_blacklist_entry &entry = key_image_blacklist.back();
+              entry.key_image = contribution.key_image;
+              entry.unlock_height = block_height + staking_num_lock_blocks(nettype);
+              entry.amount = contribution.amount;
+            }
           }
         }
 
@@ -1975,6 +1978,7 @@ void proof_info::update_pubkey(const crypto::ed25519_public_key &pk)
       {
         if (data_in.states[0].version == state_serialized::version_t::version_0)
         {
+          size_t const last_index = data_in.states.size() - 1;
           if ((data_in.states.back().height % STORE_LONG_TERM_STATE_INTERVAL) != 0)
           {
             LOG_PRINT_L0("Last serialized quorum height: " << data_in.states.back().height << " in archive is unexpectedly not a multiple of: "

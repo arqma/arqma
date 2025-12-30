@@ -35,7 +35,7 @@
 #include <memory>
 #include <typeinfo>
 #include <type_traits>
-#include "byte_slice.h"
+#include "shared_sv.h"
 #include "enums.h"
 #include "misc_log_ex.h"
 #include "serialization/keyvalue_serialization.h"
@@ -431,7 +431,7 @@ namespace net_utils
 	/************************************************************************/
 	struct i_service_endpoint
 	{
-    virtual bool do_send(byte_slice message) = 0;
+    virtual bool do_send(shared_sv message) = 0;
     virtual bool close() = 0;
     virtual bool send_done() = 0;
     virtual bool call_run_once_service_io() = 0;

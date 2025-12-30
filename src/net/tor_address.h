@@ -29,7 +29,7 @@
 
 #pragma once
 
-#include <boost/utility/string_ref.hpp>
+#include <string_view>
 #include <cstdint>
 #include <string>
 
@@ -55,7 +55,7 @@ namespace net
         char host_[63]; // null-terminated
 
         //! Keep in private, `host.size()` has no runtime check
-        tor_address(boost::string_ref host, std::uint16_t port) noexcept;
+        tor_address(std::string_view host, std::uint16_t port) noexcept;
 
     public:
         //! \return Size of internal buffer for host.
@@ -75,7 +75,7 @@ namespace net
             with `default_port` being used iff port is not specified in
             `address`.
         */
-        static expect<tor_address> make(boost::string_ref address, std::uint16_t default_port = 0);
+        static expect<tor_address> make(std::string_view address, std::uint16_t default_port = 0);
 
         //! Load from epee p2p format, and \return false if not valid tor address
         bool _load(epee::serialization::portable_storage& src, epee::serialization::section* hparent);

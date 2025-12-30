@@ -90,7 +90,7 @@ public:
   int invoke_async(int command, const epee::span<const uint8_t> in_buff, boost::uuids::uuid connection_id, const callback_t &cb, std::chrono::nanoseconds timeout = 0ns);
 
   int notify(int command, const epee::span<const uint8_t> in_buff, boost::uuids::uuid connection_id);
-  int send(epee::byte_slice message, const boost::uuids::uuid& connection_id);
+  int send(epee::shared_sv message, const boost::uuids::uuid& connection_id);
   bool close(boost::uuids::uuid connection_id);
   bool update_connection_context(const t_connection_context& contxt);
   bool request_callback(boost::uuids::uuid connection_id);
@@ -126,7 +126,11 @@ class async_protocol_handler
   bool send_message(uint32_t command, epee::span<const uint8_t> in_buff, uint32_t flags, bool expect_response)
   {
     const bucket_head2 head = make_header(command, in_buff.size(), flags, expect_response);
-    if (!m_pservice_endpoint->do_send(byte_slice{as_byte_span(head), in_buff}))
+    std::string data;
+    data.reserve(sizeof(head) + in_buff.size());
+    data.append(reinterpret_cast<const char*>(&head), sizeof(head));
+    data.append(reinterpret_cast<const char*>(in_buff.data()), in_buff.size());
+    if(!m_pservice_endpoint->do_send(shared_sv{std::move(data)}))
       return false;
 
     MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len=" << head.m_cb
@@ -330,13 +334,13 @@ public:
     {
       return false;
     }
-    ++m_wait_count;
+    m_wait_count++;
     return true;
   }
   bool finish_outer_call()
   {
     MTRACE(m_connection_context << "[levin_protocol] <<-- finish_outer_call");
-    --m_wait_count;
+    m_wait_count--;
     m_pservice_endpoint->release();
     return true;
   }
@@ -361,7 +365,7 @@ public:
 
   bool close()
   {
-    ++m_close_called;
+    m_close_called++;
 
     m_pservice_endpoint->close();
     return true;
@@ -386,7 +390,7 @@ public:
 
   virtual bool handle_recv(const void* ptr, size_t cb)
   {
-    if(m_close_called)
+    if(m_close_called != 0)
       return false; //closing connections
 
     if(!m_config.m_pcommands_handler)
@@ -491,7 +495,7 @@ public:
             else
             {
               invoke_response_handlers_guard.unlock();
-              if (!m_wait_count && !m_close_called)
+              if (m_wait_count == 0 && m_close_called == 0)
               {
                 MERROR(m_connection_context << "no active invoke when response came, WTF?");
                 return false;
@@ -522,7 +526,7 @@ public:
               head.m_return_code = SWAP32LE(return_code);
               return_buff.insert(0, reinterpret_cast<const char*>(&head), sizeof(head));
 
-              if (!m_pservice_endpoint->do_send(byte_slice{std::move(return_buff)}))
+              if (!m_pservice_endpoint->do_send(shared_sv{std::move(return_buff)}))
                 return false;
 
               MDEBUG(m_connection_context << "LEVIN_PACKET_SENT. [len= " << head.m_cb
@@ -714,11 +718,11 @@ public:
       See additional instructions for `make_fragmented_notify`.
 
       \return 1 on success */
-  int send(byte_slice message)
+  int send(shared_sv message)
   {
     const misc_utils::auto_scope_leave_caller scope_exit_handler = misc_utils::create_scope_leave_handler([this] { return finish_outer_call(); });
 
-    const std::size_t length = message.size();
+    const std::size_t length = message.view.size();
     if (!m_pservice_endpoint->do_send(std::move(message)))
     {
       LOG_ERROR_CC(m_connection_context, "Failed to send message, dropping it");
@@ -747,30 +751,34 @@ void async_protocol_handler_config<t_connection_context>::del_connection(async_p
 template<class t_connection_context>
 void async_protocol_handler_config<t_connection_context>::delete_connections(size_t count, bool incoming)
 {
-  std::vector<typename connections_map::mapped_type> connections;
-
-  auto scope_exit_handler = misc_utils::create_scope_leave_handler([&connections]{
-    for (auto &aph : connections)
-      aph->finish_outer_call();
-  });
-
+  std::vector<boost::uuids::uuid> connections;
   std::lock_guard lock{m_connects_lock};
   for (auto& c: m_connects)
   {
     if (c.second->m_connection_context.m_is_income == incoming)
-      if (c.second->start_outer_call())
-        connections.push_back(c.second);
+      connections.push_back(c.first);
   }
 
   // close random connections from  the provided set
   // TODO or better just keep removing random elements (performance)
   unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
   shuffle(connections.begin(), connections.end(), std::default_random_engine(seed));
-  for (size_t i = 0; i < connections.size() && i < count; ++i)
-    m_connects.erase(connections[i]->get_connection_id());
-
-  for (size_t i = 0; i < connections.size() && i < count; ++i)
-    connections[i]->close();
+  while (count > 0 && connections.size() > 0)
+  {
+    try
+    {
+      auto i = connections.end() - 1;
+      async_protocol_handler<t_connection_context> *conn = m_connects.at(*i);
+      del_connection(conn);
+      conn->close();
+      connections.erase(i);
+    }
+    catch (const std::out_of_range &e)
+    {
+      MWARNING("Connection not found in m_connects, continuing");
+    }
+    --count;
+  }
 }
 //------------------------------------------------------------------------------------------
 template<class t_connection_context>
@@ -833,37 +841,23 @@ int async_protocol_handler_config<t_connection_context>::invoke_async(int comman
 template<class t_connection_context> template<class callback_t>
 bool async_protocol_handler_config<t_connection_context>::foreach_connection(const callback_t &cb)
 {
-  std::vector<typename connections_map::mapped_type> conn;
-
-  auto scope_exit_hadler = misc_utils::create_scope_leave_handler([&conn]{
-    for (auto &aph : conn)
-      aph->finish_outer_call();
-  });
-
+  std::lock_guard lock{m_connects_lock};
+  for(auto& c: m_connects)
   {
-    std::lock_guard lock{m_connects_lock};
-    conn.reserve(m_connects.size());
-    for (auto &e : m_connects)
-      if (e.second->start_outer_call())
-        conn.push_back(e.second);
-  }
-
-  for (auto &aph : conn)
-    if (!cb(aph->get_context_ref()))
+    async_protocol_handler<t_connection_context>* aph = c.second;
+    if(!cb(aph->get_context_ref()))
       return false;
-
+  }
   return true;
 }
 //------------------------------------------------------------------------------------------
 template<class t_connection_context> template<class callback_t>
 bool async_protocol_handler_config<t_connection_context>::for_connection(const boost::uuids::uuid &connection_id, const callback_t &cb)
 {
-  async_protocol_handler<t_connection_context>* aph = nullptr;
-  if (find_and_lock_connection(connection_id, aph) != LEVIN_OK)
+  std::lock_guard lock{m_connects_lock};
+  async_protocol_handler<t_connection_context>* aph = find_connection(connection_id);
+  if (!aph)
     return false;
-//  auto scope_exit_handler = misc_utils::create_scope_leave_handler(
-//    boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
-  auto scope_exit_handler = misc_utils::create_scope_leave_handler([aph]() { aph->finish_outer_call(); });
   if(!cb(aph->get_context_ref()))
     return false;
   return true;
@@ -916,7 +910,7 @@ int async_protocol_handler_config<t_connection_context>::notify(int command, con
 }
 //------------------------------------------------------------------------------------------
 template<class t_connection_context>
-int async_protocol_handler_config<t_connection_context>::send(byte_slice message, const boost::uuids::uuid& connection_id)
+int async_protocol_handler_config<t_connection_context>::send(shared_sv message, const boost::uuids::uuid& connection_id)
 {
   async_protocol_handler<t_connection_context>* aph;
   int r = find_and_lock_connection(connection_id, aph);
@@ -926,27 +920,23 @@ int async_protocol_handler_config<t_connection_context>::send(byte_slice message
 template<class t_connection_context>
 bool async_protocol_handler_config<t_connection_context>::close(boost::uuids::uuid connection_id)
 {
-  async_protocol_handler<t_connection_context>* aph = nullptr;
-  if (find_and_lock_connection(connection_id, aph) != LEVIN_OK)
-    return false;
-//  auto scope_exit_handler = misc_utils::create_scope_leave_handler(
-//    boost::bind(&async_protocol_handler<t_connection_context>::finish_outer_call, aph));
-  auto scope_exit_handler = misc_utils::create_scope_leave_handler([aph]() { aph->finish_outer_call(); });
-  if (!aph->close())
-    return false;
   std::lock_guard lock{m_connects_lock};
-  m_connects.erase(connection_id);
-  return true;
+  async_protocol_handler<t_connection_context>* aph = find_connection(connection_id);
+  if (aph) {
+    del_connection(aph);
+    return aph->close();
+  }
+  return false;
 }
 //------------------------------------------------------------------------------------------
 template<class t_connection_context>
-bool async_protocol_handler_config<t_connection_context>::update_connection_context(const t_connection_context& contxt)
+bool async_protocol_handler_config<t_connection_context>::update_connection_context(const t_connection_context& context)
 {
   std::lock_guard lock{m_connects_lock};
-  async_protocol_handler<t_connection_context>* aph = find_connection(contxt.m_connection_id);
+  async_protocol_handler<t_connection_context>* aph = find_connection(context.m_connection_id);
   if(0 == aph)
     return false;
-  aph->update_connection_context(contxt);
+  aph->update_connection_context(context);
   return true;
 }
 //------------------------------------------------------------------------------------------

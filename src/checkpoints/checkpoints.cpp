@@ -303,11 +303,14 @@ namespace cryptonote
     return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::init(network_type nettype, class BlockchainDB *db)
+  bool checkpoints::init(network_type nettype, struct BlockchainDB *db)
   {
     *this = {};
     m_db = db;
     m_nettype = nettype;
+
+    if (db->is_read_only())
+      return true;
 
     if(nettype == MAINNET)
     {

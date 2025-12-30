@@ -27,8 +27,6 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <boost/range/adaptor/reversed.hpp>
-
 #include "common/string_util.h"
 #include "cryptonote_core/service_node_rules.h"
 #include "checkpoints/checkpoints.h"
@@ -231,8 +229,9 @@ void BlockchainDB::pop_block(block& blk, std::vector<transaction>& txs)
 
   remove_block();
 
-  for (const auto& h : boost::adaptors::reverse(blk.tx_hashes))
+  for (auto it = blk.tx_hashes.rbegin(); it != blk.tx_hashes.rend(); ++it)
   {
+    auto& h = *it;
     cryptonote::transaction tx;
     if (!get_tx(h, tx) && !get_pruned_tx(h, tx))
       throw DB_ERROR("Failed to get pruned or unpruned transaction from the db");
@@ -240,11 +239,6 @@ void BlockchainDB::pop_block(block& blk, std::vector<transaction>& txs)
     remove_transaction(h);
   }
   remove_transaction(get_transaction_hash(blk.miner_tx));
-}
-
-bool BlockchainDB::is_open() const
-{
-  return m_open;
 }
 
 void BlockchainDB::remove_transaction(const crypto::hash& tx_hash)

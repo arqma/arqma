@@ -192,7 +192,13 @@ namespace cryptonote
     std::unique_lock lock{m_transactions_lock};
 
     PERF_TIMER(add_tx);
-    if(tx.version == txversion::v0)
+    if (blob.size() == 0)
+    {
+      MERROR("Could not add to txpool, blob is empty for tx: " << id);
+      return false;
+    }
+
+    if (tx.version == txversion::v0)
     {
       // v0 never accepted
       LOG_PRINT_L1("transaction version 0 is invalid");

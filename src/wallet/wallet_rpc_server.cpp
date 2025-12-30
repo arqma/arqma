@@ -3992,7 +3992,7 @@ namespace tools
 	    ssl_options.verification != epee::net_utils::ssl_verification_t::none &&
 	    ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled;
 
-	  if (verification_required && !ssl_options.has_strong_verification(boost::string_ref{}))
+	  if (verification_required && !ssl_options.has_strong_verification(""sv))
 	  {
 	    er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
 	    er.message = "SSL is enabled but no user certificate or fingerprints were provided";

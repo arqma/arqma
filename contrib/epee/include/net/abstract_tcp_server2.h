@@ -47,7 +47,6 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/optional.hpp>
-#include "byte_slice.h"
 #include "net_utils_base.h"
 #include "connection_basic.hpp"
 #include "network_throttle-detail.hpp"
@@ -56,7 +55,7 @@
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "net"
 
-#define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 1000
+#define ABSTRACT_SERVER_SEND_QUE_MAX_COUNT 3000
 
 namespace epee
 {
@@ -129,7 +128,7 @@ namespace net_utils
 
   private:
     //----------------- i_service_endpoint ---------------------
-    virtual bool do_send(byte_slice message);
+    virtual bool do_send(shared_sv message);
     virtual bool send_done();
     virtual bool close();
     virtual bool call_run_once_service_io();
@@ -138,7 +137,7 @@ namespace net_utils
     virtual bool add_ref();
     virtual bool release();
     //------------------------------------------------------
-    bool do_send_chunk(byte_slice chunk);
+    bool do_send_chunk(shared_sv chunk);
 
     std::shared_ptr<connection<t_protocol_handler> > safe_shared_from_this();
     bool shutdown();
@@ -155,7 +154,7 @@ namespace net_utils
 
     unsigned int host_count(const std::string &host, int delta = 0);
 
-    std::array<char, 8192> buffer_;
+    std::array<char, 16384> buffer_;
     size_t buffer_ssl_init_fill;
 
     t_connection_context context;

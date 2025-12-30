@@ -71,6 +71,7 @@ namespace cryptonote
     epee::copyable_atomic m_new_stripe_notification{0};
     epee::copyable_atomic m_idle_peer_notification{0};
     int32_t m_score{0};
+    int m_expect_response{0};
   };
 
   inline std::string get_protocol_state_string(cryptonote_connection_context::state s)

@@ -33,7 +33,7 @@
 #include <iosfwd>
 #include <string>
 #include <cstddef>
-#include <boost/utility/string_ref.hpp>
+#include <string_view>
 
 #include "wipeable_string.h"
 #include "span.h"
@@ -52,9 +52,19 @@ namespace epee
     template<std::size_t N>
     static std::array<char, N * 2> array(const std::array<std::uint8_t, N>& src) noexcept
     {
-      std::array<char, N * 2> out{{}};
+      std::array<char, N * 2> out;
       static_assert(N <= 128, "keep the stack size down");
       buffer_unchecked(out.data(), {src.data(), src.size()});
+      return out;
+    }
+
+    //! \return An array containing hex of `src`.
+    template<typename T>
+    static std::array<char, sizeof(T) * 2> array(const T& src) noexcept
+    {
+      std::array<char, sizeof(T) * 2> out;
+      static_assert(sizeof(T) <= 128, "keep the stack size down");
+      buffer_unchecked(out.data(), as_byte_span(src));
       return out;
     }
 
@@ -73,17 +83,17 @@ namespace epee
 
   struct from_hex
   {
-    static bool to_string(std::string& out, boost::string_ref src);
+    static bool to_string(std::string& out, std::string_view src);
 
-    static bool to_buffer(span<std::uint8_t> out, boost::string_ref src) noexcept;
+    static bool to_buffer(span<std::uint8_t> out, std::string_view src) noexcept;
 
   private:
-    static bool to_buffer_unchecked(std::uint8_t* out, boost::string_ref src) noexcept;
+    static bool to_buffer_unchecked(std::uint8_t* out, std::string_view src) noexcept;
   };
 
   //! Convert hex in current C locale encoding to binary
   struct from_hex_locale
   {
-      static std::vector<uint8_t> to_vector(boost::string_ref src);
+      static std::vector<uint8_t> to_vector(std::string_view src);
   };
 }

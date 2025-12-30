@@ -149,6 +149,7 @@ using namespace std::literals;
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
+#define P2P_MAX_PEERS_IN_HANDSHAKE                      250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
 #define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               20         // seconds
 #define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       // 2 seconds
@@ -188,8 +189,8 @@ constexpr auto P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT     = 5s;
 
 #define BULLETPROOF_MAX_OUTPUTS                         16
 
-#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096         // the smaller, the smoother the increase
-#define CRYPTONOTE_PRUNING_LOG_STRIPES                  3            // the higher, the more space saved
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  2048         // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_LOG_STRIPES                  1            // the higher, the more space saved
 #define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500         // the smaller, the more space saved
 //#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
 
@@ -337,7 +338,7 @@ namespace config
 
 namespace arqma
 {
-  static constexpr size_t seed_nodes_qty = 12;
+  static constexpr size_t seed_nodes_qty = 8;
   const char *const mainnet_core_nodes[] =
   {
     "node5.arqma.com", //Malbit

@@ -232,7 +232,7 @@ namespace net_utils
     if(!self)
       return false;
 
-    strand_.post(boost::bind(&connection<t_protocol_handler>::call_back_starter, self), std::allocator<void>{});
+    strand_.post(std::bind(&connection<t_protocol_handler>::call_back_starter, self), std::allocator<void>{});
     CATCH_ENTRY_L0("connection<t_protocol_handler>::request_callback()", false);
     return true;
   }
@@ -308,45 +308,45 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  void connection<t_protocol_handler>::handle_read(const boost::system::error_code& e,
-    std::size_t bytes_transferred)
+  void connection<t_protocol_handler>::handle_read(const boost::system::error_code& e, std::size_t bytes_transferred)
   {
     TRY_ENTRY();
 
     if (!e)
     {
-        double current_speed_down;
-		{
-			std::lock_guard lock{m_throttle_speed_in_mutex};
-			m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
-			current_speed_down = m_throttle_speed_in.get_current_speed();
-		}
-        context.m_current_speed_down = current_speed_down;
-        context.m_max_speed_down = std::max(context.m_max_speed_down, current_speed_down);
-    {
-			std::lock_guard lock{epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in};
-			epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
-		}
+      double current_speed_down;
+		  {
+			  std::lock_guard lock{m_throttle_speed_in_mutex};
+			  m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
+			  current_speed_down = m_throttle_speed_in.get_current_speed();
+		  }
+      context.m_current_speed_down = current_speed_down;
+      context.m_max_speed_down = std::max(context.m_max_speed_down, current_speed_down);
+      {
+			  std::lock_guard lock{epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in};
+			  epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
+		  }
 
-		double delay=0; // will be calculated - how much we should sleep to obey speed limit etc
+		  double delay=0; // will be calculated - how much we should sleep to obey speed limit etc
 
+		  if (speed_limit_is_enabled())
+		  {
+			  do // keep sleeping if we should sleep
+			  {
+				  {
+					  std::lock_guard lock{epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in};
+					  delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
+				  }
 
-		if (speed_limit_is_enabled()) {
-			do // keep sleeping if we should sleep
-			{
-				{
-					std::lock_guard lock{epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in};
-					delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
-				}
-
-				delay *= 0.5;
-				long int ms = (long int)(delay * 100);
-				if (ms > 0) {
-					reset_timer(std::chrono::milliseconds(ms + 1), true);
-					std::this_thread::sleep_for(std::chrono::milliseconds{ms});
-				}
-			} while(delay > 0);
-		} // any form of sleeping
+				  delay *= 0.5;
+				  long int ms = (long int)(delay * 100);
+				  if (ms > 0)
+				  {
+					  reset_timer(std::chrono::milliseconds(ms + 1), true);
+					  std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+				  }
+			  } while(delay > 0);
+		  } // any form of sleeping
 
       logger_handle_net_read(bytes_transferred);
       context.m_last_recv = std::chrono::steady_clock::now();
@@ -365,7 +365,8 @@ namespace net_utils
         }
         if(do_shutdown)
           shutdown();
-      }else
+      }
+      else
       {
         reset_timer(get_timeout_from_bytes_read(bytes_transferred), false);
         async_read_some(boost::asio::buffer(buffer_),
@@ -374,7 +375,8 @@ namespace net_utils
               boost::asio::placeholders::error,
               boost::asio::placeholders::bytes_transferred)));
       }
-    }else
+    }
+    else
     {
       if(e.value() != 2)
       {
@@ -401,8 +403,7 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  void connection<t_protocol_handler>::handle_receive(const boost::system::error_code& e,
-    std::size_t bytes_transferred)
+  void connection<t_protocol_handler>::handle_receive(const boost::system::error_code& e, std::size_t bytes_transferred)
   {
     TRY_ENTRY();
 
@@ -428,7 +429,7 @@ namespace net_utils
     // detect SSL
     if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
     {
-      if (is_ssl((const unsigned char*)buffer_.data(), buffer_ssl_init_fill))
+      if (is_ssl({buffer_.data(), buffer_ssl_init_fill}))
       {
         MDEBUG("That looks like SSL");
         m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_enabled; // read/write to the SSL socket
@@ -488,7 +489,8 @@ namespace net_utils
       size_t cnt = GET_IO_SERVICE(socket()).run_one();
       if(!cnt)//service is going to quit
         return false;
-    }else
+    }
+    else
     {
       //multi thread model, we can't(!) wait in blocked call
       //so we make non blocking call and releasing CPU by calling sleep(0); 
@@ -497,15 +499,16 @@ namespace net_utils
       //ask it inside(!) critical region if we still able to go in event wait...
       size_t cnt = GET_IO_SERVICE(socket()).poll_one();
       if(!cnt)
-        misc_utils::sleep_no_w(1);
+        std::this_thread::sleep_for(1ms);
     }
 
     return true;
     CATCH_ENTRY_L0("connection<t_protocol_handler>::call_run_once_service_io", false);
   }
   //---------------------------------------------------------------------------------
-    template<class t_protocol_handler>
-  bool connection<t_protocol_handler>::do_send(byte_slice message) {
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::do_send(shared_sv message)
+  {
     TRY_ENTRY();
 
     // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
@@ -514,55 +517,38 @@ namespace net_utils
     if (m_was_shutdown) return false;
 		// TODO avoid copy
 
-		std::uint8_t const* const message_data = message.data();
-		const std::size_t message_size = message.size();
-
-		const double factor = 32; // TODO config
+		const double factor = 128; // TODO config
 		typedef long long signed int t_safe; // my t_size to avoid any overunderflow in arithmetic
 		const t_safe chunksize_good = (t_safe)( 1024 * std::max(1.0,factor) );
-        const t_safe chunksize_max = chunksize_good * 2 ;
+    const t_safe chunksize_max = chunksize_good * 2;
 		const bool allow_split = (m_connection_type == e_connection_type_RPC) ? false : true; // do not split RPC data
 
-        CHECK_AND_ASSERT_MES(! (chunksize_max<0), false, "Negative chunksize_max" ); // make sure it is unsigned before removin sign with cast:
-        long long unsigned int chunksize_max_unsigned = static_cast<long long unsigned int>( chunksize_max ) ;
+    CHECK_AND_ASSERT_MES(! (chunksize_max<0), false, "Negative chunksize_max" ); // make sure it is unsigned before removin sign with cast:
+    long long unsigned int chunksize_max_unsigned = static_cast<long long unsigned int>( chunksize_max ) ;
 
-        if (allow_split && (message_size > chunksize_max_unsigned)) {
+    if (allow_split && (message.size() > chunksize_max_unsigned))
+    {
 			{ // LOCK: chunking
-    		std::lock_guard send_guard{m_chunking_lock}; // *** critical *** 
+    		std::lock_guard send_guard{m_chunking_lock};
 
-				MDEBUG("do_send() will SPLIT into small chunks, from packet="<<message_size<<" B for ptr="<<(const void*)message_data);
-				// 01234567890 
-				// ^^^^        (pos=0, len=4)     ;   pos:=pos+len, pos=4
-				//     ^^^^    (pos=4, len=4)     ;   pos:=pos+len, pos=8
-				//         ^^^ (pos=8, len=4)    ;   
+				MDEBUG("do_send() will SPLIT into small chunks, from packet=" << message.size() << " B for ptr=" << (void*)message.ptr.get());
 
-				// const size_t bufsize = chunksize_good; // TODO safecast
-				// char* buf = new char[ bufsize ];
+				while (!message.view.empty())
+				{
+				  bool ok = do_send_chunk(message.extract_prefix(chunksize_good));
 
-				bool all_ok = true;
-				while (!message.empty()) {
-					byte_slice chunk = message.take_slice(chunksize_good);
+				  if (!ok)
+				  {
+				    MDEBUG("do_send() DONE ***FAILED***");
+				    MDEBUG("do_send() SEND was aborted in middle of big package - this is probably harmless (e.g. peer closed connection)");
+				    return false;
+				  }
+				}
 
-					MDEBUG("chunk_start="<<(void*)chunk.data()<<" ptr="<<(const void*)message_data<<" pos="<<(chunk.data() - message_data));
-					MDEBUG("part of " << message.size() << ": pos="<<(chunk.data() - message_data) << " len="<<chunk.size());
+				MDEBUG("do_send() DONE SPLIT send");
+        MDEBUG("do_send() m_connection_type = " << m_connection_type);
 
-					bool ok = do_send_chunk(std::move(chunk)); // <====== ***
-
-					all_ok = all_ok && ok;
-					if (!all_ok) {
-						MDEBUG("do_send() DONE ***FAILED*** from packet="<<message_size<<" B for ptr="<<(const void*)message_data);
-						MDEBUG("do_send() SEND was aborted in middle of big package - this is mostly harmless "
-							<< " (e.g. peer closed connection) but if it causes trouble tell us at #monero-dev. " << message_size);
-						return false; // partial failure in sending
-					}
-					// (in catch block, or uniq pointer) delete buf;
-				} // each chunk
-
-				MDEBUG("do_send() DONE SPLIT from packet="<<message_size<<" B for ptr="<<(const void*)message_data);
-
-                MDEBUG("do_send() m_connection_type = " << m_connection_type);
-
-				return all_ok; // done - e.g. queued - all the chunks of current do_send call
+				return true; // done - e.g. queued - all the chunks of current do_send call
 			} // LOCK: chunking
 		} // a big block (to be chunked) - all chunks
 		else { // small block
@@ -574,7 +560,7 @@ namespace net_utils
 
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool connection<t_protocol_handler>::do_send_chunk(byte_slice chunk)
+  bool connection<t_protocol_handler>::do_send_chunk(shared_sv chunk)
   {
     TRY_ENTRY();
     // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
@@ -585,10 +571,10 @@ namespace net_utils
       return false;
     double current_speed_up;
     {
-		std::lock_guard lock{m_throttle_speed_out_mutex};
-		m_throttle_speed_out.handle_trafic_exact(chunk.size());
-		current_speed_up = m_throttle_speed_out.get_current_speed();
-	}
+		  std::lock_guard lock{m_throttle_speed_out_mutex};
+		  m_throttle_speed_out.handle_trafic_exact(chunk.size());
+		  current_speed_up = m_throttle_speed_out.get_current_speed();
+	  }
     context.m_current_speed_up = current_speed_up;
     context.m_max_speed_up = std::max(context.m_max_speed_up, current_speed_up);
 
@@ -656,11 +642,11 @@ namespace net_utils
 
         CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), false, "Unexpected queue size");
         reset_timer(get_default_timeout(), false);
-            async_write(boost::asio::buffer(m_send_que.front().data(), size_now ) ,
-                                 strand_.wrap(
-                                 boost::bind(&connection<t_protocol_handler>::handle_write, self, boost::placeholders::_1, boost::placeholders::_2)
-                                 )
-                                 );
+        async_write(boost::asio::buffer(m_send_que.front().data(), size_now),
+          strand_.wrap(
+            std::bind(&connection<t_protocol_handler>::handle_write, self, std::placeholders::_1, std::placeholders::_2)
+          )
+        );
     }
 
     return true;
@@ -836,19 +822,20 @@ namespace net_utils
       {
         do_shutdown = true;
       }
-    }else
+    }
+    else
     {
       //have more data to send
-		reset_timer(get_default_timeout(), false);
-		auto size_now = m_send_que.front().size();
-		if (speed_limit_is_enabled())
-			do_send_handler_write_from_queue(e, m_send_que.front().size() , m_send_que.size()); // (((H)))
-		CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), void(), "Unexpected queue size");
-		  async_write(boost::asio::buffer(m_send_que.front().data(), size_now) , 
-           strand_.wrap(
-            boost::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), boost::placeholders::_1, boost::placeholders::_2)
+		  reset_timer(get_default_timeout(), false);
+		  auto size_now = m_send_que.front().size();
+		  if (speed_limit_is_enabled())
+	      do_send_handler_write_from_queue(e, m_send_que.front().size() , m_send_que.size()); // (((H)))
+		  CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), void(), "Unexpected queue size");
+		  async_write(boost::asio::buffer(m_send_que.front().data(), size_now),
+        strand_.wrap(
+          std::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)
 			  )
-          );
+      );
     }
     lock.unlock();
 
@@ -863,7 +850,7 @@ namespace net_utils
   template<class t_protocol_handler>
   void connection<t_protocol_handler>::setRpcStation()
   {
-    m_connection_type = e_connection_type_RPC; 
+    m_connection_type = e_connection_type_RPC;
     MDEBUG("set m_connection_type = RPC ");
   }
 
@@ -1349,7 +1336,7 @@ namespace net_utils
       shared_context->cond.notify_one();
     };
 
-    sock_.async_connect(remote_endpoint, boost::bind<void>(connect_callback, boost::placeholders::_1, local_shared_context));
+    sock_.async_connect(remote_endpoint, std::bind<void>(connect_callback, std::placeholders::_1, local_shared_context));
     while(local_shared_context->ec == boost::asio::error::would_block)
     {
       auto wait_stat = local_shared_context->cond.wait_for(lock, std::chrono::milliseconds{conn_timeout});

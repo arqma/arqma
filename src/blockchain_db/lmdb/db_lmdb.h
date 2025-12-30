@@ -171,7 +171,7 @@ struct mdb_txn_safe
 // A regular network sync without batch writes is expected to open a new read
 // transaction, as those lookups are part of the validation done prior to the
 // write for block and tx data, so no write transaction is open at the time.
-class BlockchainLMDB : public BlockchainDB
+class BlockchainLMDB final : public BlockchainDB
 {
 public:
   BlockchainLMDB(bool batch_transactions=true);
@@ -318,7 +318,6 @@ public:
 
   void set_batch_transactions(bool batch_transactions) override;
   bool batch_start(uint64_t batch_num_blocks=0, uint64_t batch_bytes=0) override;
-  void batch_commit();
   void batch_stop() override;
   void batch_abort() override;
 
