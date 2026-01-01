@@ -1020,7 +1020,15 @@ if(NOT Boost_FOUND)
 elseif(Boost_FOUND)
   statusinfo("Found Boost Version: ${Boost_VERSION_STRING}")
 
-  set(Boost_Libs date_time chrono serialization program_options thread filesystem system regex)
+  set(Boost_Libs date_time chrono serialization program_options thread filesystem)
+
+  if(Boost_VERSION_STRING VERSION_LESS 1.69.0)
+    list(APPEND Boost_Libs system)
+  endif()
+
+  if(Boost_VERSION_STRING VERSION_LESS 1.77.0)
+    list(APPEND Boost_Libs regex)
+  endif()
   if(WIN32)
     list(APPEND Boost_Libs locale)
   endif()
