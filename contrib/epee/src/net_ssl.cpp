@@ -39,6 +39,10 @@
 extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/pem.h>
+#include <openssl/evp.h>
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#include <openssl/rsa.h>
+#endif
 }
 #include "misc_log_ex.h"
 #include "net/net_helper.h"
@@ -139,6 +143,50 @@ namespace net_utils
 bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
 {
   MGINFO("Generating SSL certificate");
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
+  if (!ctx)
+  {
+    MERROR("Failed to create EVP_PKEY_CTX");
+    return false;
+  }
+
+  if (EVP_PKEY_keygen_init(ctx) <= 0)
+  {
+    MERROR("Failed to initialize key generation");
+    EVP_PKEY_CTX_free(ctx);
+    return false;
+  }
+
+  if (EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 4096) <= 0)
+  {
+    MERROR("Failed to set RSA key size");
+    EVP_PKEY_CTX_free(ctx);
+    return false;
+  }
+
+  pkey = EVP_PKEY_new();
+  if (!pkey)
+  {
+    MERROR("Failed to create new private key");
+    EVP_PKEY_CTX_free(ctx);
+    return false;
+  }
+
+  openssl_pkey pkey_deleter{pkey};
+
+  if (EVP_PKEY_keygen(ctx, &pkey) <= 0)
+  {
+    MERROR("Error generating RSA private key");
+    EVP_PKEY_CTX_free(ctx);
+    return false;
+  }
+
+  EVP_PKEY_CTX_free(ctx);
+  (void)pkey_deleter.release();
+
+#else
   pkey = EVP_PKEY_new();
   if (!pkey)
   {
@@ -177,6 +225,7 @@ bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
 
   // the RSA key is now managed by the EVP_PKEY structure
   (void)rsa.release();
+#endif
 
   cert = X509_new();
   if (!cert)
@@ -299,19 +348,23 @@ ssl_options_t::ssl_options_t(std::vector<std::vector<std::uint8_t>> fingerprints
 
 boost::asio::ssl::context ssl_options_t::create_context() const
 {
-	boost::asio::ssl::context ssl_context{boost::asio::ssl::context::tlsv13};
+	boost::asio::ssl::context ssl_context{boost::asio::ssl::context::tlsv12};
 	if (!bool(*this))
 	  return ssl_context;
 
-  // only allow tls v1.3
+  // only allow tls v1.2 and up
   ssl_context.set_options(boost::asio::ssl::context::default_workarounds);
   ssl_context.set_options(boost::asio::ssl::context::no_sslv2);
   ssl_context.set_options(boost::asio::ssl::context::no_sslv3);
   ssl_context.set_options(boost::asio::ssl::context::no_tlsv1);
   ssl_context.set_options(boost::asio::ssl::context::no_tlsv1_1);
-  ssl_context.set_options(boost::asio::ssl::context::no_tlsv1_2);
 
-  // only allow a select handful of tls v1.3
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+  if (SSL_CTX_set_ciphersuites(ssl_context.native_handle(), "TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256") == 0)
+  {
+    MERROR("Failed to set TLS 1.3 cipher suites");
+  }
+#endif
   SSL_CTX_set_cipher_list(ssl_context.native_handle(), "EECDH+CHACHA20:EECDH+AES");
 
   // set options on the SSL context for added security
@@ -334,7 +387,9 @@ boost::asio::ssl::context ssl_options_t::create_context() const
 #ifdef SSL_OP_CIPHER_SERVER_PREFERENCE
   SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
 #endif
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_CTX_set_ecdh_auto(ctx, 1);
+#endif
 
   switch (verification)
   {
