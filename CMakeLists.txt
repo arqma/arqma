@@ -95,7 +95,8 @@ endif()
 cmake_minimum_required(VERSION 3.12...3.31)
 statusinfo("CMake version ${CMAKE_VERSION}")
 
-project(arqma)
+project(arqma
+  LANGUAGES CXX C)
 
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
@@ -296,6 +297,9 @@ else()
   set(OPT_FLAGS_RELEASE "-Ofast")
 endif()
 
+set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG ${OPT_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG ${OPT_FLAGS_RELEASE}")
+
 # BUILD_TAG is used to select the build type to check for a new version
 if(BUILD_TAG)
   statusinfo("Building build tag ${BUILD_TAG}")
@@ -322,14 +326,10 @@ if(NOT MANUAL_SUBMODULES)
     endfunction ()
 
     statusinfo("Checking submodules")
-    check_submodule(external/miniupnp)
     check_submodule(external/rapidjson)
     check_submodule(external/randomarq)
   endif()
 endif()
-
-set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG ${OPT_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG ${OPT_FLAGS_RELEASE}")
 
 set(PER_BLOCK_CHECKPOINT 1)
 add_definitions("-DPER_BLOCK_CHECKPOINT")
@@ -340,7 +340,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 option(BOOST_IGNORE_SYSTEM_PATHS "Ignore boost system paths for local boost installation" OFF)
 if (BOOST_IGNORE_SYSTEM_PATHS)
-  set(Boost_NO_SYSTEM_PATHS TRUE)
+  set(Boost_NO_SYSTEM_PATHS ON)
 endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -370,7 +370,6 @@ else()
 endif()
 statusinfo("Building for a ${ARCH_WIDTH}-bit system")
 
-# Check if we're on FreeBSD so we can exclude the local miniupnpc (it should be installed from ports instead)
 # CMAKE_SYSTEM_NAME checks are commonly known, but specifically taken from libsdl's CMakeLists
 if(CMAKE_SYSTEM_NAME MATCHES "kFreeBSD.*|FreeBSD")
   set(FREEBSD TRUE)
@@ -454,6 +453,9 @@ add_definitions("-DBLOCKCHAIN_DB=${BLOCKCHAIN_DB}")
 # Can't install hook in static build on OSX, because OSX linker does not support --wrap
 # On ARM, having libunwind package (with .so's only) installed breaks static link.
 # When possible, avoid stack tracing using libunwind in favor of using easylogging++.
+
+option(FORCE_UNWIND "Force to use libunwind to have use of Stack_Trace" OFF)
+
 if(APPLE)
   set(DEFAULT_STACK_TRACE OFF)
   set(LIBUNWIND_LIBRARIES "")
@@ -462,8 +464,14 @@ elseif(DEPENDS AND NOT LINUX)
   set(LIBUNWIND_LIBRARIES "")
 elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT MINGW)
   set(DEFAULT_STACK_TRACE ON)
-  set(STACK_TRACE_LIB "easylogging++") # for diag output only
-  set(LIBUNWIND_LIBRARIES "")
+  if(FORCE_UNWIND)
+    find_package(Libunwind)
+    set(STACK_TRACE_LIB "libunwind") # for diag output only
+    add_definitions(-DFORCE_UNWIND)
+  else()
+    set(STACK_TRACE_LIB "easylogging++") # for diag output only
+    set(LIBUNWIND_LIBRARIES "")
+  endif()
 elseif(ARM)
   set(DEFAULT_STACK_TRACE OFF)
   set(LIBUNWIND_LIBRARIES "")
@@ -486,12 +494,8 @@ else()
   statusinfo("Stack trace on exception disabled")
 endif()
 
-if (UNIX AND NOT APPLE)
-  set(THREADS_PREFER_PTHREAD_FLAG ON)
-  find_package(Threads)
-  add_c_flag_if_supported(-pthread CMAKE_C_FLAGS)
-  add_cxx_flag_if_supported(-pthread CMAKE_CXX_FLAGS)
-endif()
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads)
 
 if(CMAKE_SYSTEM_NAME MATCHES "(SunOS|Solaris)")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthreads")
@@ -509,6 +513,9 @@ endif()
 find_package(OpenSSL REQUIRED)
 statusinfo("Using OpenSSL include dir at ${OPENSSL_INCLUDE_DIR}")
 include_directories(${OPENSSL_INCLUDE_DIR})
+if (OPENSSL_VERSION VERSION_GREATER_EQUAL "3.0.0")
+  add_definitions(-DOPENSSL_API_COMPAT=0x30000000L)
+endif()
 if(STATIC AND NOT IOS)
   if(UNIX)
     set(OPENSSL_LIBRARIES "${OPENSSL_LIBRARIES};${CMAKE_DL_LIBS};${CMAKE_THREAD_LIBS_INIT}")
@@ -517,7 +524,7 @@ if(STATIC AND NOT IOS)
   endif()
 endif()
 
-if(WIN32)
+if (MINGW)
   list(APPEND OPENSSL_LIBRARIES ws2_32 crypt32)
 endif()
 
@@ -595,14 +602,13 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 
-add_library(miniupnpc INTERFACE)
 add_library(libunbound INTERFACE)
 add_library(systemd INTERFACE)
 
 pkg_check_modules(UNBOUND libunbound REQUIRED IMPORTED_TARGET)
 target_link_libraries(libunbound INTERFACE PkgConfig::UNBOUND)
 
-option(WITH_SYSTEMD "Attempts to link against and enable systemd daemon notification support" ON)
+option(WITH_SYSTEMD "Attempts to link against and enable systemd daemon notification support" OFF)
 if (WITH_SYSTEMD)
   pkg_check_modules(SYSTEMD libsystemd IMPORTED_TARGET)
 
@@ -634,6 +640,7 @@ if(HIDAPI_FOUND)
 elseif(NOT HIDAPI_FOUND)
   statusinfo("Could not find HIDAPI")
 endif()
+
 
 include(TestCXXAcceptsFlag)
 statusinfo("Building on ${CMAKE_SYSTEM_PROCESSOR} for ${ARCH}")
@@ -699,13 +706,16 @@ endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ARCH_FLAG}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ARCH_FLAG}")
 
-set(WARNINGS "-Wall -Wextra -Wpointer-arith -Wundef -Wvla -Wwrite-strings -Wno-error=extra -Wno-error=deprecated-declarations -Wno-unused-parameter -Wno-error=unused-variable -Wno-error=undef -Wno-error=uninitialized -Wno-string-compare")
+set(WARNINGS "-Wall -Wextra -Wpointer-arith -Wundef -Wvla -Wwrite-strings -Wno-error=extra -Wno-error=deprecated-declarations -Wno-unused-parameter -Wno-error=unused-variable -Wno-error=undef -Wno-error=uninitialized -Wno-unused-variable")
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   if(ARM)
     set(WARNINGS "${WARNINGS} -Wno-error=inline-asm")
   endif()
 else()
   set(WARNINGS "${WARNINGS} -Wlogical-op -Wno-error=maybe-uninitialized -Wno-error=cpp")
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.5))
+  set(WARNINGS "${WARNINGS} -Wno-string-compare -Wno-unused-but-set-variable -Wno-unused-private-field")
 endif()
 if(MINGW)
   set(WARNINGS "${WARNINGS} -Wno-error=unused-value -Wno-error=unused-but-set-variable")
@@ -789,7 +799,6 @@ if(noexecheap_SUPPORTED)
   set(LD_SECURITY_FLAGS "${LD_SECURITY_FLAGS} -Wl,-z,noexecheap")
 endif()
 
-
 if(BACKCOMPAT)
   add_linker_flag_if_supported(-Wl,--wrap=__divmoddi4 LD_BACKCOMPAT_FLAGS)
   add_linker_flag_if_supported(-Wl,--wrap=glob LD_BACKCOMPAT_FLAGS)
@@ -812,8 +821,15 @@ statusinfo("Using C security hardening flags: ${C_SECURITY_FLAGS}")
 statusinfo("Using C++ security hardening flags: ${CXX_SECURITY_FLAGS}")
 statusinfo("Using linker security hardening flags: ${LD_SECURITY_FLAGS}")
 
-if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND APPLE)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
   set(WARNINGS "${WARNINGS} -Wno-unused-command-line-argument")
+endif()
+
+if (FORCE_UNWIND)
+  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE ${MINGW_FLAG} ${WARNINGS} ${C_WARNINGS} ${PIC_FLAG} ${C_SECURITY_FLAGS}")
@@ -999,24 +1015,37 @@ if(DEPENDS)
   endif()
 endif()
 
-if (NOT WIN32)
-  find_package(Boost 1.66.0 COMPONENTS system filesystem thread date_time chrono regex serialization program_options)
-elseif (WIN32)
-  find_package(Boost 1.66.0 COMPONENTS system filesystem thread date_time chrono regex serialization program_options locale)
+set(Boost_version_min 1.66)
+find_package(Boost ${Boost_version_min} QUIET REQUIRED)
+
+if(NOT Boost_FOUND)
+  die("Could not find Boost libraries, please make sure you have installed Boost or libboost-all-dev. Minimum version 1.66 is required")
+elseif(Boost_FOUND)
+  statusinfo("Found Boost Version: ${Boost_VERSION_STRING}")
+
+  set(Boost_Libs date_time chrono serialization program_options thread filesystem)
+
+  if(Boost_VERSION_STRING VERSION_LESS 1.69.0)
+    list(APPEND Boost_Libs system)
+  endif()
+
+  if(Boost_VERSION_STRING VERSION_LESS 1.77.0)
+    list(APPEND Boost_Libs regex)
+  endif()
+  if(WIN32)
+    list(APPEND Boost_Libs locale)
+  endif()
+
+  statusinfo("Boost Libraries: ${Boost_Libs}")
+
+  find_package(Boost ${Boost_version_min} QUIET REQUIRED COMPONENTS ${Boost_Libs})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_LIB_SUFFIXES})
 endif()
 
 add_definitions(-DBOOST_ASIO_ENABLE_SEQUENTIAL_STRAND_ALLOCATION)
 add_definitions(-DBOOST_NO_AUTO_PTR)
 add_definitions(-DBOOST_UUID_DISABLE_ALIGNMENT)
 
-set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_LIB_SUFFIXES})
-if(NOT Boost_FOUND)
-  die("Could not find Boost libraries, please make sure you have installed Boost or libboost-all-dev. Minimum version 1.66 is required")
-elseif(Boost_FOUND)
-  statusinfo("Found Boost Version: ${Boost_VERSION}")
-  statusinfo("Boost Includes Dir is: ${Boost_INCLUDE_DIRS}")
-  statusinfo("Boost Libraries Dir is: ${Boost_LIBRARY_DIRS}")
-endif()
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 if(MINGW)
@@ -1060,6 +1089,7 @@ if(HIDAPI_FOUND OR LibUSB_COMPILE_TEST_PASSED)
   endif()
 endif()
 
+
 option(USE_READLINE "Build with GNU readline support." ON)
 if(USE_READLINE AND NOT DEPENDS)
   find_package(Readline)
@@ -1102,10 +1132,6 @@ endif()
 option(ARQMA_DEBUG_SHORT_PROOFS "Quick proofs on test networks" OFF)
 if (ARQMA_DEBUG_SHORT_PROOFS)
   add_definitions(-DUPTIME_PROOF_BASE_MINUTE=3)
-endif()
-
-if(STATIC)
-  set(sodium_USE_STATIC_LIBS ON)
 endif()
 
 pkg_check_modules(SODIUM libsodium>=1.0.18 REQUIRED)

@@ -108,7 +108,7 @@ namespace service_nodes
     voting_pool m_vote_pool;
     uint64_t m_obligations_height;
     uint64_t m_last_checkpointed_height;
-    mutable epee::critical_section m_lock;
+    mutable std::recursive_mutex m_lock;
   };
 
   int find_index_in_quorum_group(std::vector<crypto::public_key> const &group, const crypto::public_key &my_pubkey);

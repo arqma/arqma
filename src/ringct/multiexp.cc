@@ -451,6 +451,7 @@ rct::key straus(const std::vector<MultiexpData> &data, const std::shared_ptr<str
 
   MULTIEXP_PERF(PERF_TIMER_START_UNIT(setup, 1000000));
   static constexpr unsigned int mask = (1<<STRAUS_C)-1;
+  (void)mask;
   std::shared_ptr<straus_cached_data> local_cache = cache == NULL ? straus_init_cache(data) : cache;
   ge_cached cached;
   ge_p1p1 p1;

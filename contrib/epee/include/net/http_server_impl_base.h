@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <boost/thread.hpp>
 #include "net/abstract_tcp_server2.h"
 #include "http_protocol_handler.h"
 #include "net/http_server_handlers_map2.h"
@@ -46,7 +45,7 @@ namespace epee
         : m_net_server(epee::net_utils::e_connection_type_RPC)
     {}
 
-    explicit http_server_impl_base(boost::asio::io_context& external_io_service)
+    explicit http_server_impl_base(boost::asio::io_service& external_io_service)
         : m_net_server(external_io_service)
     {}
 
@@ -56,7 +55,6 @@ namespace epee
       boost::optional<net_utils::http::login> user = boost::none,
       net_utils::ssl_options_t ssl_options = net_utils::ssl_support_t::e_ssl_support_autodetect)
     {
-
       //set self as callback handler
       m_net_server.get_config_object().m_phandler = static_cast<t_child_class*>(this);
       m_net_server.get_config_object().rng = std::move(rng);
@@ -103,9 +101,9 @@ namespace epee
       return m_net_server.deinit_server();
     }
 
-    bool timed_wait_server_stop(uint64_t ms)
+    bool server_stop()
     {
-      return m_net_server.timed_wait_server_stop(ms);
+      return m_net_server.server_stop();
     }
 
     bool send_stop_signal()

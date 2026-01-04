@@ -151,7 +151,6 @@ int main(int argc, char* argv[])
   LOG_PRINT_L0("Initializing source blockchain (BlockchainDB)");
   BlockchainAndSNlistAndPool blockchain_objects = {};
   Blockchain *core_storage = &blockchain_objects.blockchain;
-  tx_memory_pool& tx_pool = blockchain_objects.tx_pool;
   //std::unique_ptr<BlockchainAndSNlistAndPool> core_storage = std::make_unique<BlockchainAndSNlistAndPool>();
   BlockchainDB *db = new_db();
   if (db == NULL)

@@ -28,6 +28,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <string_view>
 #include "parserse_base_utils.h"
 #include "file_io_utils.h"
 
@@ -46,8 +47,8 @@ namespace epee
       {
         ASSERT_MES_AND_THROW("json parse error");
       }*/
-      template<class t_storage>
-      inline void run_handler(typename t_storage::hsection current_section, std::string::const_iterator& sec_buf_begin, std::string::const_iterator buf_end, t_storage& stg, unsigned int recursion)
+      template<typename It, class t_storage>
+      inline void run_handler(typename t_storage::hsection current_section, It& sec_buf_begin, It buf_end, t_storage& stg, unsigned int recursion)
       {
         CHECK_AND_ASSERT_THROW_MES(recursion < EPEE_JSON_RECURSION_LIMIT_INTERNAL, "Wrong JSON data: recursion limitation (" << EPEE_JSON_RECURSION_LIMIT_INTERNAL << ") exceeded");
 
@@ -78,8 +79,7 @@ namespace epee
 
         match_state state = match_state_lookup_for_section_start;
         array_mode array_md = array_mode_undifined;
-        std::string::const_iterator it = sec_buf_begin;
-        for(;it != buf_end;it++)
+        for (auto it = sec_buf_begin; it != buf_end; ++it)
         {
           switch (state)
           {
@@ -119,7 +119,7 @@ namespace epee
               state = match_state_wonder_after_value;
             }else if (epee::misc_utils::parse::isdigit(*it) || *it == '-')
             {//just a named number value started
-              boost::string_ref val;
+              std::string_view val;
               bool is_v_float = false;bool is_signed = false;
               match_number2(it, buf_end, val, is_v_float, is_signed);
               if(!is_v_float)
@@ -147,17 +147,17 @@ namespace epee
               state = match_state_wonder_after_value;
             }else if(isalpha(*it) )
             {// could be null, true or false
-              boost::string_ref word;
+              std::string_view word;
               match_word2(it, buf_end, word);
-              if(boost::iequals(word, "null"))
+              if(word == "null")
               {
                 state = match_state_wonder_after_value;
-                //just skip this, 
-              }else if(boost::iequals(word, "true"))
+                //just skip this,
+              }else if(word == "true")
               {
                 stg.set_value(name, true, current_section);
                 state = match_state_wonder_after_value;
-              }else if(boost::iequals(word, "false"))
+              }else if(word == "false")
               {
                 stg.set_value(name, false, current_section);
                 state = match_state_wonder_after_value;
@@ -210,7 +210,7 @@ namespace epee
               array_md = array_mode_string;
             }else if (epee::misc_utils::parse::isdigit(*it) || *it == '-')
             {//array of numbers value started
-              boost::string_ref val;
+              std::string_view val;
               bool is_v_float = false;bool is_signed_val = false;
               match_number2(it, buf_end, val, is_v_float, is_signed_val);
               if(!is_v_float)
@@ -246,15 +246,15 @@ namespace epee
               state = match_state_wonder_after_value;
             }else if(isalpha(*it) )
             {// array of booleans
-              boost::string_ref word;
+              std::string_view word;
               match_word2(it, buf_end, word);
-              if(boost::iequals(word, "true"))
+              if(word == "true")
               {
                 h_array = stg.insert_first_value(name, true, current_section);
                 CHECK_AND_ASSERT_THROW_MES(h_array, " failed to insert values section entry");
                 state = match_state_array_after_value;
                 array_md = array_mode_booleans;
-              }else if(boost::iequals(word, "false"))
+              }else if(word == "false")
               {
                 h_array = stg.insert_first_value(name, false, current_section);
                 CHECK_AND_ASSERT_THROW_MES(h_array, " failed to insert values section entry");
@@ -300,7 +300,7 @@ namespace epee
             case array_mode_numbers:
               if (epee::misc_utils::parse::isdigit(*it) || *it == '-')
               {//array of numbers value started
-                boost::string_ref val;
+                std::string_view val;
                 bool is_v_float = false;bool is_signed_val = false;
                 match_number2(it, buf_end, val, is_v_float, is_signed_val);
                 bool insert_res = false;
@@ -334,14 +334,14 @@ namespace epee
             case array_mode_booleans:
               if(isalpha(*it) )
               {// array of booleans
-                boost::string_ref word;
+                std::string_view word;
                 match_word2(it, buf_end, word);
-                if(boost::iequals(word, "true"))
+                if(word == "true")
                 {
                   bool r = stg.insert_next_value(h_array, true);
                   CHECK_AND_ASSERT_THROW_MES(r, " failed to insert values section entry");
                   state = match_state_array_after_value;
-                }else if(boost::iequals(word, "false"))
+                }else if(word == "false")
                 {
                   bool r = stg.insert_next_value(h_array, false);
                   CHECK_AND_ASSERT_THROW_MES(r, " failed to insert values section entry");
@@ -391,12 +391,12 @@ namespace epee
 }
 */
       template<class t_storage>
-      inline bool load_from_json(const std::string& buff_json, t_storage& stg)
+      inline bool load_from_json(std::string_view buff_json, t_storage& stg)
       {
-        std::string::const_iterator sec_buf_begin  = buff_json.begin();
         try
         {
-          run_handler(nullptr, sec_buf_begin, buff_json.end(), stg, 0);
+          auto it = buff_json.begin();
+          run_handler(nullptr, it, buff_json.end(), stg, 0);
           return true;
         }
         catch(const std::exception& ex)

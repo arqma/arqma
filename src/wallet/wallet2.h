@@ -41,7 +41,6 @@
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/deque.hpp>
-#include <boost/thread/lock_guard.hpp>
 #include <atomic>
 #include <random>
 
@@ -77,6 +76,8 @@ class Serialization_portability_wallet_Test;
 
 namespace tools
 {
+  using namespace std::literals;
+
   static const char *ERR_MSG_NETWORK_VERSION_QUERY_FAILED = "Could not query the current network version, try later";
   static const char *ERR_MSG_NETWORK_HEIGHT_QUERY_FAILED = "Could not query the current network block height, try later: ";
   static const char *ERR_MSG_SERVICE_NODE_LIST_QUERY_FAILED = "Failed to query daemon for service node list";
@@ -122,6 +123,8 @@ private:
     wallet2 &w;
     bool locked;
     crypto::chacha_key key;
+    static std::mutex lockers_mutex;
+    static unsigned int lockers;
   };
 
   class i_wallet2_callback
@@ -305,7 +308,7 @@ private:
     friend class ::Serialization_portability_wallet_Test;
     friend class wallet_keys_unlocker;
   public:
-    static constexpr const std::chrono::seconds rpc_timeout = std::chrono::minutes(3) + std::chrono::seconds(30);
+    static constexpr const std::chrono::seconds rpc_timeout = 3min + 30s;
 
     enum RefreshType {
       RefreshFull,
@@ -767,12 +770,12 @@ private:
      * Export multisig info
      * This will generate and remember new k values
      */
-    cryptonote::blobdata export_multisig();
+    std::string export_multisig();
     /*!
      * Import a set of multisig info from multisig partners
      * \return the number of inputs which were imported
      */
-    size_t import_multisig(std::vector<cryptonote::blobdata> info);
+    size_t import_multisig(std::vector<std::string> info);
     /*!
      * \brief Rewrites to the wallet file for wallet upgrade (doesn't generate key, assumes it's already there)
      * \param wallet_name Name of wallet file (should exist)
@@ -945,7 +948,7 @@ private:
 
     bool sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, std::vector<cryptonote::tx_destination_entry> dsts) const;
     bool parse_multisig_tx_from_str(std::string multisig_tx_st, multisig_tx_set &exported_txs) const;
-    bool load_multisig_tx(cryptonote::blobdata blob, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
+    bool load_multisig_tx(std::string blob, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
     bool load_multisig_tx_from_file(const std::string &filename, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
     bool sign_multisig_tx_from_file(const std::string &filename, std::vector<crypto::hash> &txids, std::function<bool(const multisig_tx_set&)> accept_func);
     bool sign_multisig_tx(multisig_tx_set &exported_txs, std::vector<crypto::hash> &txids);
@@ -1196,7 +1199,7 @@ private:
      * \param  spent                    [OUT] the sum of spent funds included in the signature
      * \return                          true if the signature verifies correctly
      */
-    bool check_reserve_proof(const cryptonote::account_public_address &address, const std::string &message, const std::string &sig_str, uint64_t &total, uint64_t &spent);
+    bool check_reserve_proof(const cryptonote::account_public_address &address, const std::string &message, const std::string_view sig_str, uint64_t &total, uint64_t &spent);
 
    /*!
     * \brief GUI Address book get/store
@@ -1351,24 +1354,24 @@ private:
     crypto::public_key get_multisig_signing_public_key(const crypto::secret_key &skey) const;
 
     template<class t_request, class t_response>
-    inline bool invoke_http_json(const boost::string_ref uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST")
+    inline bool invoke_http_json(const std::string_view uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = 15s, std::string_view http_method = "POST"sv)
     {
       if(m_offline) return false;
-      std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
+      std::lock_guard lock{m_daemon_rpc_mutex};
       return epee::net_utils::invoke_http_json(uri, req, res, *m_http_client, timeout, http_method);
     }
     template<class t_request, class t_response>
-    inline bool invoke_http_bin(const boost::string_ref uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST")
+    inline bool invoke_http_bin(std::string_view uri, const t_request& req, t_response& res, std::chrono::milliseconds timeout = 15s, std::string_view http_method = "POST"sv)
     {
       if(m_offline) return false;
-      std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
+      std::lock_guard lock{m_daemon_rpc_mutex};
       return epee::net_utils::invoke_http_bin(uri, req, res, *m_http_client, timeout, http_method);
     }
     template<class t_request, class t_response>
-    inline bool invoke_http_json_rpc(const boost::string_ref uri, const std::string& method_name, const t_request& req, t_response& res, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST", const std::string& req_id = "0")
+    inline bool invoke_http_json_rpc(std::string_view uri, const std::string& method_name, const t_request& req, t_response& res, std::chrono::milliseconds timeout = 15s, std::string_view http_method = "POST"sv, const std::string& req_id = "0")
     {
       if(m_offline) return false;
-      std::lock_guard<std::recursive_mutex> lock(m_daemon_rpc_mutex);
+      std::lock_guard lock{m_daemon_rpc_mutex};
       return epee::net_utils::invoke_http_json_rpc(uri, method_name, req, res, *m_http_client, timeout, http_method, req_id);
     }
 
@@ -1509,7 +1512,7 @@ private:
     bool prepare_file_names(const std::string& file_path);
     void process_unconfirmed(const crypto::hash &txid, const cryptonote::transaction& tx, uint64_t height);
     void process_outgoing(const crypto::hash &txid, const cryptonote::transaction& tx, uint64_t height, uint64_t ts, uint64_t spent, uint64_t received, uint32_t subaddr_account, const std::set<uint32_t>& subaddr_indices);
-    void add_unconfirmed_tx(const cryptonote::transaction& tx, uint64_t amount_in, const std::vector<cryptonote::tx_destination_entry> &dests, const crypto::hash &payment_id, uint64_t change_amount, uint32_t subaddr_account, const std::set<uint32_t>& subaddr_indices);
+    void add_unconfirmed_tx(const crypto::hash &txid, const cryptonote::transaction& tx, uint64_t amount_in, const std::vector<cryptonote::tx_destination_entry> &dests, const crypto::hash &payment_id, uint64_t change_amount, uint32_t subaddr_account, const std::set<uint32_t>& subaddr_indices);
     void generate_genesis(cryptonote::block& b) const;
     void check_genesis(const crypto::hash& genesis_hash) const; //throws
     bool generate_chacha_key_from_secret_keys(crypto::chacha_key &key) const;
@@ -1518,7 +1521,7 @@ private:
     void check_acc_out_precomp(const cryptonote::tx_out &o, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, size_t i, tx_scan_info_t &tx_scan_info) const;
     void check_acc_out_precomp(const cryptonote::tx_out &o, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, size_t i, const is_out_data *is_out_data, tx_scan_info_t &tx_scan_info) const;
     void check_acc_out_precomp_once(const cryptonote::tx_out &o, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, size_t i, const is_out_data *is_out_data, tx_scan_info_t &tx_scan_info, bool &already_seen) const;
-    void parse_block_round(const cryptonote::blobdata &blob, cryptonote::block &bl, crypto::hash &bl_id, bool &error) const;
+    void parse_block_round(const std::string &blob, cryptonote::block &bl, crypto::hash &bl_id, bool &error) const;
     uint64_t get_upper_transaction_weight_limit() const;
     std::vector<uint64_t> get_unspent_amounts_vector(bool strict) const;
     uint64_t get_dynamic_base_fee_estimate();

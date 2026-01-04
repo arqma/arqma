@@ -68,10 +68,6 @@ public:
 
   bool save_blockchain(const std::vector<std::string>& args);
 
-  bool show_hash_rate(const std::vector<std::string>& args);
-
-  bool hide_hash_rate(const std::vector<std::string>& args);
-
   bool show_difficulty(const std::vector<std::string>& args);
 
   bool show_status(const std::vector<std::string>& args);

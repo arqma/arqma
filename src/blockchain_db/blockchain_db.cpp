@@ -27,17 +27,16 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <boost/range/adaptor/reversed.hpp>
-
+#include "common/string_util.h"
 #include "cryptonote_core/service_node_rules.h"
 #include "checkpoints/checkpoints.h"
 #include "string_tools.h"
 #include "blockchain_db.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
-#include "profile_tools.h"
 #include "ringct/rctOps.h"
 
 #include "lmdb/db_lmdb.h"
+#include <chrono>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "blockchain.db"
@@ -75,7 +74,7 @@ void BlockchainDB::pop_block()
   pop_block(blk, txs);
 }
 
-void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
+void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair<transaction, std::string>& txp, const crypto::hash* tx_hash_ptr, const crypto::hash* tx_prunable_hash_ptr)
 {
   const transaction &tx = txp.first;
 
@@ -163,12 +162,12 @@ void BlockchainDB::add_transaction(const crypto::hash& blk_hash, const std::pair
   add_tx_amount_output_indices(tx_id, amount_output_indices);
 }
 
-uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
+uint64_t BlockchainDB::add_block( const std::pair<block, std::string>& blck
                                 , size_t block_weight
                                 , uint64_t long_term_block_weight
                                 , const difficulty_type& cumulative_difficulty
                                 , const uint64_t& coins_generated
-                                , const std::vector<std::pair<transaction, blobdata>>& txs
+                                , const std::vector<std::pair<transaction, std::string>>& txs
                                 )
 {
   const block &blk = blck.first;
@@ -178,16 +177,15 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
     throw std::runtime_error("Inconsistent tx/hashes sizes");
 
 
-  TIME_MEASURE_START(time1);
+  auto started = std::chrono::steady_clock::now();
   crypto::hash blk_hash = get_block_hash(blk);
-  TIME_MEASURE_FINISH(time1);
-  time_blk_hash += time1;
+  time_blk_hash += std::chrono::steady_clock::now() - started;
 
   uint64_t prev_height = height();
 
   // call out to add the transactions
 
-  time1 = epee::misc_utils::get_tick_count();
+  started = std::chrono::steady_clock::now();
 
   uint64_t num_rct_outs = 0;
   add_transaction(blk_hash, std::make_pair(blk.miner_tx, tx_to_blob(blk.miner_tx)));
@@ -195,7 +193,7 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
     num_rct_outs += blk.miner_tx.vout.size();
   int tx_i = 0;
   crypto::hash tx_hash = crypto::null_hash;
-  for (const std::pair<transaction, blobdata>& tx : txs)
+  for (const std::pair<transaction, std::string>& tx : txs)
   {
     tx_hash = blk.tx_hashes[tx_i];
     add_transaction(blk_hash, tx, &tx_hash);
@@ -206,14 +204,12 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
     }
     ++tx_i;
   }
-  TIME_MEASURE_FINISH(time1);
-  time_add_transaction += time1;
+  time_add_transaction += std::chrono::steady_clock::now() - started;
 
   // call out to subclass implementation to add the block & metadata
-  time1 = epee::misc_utils::get_tick_count();
+  started = std::chrono::steady_clock::now();
   add_block(blk, block_weight, long_term_block_weight, cumulative_difficulty, coins_generated, num_rct_outs, blk_hash);
-  TIME_MEASURE_FINISH(time1);
-  time_add_block1 += time1;
+  time_add_block1 += std::chrono::steady_clock::now() - started;
 
   m_hardfork->add(blk, prev_height);
 
@@ -233,8 +229,9 @@ void BlockchainDB::pop_block(block& blk, std::vector<transaction>& txs)
 
   remove_block();
 
-  for (const auto& h : boost::adaptors::reverse(blk.tx_hashes))
+  for (auto it = blk.tx_hashes.rbegin(); it != blk.tx_hashes.rend(); ++it)
   {
+    auto& h = *it;
     cryptonote::transaction tx;
     if (!get_tx(h, tx) && !get_pruned_tx(h, tx))
       throw DB_ERROR("Failed to get pruned or unpruned transaction from the db");
@@ -242,11 +239,6 @@ void BlockchainDB::pop_block(block& blk, std::vector<transaction>& txs)
     remove_transaction(h);
   }
   remove_transaction(get_transaction_hash(blk.miner_tx));
-}
-
-bool BlockchainDB::is_open() const
-{
-  return m_open;
 }
 
 void BlockchainDB::remove_transaction(const crypto::hash& tx_hash)
@@ -267,7 +259,7 @@ void BlockchainDB::remove_transaction(const crypto::hash& tx_hash)
 
 block BlockchainDB::get_block_from_height(const uint64_t& height) const
 {
-  blobdata bd = get_block_blob_from_height(height);
+  std::string bd = get_block_blob_from_height(height);
   block b;
   if (!parse_and_validate_block_from_blob(bd, b))
     throw DB_ERROR("Failed to parse block from blob retrieved from the db");
@@ -277,7 +269,7 @@ block BlockchainDB::get_block_from_height(const uint64_t& height) const
 
 block BlockchainDB::get_block(const crypto::hash& h) const
 {
-  blobdata bd = get_block_blob(h);
+  std::string bd = get_block_blob(h);
   block b;
   if (!parse_and_validate_block_from_blob(bd, b))
     throw DB_ERROR("Failed to parse block from blob retrieved from the db");
@@ -287,7 +279,7 @@ block BlockchainDB::get_block(const crypto::hash& h) const
 
 bool BlockchainDB::get_tx(const crypto::hash& h, cryptonote::transaction &tx) const
 {
-  blobdata bd;
+  std::string bd;
   if (!get_tx_blob(h, bd))
     return false;
   if (!parse_and_validate_tx_from_blob(bd, tx))
@@ -298,7 +290,7 @@ bool BlockchainDB::get_tx(const crypto::hash& h, cryptonote::transaction &tx) co
 
 bool BlockchainDB::get_pruned_tx(const crypto::hash& h, cryptonote::transaction &tx) const
 {
-  blobdata bd;
+  std::string bd;
   if (!get_pruned_tx_blob(h, bd))
     return false;
   if (!parse_and_validate_tx_base_from_blob(bd, tx))
@@ -333,32 +325,24 @@ uint64_t BlockchainDB::get_output_unlock_time(const uint64_t amount, const uint6
 void BlockchainDB::reset_stats()
 {
   num_calls = 0;
-  time_blk_hash = 0;
-  time_tx_exists = 0;
-  time_add_block1 = 0;
-  time_add_transaction = 0;
-  time_commit1 = 0;
+  time_blk_hash = 0ns;
+  time_tx_exists = 0ns;
+  time_add_block1 = 0ns;
+  time_add_transaction = 0ns;
+  time_commit1 = 0ns;
 }
 
 void BlockchainDB::show_stats()
 {
-  LOG_PRINT_L1(ENDL
-    << "*********************************"
-    << ENDL
-    << "num_calls: " << num_calls
-    << ENDL
-    << "time_blk_hash: " << time_blk_hash << "ms"
-    << ENDL
-    << "time_tx_exists: " << time_tx_exists << "ms"
-    << ENDL
-    << "time_add_block1: " << time_add_block1 << "ms"
-    << ENDL
-    << "time_add_transaction: " << time_add_transaction << "ms"
-    << ENDL
-    << "time_commit1: " << time_commit1 << "ms"
-    << ENDL
-    << "*********************************"
-    << ENDL
+  LOG_PRINT_L1("\n"
+    << "*********************************\n"
+    << "num_calls: " << num_calls << "\n"
+    << "time_blk_hash: " << tools::friendly_duration(time_blk_hash) << "\n"
+    << "time_tx_exists: " << tools::friendly_duration(time_tx_exists) << "\n"
+    << "time_add_block1: " << tools::friendly_duration(time_add_block1) << "\n"
+    << "time_add_transaction: " << tools::friendly_duration(time_add_transaction) << "\n"
+    << "time_commit1: " << tools::friendly_duration(time_commit1) << "\n"
+    << "*********************************\n"
   );
 }
 

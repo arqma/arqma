@@ -29,15 +29,13 @@
 //
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
+#include <mutex>
 #include <unistd.h>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/lock_guard.hpp>
-#include <boost/shared_ptr.hpp>
 
 #include "common/varint.h"
 #include "warnings.h"
@@ -91,8 +89,8 @@ namespace crypto {
 
   void generate_random_bytes_thread_safe(size_t N, uint8_t *bytes)
   {
-    static boost::mutex random_lock;
-    boost::lock_guard<boost::mutex> lock(random_lock);
+    static std::mutex random_lock;
+    std::lock_guard lock{random_lock};
     generate_random_bytes_not_thread_safe(N, bytes);
   }
 
@@ -512,7 +510,7 @@ POP_WARNINGS
     ge_p3 image_unp;
     ge_dsmp image_pre;
     ec_scalar sum, k, h;
-    boost::shared_ptr<rs_comm> buf(reinterpret_cast<rs_comm *>(malloc(rs_comm_size(pubs_count))), free);
+    std::shared_ptr<rs_comm> buf(reinterpret_cast<rs_comm *>(malloc(rs_comm_size(pubs_count))), free);
     if (!buf)
       local_abort("malloc failure");
     assert(sec_index < pubs_count);
@@ -574,7 +572,7 @@ POP_WARNINGS
     ge_p3 image_unp;
     ge_dsmp image_pre;
     ec_scalar sum, h;
-    boost::shared_ptr<rs_comm> buf(reinterpret_cast<rs_comm *>(malloc(rs_comm_size(pubs_count))), free);
+    std::shared_ptr<rs_comm> buf(reinterpret_cast<rs_comm *>(malloc(rs_comm_size(pubs_count))), free);
     if (!buf)
       return false;
 #if !defined(NDEBUG)

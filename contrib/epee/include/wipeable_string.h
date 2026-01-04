@@ -65,6 +65,7 @@ namespace epee
     size_t length() const noexcept { return buffer.size(); }
     bool empty() const noexcept { return buffer.empty(); }
     void trim();
+    std::string_view view() const noexcept { return std::string_view{data(), size()}; }
     void split(std::vector<wipeable_string> &fields) const;
     boost::optional<wipeable_string> parse_hexstr() const;
     template<typename T> inline bool hex_to_pod(T &pod) const;

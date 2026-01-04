@@ -47,6 +47,7 @@ private:
   uint16_t public_rpc_port;
   std::string zmq_rpc_bind_address;
   std::string zmq_rpc_bind_port;
+  bool zmq_rpc_enabled;
 public:
   t_daemon(
       boost::program_options::variables_map const & vm, uint16_t public_rpc_port = 0

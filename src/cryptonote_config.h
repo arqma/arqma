@@ -31,10 +31,13 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <string>
 #include <boost/uuid/uuid.hpp>
 #include <stdexcept>
 #include <chrono>
+
+using namespace std::literals;
 
 #define CRYPTONOTE_DNS_TIMEOUT_MS                       20000
 
@@ -121,7 +124,6 @@
 #define CRYPTONOTE_MEMPOOL_TX_LIVETIME                  (86400*3) // seconds, three days
 #define CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME   604800 // seconds, one week
 
-// see src/cryptonote_protocol/levin_notify.cpp
 #define CRYPTONOTE_NOISE_MIN_EPOCH                      5      // minutes
 #define CRYPTONOTE_NOISE_EPOCH_RANGE                    30     // seconds
 #define CRYPTONOTE_NOISE_MIN_DELAY                      10     // seconds
@@ -129,7 +131,7 @@
 #define CRYPTONOTE_NOISE_BYTES                          3*1024 // 3 KiB
 #define CRYPTONOTE_NOISE_CHANNELS                       2      // Max outgoing connections per zone used for noise/covert sending
 
-#define CRYPTONOTE_MAX_FRAGMENTS                        20 // ~20 * NOISE_BYTES max payload size for covert/noise send
+#define CRYPTONOTE_MAX_FRAGMENTS                        20
 
 #define COMMAND_RPC_GET_BLOCKS_FAST_MAX_BLOCK_COUNT     1000
 #define COMMAND_RPC_GET_BLOCKS_FAST_MAX_TX_COUNT        20000
@@ -147,11 +149,12 @@
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60         // secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
+#define P2P_MAX_PEERS_IN_HANDSHAKE                      250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
-#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               45         // seconds
+#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               20         // seconds
 #define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       // 2 seconds
-#define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  // 2 minutes
-#define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       // 5 seconds
+constexpr auto P2P_DEFAULT_INVOKE_TIMEOUT               = 2min;
+constexpr auto P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT     = 5s;
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT_TEST       1
@@ -165,17 +168,11 @@
 #define P2P_IP_FAILS_BEFORE_BLOCK                       10
 #define P2P_IDLE_CONNECTION_KILL_INTERVAL               30     // 30 seconds
 
-#define P2P_SUPPORT_FLAG_FLUFFY_BLOCKS                  0x01
-#define P2P_SUPPORT_FLAGS                               P2P_SUPPORT_FLAG_FLUFFY_BLOCKS
-
-#define THREAD_STACK_SIZE                               8 * 1024 * 1024
-
 #define CRYPTONOTE_NAME                                 "arqma"
 #define CRYPTONOTE_POOLDATA_FILENAME                    "poolstate.bin"
 #define CRYPTONOTE_BLOCKCHAINDATA_FILENAME              "data.mdb"
 #define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
 #define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
-#define MINER_CONFIG_FILE_NAME                          "miner_conf.json"
 
 #define HF_VERSION_MIN_MIXIN_10                         13
 
@@ -192,8 +189,8 @@
 
 #define BULLETPROOF_MAX_OUTPUTS                         16
 
-#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  4096         // the smaller, the smoother the increase
-#define CRYPTONOTE_PRUNING_LOG_STRIPES                  3            // the higher, the more space saved
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE                  2048         // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_LOG_STRIPES                  1            // the higher, the more space saved
 #define CRYPTONOTE_PRUNING_TIP_BLOCKS                   5500         // the smaller, the more space saved
 //#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
 
@@ -232,7 +229,7 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 #define STORAGE_SERVER_PING_LIFETIME                    UPTIME_PROOF_FREQUENCY_IN_SECONDS
 //#define ARQNET_PING_LIFETIME                            UPTIME_PROOF_FREQUENCY_IN_SECONDS
 
-#define DNS_BLOCKLIST_LIFETIME                          (86400 * 8) // 8 days
+#define DNS_BANLIST_LIFETIME                          (86400 * 8) // 8 days
 
 namespace config
 {
@@ -301,7 +298,7 @@ namespace config
     static const uint8_t ARQMA_DECIMALS = 9;
     const uint64_t PREMINE = 7500000000000000; // Premine Reward (already burned).
     const uint64_t PREMINE_BURN = 5100000000000000; // Will need to be set after knowing exact amount.
-    const uint64_t DEFAULT_TXPOOL_MAX_WEIGHT = 10485760;
+    const uint64_t DEFAULT_TXPOOL_MAX_WEIGHT = 78643200;
     const uint64_t MAXIMUM_BLOCK_SIZE_LIMIT = 2097152; // It is set to 2048kB (2MB)
     const uint64_t MINIMUM_BLOCK_SIZE_LIMIT = 1048576; // It is set to 1024kB (1MB)
     static const uint8_t ARQMA_GENESIS_BLOCK_MAJOR_VERSION = 1;
@@ -341,18 +338,16 @@ namespace config
 
 namespace arqma
 {
-  static constexpr size_t seed_nodes_qty = 12;
+  static constexpr size_t seed_nodes_qty = 8;
   const char *const mainnet_core_nodes[] =
   {
     "node5.arqma.com", //Malbit
     "node1.arqma.com", //ArqTras
-    "node6.arqma.com", //Malbit US
+    "node6.arqma.com", //Malbit
     "node2.arqma.com", //ArqTras
-    "node7.arqma.com", //Malbit Contabo
+    "node7.arqma.com", //Malbit
     "node3.arqma.com", //ArqTras
     "node4.arqma.com", //ArqTras
-    "node8.arqma.com", //Malbit Asia
-    "it-support.mal-bit.com"
   };
 
   const char *const testnet_core_nodes[] =
@@ -392,6 +387,7 @@ namespace cryptonote
     network_version_15,
     network_version_16,
     network_version_17,
+    network_version_18,
 
     network_version_count,
   };

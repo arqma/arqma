@@ -62,14 +62,14 @@ TransactionHistoryImpl::~TransactionHistoryImpl()
 
 int TransactionHistoryImpl::count() const
 {
-    boost::shared_lock<boost::shared_mutex> lock(m_historyMutex);
+    std::shared_lock lock{m_historyMutex};
     int result = m_history.size();
     return result;
 }
 
 TransactionInfo *TransactionHistoryImpl::transaction(int index) const
 {
-    boost::shared_lock<boost::shared_mutex> lock(m_historyMutex);
+    std::shared_lock lock{m_historyMutex};
     // sanity check
     if (index < 0)
         return nullptr;
@@ -79,7 +79,7 @@ TransactionInfo *TransactionHistoryImpl::transaction(int index) const
 
 TransactionInfo *TransactionHistoryImpl::transaction(const std::string &id) const
 {
-    boost::shared_lock<boost::shared_mutex> lock(m_historyMutex);
+    std::shared_lock lock{m_historyMutex};
     auto itr = std::find_if(m_history.begin(), m_history.end(),
                             [&](const TransactionInfo * ti) {
         return ti->hash() == id;
@@ -89,7 +89,7 @@ TransactionInfo *TransactionHistoryImpl::transaction(const std::string &id) cons
 
 std::vector<TransactionInfo *> TransactionHistoryImpl::getAll() const
 {
-    boost::shared_lock<boost::shared_mutex> lock(m_historyMutex);
+    std::shared_lock lock{m_historyMutex};
     return m_history;
 }
 
@@ -111,7 +111,7 @@ void TransactionHistoryImpl::refresh()
     // multithreaded access:
     // boost::lock_guard<boost::mutex> guarg(m_historyMutex);
     // for "write" access, locking exclusively
-    boost::unique_lock<boost::shared_mutex> lock(m_historyMutex);
+    std::unique_lock lock{m_historyMutex};
 
     // TODO: configurable values;
     uint64_t min_height = 0;

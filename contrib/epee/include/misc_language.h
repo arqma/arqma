@@ -24,24 +24,23 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-
-
 #pragma once
 
-#include <boost/shared_ptr.hpp>
+#include <algorithm>
+#include <memory>
 #include <vector>
 
 namespace epee
 {
 namespace misc_utils
 {
-    template<typename t_iterator>
-    t_iterator move_it_backward(t_iterator it, size_t count)
-    {
-      while(count--)
-        it--;
-      return it;
-    }
+  template<typename t_iterator>
+  t_iterator move_it_backward(t_iterator it, size_t count)
+  {
+    while(count--)
+      it--;
+    return it;
+  }
 
 	void sleep_no_w(long ms);
 
@@ -81,7 +80,7 @@ namespace misc_utils
     virtual ~call_before_die_base() = default;
   };
 
-  using auto_scope_leave_caller = boost::shared_ptr<call_before_die_base>;
+  using auto_scope_leave_caller = std::shared_ptr<call_before_die_base>;
 
 
   template<class t_scope_leave_handler>
@@ -100,7 +99,7 @@ namespace misc_utils
   template<class t_scope_leave_handler>
   auto_scope_leave_caller create_scope_leave_handler(t_scope_leave_handler f)
   {
-    auto_scope_leave_caller slc(new call_before_die<t_scope_leave_handler>(f));
+    auto_scope_leave_caller slc = std::make_shared<call_before_die<t_scope_leave_handler>>(f);
     return slc;
   }
 

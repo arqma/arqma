@@ -34,4 +34,5 @@
 #include "cryptonote_protocol_handler.h"
 #include "cryptonote_protocol_handler.inl"
 
-namespace nodetool { template class node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>; }
+template class cryptonote::t_cryptonote_protocol_handler<cryptonote::core>;
+template class nodetool::node_server<cryptonote::t_cryptonote_protocol_handler<cryptonote::core>>;

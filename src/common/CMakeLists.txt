@@ -52,7 +52,8 @@ set(common_sources
   threadpool.cpp
   updates.cpp
   aligned.c
-  combinator.cpp)
+  combinator.cpp
+  string_util.cpp)
 
 if (STACK_TRACE)
   list(APPEND common_sources stack_trace.cpp)

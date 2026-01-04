@@ -1,12 +1,21 @@
-#ifndef SRC_BLOCKS_BLOCKS_H_
-#define SRC_BLOCKS_BLOCKS_H_
+#pragma once
 
 #include "cryptonote_config.h"
-#include "span.h"
+#include <string_view>
 
 namespace blocks
 {
-    const epee::span<const unsigned char> GetCheckpointsData(cryptonote::network_type network);
+
+using namespace std::literals;
+
+template <cryptonote::network_type Network> std::string_view checkpoint_data() { return ""sv; }
+template<> std::string_view checkpoint_data<cryptonote::network_type::MAINNET>();
+
+inline std::string_view GetCheckpointsData(cryptonote::network_type network)
+{
+  if (network == cryptonote::network_type::MAINNET) return checkpoint_data<cryptonote::network_type::MAINNET>();
+  return ""sv;
 }
 
-#endif /* SRC_BLOCKS_BLOCKS_H_ */
+}
+

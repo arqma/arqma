@@ -233,7 +233,7 @@ static bool get_block_from_height(ancestry_state_t &state, BlockchainDB *db, uin
     b = state.block_cache[height];
     return true;
   }
-  cryptonote::blobdata bd = db->get_block_blob_from_height(height);
+  std::string bd = db->get_block_blob_from_height(height);
   if (!cryptonote::parse_and_validate_block_from_blob(bd, b))
   {
     LOG_PRINT_L0("Bad block from db");
@@ -258,7 +258,7 @@ static bool get_transaction(ancestry_state_t &state, BlockchainDB *db, const cry
     return true;
   }
 
-  cryptonote::blobdata bd;
+  std::string bd;
   if (!db->get_pruned_tx_blob(txid, bd))
   {
     LOG_PRINT_L0("Failed to get txid " << txid << " from db");
@@ -515,7 +515,7 @@ int main(int argc, char* argv[])
     {
       size_t block_ancestry_size = 0;
       const crypto::hash block_hash = db->get_block_hash_from_height(h);
-      const cryptonote::blobdata bd = db->get_block_blob(block_hash);
+      const std::string bd = db->get_block_blob(block_hash);
       ++total_blocks;
       cryptonote::block b;
       if (!cryptonote::parse_and_validate_block_from_blob(bd, b))
@@ -548,7 +548,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-          cryptonote::blobdata bd;
+          std::string bd;
           if (!db->get_pruned_tx_blob(txid, bd))
           {
             LOG_PRINT_L0("Failed to get txid " << txid << " from db");
@@ -578,7 +578,6 @@ int main(int argc, char* argv[])
             {
               add_ancestry(state.ancestry, txid, ancestor{amount, offset});
               // find the tx which created this output
-              bool found = false;
               crypto::hash output_txid;
               if (!get_output_txid(state, db, amount, offset, output_txid))
               {
@@ -646,7 +645,7 @@ int main(int argc, char* argv[])
   else
   {
     const crypto::hash block_hash = db->get_block_hash_from_height(opt_height);
-    const cryptonote::blobdata bd = db->get_block_blob(block_hash);
+    const std::string bd = db->get_block_blob(block_hash);
     cryptonote::block b;
     if (!cryptonote::parse_and_validate_block_from_blob(bd, b))
     {
@@ -697,7 +696,6 @@ int main(int argc, char* argv[])
             add_ancestor(ancestry, amount, offset);
 
             // find the tx which created this output
-            bool found = false;
             crypto::hash output_txid;
             if (!get_output_txid(state, db, amount, offset, output_txid))
             {

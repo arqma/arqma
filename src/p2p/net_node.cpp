@@ -29,15 +29,12 @@
 //
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#include <boost/algorithm/string/find_iterator.hpp>
-#include <boost/algorithm/string/finder.hpp>
-#include <boost/chrono/duration.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/optional/optional.hpp>
-#include <boost/thread/future.hpp>
-#include <boost/utility/string_ref.hpp>
+#include <future>
 #include <chrono>
 #include <utility>
+#include <string_view>
 
 #include "common/command_line.h"
 #include "cryptonote_core/cryptonote_core.h"
@@ -51,12 +48,14 @@
 #include "p2p/p2p_protocol_defs.h"
 #include "string_tools.h"
 
+using namespace std::literals;
+
 namespace
 {
-    constexpr const boost::chrono::milliseconds future_poll_interval{500};
+    constexpr const std::chrono::milliseconds future_poll_interval = 500ms;
     constexpr const std::chrono::seconds socks_connect_timeout{P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT};
 
-    std::int64_t get_max_connections(const boost::iterator_range<boost::string_ref::const_iterator> value) noexcept
+    std::int64_t get_max_connections(const boost::iterator_range<std::string_view::const_iterator> value) noexcept
     {
         // -1 is default, 0 is error
         if (value.empty())
@@ -69,7 +68,7 @@ namespace
     }
 
     template<typename T>
-    epee::net_utils::network_address get_address(const boost::string_ref value)
+    epee::net_utils::network_address get_address(std::string_view value)
     {
         expect<T> address = T::make(value);
         if (!address)
@@ -106,7 +105,7 @@ namespace
 
 namespace nodetool
 {
-    const command_line::arg_descriptor<std::string> arg_p2p_bind_ip        = {"p2p-bind-ip", "Interface for p2p network protocol (IPv4)", "0.0.0.0"};
+    const command_line::arg_descriptor<std::string> arg_p2p_bind_ip = {"p2p-bind-ip", "Interface for p2p network protocol (IPv4)", "0.0.0.0"};
     const command_line::arg_descriptor<std::string> arg_p2p_bind_ipv6_address = {"p2p-bind-ipv6-address", "Interface for p2p network protocol (IPv6)", "::"};
     const command_line::arg_descriptor<std::string, false, true, 2> arg_p2p_bind_port = {
         "p2p-bind-port"
@@ -134,30 +133,28 @@ namespace nodetool
           return val;
         }
       };
-    const command_line::arg_descriptor<uint32_t>    arg_p2p_external_port  = {"p2p-external-port", "External port for p2p network protocol (if port forwarding used with NAT)", 0};
-    const command_line::arg_descriptor<bool>        arg_p2p_allow_local_ip = {"allow-local-ip", "Allow local ip add to peer list, mostly in debug purposes"};
-    const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_peer   = {"add-peer", "Manually add peer to local peerlist"};
-    const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_priority_node   = {"add-priority-node", "Specify list of peers to connect to and attempt to keep the connection open"};
-    const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_exclusive_node   = {"add-exclusive-node", "Specify list of peers to connect to only."
-                                                                                                  " If this option is given the options add-priority-node and seed-node are ignored"};
-    const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_seed_node   = {"seed-node", "Connect to a node to retrieve peer addresses, and disconnect"};
+    const command_line::arg_descriptor<uint32_t> arg_p2p_external_port = {"p2p-external-port", "External port for p2p network protocol (if port forwarding used with NAT)", 0};
+    const command_line::arg_descriptor<bool> arg_p2p_allow_local_ip = {"allow-local-ip", "Allow local ip add to peer list, mostly in debug purposes"};
+    const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_peer = {"add-peer", "Manually add peer to local peerlist"};
+    const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_priority_node = {"add-priority-node", "Specify list of peers to connect to and attempt to keep the connection open"};
+    const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_add_exclusive_node = {"add-exclusive-node", "Specify list of peers to connect to only. If this option is given the options add-priority-node and seed-node are ignored"};
+    const command_line::arg_descriptor<std::vector<std::string>> arg_p2p_seed_node = {"seed-node", "Connect to a node to retrieve peer addresses, and disconnect"};
     const command_line::arg_descriptor<std::vector<std::string>> arg_proxy = {"proxy", "<network-type>,<socks-ip:port>[,max_connections][,disable_noise] i.e. \"tor,127.0.0.1:9050,100,disable_noise\""};
     const command_line::arg_descriptor<std::vector<std::string>> arg_anonymous_inbound = {"anonymous-inbound", "<hidden-service-address>,<[bind-ip:]port>[,max_connections] i.e. \"x.onion,127.0.0.1:19996,100\""};
-    const command_line::arg_descriptor<bool> arg_p2p_hide_my_port   =    {"hide-my-port", "Do not announce yourself as peerlist candidate", false, true};
+    const command_line::arg_descriptor<bool> arg_p2p_hide_my_port = {"hide-my-port", "Do not announce yourself as peerlist candidate", false, true};
     const command_line::arg_descriptor<std::string> arg_ban_list = {"ban-list", "Specify ban list file, one IP address per line"};
-    const command_line::arg_descriptor<bool> arg_enable_dns_blocklist = {"enable-dns-blocklist", "Apply realtime blocklist from DNS", false};
+    const command_line::arg_descriptor<bool> arg_enable_dns_banlist = {"enable-dns-banlist", "Apply realtime ban list from DNS", false};
 
-    const command_line::arg_descriptor<bool>        arg_no_igd  = {"no-igd", "Disable UPnP port mapping"};
-    const command_line::arg_descriptor<std::string> arg_igd = {"igd", "UPnP port mapping (disabled, enabled, delayed)", "delayed"};
-    const command_line::arg_descriptor<bool>        arg_p2p_use_ipv6 = {"p2p-use-ipv6", "Enable IPv6 for p2p", false};
-    const command_line::arg_descriptor<bool>        arg_p2p_ignore_ipv4 = {"p2p-ignore-ipv4", "Ignore unsuccessful IPv4 bind for p2p", false};
-    const command_line::arg_descriptor<int64_t>     arg_out_peers = {"out-peers", "set max number of out peers", -1};
-    const command_line::arg_descriptor<int64_t>     arg_in_peers = {"in-peers", "set max number of in peers", -1};
+    const command_line::arg_descriptor<bool> arg_p2p_use_ipv6 = {"p2p-use-ipv6", "Enable IPv6 for p2p", false};
+    const command_line::arg_descriptor<bool> arg_p2p_ignore_ipv4 = {"p2p-ignore-ipv4", "Ignore unsuccessful IPv4 bind for p2p", false};
+    const command_line::arg_descriptor<int64_t> arg_out_peers = {"out-peers", "set max number of out peers", -1};
+    const command_line::arg_descriptor<int64_t> arg_in_peers = {"in-peers", "set max number of in peers", -1};
     const command_line::arg_descriptor<int> arg_tos_flag = {"tos-flag", "set TOS flag", -1};
 
     const command_line::arg_descriptor<int64_t> arg_limit_rate_up = {"limit-rate-up", "set limit-rate-up [kB/s]", P2P_DEFAULT_LIMIT_RATE_UP};
     const command_line::arg_descriptor<int64_t> arg_limit_rate_down = {"limit-rate-down", "set limit-rate-down [kB/s]", P2P_DEFAULT_LIMIT_RATE_DOWN};
     const command_line::arg_descriptor<int64_t> arg_limit_rate = {"limit-rate", "set limit-rate [kB/s]", -1};
+    const command_line::arg_descriptor<uint32_t> arg_max_connections_per_ip = {"max-connections-per-ip", "Maximum number of p2p connections allowed from the same IP address", 10};
 
     boost::optional<std::vector<proxy>> get_proxies(boost::program_options::variables_map const& vm)
     {
@@ -168,38 +165,38 @@ namespace nodetool
         const std::vector<std::string> args = command_line::get_arg(vm, arg_proxy);
         proxies.reserve(args.size());
 
-        for (const boost::string_ref arg : args)
+        for (std::string_view arg : args)
         {
             proxies.emplace_back();
 
             auto next = boost::algorithm::make_split_iterator(arg, boost::algorithm::first_finder(","));
             CHECK_AND_ASSERT_MES(!next.eof() && !next->empty(), boost::none, "No network type for --" << arg_proxy.name);
-            const boost::string_ref zone{next->begin(), next->size()};
+            std::string_view zone{next->begin(), next->size()};
 
             ++next;
             CHECK_AND_ASSERT_MES(!next.eof() && !next->empty(), boost::none, "No ipv4:port given for --" << arg_proxy.name);
-            const boost::string_ref proxy{next->begin(), next->size()};
+            std::string_view proxy{next->begin(), next->size()};
 
             ++next;
             for (unsigned count = 0; !next.eof(); ++count, ++next)
             {
-                if (2 <= count)
-                {
-                    MERROR("Too many ',' characters given to --" << arg_proxy.name);
-                    return boost::none;
-                }
+              if (2 <= count)
+              {
+                MERROR("Too many ',' characters given to --" << arg_proxy.name);
+                return boost::none;
+              }
+            }
 
-                if (boost::string_ref{next->begin(), next->size()} == "disable_noise")
-                    proxies.back().noise = false;
-                else
-                {
-                    proxies.back().max_connections = get_max_connections(*next);
-                    if (proxies.back().max_connections == 0)
-                    {
-                        MERROR("Invalid max connections given to --" << arg_proxy.name);
-                        return boost::none;
-                    }
-                }
+            if (boost::string_ref{next->begin(), next->size()} == "disable_noise")
+              proxies.back().noise = false;
+            else
+            {
+              proxies.back().max_connections = get_max_connections(*next);
+              if (proxies.back().max_connections == 0)
+              {
+                MERROR("Invalid max connections given to --" << arg_proxy.name);
+                return boost::none;
+              }
             }
 
             switch (epee::net_utils::zone_from_string(zone))
@@ -235,17 +232,17 @@ namespace nodetool
         const std::vector<std::string> args = command_line::get_arg(vm, arg_anonymous_inbound);
         inbounds.reserve(args.size());
 
-        for (const boost::string_ref arg : args)
+        for (std::string_view arg : args)
         {
             inbounds.emplace_back();
 
             auto next = boost::algorithm::make_split_iterator(arg, boost::algorithm::first_finder(","));
             CHECK_AND_ASSERT_MES(!next.eof() && !next->empty(), boost::none, "No inbound address for --" << arg_anonymous_inbound.name);
-            const boost::string_ref address{next->begin(), next->size()};
+            std::string_view address{next->begin(), next->size()};
 
             ++next;
             CHECK_AND_ASSERT_MES(!next.eof() && !next->empty(), boost::none, "No local ipv4:port given for --" << arg_anonymous_inbound.name);
-            const boost::string_ref bind{next->begin(), next->size()};
+            std::string_view bind{next->begin(), next->size()};
 
             const std::size_t colon = bind.find_first_of(':');
             CHECK_AND_ASSERT_MES(colon < bind.size(), boost::none, "No local port given for --" << arg_anonymous_inbound.name);
@@ -315,14 +312,14 @@ namespace nodetool
     }
 
     boost::optional<boost::asio::ip::tcp::socket>
-    socks_connect_internal(const std::atomic<bool>& stop_signal, boost::asio::io_context& service, const boost::asio::ip::tcp::endpoint& proxy, const epee::net_utils::network_address& remote)
+    socks_connect_internal(const std::atomic<bool>& stop_signal, boost::asio::io_service& service, const boost::asio::ip::tcp::endpoint& proxy, const epee::net_utils::network_address& remote)
     {
         using socket_type = net::socks::client::stream_type::socket;
         using client_result = std::pair<boost::system::error_code, socket_type>;
 
         struct notify
         {
-            boost::promise<client_result> socks_promise;
+            std::promise<client_result> socks_promise;
 
             void operator()(boost::system::error_code error, socket_type&& sock)
             {
@@ -331,9 +328,9 @@ namespace nodetool
         };
 
         net::socks::client::close_on_exit close_client{};
-        boost::unique_future<client_result> socks_result{};
+        std::future<client_result> socks_result{};
         {
-            boost::promise<client_result> socks_promise{};
+            std::promise<client_result> socks_promise{};
             socks_result = socks_promise.get_future();
 
             auto client = net::socks::make_connect_client(
@@ -345,7 +342,7 @@ namespace nodetool
         }
 
         const auto start = std::chrono::steady_clock::now();
-        while (socks_result.wait_for(future_poll_interval) == boost::future_status::timeout)
+        while (socks_result.wait_for(future_poll_interval) == std::future_status::timeout)
         {
             if (socks_connect_timeout < std::chrono::steady_clock::now() - start)
             {
@@ -368,7 +365,7 @@ namespace nodetool
 
             MERROR("Failed to make socks connection to " << remote.str() << " (via " << proxy << "): " << result.first.message());
         }
-        catch (boost::broken_promise const&)
+        catch (const std::future_error&)
         {}
 
         return boost::none;

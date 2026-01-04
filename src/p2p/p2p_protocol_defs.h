@@ -276,6 +276,7 @@ namespace nodetool
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
+  // TODO: remove after Hard-Fork
   struct COMMAND_REQUEST_SUPPORT_FLAGS
   {
     const static int ID = P2P_COMMANDS_POOL_BASE + 7;

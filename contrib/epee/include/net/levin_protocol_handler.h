@@ -1,6 +1,6 @@
 // Copyright (c) 2006-2013, Andrey N. Sabelnikov, www.sabelnikov.net
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // * Redistributions of source code must retain the above copyright
@@ -11,7 +11,7 @@
 // * Neither the name of the Andrey N. Sabelnikov nor the
 // names of its contributors may be used to endorse or promote products
 // derived from this software without specific prior written permission.
-//
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -22,7 +22,7 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
+// 
 
 
 
@@ -41,11 +41,11 @@ namespace epee
 namespace levin
 {
   template<class t_connection_context = net_utils::connection_context_base>
-	struct protocol_handler_config
+	struct protocl_handler_config
 	{
 		levin_commands_handler<t_connection_context>* m_pcommands_handler;
 		void (*m_pcommands_handler_destroy)(levin_commands_handler<t_connection_context>*);
-		~protocol_handler_config() { if (m_pcommands_handler && m_pcommands_handler_destroy) (*m_pcommands_handler_destroy)(m_pcommands_handler); }
+		~protocl_handler_config() { if (m_pcommands_handler && m_pcommands_handler_destroy) (*m_pcommands_handler_destroy)(m_pcommands_handler); }
 	};
 
   template<class t_connection_context = net_utils::connection_context_base>
@@ -53,7 +53,7 @@ namespace levin
 	{
 	public:
     typedef t_connection_context connection_context;
-		typedef protocol_handler_config<t_connection_context> config_type;
+		typedef protocl_handler_config<t_connection_context> config_type;
 
 		protocol_handler(net_utils::i_service_endpoint* psnd_hndlr, config_type& config, t_connection_context& conn_context);
 		virtual ~protocol_handler(){}
@@ -67,7 +67,6 @@ namespace levin
 			conn_state_reading_head,
 			conn_state_reading_body
 		};
-
 
 		config_type& m_config;
 		t_connection_context& m_conn_context;
@@ -114,10 +113,10 @@ namespace levin
 				}
 				{
 #if BYTE_ORDER == LITTLE_ENDIAN
-          bucket_head &phead = *(bucket_head*)m_cach_in_buffer.data();
+					bucket_head &phead = *(bucket_head*)m_cach_in_buffer.data();
 #else
-          bucket_head phead = *(bucket_head*)m_cach_in_buffer.data();
-          phead.m_signature = SWAP64LE(phead.m_signature);
+					bucket_head phead = *(bucket_head*)m_cach_in_buffer.data();
+					phead.m_signature = SWAP64LE(phead.m_signature);
 					phead.m_cb = SWAP64LE(phead.m_cb);
 					phead.m_command = SWAP32LE(phead.m_command);
 					phead.m_return_code = SWAP32LE(phead.m_return_code);
@@ -159,7 +158,7 @@ namespace levin
 						m_current_head.m_have_to_return_data = false;
 
 						return_buff.insert(0, (const char*)&m_current_head, sizeof(m_current_head));
-						if (!m_psnd_hndlr->do_send(byte_slice{std::move(return_buff)}))
+						if(!m_psnd_hndlr->do_send(shared_sv{std::move(return_buff)}))
 							return false;
 
 					}
@@ -176,17 +175,7 @@ namespace levin
 
 		return true;
 	}
-
-
-
-
-
-
-
 }
 }
-
-
-
 
 #endif //_LEVIN_PROTOCOL_HANDLER_H_

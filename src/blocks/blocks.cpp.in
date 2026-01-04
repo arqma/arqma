@@ -1,0 +1,9 @@
+#include "blocks/blocks.h"
+
+#include <string_view>
+
+namespace blocks {
+
+template<> std::string_view checkpoint_data<cryptonote::network_type::MAINNET>() { return "@checkpoints_data@"sv; }
+
+}

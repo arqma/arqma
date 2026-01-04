@@ -14,7 +14,7 @@
 #include <sstream>
 #include <boost/variant.hpp>
 #include "common.h"
-#include "../common/osrb.h"
+#include "common/osrb.h"
 #include <variant>
 
 namespace arqnet {
@@ -106,11 +106,12 @@ struct bt_deserialize<T, std::enable_if_t<std::is_integral<T>::value>>
         val = static_cast<T>(read.first.i64);
       }
     } else {
-      if (read.second)
+      if (read.second) {
         throw bt_deserialize_invalid("Found invalid negative value " + std::to_string(read.first.i64) + " when deserializing just before input location " + std::to_string(is.tellg()));
         if (sizeof(T) < sizeof(uint64_t) && read.first.u64 > umax)
           throw bt_deserialize_invalid("Found too-large value " + std::to_string(read.first.u64) + " when deserializing just before input location " + std::to_string(is.tellg()));
         val = static_cast<T>(read.first.u64);
+      }
     }
   }
 };

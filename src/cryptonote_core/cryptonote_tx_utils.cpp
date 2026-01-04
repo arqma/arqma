@@ -210,7 +210,7 @@ namespace cryptonote
     uint64_t fee,
     const account_public_address &miner_address,
     transaction& tx,
-    const blobdata& extra_nonce,
+    const std::string& extra_nonce,
     uint8_t hard_fork_version,
     const arqma_miner_tx_context &miner_tx_context)
   {
@@ -709,7 +709,6 @@ namespace cryptonote
         {
           tx_extra_tx_key_image_proofs::proof proof = {};
           keypair ephemeral_keys = {};
-          const subaddress_index zeroth_address = {};
           if(!generate_key_image_helper(sender_account_keys, subaddresses, out_eph_public_key, txkey_pub, additional_tx_public_keys, output_index, ephemeral_keys, proof.key_image, hwdev))
           {
             LOG_ERROR("Key image generation failed for staking TX!");
@@ -968,7 +967,7 @@ namespace cryptonote
     //genesis block
     bl = {};
 
-    blobdata tx_bl;
+    std::string tx_bl;
     bool r = string_tools::parse_hexstr_to_binbuff(config::GENESIS_TX, tx_bl);
     CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
     r = parse_and_validate_tx_from_blob(tx_bl, bl.miner_tx);
@@ -986,11 +985,11 @@ namespace cryptonote
   //---------------------------------------------------------------
   void get_altblock_longhash(const block& b, crypto::hash& res, const crypto::hash& seed_hash)
   {
-    blobdata bd = get_block_hashing_blob(b);
+    std::string bd = get_block_hashing_blob(b);
     rx_slow_hash(seed_hash.data, bd.data(), bd.size(), res.data);
   }
 
-  bool get_block_longhash(const Blockchain *pbc, const blobdata& bd, crypto::hash& res, const uint64_t height, const int major_version, const crypto::hash *seed_hash, const int miners)
+  bool get_block_longhash(const Blockchain *pbc, const std::string& bd, crypto::hash& res, const uint64_t height, const int major_version, const crypto::hash *seed_hash, const int miners)
   {
     if(major_version >= RX_BLOCK_VERSION)
     {
@@ -1023,7 +1022,7 @@ namespace cryptonote
 
   bool get_block_longhash(const Blockchain *pbc, const block& b, crypto::hash& res, const uint64_t height, const crypto::hash *seed_hash, const int miners)
   {
-    blobdata bd = get_block_hashing_blob(b);
+    std::string bd = get_block_hashing_blob(b);
     return get_block_longhash(pbc, bd, res, height, b.major_version, seed_hash, miners);
   }
 

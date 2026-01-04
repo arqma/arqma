@@ -370,18 +370,18 @@ namespace tools
     //----------------------------------------------------------------------------------------------------
     struct block_parse_error : public refresh_error
     {
-      explicit block_parse_error(std::string&& loc, const cryptonote::blobdata& block_data)
+      explicit block_parse_error(std::string&& loc, const std::string& block_data)
         : refresh_error(std::move(loc), "block parse error")
         , m_block_blob(block_data)
       {
       }
 
-      const cryptonote::blobdata& block_blob() const { return m_block_blob; }
+      const std::string& block_blob() const { return m_block_blob; }
 
       std::string to_string() const { return refresh_error::to_string(); }
 
     private:
-      cryptonote::blobdata m_block_blob;
+      std::string m_block_blob;
     };
     //----------------------------------------------------------------------------------------------------
     typedef failed_rpc_request<refresh_error, get_blocks_error_message_index> get_blocks_error;
@@ -394,18 +394,18 @@ namespace tools
     //----------------------------------------------------------------------------------------------------
     struct tx_parse_error : public refresh_error
     {
-      explicit tx_parse_error(std::string&& loc, const cryptonote::blobdata& tx_blob)
+      explicit tx_parse_error(std::string&& loc, const std::string& tx_blob)
         : refresh_error(std::move(loc), "transaction parse error")
         , m_tx_blob(tx_blob)
       {
       }
 
-      const cryptonote::blobdata& tx_blob() const { return m_tx_blob; }
+      const std::string& tx_blob() const { return m_tx_blob; }
 
       std::string to_string() const { return refresh_error::to_string(); }
 
     private:
-      cryptonote::blobdata m_tx_blob;
+      std::string m_tx_blob;
     };
     //----------------------------------------------------------------------------------------------------
     struct get_tx_pool_error : public refresh_error

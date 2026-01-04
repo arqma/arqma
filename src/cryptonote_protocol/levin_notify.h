@@ -33,10 +33,13 @@
 #include <memory>
 #include <vector>
 
-#include "byte_slice.h"
-#include "cryptonote_basic/blobdatatype.h"
+#include "shared_sv.h"
 #include "net/enums.h"
 #include "span.h"
+
+namespace boost::asio {
+  using io_service = io_context;
+}
 
 namespace epee
 {
@@ -86,7 +89,7 @@ namespace levin
     {}
 
     //! Construct an instance with available notification `zones`.
-    explicit notify(boost::asio::io_context& service, std::shared_ptr<connections> p2p, epee::byte_slice noise, epee::net_utils::zone zone);
+    explicit notify(boost::asio::io_service& service, std::shared_ptr<connections> p2p, epee::shared_sv noise, epee::net_utils::zone zone);
 
     notify(const notify&) = delete;
     notify(notify&&) = default;
@@ -126,7 +129,7 @@ namespace levin
           construction.
 
       \return True iff the notification is queued for sending. */
-    bool send_txs(std::vector<blobdata> txs, const boost::uuids::uuid& source, bool pad_txs);
+    bool send_txs(std::vector<std::string> txs, const boost::uuids::uuid& source, bool pad_txs);
   };
 } // levin
 } // net

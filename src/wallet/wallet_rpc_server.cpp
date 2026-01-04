@@ -61,10 +61,11 @@ using namespace epee;
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "wallet.rpc"
 
-#define DEFAULT_AUTO_REFRESH_PERIOD 20
-
 namespace
 {
+  using namespace std::literals;
+  constexpr auto DEFAULT_AUTO_REFRESH_PERIOD = 20s;
+
   const command_line::arg_descriptor<std::string, true> arg_rpc_bind_port = {"rpc-bind-port", "Sets bind port for server"};
   const command_line::arg_descriptor<bool> arg_disable_rpc_login = {"disable-rpc-login", "Disable HTTP authentication for RPC connections served by this process"};
   const command_line::arg_descriptor<bool> arg_restricted = {"restricted-rpc", "Restricts to view-only commands", false};
@@ -110,10 +111,11 @@ namespace tools
   {
     m_stop = false;
     m_net_server.add_idle_handler([this](){
-      if (m_auto_refresh_period == 0) // disabled
+      if (m_auto_refresh_period == 0s) // disabled
         return true;
 
-      if (boost::posix_time::microsec_clock::universal_time() < m_last_auto_refresh_time + boost::posix_time::seconds(m_auto_refresh_period))
+      const auto now = std::chrono::steady_clock::now();
+      if (now < m_last_auto_refresh_time + m_auto_refresh_period)
         return true;
 
       try {
@@ -121,9 +123,9 @@ namespace tools
       } catch (const std::exception& ex) {
         LOG_ERROR("Exception at while refreshing, what=" << ex.what());
       }
-      m_last_auto_refresh_time = boost::posix_time::microsec_clock::universal_time();
+      m_last_auto_refresh_time = now;
       return true;
-    }, 1000);
+    }, 1s);
     m_net_server.add_idle_handler([this](){
       if (m_stop.load(std::memory_order_relaxed))
       {
@@ -131,7 +133,7 @@ namespace tools
         return false;
       }
       return true;
-    }, 500);
+    }, 500ms);
 
     //DO NOT START THIS SERVER IN MORE THEN 1 THREADS WITHOUT REFACTORING
     return epee::http_server_impl_base<wallet_rpc_server, connection_context>::run(1, true);
@@ -232,7 +234,7 @@ namespace tools
     } // end auth enabled
 
     m_auto_refresh_period = DEFAULT_AUTO_REFRESH_PERIOD;
-    m_last_auto_refresh_time = boost::posix_time::min_date_time;
+    m_last_auto_refresh_time = std::chrono::steady_clock::time_point::min();
 
     m_net_server.set_threads_prefix("RPC");
     auto rng = [](size_t len, uint8_t *ptr) { return crypto::rand(len, ptr); };
@@ -262,7 +264,9 @@ namespace tools
     try
     {
       res.balance = req.all_accounts ? m_wallet->balance_all(req.strict) : m_wallet->balance(req.account_index, req.strict);
-      res.unlocked_balance = req.all_accounts ? m_wallet->unlocked_balance_all(&res.blocks_to_unlock) : m_wallet->unlocked_balance(req.account_index, &res.blocks_to_unlock);
+      res.unlocked_balance = req.all_accounts
+        ? m_wallet->unlocked_balance_all(req.strict, &res.blocks_to_unlock)
+        : m_wallet->unlocked_balance(req.account_index, req.strict, &res.blocks_to_unlock);
       res.multisig_import_needed = m_wallet->multisig() && m_wallet->has_multisig_partial_key_images();
       std::map<uint32_t, std::map<uint32_t, uint64_t>> balance_per_subaddress_per_account;
       std::map<uint32_t, std::map<uint32_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress_per_account;
@@ -878,7 +882,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.unsigned_txset, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -968,7 +972,7 @@ namespace tools
       try
       {
         tools::wallet2::unsigned_tx_set exported_txs;
-        cryptonote::blobdata blob;
+        std::string blob;
         if(!epee::string_tools::parse_hexstr_to_binbuff(req.unsigned_txset, blob))
         {
           er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -995,7 +999,7 @@ namespace tools
       try
       {
         tools::wallet2::multisig_tx_set exported_txs;
-        cryptonote::blobdata blob;
+        std::string blob;
         if(!epee::string_tools::parse_hexstr_to_binbuff(req.multisig_txset, blob))
         {
           er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -1156,7 +1160,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.tx_data_hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -1358,7 +1362,7 @@ namespace tools
   {
     if (!m_wallet) return not_open(er);
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -1518,7 +1522,7 @@ namespace tools
     if (!m_wallet) return not_open(er);
     crypto::hash payment_id;
     crypto::hash8 payment_id8;
-    cryptonote::blobdata payment_id_blob;
+    std::string payment_id_blob;
     if(!epee::string_tools::parse_hexstr_to_binbuff(req.payment_id, payment_id_blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
@@ -1593,7 +1597,7 @@ namespace tools
     {
       crypto::hash payment_id;
       crypto::hash8 payment_id8;
-      cryptonote::blobdata payment_id_blob;
+      std::string payment_id_blob;
 
       // TODO - should the whole thing fail because of one bad id?
 
@@ -1880,7 +1884,7 @@ namespace tools
     std::list<std::string>::const_iterator i = req.txids.begin();
     while (i != req.txids.end())
     {
-      cryptonote::blobdata txid_blob;
+      std::string txid_blob;
       if(!epee::string_tools::parse_hexstr_to_binbuff(*i++, txid_blob) || txid_blob.size() != sizeof(crypto::hash))
       {
         er.code = WALLET_RPC_ERROR_CODE_WRONG_TXID;
@@ -1911,7 +1915,7 @@ namespace tools
     std::list<std::string>::const_iterator i = req.txids.begin();
     while (i != req.txids.end())
     {
-      cryptonote::blobdata txid_blob;
+      std::string txid_blob;
       if(!epee::string_tools::parse_hexstr_to_binbuff(*i++, txid_blob) || txid_blob.size() != sizeof(crypto::hash))
       {
         er.code = WALLET_RPC_ERROR_CODE_WRONG_TXID;
@@ -2320,7 +2324,7 @@ namespace tools
     }
 
     crypto::hash txid;
-    cryptonote::blobdata txid_blob;
+    std::string txid_blob;
     if(!epee::string_tools::parse_hexstr_to_binbuff(req.txid, txid_blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_WRONG_TXID;
@@ -2440,7 +2444,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.outputs_data_hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -2506,7 +2510,7 @@ namespace tools
       ski.resize(req.signed_key_images.size());
       for (size_t n = 0; n < ski.size(); ++n)
       {
-        cryptonote::blobdata bd;
+        std::string bd;
 
         if(!epee::string_tools::parse_hexstr_to_binbuff(req.signed_key_images[n].key_image, bd) || bd.size() != sizeof(crypto::key_image))
         {
@@ -2643,9 +2647,6 @@ namespace tools
         return false;
       }
 
-      crypto::hash long_payment_id;
-      crypto::hash8 short_payment_id;
-
       if (!wallet2::parse_long_payment_id(req.payment_id, payment_id))
       {
         if (!wallet2::parse_short_payment_id(req.payment_id, info.payment_id))
@@ -2729,8 +2730,8 @@ namespace tools
     }
     try
     {
-      m_auto_refresh_period = req.enable ? req.period ? req.period : DEFAULT_AUTO_REFRESH_PERIOD : 0;
-      MINFO("Auto refresh now " << (m_auto_refresh_period ? std::to_string(m_auto_refresh_period) + " seconds" : std::string("disabled")));
+      m_auto_refresh_period = req.enable ? req.period ? std::chrono::seconds{req.period} : DEFAULT_AUTO_REFRESH_PERIOD : 0s;
+      MINFO("Auto refresh now " << (m_auto_refresh_period != 0s ? std::to_string(std::chrono::duration<float>(m_auto_refresh_period).count()) + " seconds" : std::string("disabled")));
       return true;
     }
     catch (const std::exception& e)
@@ -2885,7 +2886,10 @@ namespace tools
     cryptonote::COMMAND_RPC_GET_HEIGHT::request hreq;
     cryptonote::COMMAND_RPC_GET_HEIGHT::response hres;
     hres.height = 0;
-    bool r = wal->invoke_http_json("/getheight", hreq, hres);
+    if (!wal->invoke_http_json("/getheight", hreq, hres))
+    {
+      MWARNING("Failed to query daemon height while generating wallet. Continuing with defaults");
+    }
     wal->set_refresh_from_block_height(hres.height);
     crypto::secret_key dummy_key;
     try {
@@ -3568,7 +3572,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata info;
+    std::string info;
     try
     {
       info = m_wallet->export_multisig();
@@ -3616,7 +3620,7 @@ namespace tools
       return false;
     }
 
-    std::vector<cryptonote::blobdata> info;
+    std::vector<std::string> info;
     info.resize(req.info.size());
     for (size_t n = 0; n < info.size(); ++n)
     {
@@ -3782,7 +3786,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.tx_data_hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -3851,7 +3855,7 @@ namespace tools
       return false;
     }
 
-    cryptonote::blobdata blob;
+    std::string blob;
     if (!epee::string_tools::parse_hexstr_to_binbuff(req.tx_data_hex, blob))
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_HEX;
@@ -3988,7 +3992,7 @@ namespace tools
 	    ssl_options.verification != epee::net_utils::ssl_verification_t::none &&
 	    ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled;
 
-	  if (verification_required && !ssl_options.has_strong_verification(boost::string_ref{}))
+	  if (verification_required && !ssl_options.has_strong_verification(""sv))
 	  {
 	    er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
 	    er.message = "SSL is enabled but no user certificate or fingerprints were provided";
@@ -4375,9 +4379,7 @@ int main(int argc, char** argv) {
   daemonizer::init_options(hidden_options, desc_params);
   desc_params.add(hidden_options);
 
-  boost::optional<po::variables_map> vm;
-  bool should_terminate = false;
-  std::tie(vm, should_terminate) = wallet_args::main(
+  auto [vm, should_terminate] = wallet_args::main(
     argc, argv,
     "arqma-wallet-rpc [--wallet-file=<file>|--generate-from-json=<file>|--wallet-dir=<directory>] [--rpc-bind-port=<port>]",
     tools::wallet_rpc_server::tr("This is the RPC Arqma wallet. It needs to connect to a Arqma\ndaemon to work correctly."),

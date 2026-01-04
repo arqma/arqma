@@ -2,9 +2,9 @@
 #include "cryptonote_core/cryptonote_core.h"
 #include "cryptonote_core/service_node_voting.h"
 #include "cryptonote_core/service_node_rules.h"
+#include "cryptonote_core/tx_pool.h"
 #include "arqnet/sn_network.h"
 #include "arqnet/conn_matrix.h"
-#include "cryptonote_config.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "arqnet"
@@ -20,13 +20,10 @@ using namespace std::chrono_literals;
 struct SNNWrapper {
   SNNetwork snn;
   cryptonote::core &core;
-  service_node_list &sn_list;
-
-  boost::shared_mutex mutex;
 
   template <typename... Args>
-  SNNWrapper(cryptonote::core &core, service_node_list &sn_list, Args &&...args)
-    : snn{std::forward<Args>(args)...}, core{core}, sn_list{sn_list} {}
+  SNNWrapper(cryptonote::core &core, Args &&...args)
+    : snn{std::forward<Args>(args)...}, core{core} {}
 
   static SNNWrapper &from(void* obj)
   {
@@ -42,7 +39,7 @@ std::string get_data_as_string(const T &key)
   return {reinterpret_cast<const char *>(&key), sizeof(key)};
 }
 
-crypto::x25519_public_key x25519_from_string(const std::string &pubkey)
+crypto::x25519_public_key x25519_from_string(std::string_view pubkey)
 {
   crypto::x25519_public_key x25519_pub = crypto::x25519_public_key::null();
   if (pubkey.size() == sizeof(crypto::x25519_public_key))
@@ -109,7 +106,7 @@ void snn_write_log(LogLevel level, const char *file, int line, std::string msg)
   el::base::Writer(easylogging_level(level), el::Color::Default, file, line, ELPP_FUNC, el::base::DispatchAction::NormalLog).construct(ARQMA_DEFAULT_LOG_CATEGORY) << msg;
 }
 
-void *new_snnwrapper(cryptonote::core &core, service_node_list &sn_list, const std::string &bind)
+void *new_snnwrapper(cryptonote::core &core, const std::string &bind)
 {
   auto keys = core.get_service_node_keys();
   auto peer_lookup = [&sn_list = core.get_service_node_list()](const std::string &x25519_pub)
@@ -132,12 +129,12 @@ void *new_snnwrapper(cryptonote::core &core, service_node_list &sn_list, const s
   if (!keys)
   {
     MINFO("Starting remote-only arqnet instance");
-    obj = new SNNWrapper(core, sn_list, peer_lookup, allow, snn_want_log, snn_write_log);
+    obj = new SNNWrapper(core, peer_lookup, allow, snn_want_log, snn_write_log);
   }
   else
   {
     MINFO("Starting arqnet listener on " << bind << " with x25519 pubkey " << keys->pub_x25519);
-    obj = new SNNWrapper(core, sn_list, get_data_as_string(keys->pub_x25519), get_data_as_string(keys->key_x25519.data),
+    obj = new SNNWrapper(core, get_data_as_string(keys->pub_x25519), get_data_as_string(keys->key_x25519.data),
                          std::vector<std::string>{{bind}}, peer_lookup, allow, snn_want_log, snn_write_log);
   }
 
@@ -146,7 +143,7 @@ void *new_snnwrapper(cryptonote::core &core, service_node_list &sn_list, const s
   return obj;
 }
 
-void delete_snnwrapper(void *obj)
+void delete_snnwrapper(void *&obj)
 {
   auto *snn = reinterpret_cast<SNNWrapper *>(obj);
   MINFO("Shutting down arqnet listener");
@@ -195,10 +192,10 @@ public:
     {
       auto &v = (*qit)->validators;
       int my_pos = -1;
-      for (int i = 0; i < v.size(); i++)
+      for (size_t i = 0; i < v.size(); i++)
       {
         if (v[i] == my_pubkey)
-          my_pos = 1;
+          my_pos = static_cast<int>(i);
         else if (!exclude.count(v[i]))
           need_remotes.insert(v[i]);
       }
@@ -282,7 +279,7 @@ private:
         if (my_position[i] >= half && my_position[i] < half*2)
         {
           if (add_peer(validators[my_position[i] - half]))
-            MTRACE("Inter-quorum relay from Q to Q' service node " << next_validators[my_position[i] - half]);
+            MTRACE("Inter-quorum relay from Q to Q' service node " << next_validators[half + my_position[i]]);
         }
         else
         {
@@ -380,38 +377,58 @@ void relay_obligation_votes(void *obj, const std::vector<service_nodes::quorum_v
   MDEBUG("Starting relay of " << votes.size() << " votes");
   std::vector<service_nodes::quorum_vote_t> relayed_votes;
   relayed_votes.reserve(votes.size());
-  for (auto &vote : votes)
+
+  // Group votes by quorum to avoid recreating peer_info for the same quorum
+  std::map<std::pair<quorum_type, uint64_t>, std::vector<const service_nodes::quorum_vote_t*>> votes_by_quorum;
+  for (const auto& vote : votes)
   {
     if (vote.type != quorum_type::obligations)
     {
       MERROR("Internal logic error: arqnet asked to relay a " << vote.type << " vote, but should only be called with obligations votes");
       continue;
     }
+    votes_by_quorum[{vote.type, vote.block_height}].push_back(&vote);
+  }
 
-    auto quorum = snw.sn_list.get_quorum(vote.type, vote.block_height);
+  MDEBUG("Grouped " << votes.size() << " votes info " << votes_by_quorum.size() << " quorum groups");
+
+  size_t vote_index = 0;
+  for (auto &[quorum_key, quorum_votes] : votes_by_quorum)
+  {
+    auto [q_type, block_height] = quorum_key;
+    vote_index += quorum_votes.size();
+    if (vote_index % 50 == 0 || vote_index == votes.size())
+      MDEBUG("Processing vote group " << vote_index - quorum_votes.size() + 1 << "-" << vote_index << " of " << votes.size() << " (quorum at height " << block_height << ")");
+
+    auto quorum = snw.core.get_service_node_list().get_quorum(q_type, block_height);
     if (!quorum)
     {
-      MWARNING("Unable to relay vote: no " << vote.type << " quorum available for height " << vote.block_height);
+      MWARNING("Unable to relay " << quorum_votes.size() << " votes: no " << q_type << " quorum available for height " << block_height);
       continue;
     }
 
     auto &quorum_voters = quorum->validators;
-    if (quorum_voters.size() < service_nodes::min_votes_for_quorum_type(vote.type))
+    if (quorum_voters.size() < service_nodes::min_votes_for_quorum_type(q_type))
     {
-      MWARNING("Invalid vote relay: " << vote.type << " quorum @ height " << vote.block_height << " does not have enough validators ("
+      MWARNING("Invalid vote relay: " << q_type << " quorum @ height " << block_height << " does not have enough validators ("
                << quorum_voters.size() << ") to reach the minimum required votes ("
-               << service_nodes::min_votes_for_quorum_type(vote.type) << ")");
+               << service_nodes::min_votes_for_quorum_type(q_type) << ")");
     }
 
-    peer_info pinfo{snw, vote.type, quorum};
+    MTRACE("Creating peer_info for quorum at height " << block_height << " with " << quorum_votes.size() << " votes");
+    peer_info pinfo{snw, q_type, quorum};
     if (!pinfo.my_position_count)
     {
-      MWARNING("Invalid vote relay: vote to relay does not include this service node");
+      MWARNING("Invalid vote relay: quorum at height " << block_height << " does not include this service node");
       continue;
     }
 
-    pinfo.relay_to_peers("vote_ob", serialize_vote(vote));
-    relayed_votes.push_back(vote);
+    MTRACE("Relaying " << quorum_votes.size() << " votes to " << pinfo.peers.size() << " peers");
+    for (const auto *vote_ptr : quorum_votes)
+    {
+      pinfo.relay_to_peers("vote_ob", serialize_vote(*vote_ptr));
+      relayed_votes.push_back(*vote_ptr);
+    }
   }
   MDEBUG("Relayed " << relayed_votes.size() << " votes");
   snw.core.set_service_node_votes_relayed(relayed_votes);

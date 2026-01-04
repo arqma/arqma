@@ -103,6 +103,7 @@ library archives (`.a`).
 | pkg-config   | any           | NO       | `pkg-config`       | `base-devel` | `pkgconf`         | NO       |                |
 | Boost        | 1.66          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | 1.1.1         | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
+| libzmq       | 4.3.2         | NO       | `libzmq3-dev`      | `zeromq`     | `cppzmq-devel`    | NO       | ZeroMQ library |
 | libsodium    | 1.0.18        | NO       | `libsodium-dev`    | ?            | `libsodium-devel` | NO       | Cryptography   |
 | libunwind    | any           | NO       | `libunwind8-dev`   | `libunwind`  | `libunwind-devel` | YES      | Stack traces   |
 | liblzma      | any           | NO       | `liblzma-dev`      | `xz`         | `xz-devel`        | YES      | For libunwind  |
@@ -127,10 +128,6 @@ Debian / Ubuntu one liner for all dependencies
 
 `sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev qttools5-dev-tools doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
 
-Install all dependencies at once on OSX:
-
-`brew update && brew bundle --file=contrib/apple/brew`
-
 ### Cloning the repository
 
 Clone recursively to pull-in needed submodule(s):
@@ -139,7 +136,7 @@ Clone recursively to pull-in needed submodule(s):
 
 If you already have a repo cloned, initialize and update:
 
-`cd arqma && git checkout v8.2.0`
+`cd arqma && git checkout v9.0.0`
 
 `git submodule init && git submodule update`
 
@@ -288,7 +285,7 @@ application.
 
 * Change branch to last Release:
 
-	`cd arqma && git checkout v8.2.0`
+	`cd arqma && git checkout v9.0.0`
 
 * Activate and update submodules:
 
@@ -320,7 +317,7 @@ We expect to add Arqma into the ports tree in the near future, which will aid in
 
 This has been tested on OpenBSD 5.8.
 
-You will need to add a few packages to your system. `pkg_add db cmake gcc gcc-libs g++ miniupnpc gtest`.
+You will need to add a few packages to your system. `pkg_add db cmake gcc gcc-libs g++ gtest`.
 
 The doxygen and graphviz packages are optional and require the xbase set.
 
@@ -333,7 +330,7 @@ To build: `env CC=egcc CXX=eg++ CPP=ecpp DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/pat
 
 #### OpenBSD >= 6.2
 
-You will need to add a few packages to your system. `pkg_add cmake miniupnpc zeromq libiconv`.
+You will need to add a few packages to your system. `pkg_add cmake zeromq libiconv`.
 
 The doxygen and graphviz packages are optional and require the xbase set.
 
@@ -462,8 +459,6 @@ setting the following configuration parameters and environment variables:
 
 * `--p2p-bind-ip 127.0.0.1` on the command line or `p2p-bind-ip=127.0.0.1` in
   arqmad.conf to disable listening for connections on external interfaces.
-* `--no-igd` on the command line or `no-igd=1` in arqmad.conf to disable IGD
-  (UPnP port forwarding negotiation), which is pointless with Tor.
 * `DNS_PUBLIC=tcp` or `DNS_PUBLIC=tcp://x.x.x.x` where x.x.x.x is the IP of the
   desired DNS server, for DNS requests to go over TCP, so that they are routed
   through Tor. When IP is not specified, arqmad uses the default list of
@@ -481,7 +476,7 @@ setting the following configuration parameters and environment variables:
 
 Example command line to start arqmad through Tor:
 
-`DNS_PUBLIC=tcp torsocks arqmad --p2p-bind-ip 127.0.0.1 --no-igd`
+`DNS_PUBLIC=tcp torsocks arqmad --p2p-bind-ip 127.0.0.1`
 
 ### Using Tor on Tails
 
@@ -490,7 +485,7 @@ to add a rule to allow this connection too, in addition to telling torsocks to
 allow inbound connections. Full example:
 
 `sudo iptables -I OUTPUT 2 -p tcp -d 127.0.0.1 -m tcp --dport 19994 -j ACCEPT`
-`DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --no-igd --rpc-bind-ip 127.0.0.1 \
+`DNS_PUBLIC=tcp torsocks ./arqmad --p2p-bind-ip 127.0.0.1 --rpc-bind-ip 127.0.0.1 \
         --data-dir /home/amnesia/Persistent/your/directory/to/the/blockchain`
 ## Debugging
 

@@ -457,61 +457,6 @@ bool t_rpc_command_executor::save_blockchain() {
   return true;
 }
 
-bool t_rpc_command_executor::show_hash_rate() {
-  cryptonote::COMMAND_RPC_SET_LOG_HASH_RATE::request req;
-  cryptonote::COMMAND_RPC_SET_LOG_HASH_RATE::response res;
-  req.visible = true;
-
-  std::string fail_message = "Unsuccessful";
-
-  if (m_is_rpc)
-  {
-    if (!m_rpc_client->rpc_request(req, res, "/set_log_hash_rate", fail_message.c_str()))
-    {
-      return true;
-    }
-  }
-  else
-  {
-    if (!m_rpc_server->on_set_log_hash_rate(req, res) || res.status != CORE_RPC_STATUS_OK)
-    {
-      tools::fail_msg_writer() << make_error(fail_message, res.status);
-    }
-  }
-
-  tools::success_msg_writer() << "Hash rate logging is on";
-
-  return true;
-}
-
-bool t_rpc_command_executor::hide_hash_rate() {
-  cryptonote::COMMAND_RPC_SET_LOG_HASH_RATE::request req;
-  cryptonote::COMMAND_RPC_SET_LOG_HASH_RATE::response res;
-  req.visible = false;
-
-  std::string fail_message = "Unsuccessful";
-
-  if (m_is_rpc)
-  {
-    if (!m_rpc_client->rpc_request(req, res, "/set_log_hash_rate", fail_message.c_str()))
-    {
-      return true;
-    }
-  }
-  else
-  {
-    if (!m_rpc_server->on_set_log_hash_rate(req, res) || res.status != CORE_RPC_STATUS_OK)
-    {
-      tools::fail_msg_writer() << make_error(fail_message, res.status);
-      return true;
-    }
-  }
-
-  tools::success_msg_writer() << "Hash rate logging is off";
-
-  return true;
-}
-
 bool t_rpc_command_executor::show_difficulty() {
   cryptonote::COMMAND_RPC_GET_INFO::request req;
   cryptonote::COMMAND_RPC_GET_INFO::response res;
@@ -754,6 +699,9 @@ bool t_rpc_command_executor::show_status()
   return true;
 }
 
+template <typename Duration>
+static auto count_seconds(const Duration &d) { return std::chrono::duration_cast<std::chrono::seconds>(d).count(); }
+
 bool t_rpc_command_executor::print_connections() {
   cryptonote::COMMAND_RPC_GET_CONNECTIONS::request req;
   cryptonote::COMMAND_RPC_GET_CONNECTIONS::response res;
@@ -786,7 +734,8 @@ bool t_rpc_command_executor::print_connections() {
 
   tools::msg_writer()
       << std::setw(host_field_width) << std::left << "Remote Host"
-      << std::setw(6) << "SSL"
+      << std::setw(8)  << "Type"
+      << std::setw(6)  << "SSL"
       << std::setw(20) << "Peer id"
       << std::setw(30) << "Recv/Sent (inactive,sec)"
       << std::setw(25) << "State"
@@ -805,11 +754,11 @@ bool t_rpc_command_executor::print_connections() {
     tools::msg_writer()
      //<< std::setw(30) << std::left << in_out
      << std::setw(host_field_width) << std::left << address
-     << std::setw(6) << (info.ssl ? "yes" : "no")
+     << std::setw(6)  << (info.ssl ? "yes" : "no")
      << std::setw(20) << epee::string_tools::pad_string(info.peer_id, 16, '0', true)
-     << std::setw(30) << std::to_string(info.recv_count) + "("  + std::to_string(info.recv_idle_time) + ")/" + std::to_string(info.send_count) + "(" + std::to_string(info.send_idle_time) + ")"
+     << std::setw(30) << std::to_string(info.recv_count) + "("  + std::to_string(count_seconds(info.recv_idle_time)) + ")/" + std::to_string(info.send_count) + "(" + std::to_string(count_seconds(info.send_idle_time)) + ")"
      << std::setw(25) << info.state
-     << std::setw(20) << info.live_time
+     << std::setw(20) << std::to_string(count_seconds(info.live_time))
      << std::setw(12) << info.avg_download
      << std::setw(14) << info.current_download
      << std::setw(10) << info.avg_upload
@@ -1178,7 +1127,7 @@ bool t_rpc_command_executor::print_transaction(crypto::hash transaction_hash,
     if (include_json)
     {
       cryptonote::transaction tx;
-      cryptonote::blobdata blob;
+      std::string blob;
       std::string source = as_hex.empty() ? pruned_as_hex + prunable_as_hex : as_hex;
       bool pruned = !pruned_as_hex.empty() && prunable_as_hex.empty();
       if (!epee::string_tools::parse_hexstr_to_binbuff(source, blob))
@@ -2558,8 +2507,6 @@ static void append_printable_service_node_list_entry(cryptonote::network_type ne
 
   if(is_registered) // Print Service Node tests
   {
-    epee::console_colors uptime_proof_color = (entry.last_uptime_proof == 0) ? epee::console_color_red : epee::console_color_green;
-
     stream << indent2;
     if(entry.last_uptime_proof == 0)
     {
@@ -2925,105 +2872,160 @@ bool t_rpc_command_executor::prepare_registration(bool force_registration)
   };
   auto scoped_log_cats = std::unique_ptr<clear_log_categories>(new clear_log_categories());
 
-  cryptonote::COMMAND_RPC_GET_INFO::request req{};
-  cryptonote::COMMAND_RPC_GET_INFO::response res{};
-  cryptonote::COMMAND_RPC_HARD_FORK_INFO::request hf_req{};
-  cryptonote::COMMAND_RPC_HARD_FORK_INFO::response hf_res{};
+  cryptonote::COMMAND_RPC_GET_INFO::request ireq;
+  cryptonote::COMMAND_RPC_GET_INFO::response ires;
+  cryptonote::COMMAND_RPC_HARD_FORK_INFO::request hfreq;
+  cryptonote::COMMAND_RPC_HARD_FORK_INFO::response hfres;
+  epee::json_rpc::error error_resp;
+  std::string fail_message = "Problem fetching info";
 
+  hfreq.version = 0;
   {
-    cryptonote::COMMAND_RPC_GET_SERVICE_NODE_KEY::request keyreq = {};
-    cryptonote::COMMAND_RPC_GET_SERVICE_NODE_KEY::response keyres = {};
-    const std::string fail_msg = "Cannot get service node key. Make sure you are running daemon with --service-node flag";
-
-    if(m_is_rpc)
+    if (m_is_rpc)
     {
-      if(!m_rpc_client->json_rpc_request(keyreq, keyres, "get_service_node_key", fail_msg))
+      if (!m_rpc_client->rpc_request(ireq, ires, "/getinfo", fail_message.c_str()))
+      {
+        return true;
+      }
+      if (!m_rpc_client->json_rpc_request(hfreq, hfres, "hard_fork_info", fail_message.c_str()))
       {
         return true;
       }
     }
-    else if (auto last_storage_server_ping = static_cast<time_t>(res.last_storage_server_ping);
-        last_storage_server_ping < (time(nullptr) - 60) && !force_registration)
-    {
-      tools::fail_msg_writer() << "Unable to prepare registration: this daemon has not received a ping from the storage server "
-                               << (res.last_storage_server_ping == 0 ? "yet" : "since " + get_human_time_ago(last_storage_server_ping, std::time(nullptr)));
-      return false;
-    }
     else
     {
-      epee::json_rpc::error error_resp;
-      if(!m_rpc_server->on_get_service_node_key(keyreq, keyres, error_resp) || keyres.status != CORE_RPC_STATUS_OK)
+      if (!m_rpc_server->on_get_info(ireq, ires) || ires.status != CORE_RPC_STATUS_OK)
       {
-        tools::fail_msg_writer() << make_error(fail_msg, error_resp.message);
+        tools::fail_msg_writer() << make_error(fail_message, ires.status);
         return true;
+      }
+      if (!m_rpc_server->on_hard_fork_info(hfreq, hfres, error_resp) || hfres.status != CORE_RPC_STATUS_OK)
+      {
+        tools::fail_msg_writer() << make_error(fail_message, hfres.status);
+        return true;
+      }
+    }
+
+    std::string my_sn_key;
+    uint64_t last_ss_ping = 0;
+    {
+      cryptonote::COMMAND_RPC_GET_SERVICE_NODE_KEY::request req = {};
+      cryptonote::COMMAND_RPC_GET_SERVICE_NODE_KEY::response res = {};
+      epee::json_rpc::error error_resp;
+      std::string const fail_msg = "Cannot get service node key. Make sure you are running daemon with --service-node flag";
+
+      bool good = true;
+      if (m_is_rpc)
+      {
+        if (!m_rpc_client->json_rpc_request(req, res, "get_service_node_key", fail_msg))
+        {
+          good = false;
+          return false;
+        }
+      }
+      else
+      {
+        if (!m_rpc_server->on_get_service_node_key(req, res, error_resp) || res.status != CORE_RPC_STATUS_OK)
+        {
+          tools::fail_msg_writer() << make_error(fail_msg, error_resp.message);
+          good = false;
+          return false;
+        }
+      }
+
+      if (good)
+      {
+        my_sn_key = std::move(res.service_node_pubkey);
+        cryptonote::COMMAND_RPC_GET_SERVICE_NODES::request sn_req = {};
+        cryptonote::COMMAND_RPC_GET_SERVICE_NODES::response sn_res = {};
+
+        sn_req.service_node_pubkeys.push_back(my_sn_key);
+        if (m_is_rpc)
+          good = m_rpc_client->json_rpc_request(sn_req, sn_res, "get_service_nodes", fail_msg.c_str()) && sn_res.service_node_states.size() == 1;
+        else
+          good = m_rpc_server->on_get_service_nodes(sn_req, sn_res, error_resp) && sn_res.status == CORE_RPC_STATUS_OK && sn_res.service_node_states.size() == 1;
+
+        if (good)
+        {
+          auto &entry = sn_res.service_node_states.front();
+        }
+      }
+    }
+
+    if (!my_sn_key.empty())
+    {
+      if (auto last_storage_server_ping = static_cast<time_t>(ires.last_storage_server_ping);
+        last_storage_server_ping < (time(nullptr) - 60) && !force_registration)
+      {
+        tools::fail_msg_writer() << "Unable to prepare registration: this daemon has not received a ping from the storage server "
+                                 << (ires.last_storage_server_ping == 0 ? "yet" : "since " + get_human_time_ago(last_storage_server_ping, std::time(nullptr)));
+        return false;
       }
     }
   }
 
   uint64_t block_height = 0;
-  uint8_t hard_fork_version = cryptonote::network_version_16;
   cryptonote::network_type nettype = cryptonote::UNDEFINED;
   {
     std::string const info_fail_message = "Could not get current blockchain info";
 
     if(m_is_rpc)
     {
-      if(!m_rpc_client->rpc_request(req, res, "/getinfo", info_fail_message.c_str()))
+      if(!m_rpc_client->rpc_request(ireq, ires, "/getinfo", info_fail_message.c_str()))
         return true;
 
-      if(!m_rpc_client->json_rpc_request(hf_req, hf_res, "hard_fork_info", info_fail_message.c_str()))
+      if(!m_rpc_client->json_rpc_request(hfreq, hfres, "hard_fork_info", info_fail_message.c_str()))
         return true;
 
-      if(res.mainnet)
+      if(ires.mainnet)
         nettype = cryptonote::MAINNET;
-      else if(res.stagenet)
+      else if(ires.stagenet)
         nettype = cryptonote::STAGENET;
-      else if(res.testnet)
+      else if(ires.testnet)
         nettype = cryptonote::TESTNET;
     }
     else
     {
-      if(!m_rpc_server->on_get_info(req, res) || res.status != CORE_RPC_STATUS_OK)
+      if(!m_rpc_server->on_get_info(ireq, ires) || ires.status != CORE_RPC_STATUS_OK)
       {
-        tools::fail_msg_writer() << make_error(info_fail_message, res.status);
+        tools::fail_msg_writer() << make_error(info_fail_message, ires.status);
         return true;
       }
 
       epee::json_rpc::error error_resp;
-      if(!m_rpc_server->on_hard_fork_info(hf_req, hf_res, error_resp) || hf_res.status != CORE_RPC_STATUS_OK)
+      if(!m_rpc_server->on_hard_fork_info(hfreq, hfres, error_resp) || hfres.status != CORE_RPC_STATUS_OK)
       {
-        tools::fail_msg_writer() << make_error(info_fail_message, hf_res.status);
+        tools::fail_msg_writer() << make_error(info_fail_message, hfres.status);
         return true;
       }
 
       nettype = m_rpc_server->nettype();
     }
 
-    hard_fork_version = hf_res.version;
-    block_height = std::max(res.height, res.target_height);
+    block_height = std::max(ires.height, ires.target_height);
   }
 
   {
-    cryptonote::COMMAND_RPC_GET_LAST_BLOCK_HEADER::request req  = {};
-    cryptonote::COMMAND_RPC_GET_LAST_BLOCK_HEADER::response res = {};
+    cryptonote::COMMAND_RPC_GET_LAST_BLOCK_HEADER::request breq  = {};
+    cryptonote::COMMAND_RPC_GET_LAST_BLOCK_HEADER::response bres = {};
     std::string const fail_msg = "Get latest block failed, unable to check sync status";
 
     if(m_is_rpc)
     {
-      if(!m_rpc_client->json_rpc_request(req, res, "get_last_block_header", fail_msg))
+      if(!m_rpc_client->json_rpc_request(breq, bres, "get_last_block_header", fail_msg))
         return true;
     }
     else
     {
       epee::json_rpc::error error_resp;
-      if(!m_rpc_server->on_get_last_block_header(req, res, error_resp) || res.status != CORE_RPC_STATUS_OK)
+      if(!m_rpc_server->on_get_last_block_header(breq, bres, error_resp) || bres.status != CORE_RPC_STATUS_OK)
       {
-        tools::fail_msg_writer() << make_error(fail_msg, res.status);
+        tools::fail_msg_writer() << make_error(fail_msg, bres.status);
         return true;
       }
     }
 
-    cryptonote::block_header_response const &header = res.block_header;
+    cryptonote::block_header_response const &header = bres.block_header;
     uint64_t const now = time(nullptr);
 
     if(now >= header.timestamp)

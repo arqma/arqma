@@ -31,8 +31,7 @@
 
 #include "base58.h"
 
-#include <assert.h>
-#include <string>
+#include <cassert>
 #include <vector>
 
 #include "crypto/hash.h"
@@ -170,7 +169,7 @@ namespace tools
       }
     }
 
-    std::string encode(const std::string& data)
+    std::string encode(std::string_view data)
     {
       if (data.empty())
         return std::string();
@@ -193,7 +192,7 @@ namespace tools
       return res;
     }
 
-    bool decode(const std::string& enc, std::string& data)
+    bool decode(std::string_view enc, std::string& data)
     {
       if (enc.empty())
       {
@@ -225,7 +224,7 @@ namespace tools
       return true;
     }
 
-    std::string encode_addr(uint64_t tag, const std::string& data)
+    std::string encode_addr(uint64_t tag, std::string_view data)
     {
       std::string buf = get_varint_data(tag);
       buf += data;
@@ -235,7 +234,7 @@ namespace tools
       return encode(buf);
     }
 
-    bool decode_addr(const std::string &addr, uint64_t& tag, std::string& data)
+    bool decode_addr(std::string_view addr, uint64_t& tag, std::string& data)
     {
       std::string addr_data;
       bool r = decode(addr, addr_data);

@@ -70,6 +70,7 @@ static constexpr HardFork::Params mainnet_hard_forks[] =
   { network_version_15,  303666, 0, 1573257000 },
   { network_version_16, 1731480, 0, 1749313836 },
   { network_version_17, 1760751, 0, 1754410575 },
+  { network_version_18, 1863160, 0, 1768160647 },
 };
 
 static constexpr HardFork::Params testnet_hard_forks[] =
@@ -86,6 +87,7 @@ static constexpr HardFork::Params testnet_hard_forks[] =
   { network_version_15,    800, 0, 1566598080 },
   { network_version_16,    900, 0, 1566598280 },
   { network_version_17,   1000, 0, 1566598281 },
+//  { network_version_18,   1100, 0, 1566598282 },
 };
 
 static constexpr HardFork::Params stagenet_hard_forks[] =
@@ -102,6 +104,8 @@ static constexpr HardFork::Params stagenet_hard_forks[] =
   { network_version_15,    140, 0, 1570414500 },
   { network_version_16,    160, 0, 1570414510 },
   { network_version_17,    180, 0, 1570414511 },
+// TODO: Need to be set
+//  { network_version_18,    200, 0, 1570414512 },
 };
 
 uint64_t HardFork::get_hardcoded_hard_fork_height(network_type nettype, cryptonote::network_version version)
@@ -127,7 +131,7 @@ HardFork::ParamsIterator HardFork::get_hardcoded_hard_forks(network_type nettype
   return {nullptr, nullptr};
 }
 
-HardFork::HardFork(cryptonote::BlockchainDB &db, uint8_t original_version, time_t forked_time, uint64_t window_size, uint8_t default_threshold_percent):
+HardFork::HardFork(cryptonote::BlockchainDB &db, uint8_t original_version, std::chrono::seconds forked_time, uint64_t window_size, uint8_t default_threshold_percent):
   db(db),
   forked_time(forked_time),
   window_size(window_size),
@@ -143,7 +147,7 @@ HardFork::HardFork(cryptonote::BlockchainDB &db, uint8_t original_version, time_
 
 bool HardFork::add_fork(uint8_t version, uint64_t height, uint8_t threshold, time_t time)
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
 
   // add in order
   if (version == 0)
@@ -184,7 +188,7 @@ bool HardFork::do_check(uint8_t block_version, uint8_t voting_version) const
 
 bool HardFork::check(const cryptonote::block &block) const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   return do_check(::get_block_version(block), ::get_block_vote(block));
 }
 
@@ -196,13 +200,13 @@ bool HardFork::do_check_for_height(uint8_t block_version, uint8_t voting_version
 
 bool HardFork::check_for_height(const cryptonote::block &block, uint64_t height) const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   return do_check_for_height(::get_block_version(block), ::get_block_vote(block), height);
 }
 
 bool HardFork::add(uint8_t block_version, uint8_t voting_version, uint64_t height)
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
 
   if (!do_check(block_version, voting_version))
     return false;
@@ -238,7 +242,7 @@ bool HardFork::add(const cryptonote::block &block, uint64_t height)
 
 void HardFork::init()
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
 
   // add a placeholder for the default version, to avoid special cases
   if (heights.empty())
@@ -268,7 +272,7 @@ uint8_t HardFork::get_block_version(uint64_t height) const
 
 bool HardFork::reorganize_from_block_height(uint64_t height)
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   if (height >= db.height())
     return false;
 
@@ -315,7 +319,7 @@ bool HardFork::reorganize_from_chain_height(uint64_t height)
 
 bool HardFork::rescan_from_block_height(uint64_t height)
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   db_rtxn_guard rtxn_guard(&db);
   if (height >= db.height())
     return false;
@@ -355,7 +359,7 @@ void HardFork::on_block_popped(uint64_t nblocks)
 {
   CHECK_AND_ASSERT_THROW_MES(nblocks > 0, "nblocks must be greater than 0");
 
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
 
   const uint64_t new_chain_height = db.height();
   const uint64_t old_chain_height = new_chain_height + nblocks;
@@ -378,7 +382,7 @@ void HardFork::on_block_popped(uint64_t nblocks)
 
 int HardFork::get_voted_fork_index(uint64_t height) const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   uint32_t accumulated_votes = 0;
   for (int n = heights.size() - 1; n > 0; --n) {
     uint8_t v = heights[n].version;
@@ -393,7 +397,7 @@ int HardFork::get_voted_fork_index(uint64_t height) const
 
 HardFork::State HardFork::get_state(time_t t) const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
 
   // no hard forks setup yet
   if (heights.size() <= 1)
@@ -408,7 +412,7 @@ HardFork::State HardFork::get_state() const
 
 uint8_t HardFork::get(uint64_t height) const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   if (height > db.height()) {
     assert(false);
     return INVALID_HARD_FORK_VERSION_FOR_HEIGHT;
@@ -421,19 +425,19 @@ uint8_t HardFork::get(uint64_t height) const
 
 uint8_t HardFork::get_current_version() const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   return heights[current_fork_index].version;
 }
 
 uint8_t HardFork::get_ideal_version() const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   return heights.back().version;
 }
 
 uint8_t HardFork::get_ideal_version(uint64_t height) const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   for (unsigned int n = heights.size() - 1; n > 0; --n) {
     if (height >= heights[n].height) {
       return heights[n].version;
@@ -457,7 +461,7 @@ uint64_t HardFork::get_earliest_ideal_height_for_version(uint8_t version) const
 
 uint8_t HardFork::get_next_version() const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
   uint64_t height = db.height();
   for (auto i = heights.rbegin(); i != heights.rend(); ++i) {
     if (height >= i->height) {
@@ -469,7 +473,7 @@ uint8_t HardFork::get_next_version() const
 
 bool HardFork::get_voting_info(uint8_t version, uint32_t &window, uint32_t &votes, uint32_t &threshold, uint64_t &earliest_height, uint8_t &voting) const
 {
-  CRITICAL_REGION_LOCAL(lock);
+  std::unique_lock l{lock};
 
   const uint8_t current_version = heights[current_fork_index].version;
   const bool enabled = current_version >= version;

@@ -46,7 +46,6 @@ target_link_libraries(cryptonote_format_utils_basic
 
 set(cryptonote_basic_sources
   account.cpp
-  connection_context.cpp
   cryptonote_basic.cpp
   cryptonote_basic_impl.cpp
   cryptonote_format_utils.cpp
@@ -71,11 +70,8 @@ target_link_libraries(cryptonote_basic
     checkpoints
     cryptonote_format_utils_basic
     device
-    ${Boost_DATE_TIME_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SERIALIZATION_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
   PRIVATE
     ${EXTRA_LIBRARIES})

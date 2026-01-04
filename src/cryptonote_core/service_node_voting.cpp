@@ -227,7 +227,7 @@ namespace service_nodes
         return false;
       }
 
-      if (hard_fork_version > cryptonote::network_version_17 && checkpoint.signatures.size() > service_nodes::CHECKPOINT_QUORUM_SIZE)
+      if (checkpoint.signatures.size() > service_nodes::CHECKPOINT_QUORUM_SIZE)
       {
         LOG_PRINT_L1("Checkpoint has too many signatures to be considered at height: " << checkpoint.height);
         return false;
@@ -237,7 +237,7 @@ namespace service_nodes
       for (size_t i = 0; i < checkpoint.signatures.size(); i++)
       {
         service_nodes::voter_to_signature const &voter_to_signature = checkpoint.signatures[i];
-        if (hard_fork_version > cryptonote::network_version_17 && i < (checkpoint.signatures.size() - 1))
+        if (hard_fork_version >= cryptonote::network_version_17 && i < (checkpoint.signatures.size() - 1))
         {
           auto curr = checkpoint.signatures[i].voter_index;
           auto next = checkpoint.signatures[i + 1].voter_index;
@@ -251,7 +251,7 @@ namespace service_nodes
 
         if (!bounds_check_validator_index(quorum, voter_to_signature.voter_index, nullptr)) return false;
         crypto::public_key const &key = quorum.validators[voter_to_signature.voter_index];
-        if (hard_fork_version > cryptonote::network_version_17 && unique_vote_set[voter_to_signature.voter_index]++)
+        if (unique_vote_set[voter_to_signature.voter_index]++)
         {
           LOG_PRINT_L1("Voter: " << epee::string_tools::pod_to_hex(key) << ", quorum index is duplicated: " << voter_to_signature.voter_index << ", checkpoint failed verification at height: " << checkpoint.height);
           return false;
@@ -452,7 +452,7 @@ namespace service_nodes
 
   void voting_pool::set_relayed(const std::vector<quorum_vote_t>& votes)
   {
-    CRITICAL_REGION_LOCAL(m_lock);
+    std::unique_lock lock{m_lock};
     const time_t now = time(NULL);
 
     for (const quorum_vote_t &find_vote : votes)
@@ -483,7 +483,7 @@ namespace service_nodes
 
   std::vector<quorum_vote_t> voting_pool::get_relayable_votes(uint64_t height, uint8_t hard_fork_version, bool quorum_relay) const
   {
-    CRITICAL_REGION_LOCAL(m_lock);
+    std::unique_lock lock{m_lock};
 
     constexpr uint64_t TIME_BETWEEN_RELAY = 60 * 2;
 
@@ -523,7 +523,7 @@ namespace service_nodes
 
   std::vector<pool_vote_entry> voting_pool::add_pool_vote_if_unique(const quorum_vote_t& vote, cryptonote::vote_verification_context& vvc)
   {
-    CRITICAL_REGION_LOCAL(m_lock);
+    std::unique_lock lock{m_lock};
     auto *votes = find_vote_pool(vote, /*create_if_not_found=*/ true);
     if (!votes) return {};
 
@@ -533,7 +533,7 @@ namespace service_nodes
 
   void voting_pool::remove_used_votes(std::vector<cryptonote::transaction> const &txs, uint8_t hard_fork_version)
   {
-    CRITICAL_REGION_LOCAL(m_lock);
+    std::unique_lock lock{m_lock};
     if (m_obligations_pool.empty())
       return;
 
@@ -571,7 +571,7 @@ namespace service_nodes
 
   void voting_pool::remove_expired_votes(uint64_t height)
   {
-    CRITICAL_REGION_LOCAL(m_lock);
+    std::unique_lock lock{m_lock};
     uint64_t min_height = (height < VOTE_LIFETIME) ? 0 : height - VOTE_LIFETIME;
     cull_votes(m_obligations_pool, min_height, height);
     cull_votes(m_checkpoint_pool, min_height, height);

@@ -31,8 +31,6 @@
 
 #pragma once
 
-#include <boost/thread/locks.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/optional.hpp>
 #include <boost/endian/conversion.hpp>
 #include <system_error>
@@ -40,6 +38,7 @@
 #include <cstdio>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <chrono>
 
@@ -216,8 +215,8 @@ namespace tools
     /*! \brief calles m_handler */
     static void handle_signal(int type)
     {
-      static boost::mutex m_mutex;
-      boost::unique_lock<boost::mutex> lock(m_mutex);
+      static std::mutex m_mutex;
+      std::unique_lock lock{m_mutex};
       m_handler(type);
     }
 
@@ -235,10 +234,20 @@ namespace tools
   bool is_local_address(const std::string &address);
   int vercmp(const char *v0, const char *v1); // returns < 0, 0, > 0, similar to strcmp, but more human friendly than lexical - does not attempt to validate
 
-  bool sha256sum(const uint8_t *data, size_t len, crypto::hash &hash);
-  bool sha256sum(const std::string &filename, crypto::hash &hash);
+  bool sha256sum_str(std::string_view str, crypto::hash& hash);
 
-  boost::optional<bool> is_hdd(const char *path);
+  template <typename Char, std::enable_if_t<sizeof(Char) == 1 && !std::is_same_v<Char, char>, int> = 0>
+  bool sha256sum_str(std::basic_string_view<Char> str, crypto::hash& hash)
+  {
+    return sha256sum_str(std::string_view{reinterpret_cast<const char*>(str.data()), str.size()}, hash);
+  }
+  template <typename Char, std::enable_if_t<sizeof(Char) == 1, int> = 0>
+  bool sha256sum_str(const Char* data, size_t len, crypto::hash& hash)
+  {
+    return sha256sum_str(std::string_view{reinterpret_cast<const char*>(data), len}, hash);
+  }
+
+  bool sha256sum_file(const std::string &filename, crypto::hash& hash);
 
   boost::optional<std::pair<uint32_t, uint32_t>> parse_subaddress_lookahead(const std::string& str);
 

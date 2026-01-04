@@ -30,21 +30,19 @@
 #include "warnings.h"
 #include "storages/parserse_base_utils.h"
 #include <boost/lexical_cast.hpp> // A heavy header, that was extracted from the rest
-
-#ifndef OUT
-	#define OUT
-#endif
+#include <string_view>
 
 namespace epee
 {
+using namespace std::literals;
 namespace string_tools
 {
 PUSH_WARNINGS
 DISABLE_GCC_WARNING(maybe-uninitialized)
     template<class XType>
-    inline bool get_xtype_from_string(OUT XType& val, const std::string& str_id)
+    inline bool get_xtype_from_string(XType& val, std::string_view str_id)
     {
-        if (std::is_integral<XType>::value && !std::numeric_limits<XType>::is_signed && !std::is_same<XType, bool>::value)
+        if (std::is_integral_v<XType> && std::is_unsigned_v<XType> && !std::is_same_v<XType, bool>)
         {
             for (char c : str_id)
             {
@@ -55,7 +53,7 @@ DISABLE_GCC_WARNING(maybe-uninitialized)
 
         try
         {
-            val = boost::lexical_cast<XType>(str_id);
+            val = boost::lexical_cast<XType>(std::string{str_id});
             return true;
         }
         catch(const std::exception& /*e*/)

@@ -104,7 +104,7 @@ typedef cryptonote::simple_wallet sw;
   /* stop any background refresh, and take over */ \
   m_idle_run = false; \
   m_wallet->stop(); \
-  boost::unique_lock<boost::mutex> lock(m_idle_mutex); \
+  std::unique_lock lock{m_idle_mutex}; \
   m_idle_cond.notify_all(); \
   epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ \
   /* m_idle_mutex is still locked here */ \
@@ -1075,7 +1075,7 @@ bool simple_wallet::export_multisig(const std::vector<std::string> &args)
     return true;
   try
   {
-    cryptonote::blobdata ciphertext = m_wallet->export_multisig();
+    std::string ciphertext = m_wallet->export_multisig();
 
     bool r = m_wallet->save_to_file(filename, ciphertext);
     if (!r)
@@ -1122,7 +1122,7 @@ bool simple_wallet::import_multisig(const std::vector<std::string> &args)
 
   SCOPED_WALLET_UNLOCK();
 
-  std::vector<cryptonote::blobdata> info;
+  std::vector<std::string> info;
   for (size_t n = 0; n < args.size(); ++n)
   {
     const std::string filename = args[n];
@@ -2885,9 +2885,9 @@ bool simple_wallet::ask_wallet_create_if_needed()
           bool ok = true;
           if (!m_restoring)
           {
-            std::string prompt = tr("No wallet found with that name. Confirm creation of new wallet named: ");
-            prompt += "\"" + wallet_path + "\"";
-            confirm_creation = input_line(prompt, true);
+            message_writer() << tr("Looking for filename: ") << boost::filesystem::absolute(wallet_path);
+            message_writer() << tr("No wallet found with that name. Confirm creation of new wallet named: ") << wallet_path;
+            confirm_creation = input_line("", true);
             if(std::cin.eof())
             {
               LOG_ERROR("Unexpected std::cin.eof() - Exited simple_wallet::ask_wallet_create_if_needed()");
@@ -3312,7 +3312,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       {
         std::vector<crypto::secret_key> multisig_secret_spendkeys(multisig_n);
         epee::wipeable_string spendkey_string;
-        cryptonote::blobdata spendkey_data;
+        std::string spendkey_data;
         // get N secret spend keys from user
         for(unsigned int i=0; i<multisig_n; ++i)
         {
@@ -3738,6 +3738,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     "your current session's state. Otherwise, you might need to synchronize \n"
     "your wallet again (your wallet keys are NOT at risk in any case).\n")
   ;
+  success_msg_writer() << tr("Filename: ") << boost::filesystem::absolute(m_wallet->get_keys_file());
 
   if (!two_random)
   {
@@ -3993,7 +3994,7 @@ bool simple_wallet::close_wallet()
     m_idle_run.store(false, std::memory_order_relaxed);
     m_wallet->stop();
     {
-      boost::unique_lock<boost::mutex> lock(m_idle_mutex);
+      std::unique_lock lock{m_idle_mutex};
       m_idle_cond.notify_one();
     }
     m_idle_thread.join();
@@ -5168,7 +5169,6 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
 
   vector<cryptonote::address_parse_info> dsts_info;
   vector<cryptonote::tx_destination_entry> dsts;
-  size_t num_subaddresses = 0;
   for (size_t i = 0; i < local_args.size(); )
   {
     dsts_info.emplace_back();
@@ -5227,7 +5227,6 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     de.addr = info.address;
     de.is_subaddress = info.is_subaddress;
     de.is_integrated = info.has_payment_id;
-    num_subaddresses += info.is_subaddress;
 
     if (info.has_payment_id || !payment_id_uri.empty())
     {
@@ -5644,7 +5643,7 @@ bool simple_wallet::query_locked_stakes(bool print_result)
     }
 
     bool once_only = true;
-    cryptonote::blobdata binary_buf;
+    std::string binary_buf;
     binary_buf.reserve(sizeof(crypto::key_image));
     for(size_t i = 0; i < response.size(); ++i)
     {
@@ -7064,7 +7063,6 @@ static std::string get_human_readable_timestamp(uint64_t ts)
   time_t tt = ts;
   struct tm tm;
   epee::misc_utils::get_gmt_time(tt, tm);
-  uint64_t now = time(NULL);
   strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
   return std::string(buffer);
 }
@@ -7494,21 +7492,22 @@ bool simple_wallet::rescan_blockchain(const std::vector<std::string> &args_)
 //----------------------------------------------------------------------------------------------------
 void simple_wallet::wallet_idle_thread()
 {
-  const boost::posix_time::ptime start_time = boost::posix_time::microsec_clock::universal_time();
+  const auto start_time = std::chrono::steady_clock::now();
   while (true)
   {
-    boost::unique_lock<boost::mutex> lock(m_idle_mutex);
+    std::unique_lock lock{m_idle_mutex};
     if (!m_idle_run.load(std::memory_order_relaxed))
       break;
 
     // auto refresh
-    const boost::posix_time::ptime now0 = boost::posix_time::microsec_clock::universal_time();
-    const uint64_t dt_actual = (now0 - start_time).total_microseconds() % 1000000;
+    const auto dt_actual = (std::chrono::steady_clock::now() - start_time) % 1s;
+    constexpr auto threshold =
 #ifdef _WIN32
-    static const uint64_t threshold = 10000;
+      10ms;
 #else
-    static const uint64_t threshold = 2000;
+      2ms;
 #endif
+
     if (dt_actual < threshold)
     {
       m_refresh_checker.do_call([this] { check_refresh(); });
@@ -7517,10 +7516,9 @@ void simple_wallet::wallet_idle_thread()
         break;
     }
 
-    const boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
-    const auto dt = (now - start_time).total_microseconds();
-    const auto wait = 1000000 - dt % 1000000;
-    m_idle_cond.wait_for(lock, boost::chrono::microseconds(wait));
+    const auto dt = std::chrono::steady_clock::now() - start_time;
+    const auto wait = 1s - dt % 1s;
+    m_idle_cond.wait_for(lock, wait);
   }
 }
 //----------------------------------------------------------------------------------------------------
@@ -7575,7 +7573,7 @@ bool simple_wallet::run()
   refresh_main(0, ResetNone, true);
 
   m_auto_refresh_enabled = m_wallet->auto_refresh();
-  m_idle_thread = boost::thread([&] { wallet_idle_thread(); });
+  m_idle_thread = std::thread([&] { wallet_idle_thread(); });
 
   message_writer(console_color_green, false) << "Background refresh thread started";
   return m_cmd_binder.run_handling([this](){return get_prompt();}, "");
@@ -8026,7 +8024,7 @@ bool simple_wallet::set_tx_note(const std::vector<std::string> &args)
     return true;
   }
 
-  cryptonote::blobdata txid_data;
+  std::string txid_data;
   if(!epee::string_tools::parse_hexstr_to_binbuff(args.front(), txid_data) || txid_data.size() != sizeof(crypto::hash))
   {
     fail_msg_writer() << tr("failed to parse txid");
@@ -8054,7 +8052,7 @@ bool simple_wallet::get_tx_note(const std::vector<std::string> &args)
     return true;
   }
 
-  cryptonote::blobdata txid_data;
+  std::string txid_data;
   if(!epee::string_tools::parse_hexstr_to_binbuff(args.front(), txid_data) || txid_data.size() != sizeof(crypto::hash))
   {
     fail_msg_writer() << tr("failed to parse txid");
@@ -8418,7 +8416,7 @@ bool simple_wallet::show_transfer(const std::vector<std::string> &args)
     return true;
   }
 
-  cryptonote::blobdata txid_data;
+  std::string txid_data;
   if(!epee::string_tools::parse_hexstr_to_binbuff(args.front(), txid_data) || txid_data.size() != sizeof(crypto::hash))
   {
     fail_msg_writer() << tr("failed to parse txid");
@@ -8607,7 +8605,7 @@ void simple_wallet::commit_or_save(std::vector<tools::wallet2::pending_tx>& ptx_
     const crypto::hash txid = get_transaction_hash(ptx.tx);
     if (do_not_relay)
     {
-      cryptonote::blobdata blob;
+      std::string blob;
       tx_to_blob(ptx.tx, blob);
       const std::string blob_hex = epee::string_tools::buff_to_hex_nodelimer(blob);
       const std::string filename = "raw_arqma_tx" + (ptx_vector.size() == 1 ? "" : ("_" + std::to_string(i++)));
@@ -8679,9 +8677,7 @@ int main(int argc, char* argv[])
   po::positional_options_description positional_options;
   positional_options.add(arg_command.name, -1);
 
-  boost::optional<po::variables_map> vm;
-  bool should_terminate = false;
-  std::tie(vm, should_terminate) = wallet_args::main(
+  auto [vm, should_terminate] = wallet_args::main(
    argc, argv,
    "arqma-wallet-cli [--wallet-file=<filename>|--generate-new-wallet=<filename>] [<COMMAND>]",
     sw::tr("This is the command line ArQmA Command Line Wallet.\nIt needs to connect to a ArQmA Daemon to work correctly.\nWARNING: Do not reuse your ArQmA keys on an another fork,\nUNLESS this fork has key reuse mitigations built in. Doing so will harm your privacy."),

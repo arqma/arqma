@@ -40,11 +40,8 @@
 
 #include <memory>
 
-#include "syncobj.h"
-
 #include "net/net_utils_base.h"
 #include "misc_log_ex.h"
-#include <boost/chrono.hpp>
 #include "misc_language.h"
 #include <sstream>
 #include <iomanip>
@@ -85,7 +82,6 @@ class connection_basic_pimpl {
     static int m_default_tos;
 
     network_throttle_bw m_throttle; // per-perr
-    critical_section m_throttle_lock;
 
     void _packet(size_t packet_size, int phase, int q_len); // execute a sleep ; phase is not really used now(?) could be used for different kinds of sleep e.g. direct/queue write
 };
@@ -132,7 +128,7 @@ network_throttle::network_throttle(const std::string &nameshort, const std::stri
 	m_start_time = 0;
 	m_any_packet_yet = false;
 	m_slot_size = 1.0; // hard coded in few places
-	m_target_speed = 64 * 1024; // other defaults are probably defined in the command-line parsing code when this class is used e.g. as main global throttle
+	m_target_speed = 1024 * 1024; // other defaults are probably defined in the command-line parsing code when this class is used e.g. as main global throttle
 	m_last_sample_time = 0;
 	m_history.resize(m_window_size);
 	m_total_packets = 0;
@@ -168,7 +164,7 @@ void network_throttle::tick()
 	// TODO optimize when moving few slots at once
 	while ( (!m_any_packet_yet) || (last_sample_time_slot < current_sample_time_slot))
 	{
-		_dbg3("Moving counter buffer by 1 second " << last_sample_time_slot << " < " << current_sample_time_slot << " (last time " << m_last_sample_time<<")");
+		MTRACE("Moving counter buffer by 1 second " << last_sample_time_slot << " < " << current_sample_time_slot << " (last time " << m_last_sample_time<<")");
 		// rotate buffer
 		m_history.push_front(packet_info());
 		if (! m_any_packet_yet)
@@ -197,7 +193,7 @@ void network_throttle::_handle_trafic_exact(size_t packet_size, size_t orginal_s
 	m_total_packets++;
 	m_total_bytes += packet_size;
 
-	std::ostringstream oss; oss << "["; for (auto sample : m_history) oss << sample.m_size << " "; oss << "]" << std::ends;
+	std::ostringstream oss; oss << "["; 	for (auto sample: m_history) oss << sample.m_size << " ";	 oss << "]" << std::ends;
 	std::string history_str = oss.str();
 
 	MTRACE("Throttle " << m_name << ": packet of ~" << packet_size << "b " << " (from " << orginal_size << " b)"
@@ -222,15 +218,15 @@ network_time_seconds network_throttle::get_sleep_time_after_tick(size_t packet_s
 
 void network_throttle::logger_handle_net(const std::string &filename, double time, size_t size)
 {
-    static boost::mutex mutex;
+    static std::mutex mutex;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
+    std::lock_guard lock{mutex};
     {
         std::fstream file;
         file.open(filename.c_str(), std::ios::app | std::ios::out );
         file.precision(6);
         if(!file.is_open())
-            _warn("Can't open file " << filename);
+            MWARNING("Can't open file " << filename);
         file << static_cast<int>(time) << " " << static_cast<double>(size/1024) << "\n";
         file.close();
     }
@@ -293,8 +289,8 @@ if (!m_any_packet_yet)
     }
 
 	if (dbg) {
-	  std::ostringstream oss; oss << "["; for (auto sample : m_history) oss << sample.m_size << " "; oss << "]" << std::ends;
-	  std::string history_str = oss.str();
+	  std::ostringstream oss; oss << "["; 	for (auto sample: m_history) oss << sample.m_size << " ";	 oss << "]" << std::ends;
+		std::string history_str = oss.str();
 		MTRACE((cts.delay > 0 ? "SLEEP" : "")
 			<< "dbg " << m_name << ": "
 			<< "speed is A=" << std::setw(8) <<cts.average<<" vs "

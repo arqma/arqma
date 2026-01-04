@@ -29,11 +29,12 @@
 
 #pragma once
 
-#include <boost/utility/string_ref.hpp>
+#include <string_view>
 #include <cstdint>
 
 namespace epee
 {
+using namespace std::literals;
 namespace net_utils
 {
 	enum class address_type : std::uint8_t
@@ -57,9 +58,21 @@ namespace net_utils
 	// implementations in src/net_utils_base.cpp
 
 	//! \return String name of zone or "invalid" on error.
-	const char* zone_to_string(zone value) noexcept;
+	constexpr std::string_view zone_to_string(zone value) noexcept {
+	  switch(value) {
+	    case zone::public_: return "public"sv;
+	    case zone::i2p:     return "i2p"sv;
+	    case zone::tor:     return "tor"sv;
+	    default:            return "invalid"sv;
+	  }
+	}
 
 	//! \return `zone` enum of `value` or `zone::invalid` on error.
-	zone zone_from_string(boost::string_ref value) noexcept;
+	constexpr zone zone_from_string(std::string_view value) noexcept {
+	  if (value == "public"sv) return zone::public_;
+	  if (value == "i2p"sv)    return zone::i2p;
+	  if (value == "tor"sv)    return zone::tor;
+	  return zone::invalid;
+	}
 } // net_utils
 } // epee

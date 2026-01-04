@@ -88,10 +88,6 @@ namespace daemon_args
     "daemon_command"
   , "Hidden"
   };
-  const command_line::arg_descriptor<bool> arg_os_version = {
-    "os-version"
-  , "OS for which this executable was compiled"
-  };
   const command_line::arg_descriptor<unsigned> arg_max_concurrency = {
     "max-concurrency"
   , "Max number of threads to use for a parallel job"
@@ -101,6 +97,11 @@ namespace daemon_args
   const command_line::arg_descriptor<bool> arg_public_node = {
     "public-node"
   , "Allow Arq-Net Users to use this Arqma Node as a Remote-Node (restricted RPC mode, view-only commands) and advertise it over P2P Network Protocol"
+  , false
+  };
+  const command_line::arg_descriptor<bool> arg_zmq_rpc_enabled = {
+    "zmq-enabled"
+  , "Enable Arqma ZMQ server"
   , false
   };
   const command_line::arg_descriptor<std::string> arg_zmq_rpc_bind_ip = {

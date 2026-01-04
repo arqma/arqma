@@ -111,7 +111,7 @@ namespace lmdb
             \return The result of calling `f`.
         */
         template<typename F>
-        typename std::result_of<F(MDB_txn&)>::type try_write(F f, unsigned attempts = 3)
+        auto try_write(F f, unsigned attempts = 3) -> decltype(f(std::declval<MDB_txn&>()))
         {
             for (unsigned i = 0; i < attempts; ++i)
             {
@@ -123,10 +123,13 @@ namespace lmdb
                 const auto wrote = f(*(*txn));
                 if (wrote)
                 {
-                    ARQMA_CHECK(commit(std::move(*txn)));
+                  const auto committed = commit(std::move(*txn));
+                  if (committed)
                     return wrote;
+                  if (committed != lmdb::error(MDB_MAP_FULL))
+                    return committed.error();
                 }
-                if (wrote != lmdb::error(MDB_MAP_FULL))
+                else if (wrote != lmdb::error(MDB_MAP_FULL))
                     return wrote;
 
                 txn->reset();

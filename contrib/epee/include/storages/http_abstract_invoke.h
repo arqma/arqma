@@ -25,10 +25,9 @@
 //
 
 #pragma once
-#include <boost/utility/string_ref.hpp>
+#include <string_view>
 #include <chrono>
 #include <string>
-#include "byte_slice.h"
 #include "portable_storage_template_helper.h"
 #include "net/http_base.h"
 #include "net/http_server_handlers_map2.h"
@@ -38,7 +37,7 @@ namespace epee
   namespace net_utils
   {
     template<class t_request, class t_response, class t_transport>
-    bool invoke_http_json(const boost::string_ref uri, const t_request& out_struct, t_response& result_struct, t_transport& transport, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref method = "POST")
+    bool invoke_http_json(const std::string_view uri, const t_request& out_struct, t_response& result_struct, t_transport& transport, std::chrono::milliseconds timeout = 15s, const std::string_view method = "POST"sv)
     {
       std::string req_param;
       if(!serialization::store_t_to_json(out_struct, req_param))
@@ -70,14 +69,14 @@ namespace epee
     }
 
     template<class t_request, class t_response, class t_transport>
-    bool invoke_http_bin(const boost::string_ref uri, const t_request& out_struct, t_response& result_struct, t_transport& transport, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref method = "POST")
+    bool invoke_http_bin(const std::string_view uri, const t_request& out_struct, t_response& result_struct, t_transport& transport, std::chrono::milliseconds timeout = 15s, const std::string_view method = "POST"sv)
     {
-      byte_slice req_param;
-      if(!serialization::store_t_to_binary(out_struct, req_param, 16 * 1024))
+      std::string req_param;
+      if(!serialization::store_t_to_binary(out_struct, req_param))
         return false;
 
       const http::http_response_info* pri = NULL;
-      if(!transport.invoke(uri, method, boost::string_ref{reinterpret_cast<const char*>(req_param.data()), req_param.size()}, timeout, std::addressof(pri)))
+      if(!transport.invoke(uri, method, req_param, timeout, std::addressof(pri)))
       {
         LOG_PRINT_L1("Failed to invoke http request to  " << uri);
         return false;
@@ -99,7 +98,7 @@ namespace epee
     }
 
     template<class t_request, class t_response, class t_transport>
-    bool invoke_http_json_rpc(const boost::string_ref uri, std::string method_name, const t_request& out_struct, t_response& result_struct, t_transport& transport, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST", const std::string& req_id = "0")
+    bool invoke_http_json_rpc(const std::string_view uri, std::string method_name, const t_request& out_struct, t_response& result_struct, t_transport& transport, std::chrono::milliseconds timeout = 15s, const std::string_view http_method = "POST"sv, const std::string& req_id = "0"s)
     {
       epee::json_rpc::request<t_request> req_t{};
       req_t.jsonrpc = "2.0";
@@ -121,7 +120,7 @@ namespace epee
     }
 
     template<class t_command, class t_transport>
-    bool invoke_http_json_rpc(const boost::string_ref uri, typename t_command::request& out_struct, typename t_command::response& result_struct, t_transport& transport, std::chrono::milliseconds timeout = std::chrono::seconds(15), const boost::string_ref http_method = "POST", const std::string& req_id = "0")
+    bool invoke_http_json_rpc(const std::string_view uri, typename t_command::request& out_struct, typename t_command::response& result_struct, t_transport& transport, std::chrono::milliseconds timeout = 15s, const std::string_view http_method = "POST"sv, const std::string_view req_id = "0"sv)
     {
       return invoke_http_json_rpc(uri, t_command::methodname(), out_struct, result_struct, transport, timeout, http_method, req_id);
     }

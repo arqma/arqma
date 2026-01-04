@@ -31,7 +31,6 @@
 
 #include "checkpoints.h"
 
-#include "common/dns_utils.h"
 #include "string_tools.h"
 #include "storages/portable_storage_template_helper.h" // epee json include
 #include "serialization/keyvalue_serialization.h"
@@ -40,13 +39,11 @@
 #include "cryptonote_core/service_node_rules.h"
 #include <functional>
 #include <vector>
-#include "syncobj.h"
 #include "blockchain_db/blockchain_db.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
+#include "common/arqma.h"
 
 using namespace epee;
-
-#include "common/arqma.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "checkpoints"
@@ -64,7 +61,8 @@ namespace cryptonote
     return result;
   }
 
-  height_to_hash const HARDCODED_MAINNET_CHECKPOINTS[] = {
+  height_to_hash const HARDCODED_MAINNET_CHECKPOINTS[] =
+  {
     {0,       "60077b4d5cd49a1278d448c58b6854993d127fcaedbdeab82acff7f7fd86e328"},
     {1731481, "94b47df7c0895399f85dff9f7a1d7c2e67f8809e2a2b5fb14bc9714a2bb1490d"},
     {1731482, "942d66af0c7fd6f366e35f18dbb1ca668693a4ad37a6058d61bc920550fe10b7"},
@@ -79,13 +77,17 @@ namespace cryptonote
     {1773388, "b53a8aa326bef07b7afccd31deb534e82e51fba08b0f2e7bd241e23bff644e32"},
     {1773392, "c859e9132646f5f41f0bf8569c8e42701b93446a06d85c672807735adc684a2c"},
     {1773396, "1a01e3ad21b6c5c2d20b367f055d73bf39743116241008601549a0bbd0b00d14"},
+    {1780836, "15e361852639e4b53deb5d1d77acf41650cd33d389db853e2b4ebd8f87c2eb9d"},
+    {1781040, "c93dbc218726f9afc4ebc6c67b9bedc80d52aedd9ab8ce7998015fbe34d5b4e1"},
+    {1784352, "59732f183678346c2506a1de4e11dc8eb097a17557a28ab1fbb0fae13fe1cf9a"},
+    {1831366, "d775b62de808b578d907d524dd8d38da641b6fe020d8c23cc6e3ebb828d591a3"},
   };
   //---------------------------------------------------------------------------
   crypto::hash get_newest_hardcoded_checkpoint(cryptonote::network_type nettype, uint64_t *height)
   {
     crypto::hash result = crypto::null_hash;
     *height = 0;
-    if(nettype != MAINNET)
+    if (nettype != MAINNET)
       return result;
 
     uint64_t last_index = arqma::array_count(HARDCODED_MAINNET_CHECKPOINTS) - 1;
@@ -169,7 +171,8 @@ namespace cryptonote
       result = false;
     }
 
-    if (batch_started) m_db->batch_stop();
+    if (batch_started)
+      m_db->batch_stop();
     return result;
   }
   //---------------------------------------------------------------------------
@@ -300,11 +303,14 @@ namespace cryptonote
     return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::init(network_type nettype, class BlockchainDB *db)
+  bool checkpoints::init(network_type nettype, struct BlockchainDB *db)
   {
     *this = {};
     m_db = db;
     m_nettype = nettype;
+
+    if (db->is_read_only())
+      return true;
 
     if(nettype == MAINNET)
     {

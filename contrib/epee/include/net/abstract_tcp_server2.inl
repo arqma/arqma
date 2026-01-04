@@ -30,21 +30,23 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#pragma once
+
+#include <boost/bind/bind.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/foreach.hpp>
 #include <boost/uuid/random_generator.hpp>
-#include <boost/chrono.hpp>
 #include <boost/asio/bind_executor.hpp>
-#include <boost/asio/deadline_timer.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/thread.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include "warnings.h"
 #include "string_tools_lexical.h"
 #include "misc_language.h"
 #include "net/abstract_tcp_server2.h"
 
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+#include <chrono>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -57,11 +59,11 @@
 #define DEFAULT_TIMEOUT_MS_LOCAL 1800000 // 30 minutes
 #define DEFAULT_TIMEOUT_MS_REMOTE 300000 // 5 minutes
 #define TIMEOUT_EXTRA_MS_PER_BYTE 0.2
-#define AGGRESSIVE_TIMEOUT_THRESHOLD 240  // sockets
+#define AGGRESSIVE_TIMEOUT_THRESHOLD 120  // sockets
 #define NEW_CONNECTION_TIMEOUT_LOCAL 1200000 // 2 minutes
 #define NEW_CONNECTION_TIMEOUT_REMOTE 10000 // 10 seconds
 
-
+using namespace std::literals;
 
 namespace epee
 {
@@ -77,1060 +79,800 @@ namespace net_utils
   /************************************************************************/
   /*                                                                      */
   /************************************************************************/
-  template<typename T>
-  unsigned int connection<T>::host_count(int delta)
+  template<class t_protocol_handler>
+  connection<t_protocol_handler>::connection( boost::asio::io_service& io_service,
+                                              std::shared_ptr<shared_state> state,
+		                                          t_connection_type connection_type,
+		                                          ssl_support_t ssl_support)
+	  : connection( boost::asio::ip::tcp::socket{io_service},
+	    std::move(state),
+	    connection_type,
+	    ssl_support)
+  {
+  }
+
+  template<class t_protocol_handler>
+  connection<t_protocol_handler>::connection( boost::asio::ip::tcp::socket&& sock,
+                                              std::shared_ptr<shared_state> state,
+		                                          t_connection_type connection_type,
+		                                          ssl_support_t ssl_support)
+		: connection_basic(std::move(sock), state, ssl_support),
+		  m_protocol_handler(this, check_and_get(state), context),
+		  buffer_ssl_init_fill(0),
+		  m_connection_type( connection_type ),
+		  m_throttle_speed_in("speed_in", "throttle_speed_in"),
+		  m_throttle_speed_out("speed_out", "throttle_speed_out"),
+		  m_timer(GET_IO_SERVICE(socket_)),
+		  m_local(false),
+		  m_ready_to_close(false)
+  {
+    MDEBUG("test, connection constructor set m_connection_type=" << m_connection_type);
+  }
+
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  connection<t_protocol_handler>::~connection() noexcept(false)
+  {
+    if(!m_was_shutdown)
+    {
+      shutdown();
+    }
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  std::shared_ptr<connection<t_protocol_handler> > connection<t_protocol_handler>::safe_shared_from_this()
+  {
+    try
+    {
+      return connection<t_protocol_handler>::shared_from_this();
+    }
+    catch (const std::bad_weak_ptr&)
+    {
+      // It happens when the connection is being deleted
+      return nullptr;
+    }
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::start(bool is_income, bool is_multithreaded)
+  {
+    TRY_ENTRY();
+
+    boost::system::error_code ec;
+    auto remote_ep = socket().remote_endpoint(ec);
+    CHECK_AND_NO_ASSERT_MES(!ec, false, "Failed to get remote endpoint: " << ec.message() << ':' << ec.value());
+    CHECK_AND_NO_ASSERT_MES(remote_ep.address().is_v4() || remote_ep.address().is_v6(), false, "only IPv4 and IPv6 supported here");
+
+    if (remote_ep.address().is_v4())
+    {
+      const unsigned long ip_ = boost::asio::detail::socket_ops::host_to_network_long(remote_ep.address().to_v4().to_uint());
+      return start(is_income, is_multithreaded, ipv4_network_address{uint32_t(ip_), remote_ep.port()});
+    }
+    else
+    {
+      const auto ip_ = remote_ep.address().to_v6();
+      return start(is_income, is_multithreaded, ipv6_network_address{ip_, remote_ep.port()});
+    }
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::start()", false);
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::start(bool is_income, bool is_multithreaded, network_address real_remote)
+  {
+    TRY_ENTRY();
+
+    // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
+    auto self = safe_shared_from_this();
+    if(!self)
+      return false;
+
+    m_is_multithreaded = is_multithreaded;
+    m_local = real_remote.is_loopback() || real_remote.is_local();
+
+    // create a random uuid, we don't need crypto strength here
+    const boost::uuids::uuid random_uuid = boost::uuids::random_generator()();
+
+    context = t_connection_context{};
+    bool ssl = m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled;
+    context.set_details(random_uuid, std::move(real_remote), is_income, ssl);
+
+    boost::system::error_code ec;
+    CHECK_AND_NO_ASSERT_MES(!ec, false, "Failed to get local endpoint: " << ec.message() << ':' << ec.value());
+
+    if(static_cast<shared_state&>(get_state()).pfilter && !static_cast<shared_state&>(get_state()).pfilter->is_remote_host_allowed(context.m_remote_address))
+    {
+      close();
+      return false;
+    }
+
+    m_host = context.m_remote_address.host_str();
+    try { host_count(m_host, 1); } catch(...) { /* ignore */ }
+
+    m_protocol_handler.after_init_connection();
+
+    reset_timer(std::chrono::milliseconds(m_local ? NEW_CONNECTION_TIMEOUT_LOCAL : NEW_CONNECTION_TIMEOUT_REMOTE), false);
+
+    // first read on the raw socket to detect SSL for the server
+    buffer_ssl_init_fill = 0;
+    if (is_income && m_ssl_support != epee::net_utils::ssl_support_t::e_ssl_support_disabled)
+      socket().async_receive(boost::asio::buffer(buffer_),
+        strand_.wrap(
+          boost::bind(&connection<t_protocol_handler>::handle_receive, self,
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred)));
+    else
+      async_read_some(boost::asio::buffer(buffer_),
+        strand_.wrap(
+          boost::bind(&connection<t_protocol_handler>::handle_read, self,
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred)));
+#if !defined(_WIN32) || !defined(__i686)
+	  // not supported before Windows7, too lazy for runtime check
+	  // Just exclude for 32bit windows builds
+	  //set ToS flag
+	  int tos = get_tos_flag();
+	  boost::asio::detail::socket_option::integer< IPPROTO_IP, IP_TOS >
+	  optionTos( tos );
+    socket().set_option( optionTos );
+	  //_dbg1("Set ToS flag to " << tos);
+#endif
+	  boost::asio::ip::tcp::no_delay noDelayOption(false);
+	  socket().set_option(noDelayOption);
+    return true;
+
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::start()", false);
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::request_callback()
+  {
+    TRY_ENTRY();
+    // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
+    auto self = safe_shared_from_this();
+    if(!self)
+      return false;
+
+    strand_.post(std::bind(&connection<t_protocol_handler>::call_back_starter, self), std::allocator<void>{});
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::request_callback()", false);
+    return true;
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  boost::asio::io_service& connection<t_protocol_handler>::get_io_service()
+  {
+    return GET_IO_SERVICE(socket());
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::add_ref()
+  {
+    TRY_ENTRY();
+
+    // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
+    auto self = safe_shared_from_this();
+    if(!self)
+      return false;
+    std::lock_guard lock{self->m_self_refs_lock};
+    if(m_was_shutdown)
+      return false;
+    ++m_reference_count;
+    m_self_ref = std::move(self);
+    return true;
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::add_ref()", false);
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::release()
+  {
+    TRY_ENTRY();
+    std::shared_ptr<connection<t_protocol_handler> >  back_connection_copy;
+    std::lock_guard lock{m_self_refs_lock};
+    CHECK_AND_ASSERT_MES(m_reference_count, false, "[sock " << socket().native_handle() << "] m_reference_count already at 0 at connection<t_protocol_handler>::release() call");
+    // is this the last reference?
+    if (--m_reference_count == 0) {
+        // move the held reference to a local variable, keeping the object alive until the function terminates
+        std::swap(back_connection_copy, m_self_ref);
+    }
+    return true;
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::release()", false);
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  void connection<t_protocol_handler>::call_back_starter()
+  {
+    TRY_ENTRY();
+    m_protocol_handler.handle_qued_callback();
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::call_back_starter()", void());
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  void connection<t_protocol_handler>::save_dbg_log()
+  {
+    std::string address, port;
+    boost::system::error_code e;
+
+    boost::asio::ip::tcp::endpoint endpoint = socket().remote_endpoint(e);
+    if (e)
+    {
+      address = "<not connected>";
+      port = "<not connected>";
+    }
+    else
+    {
+      address = endpoint.address().to_string();
+      port = boost::lexical_cast<std::string>(endpoint.port());
+    }
+    MDEBUG(" connection type " << to_string( m_connection_type ) << " "
+        << socket().local_endpoint().address().to_string() << ":" << socket().local_endpoint().port()
+        << " <--> " << context.m_remote_address.str() << " (via " << address << ":" << port << ")");
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  void connection<t_protocol_handler>::handle_read(const boost::system::error_code& e, std::size_t bytes_transferred)
+  {
+    TRY_ENTRY();
+
+    if (!e)
+    {
+      double current_speed_down;
+		  {
+			  std::lock_guard lock{m_throttle_speed_in_mutex};
+			  m_throttle_speed_in.handle_trafic_exact(bytes_transferred);
+			  current_speed_down = m_throttle_speed_in.get_current_speed();
+		  }
+      context.m_current_speed_down = current_speed_down;
+      context.m_max_speed_down = std::max(context.m_max_speed_down, current_speed_down);
+      {
+			  std::lock_guard lock{epee::net_utils::network_throttle_manager::network_throttle_manager::m_lock_get_global_throttle_in};
+			  epee::net_utils::network_throttle_manager::network_throttle_manager::get_global_throttle_in().handle_trafic_exact(bytes_transferred);
+		  }
+
+		  double delay=0; // will be calculated - how much we should sleep to obey speed limit etc
+
+		  if (speed_limit_is_enabled())
+		  {
+			  do // keep sleeping if we should sleep
+			  {
+				  {
+					  std::lock_guard lock{epee::net_utils::network_throttle_manager::m_lock_get_global_throttle_in};
+					  delay = epee::net_utils::network_throttle_manager::get_global_throttle_in().get_sleep_time_after_tick( bytes_transferred );
+				  }
+
+				  delay *= 0.5;
+				  long int ms = (long int)(delay * 100);
+				  if (ms > 0)
+				  {
+					  reset_timer(std::chrono::milliseconds(ms + 1), true);
+					  std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+				  }
+			  } while(delay > 0);
+		  } // any form of sleeping
+
+      logger_handle_net_read(bytes_transferred);
+      context.m_last_recv = std::chrono::steady_clock::now();
+      context.m_recv_cnt += bytes_transferred;
+      m_ready_to_close = false;
+      bool recv_res = m_protocol_handler.handle_recv(buffer_.data(), bytes_transferred);
+      if(!recv_res)
+      {
+        //some error in protocol, protocol handler ask to close connection
+        m_want_close_connection = true;
+        bool do_shutdown = false;
+        {
+          std::lock_guard lock{m_send_que_lock};
+          if(!m_send_que.size())
+            do_shutdown = true;
+        }
+        if(do_shutdown)
+          shutdown();
+      }
+      else
+      {
+        reset_timer(get_timeout_from_bytes_read(bytes_transferred), false);
+        async_read_some(boost::asio::buffer(buffer_),
+          strand_.wrap(
+            boost::bind(&connection<t_protocol_handler>::handle_read, connection<t_protocol_handler>::shared_from_this(),
+              boost::asio::placeholders::error,
+              boost::asio::placeholders::bytes_transferred)));
+      }
+    }
+    else
+    {
+      if(e.value() != 2)
+      {
+        shutdown();
+      }
+      else
+      {
+        bool do_shutdown = false;
+        {
+          std::lock_guard lock{m_send_que_lock};
+          if(!m_send_que.size())
+            do_shutdown = true;
+        }
+        if (m_ready_to_close || do_shutdown)
+          shutdown();
+      }
+      m_ready_to_close = true;
+    }
+    // If an error occurs then no new asynchronous operations are started. This
+    // means that all shared_ptr references to the connection object will
+    // disappear and the object will be destroyed automatically after this
+    // handler returns. The connection class's destructor closes the socket.
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::handle_read", void());
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  void connection<t_protocol_handler>::handle_receive(const boost::system::error_code& e, std::size_t bytes_transferred)
+  {
+    TRY_ENTRY();
+
+    if (e)
+    {
+      // offload the error case
+      handle_read(e, bytes_transferred);
+      return;
+    }
+
+    buffer_ssl_init_fill += bytes_transferred;
+    MTRACE("we now have " << buffer_ssl_init_fill << "/" << get_ssl_magic_size() << " bytes needed to detect SSL");
+    if (buffer_ssl_init_fill < get_ssl_magic_size())
+    {
+      socket().async_receive(boost::asio::buffer(buffer_.data() + buffer_ssl_init_fill, buffer_.size() - buffer_ssl_init_fill),
+        strand_.wrap(
+          boost::bind(&connection<t_protocol_handler>::handle_receive, connection<t_protocol_handler>::shared_from_this(),
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred)));
+      return;
+    }
+
+    // detect SSL
+    if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
+    {
+      if (is_ssl({buffer_.data(), buffer_ssl_init_fill}))
+      {
+        MDEBUG("That looks like SSL");
+        m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_enabled; // read/write to the SSL socket
+      }
+      else
+      {
+        MDEBUG("That does not look like SSL");
+        m_ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_disabled; // read/write to the raw socket
+      }
+    }
+
+    if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+    {
+      // Handshake
+      if (!handshake(boost::asio::ssl::stream_base::server, boost::asio::const_buffer(buffer_.data(), buffer_ssl_init_fill)))
+      {
+        MERROR("SSL handshake failed");
+        m_want_close_connection = true;
+        m_ready_to_close = true;
+        bool do_shutdown = false;
+        {
+          std::lock_guard lock{m_send_que_lock};
+          if(!m_send_que.size())
+            do_shutdown = true;
+        }
+        if(do_shutdown)
+          shutdown();
+        return;
+      }
+    }
+    else
+    {
+      handle_read(e, buffer_ssl_init_fill);
+      return;
+    }
+
+    async_read_some(boost::asio::buffer(buffer_),
+      strand_.wrap(
+        boost::bind(&connection<t_protocol_handler>::handle_read, connection<t_protocol_handler>::shared_from_this(),
+          boost::asio::placeholders::error,
+          boost::asio::placeholders::bytes_transferred)));
+
+    // If an error occurs then no new asynchronous operations are started. This
+    // means that all shared_ptr references to the connection object will
+    // disappear and the object will be destroyed automatically after this
+    // handler returns. The connection class's destructor closes the socket.
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::handle_receive", void());
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::call_run_once_service_io()
+  {
+    TRY_ENTRY();
+    if(!m_is_multithreaded)
+    {
+      //single thread model, we can wait in blocked call
+      size_t cnt = GET_IO_SERVICE(socket()).run_one();
+      if(!cnt)//service is going to quit
+        return false;
+    }
+    else
+    {
+      //multi thread model, we can't(!) wait in blocked call
+      //so we make non blocking call and releasing CPU by calling sleep(0); 
+      //if no handlers were called
+      //TODO: Maybe we need to have have critical section + event + callback to upper protocol to
+      //ask it inside(!) critical region if we still able to go in event wait...
+      size_t cnt = GET_IO_SERVICE(socket()).poll_one();
+      if(!cnt)
+        std::this_thread::sleep_for(1ms);
+    }
+
+    return true;
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::call_run_once_service_io", false);
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::do_send(shared_sv message)
+  {
+    TRY_ENTRY();
+
+    // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
+    auto self = safe_shared_from_this();
+    if (!self) return false;
+    if (m_was_shutdown) return false;
+		// TODO avoid copy
+
+		const double factor = 128; // TODO config
+		typedef long long signed int t_safe; // my t_size to avoid any overunderflow in arithmetic
+		const t_safe chunksize_good = (t_safe)( 1024 * std::max(1.0,factor) );
+    const t_safe chunksize_max = chunksize_good * 2;
+		const bool allow_split = (m_connection_type == e_connection_type_RPC) ? false : true; // do not split RPC data
+
+    CHECK_AND_ASSERT_MES(! (chunksize_max<0), false, "Negative chunksize_max" ); // make sure it is unsigned before removin sign with cast:
+    long long unsigned int chunksize_max_unsigned = static_cast<long long unsigned int>( chunksize_max ) ;
+
+    if (allow_split && (message.size() > chunksize_max_unsigned))
+    {
+			{ // LOCK: chunking
+    		std::lock_guard send_guard{m_chunking_lock};
+
+				MDEBUG("do_send() will SPLIT into small chunks, from packet=" << message.size() << " B for ptr=" << (void*)message.ptr.get());
+
+				while (!message.view.empty())
+				{
+				  bool ok = do_send_chunk(message.extract_prefix(chunksize_good));
+
+				  if (!ok)
+				  {
+				    MDEBUG("do_send() DONE ***FAILED***");
+				    MDEBUG("do_send() SEND was aborted in middle of big package - this is probably harmless (e.g. peer closed connection)");
+				    return false;
+				  }
+				}
+
+				MDEBUG("do_send() DONE SPLIT send");
+        MDEBUG("do_send() m_connection_type = " << m_connection_type);
+
+				return true; // done - e.g. queued - all the chunks of current do_send call
+			} // LOCK: chunking
+		} // a big block (to be chunked) - all chunks
+		else { // small block
+			return do_send_chunk(std::move(message)); // just send as 1 big chunk
+		}
+
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::do_send", false);
+	} // do_send()
+
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::do_send_chunk(shared_sv chunk)
+  {
+    TRY_ENTRY();
+    // Use safe_shared_from_this, because of this is public method and it can be called on the object being deleted
+    auto self = safe_shared_from_this();
+    if(!self)
+      return false;
+    if(m_was_shutdown)
+      return false;
+    double current_speed_up;
+    {
+		  std::lock_guard lock{m_throttle_speed_out_mutex};
+		  m_throttle_speed_out.handle_trafic_exact(chunk.size());
+		  current_speed_up = m_throttle_speed_out.get_current_speed();
+	  }
+    context.m_current_speed_up = current_speed_up;
+    context.m_max_speed_up = std::max(context.m_max_speed_up, current_speed_up);
+
+    context.m_last_send = std::chrono::steady_clock::now();
+    context.m_send_cnt += chunk.size();
+    //some data should be wrote to stream
+    //request complete
+
+    // No sleeping here; sleeping is done once and for all in "handle_write"
+
+    std::unique_lock queue_lock{m_send_que_lock};
+
+    long int retry=0;
+    const long int retry_limit = 5*4;
+    while (m_send_que.size() > ABSTRACT_SERVER_SEND_QUE_MAX_COUNT)
+    {
+        retry++;
+
+        using engine           = std::mt19937;
+        static bool initialized = false;
+        static engine rng;
+        if (!initialized)
+        {
+          initialized = true;
+          std::random_device dev;
+          std::seed_seq::result_type rand[engine::state_size]{}; // Use complete bit space
+          std::generate_n(rand, engine::state_size, std::ref(dev));
+          std::seed_seq seed(rand, rand + engine::state_size);
+          rng.seed(seed);
+        }
+
+        int ms = std::uniform_int_distribution<>{250, 299}(rng);
+        MDEBUG("Sleeping because QUEUE is FULL, in " << __FUNCTION__ << " for " << ms << " ms before packet_size="<<chunk.size()); // XXX debug sleep
+        queue_lock.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+        queue_lock.lock();
+
+        if (retry > retry_limit) {
+            MWARNING("send que size is more than ABSTRACT_SERVER_SEND_QUE_MAX_COUNT(" << ABSTRACT_SERVER_SEND_QUE_MAX_COUNT << "), shutting down connection");
+            shutdown();
+            return false;
+        }
+    }
+
+    m_send_que.push_back(std::move(chunk));
+
+    if(m_send_que.size() > 1)
+    { // active operation should be in progress, nothing to do, just wait last operation callback
+        auto size_now = m_send_que.back().size();
+        MDEBUG("do_send_chunk() NOW just queues: packet="<<size_now<<" B, is added to queue-size="<<m_send_que.size());
+        //do_send_handler_delayed( ptr , size_now ); // (((H))) // empty function
+    }
+    else
+    { // no active operation
+
+        if(m_send_que.size()!=1)
+        {
+            return false;
+        }
+
+        auto size_now = m_send_que.front().size();
+        MDEBUG("do_send_chunk() NOW SENSD: packet="<<size_now<<" B");
+        if (speed_limit_is_enabled())
+			  do_send_handler_write( m_send_que.back().data(), m_send_que.back().size() ); // (((H)))
+
+        CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), false, "Unexpected queue size");
+        reset_timer(get_default_timeout(), false);
+        async_write(boost::asio::buffer(m_send_que.front().data(), size_now),
+          strand_.wrap(
+            std::bind(&connection<t_protocol_handler>::handle_write, self, std::placeholders::_1, std::placeholders::_2)
+          )
+        );
+    }
+
+    return true;
+
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::do_send_chunk", false);
+  } // do_send_chunk
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  std::chrono::milliseconds connection<t_protocol_handler>::get_default_timeout()
+  {
+    unsigned count;
+    try { count = host_count(m_host); } catch (...) { count = 0; }
+    const unsigned shift = get_state().sock_count > AGGRESSIVE_TIMEOUT_THRESHOLD ? std::min(std::max(count, 1u) - 1, 8u) : 0;
+    if (m_local)
+      return std::chrono::milliseconds{DEFAULT_TIMEOUT_MS_LOCAL >> shift};
+    else
+      return std::chrono::milliseconds{DEFAULT_TIMEOUT_MS_REMOTE >> shift};
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  std::chrono::milliseconds connection<t_protocol_handler>::get_timeout_from_bytes_read(size_t bytes)
+  {
+    std::chrono::milliseconds ms{(unsigned)(bytes * TIMEOUT_EXTRA_MS_PER_BYTE)};
+    if (auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(m_timer.expiry() - std::chrono::steady_clock::now());
+        remaining > 0ms)
+      ms += remaining;
+    if (ms > get_default_timeout())
+      ms = get_default_timeout();
+    return ms;
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  unsigned int connection<t_protocol_handler>::host_count(const std::string &host, int delta)
   {
     static std::mutex hosts_mutex;
-    std::lock_guard<std::mutex> guard(hosts_mutex);
+    std::lock_guard lock{hosts_mutex};
     static std::map<std::string, unsigned int> hosts;
-    unsigned int &val = hosts[m_host];
+    unsigned int &val = hosts[host];
     if (delta > 0)
-      MTRACE("New connection from host " << m_host << ": " << val);
+      MTRACE("New connection from host " << host << ": " << val);
     else if (delta < 0)
-      MTRACE("Closed connection from host " << m_host << ": " << val);
+      MTRACE("Closed connection from host " << host << ": " << val);
     CHECK_AND_ASSERT_THROW_MES(delta >= 0 || val >= (unsigned)-delta, "Count would go negative");
     CHECK_AND_ASSERT_THROW_MES(delta <= 0 || val <= std::numeric_limits<unsigned int>::max() - (unsigned)delta, "Count would wrap");
     val += delta;
     return val;
   }
-
-  template<typename T>
-  typename connection<T>::duration_t connection<T>::get_default_timeout()
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  void connection<t_protocol_handler>::reset_timer(std::chrono::milliseconds ms, bool add)
   {
-    unsigned count{};
-    try { count = host_count(); } catch (...) {}
-    const unsigned shift = (
-      connection_basic::get_state().sock_count > AGGRESSIVE_TIMEOUT_THRESHOLD ?
-      std::min(std::max(count, 1u) - 1, 8u) :
-      0
-    );
-    return (
-      m_local ?
-      std::chrono::milliseconds(DEFAULT_TIMEOUT_MS_LOCAL >> shift) :
-      std::chrono::milliseconds(DEFAULT_TIMEOUT_MS_REMOTE >> shift)
-    );
-  }
-
-  template<typename T>
-  typename connection<T>::duration_t connection<T>::get_timeout_from_bytes_read(size_t bytes) const
-  {
-    return std::chrono::duration_cast<connection<T>::duration_t>(
-      std::chrono::duration<double, std::chrono::milliseconds::period>(
-        bytes * TIMEOUT_EXTRA_MS_PER_BYTE
-      )
-    );
-  }
-
-  template<typename T>
-  void connection<T>::state_status_check()
-  {
-    switch (m_state.status)
+    if (ms < 0s)
     {
-      case status_t::RUNNING:
-        interrupt();
-        break;
-      case status_t::INTERRUPTED:
-        on_interrupted();
-        break;
-      case status_t::TERMINATING:
-        on_terminating();
-        break;
-      default:
-        break;
-    }
-  }
-
-  template<typename T>
-  void connection<T>::start_timer(duration_t duration, bool add)
-  {
-    if (m_state.timers.general.wait_expire) {
-      m_state.timers.general.cancel_expire = true;
-      m_state.timers.general.reset_expire = true;
-      m_timers.general.expires_after(
-        std::min(
-          duration + (add ? (m_timers.general.expiry() - std::chrono::steady_clock::now()) : duration_t{}),
-          get_default_timeout()
-        )
-      );
-    }
-    else {
-      m_timers.general.expires_after(
-        std::min(
-          duration + (add ? (m_timers.general.expiry() - std::chrono::steady_clock::now()) : duration_t{}),
-          get_default_timeout()
-        )
-      );
-      async_wait_timer();
-    }
-  }
-
-  template<typename T>
-  void connection<T>::async_wait_timer()
-  {
-    if (m_state.timers.general.wait_expire)
       return;
-    m_state.timers.general.wait_expire = true;
-    auto self = connection<T>::shared_from_this();
-    m_timers.general.async_wait([this, self](const ec_t & ec){
-      std::lock_guard<std::mutex> guard(m_state.lock);
-      m_state.timers.general.wait_expire = false;
-      if (m_state.timers.general.cancel_expire) {
-        m_state.timers.general.cancel_expire = false;
-        if (m_state.timers.general.reset_expire) {
-          m_state.timers.general.reset_expire = false;
-          async_wait_timer();
-        }
-        else if (m_state.status == status_t::INTERRUPTED)
-          on_interrupted();
-        else if (m_state.status == status_t::TERMINATING)
-          on_terminating();
-      }
-      else if (m_state.status == status_t::RUNNING)
-        interrupt();
-      else if (m_state.status == status_t::INTERRUPTED)
-        terminate();
+    }
+    auto self = safe_shared_from_this();
+    if(!self)
+    {
+      return;
+    }
+    if (m_was_shutdown)
+    {
+      return;
+    }
+    if (add)
+    {
+      if (const auto cur = std::chrono::duration_cast<std::chrono::milliseconds>(m_timer.expiry() - std::chrono::steady_clock::now());
+          cur > 0s)
+        ms += cur;
+    }
+    m_timer.expires_after(ms);
+    m_timer.async_wait([=](const boost::system::error_code& ec)
+    {
+      if(ec == boost::asio::error::operation_aborted)
+        return;
+      self->close();
     });
   }
-
-  template<typename T>
-  void connection<T>::cancel_timer()
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::shutdown()
   {
-    if (!m_state.timers.general.wait_expire)
-      return;
-    m_state.timers.general.cancel_expire = true;
-    m_state.timers.general.reset_expire = false;
-    m_timers.general.cancel();
-  }
-
-  template<typename T>
-  void connection<T>::start_handshake()
-  {
-    if (m_state.socket.wait_handshake)
-      return;
-    static_assert(
-      epee::net_utils::get_ssl_magic_size() <= sizeof(m_state.data.read.buffer),
-      ""
-    );
-    auto self = connection<T>::shared_from_this();
-    if (!m_state.ssl.forced && !m_state.ssl.detected) {
-      m_state.socket.wait_read = true;
-      boost::asio::async_read(
-        connection_basic::socket_.next_layer(),
-        boost::asio::buffer(
-          m_state.data.read.buffer.data(),
-          m_state.data.read.buffer.size()
-        ),
-        boost::asio::transfer_exactly(epee::net_utils::get_ssl_magic_size()),
-        boost::asio::bind_executor(
-          m_strand,
-          [this, self](const ec_t &ec, size_t bytes_transferred){
-            std::lock_guard<std::mutex> guard(m_state.lock);
-            m_state.socket.wait_read = false;
-            if (m_state.socket.cancel_read) {
-              m_state.socket.cancel_read = false;
-              state_status_check();
-            }
-            else if (ec.value()) {
-              terminate();
-            }
-            else if (
-              !epee::net_utils::is_ssl(
-                static_cast<const unsigned char *>(
-                  m_state.data.read.buffer.data()
-                ),
-                bytes_transferred
-              )
-            ) {
-              m_state.ssl.enabled = false;
-              m_state.socket.handle_read = true;
-              boost::asio::post(
-                connection_basic::strand_,
-                [this, self, bytes_transferred]{
-                  bool success = m_handler.handle_recv(
-                    reinterpret_cast<char *>(m_state.data.read.buffer.data()),
-                    bytes_transferred
-                  );
-                  std::lock_guard<std::mutex> guard(m_state.lock);
-                  m_state.socket.handle_read = false;
-                  if (m_state.status == status_t::INTERRUPTED)
-                    on_interrupted();
-                  else if (m_state.status == status_t::TERMINATING)
-                    on_terminating();
-                  else if (!success)
-                    interrupt();
-                  else {
-                    start_read();
-                  }
-                }
-              );
-            }
-            else {
-              m_state.ssl.detected = true;
-              start_handshake();
-            }
-          }
-        )
-      );
-      return;
+    std::unique_lock lock{m_shutdown_lock};
+    if (m_was_shutdown)
+      return true;
+    m_was_shutdown = true;
+    // Initiate graceful connection closure.
+    m_timer.cancel();
+    boost::system::error_code ignored_ec;
+    if (m_ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled)
+    {
+      const shared_state &state = static_cast<const shared_state&>(get_state());
+      if (!state.stop_signal_sent)
+        socket_.shutdown(ignored_ec);
     }
-
-    m_state.socket.wait_handshake = true;
-    auto on_handshake = [this, self](const ec_t &ec, size_t bytes_transferred){
-      std::lock_guard<std::mutex> guard(m_state.lock);
-      m_state.socket.wait_handshake = false;
-      if (m_state.socket.cancel_handshake) {
-        m_state.socket.cancel_handshake = false;
-        state_status_check();
-      }
-      else if (ec.value()) {
-        ec_t ec;
-        connection_basic::socket_.next_layer().shutdown(
-          socket_t::shutdown_both,
-          ec
-        );
-        connection_basic::socket_.next_layer().close(ec);
-        m_state.socket.connected = false;
-        interrupt();
-      }
-      else {
-        m_state.ssl.handshaked = true;
-        start_write();
-        start_read();
-      }
-    };
-    const auto handshake = handshake_t::server;
-    static_cast<shared_state&>(
-      connection_basic::get_state()
-    ).ssl_options().configure(connection_basic::socket_, handshake);
-    boost::asio::post(
-      m_strand,
-      [this, self, on_handshake]{
-        connection_basic::socket_.async_handshake(
-          handshake,
-          boost::asio::buffer(
-            m_state.data.read.buffer.data(),
-            m_state.ssl.forced ? 0 :
-            epee::net_utils::get_ssl_magic_size()
-          ),
-          boost::asio::bind_executor(m_strand, on_handshake)
-        );
-      }
-    );
-  }
-
-  template<typename T>
-  void connection<T>::start_read()
-  {
-    if (m_state.timers.throttle.in.wait_expire || m_state.socket.wait_read ||
-      m_state.socket.handle_read
-    ) {
-      return;
+    socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+    if (!m_host.empty())
+    {
+      try { host_count(m_host, -1); } catch (...) { /* ignore */ }
+      m_host = "";
     }
-    auto self = connection<T>::shared_from_this();
-    if (m_connection_type != e_connection_type_RPC) {
-      auto calc_duration = []{
-        CRITICAL_REGION_LOCAL(
-          network_throttle_manager_t::m_lock_get_global_throttle_in
-        );
-        return std::chrono::duration_cast<connection<T>::duration_t>(
-            std::chrono::duration<double, std::chrono::seconds::period>(
-              std::min(
-                network_throttle_manager_t::get_global_throttle_in(
-                ).get_sleep_time_after_tick(1),
-                1.0
-              )
-            )
-        );
-      };
-      const auto duration = calc_duration();
-      if (duration > duration_t{}) {
-        m_timers.throttle.in.expires_after(duration);
-        m_state.timers.throttle.in.wait_expire = true;
-        m_timers.throttle.in.async_wait([this, self](const ec_t &ec){
-          std::lock_guard<std::mutex> guard(m_state.lock);
-          m_state.timers.throttle.in.wait_expire = false;
-          if (m_state.timers.throttle.in.cancel_expire) {
-            m_state.timers.throttle.in.cancel_expire = false;
-            state_status_check();
-          }
-          else if (ec.value())
-            interrupt();
-          else
-            start_read();
-        });
-        return;
-      }
-    }
-    m_state.socket.wait_read = true;
-    auto on_read = [this, self](const ec_t &ec, size_t bytes_transferred){
-      std::lock_guard<std::mutex> guard(m_state.lock);
-      m_state.socket.wait_read = false;
-      if (m_state.socket.cancel_read) {
-        m_state.socket.cancel_read = false;
-        state_status_check();
-      }
-      else if (ec.value())
-        terminate();
-      else {
-        {
-          m_state.stat.in.throttle.handle_trafic_exact(bytes_transferred);
-          const auto speed = m_state.stat.in.throttle.get_current_speed();
-          m_conn_context.m_current_speed_down = speed;
-          m_conn_context.m_max_speed_down = std::max(
-            m_conn_context.m_max_speed_down,
-            speed
-          );
-          {
-            CRITICAL_REGION_LOCAL(
-              network_throttle_manager_t::m_lock_get_global_throttle_in
-            );
-            network_throttle_manager_t::get_global_throttle_in(
-            ).handle_trafic_exact(bytes_transferred);
-          }
-          connection_basic::logger_handle_net_read(bytes_transferred);
-          m_conn_context.m_last_recv = time(NULL);
-          m_conn_context.m_recv_cnt += bytes_transferred;
-          start_timer(get_timeout_from_bytes_read(bytes_transferred), true);
-        }
-
-        // Post handle_recv to a separate `strand_`, distinct from `m_strand`
-        // which is listening for reads/writes. This avoids a circular dep.
-        // handle_recv can queue many writes, and `m_strand` will process those
-        // writes until the connection terminates without deadlocking waiting
-        // for handle_recv.
-        m_state.socket.handle_read = true;
-        boost::asio::post(
-          connection_basic::strand_,
-          [this, self, bytes_transferred]{
-            bool success = m_handler.handle_recv(
-              reinterpret_cast<char *>(m_state.data.read.buffer.data()),
-              bytes_transferred
-            );
-            std::lock_guard<std::mutex> guard(m_state.lock);
-            m_state.socket.handle_read = false;
-            if (m_state.status == status_t::INTERRUPTED)
-              on_interrupted();
-            else if (m_state.status == status_t::TERMINATING)
-              on_terminating();
-            else if (!success)
-              interrupt();
-            else {
-              start_read();
-            }
-          }
-        );
-      }
-    };
-    if (!m_state.ssl.enabled)
-      connection_basic::socket_.next_layer().async_read_some(
-        boost::asio::buffer(
-          m_state.data.read.buffer.data(),
-          m_state.data.read.buffer.size()
-        ),
-        boost::asio::bind_executor(m_strand, on_read)
-      );
-    else
-      boost::asio::post(
-        m_strand,
-        [this, self, on_read]{
-          connection_basic::socket_.async_read_some(
-            boost::asio::buffer(
-              m_state.data.read.buffer.data(),
-              m_state.data.read.buffer.size()
-            ),
-            boost::asio::bind_executor(m_strand, on_read)
-          );
-        }
-      );
-  }
-
-  template<typename T>
-  void connection<T>::start_write()
-  {
-    if (m_state.timers.throttle.out.wait_expire || m_state.socket.wait_write ||
-      m_state.data.write.queue.empty() ||
-      (m_state.ssl.enabled && !m_state.ssl.handshaked)
-    )
-      return;
-    auto self = connection<T>::shared_from_this();
-    if (m_connection_type != e_connection_type_RPC) {
-      auto calc_duration = [this]{
-        CRITICAL_REGION_LOCAL(
-          network_throttle_manager_t::m_lock_get_global_throttle_out
-        );
-        return std::chrono::duration_cast<connection<T>::duration_t>(
-            std::chrono::duration<double, std::chrono::seconds::period>(
-              std::min(
-                network_throttle_manager_t::get_global_throttle_out(
-                ).get_sleep_time_after_tick(
-                  m_state.data.write.queue.back().size()
-                ),
-                1.0
-              )
-            )
-        );
-      };
-      const auto duration = calc_duration();
-      if (duration > duration_t{}) {
-        m_timers.throttle.out.expires_after(duration);
-        m_state.timers.throttle.out.wait_expire = true;
-        m_timers.throttle.out.async_wait([this, self](const ec_t &ec){
-          std::lock_guard<std::mutex> guard(m_state.lock);
-          m_state.timers.throttle.out.wait_expire = false;
-          if (m_state.timers.throttle.out.cancel_expire) {
-            m_state.timers.throttle.out.cancel_expire = false;
-            state_status_check();
-          }
-          else if (ec.value())
-            interrupt();
-          else
-            start_write();
-        });
-      }
-    }
-
-    m_state.socket.wait_write = true;
-    auto on_write = [this, self](const ec_t &ec, size_t bytes_transferred){
-      std::lock_guard<std::mutex> guard(m_state.lock);
-      m_state.socket.wait_write = false;
-      if (m_state.socket.cancel_write) {
-        m_state.socket.cancel_write = false;
-        m_state.data.write.queue.clear();
-        state_status_check();
-      }
-      else if (ec.value()) {
-        m_state.data.write.queue.clear();
-        interrupt();
-      }
-      else {
-        {
-          m_state.stat.out.throttle.handle_trafic_exact(bytes_transferred);
-          const auto speed = m_state.stat.out.throttle.get_current_speed();
-          m_conn_context.m_current_speed_up = speed;
-          m_conn_context.m_max_speed_down = std::max(
-            m_conn_context.m_max_speed_down,
-            speed
-          );
-          {
-            CRITICAL_REGION_LOCAL(
-              network_throttle_manager_t::m_lock_get_global_throttle_out
-            );
-            network_throttle_manager_t::get_global_throttle_out(
-            ).handle_trafic_exact(bytes_transferred);
-          }
-          connection_basic::logger_handle_net_write(bytes_transferred);
-          m_conn_context.m_last_send = time(NULL);
-          m_conn_context.m_send_cnt += bytes_transferred;
-
-          start_timer(get_default_timeout(), true);
-        }
-        assert(bytes_transferred == m_state.data.write.queue.back().size());
-        m_state.data.write.queue.pop_back();
-        m_state.condition.notify_all();
-        start_write();
-      }
-    };
-    if (!m_state.ssl.enabled)
-      boost::asio::async_write(
-        connection_basic::socket_.next_layer(),
-        boost::asio::buffer(
-          m_state.data.write.queue.back().data(),
-          m_state.data.write.queue.back().size()
-        ),
-        boost::asio::bind_executor(m_strand, on_write)
-      );
-    else
-      boost::asio::post(
-        m_strand,
-        [this, self, on_write]{
-          boost::asio::async_write(
-            connection_basic::socket_,
-            boost::asio::buffer(
-              m_state.data.write.queue.back().data(),
-              m_state.data.write.queue.back().size()
-            ),
-            boost::asio::bind_executor(m_strand, on_write)
-          );
-        }
-      );
-  }
-
-  template<typename T>
-  void connection<T>::start_shutdown()
-  {
-    if (m_state.socket.wait_shutdown)
-      return;
-    auto self = connection<T>::shared_from_this();
-    m_state.socket.wait_shutdown = true;
-    auto on_shutdown = [this, self](const ec_t &ec){
-      std::lock_guard<std::mutex> guard(m_state.lock);
-      m_state.socket.wait_shutdown = false;
-      if (m_state.socket.cancel_shutdown) {
-        m_state.socket.cancel_shutdown = false;
-        switch (m_state.status)
-        {
-          case status_t::RUNNING:
-            interrupt();
-            break;
-          case status_t::INTERRUPTED:
-            terminate();
-            break;
-          case status_t::TERMINATING:
-            on_terminating();
-            break;
-          default:
-            break;
-        }
-      }
-      else {
-        terminate();
-      }
-    };
-    boost::asio::post(
-      m_strand,
-      [this, self, on_shutdown]{
-        connection_basic::socket_.async_shutdown(
-          boost::asio::bind_executor(m_strand, on_shutdown)
-        );
-      }
-    );
-    start_timer(get_default_timeout());
-  }
-
-  template<typename T>
-  void connection<T>::cancel_socket()
-  {
-    bool wait_socket = false;
-    if (m_state.socket.wait_handshake)
-      wait_socket = m_state.socket.cancel_handshake = true;
-    if (m_state.timers.throttle.in.wait_expire) {
-      m_state.timers.throttle.in.cancel_expire = true;
-      m_timers.throttle.in.cancel();
-    }
-    if (m_state.socket.wait_read)
-      wait_socket = m_state.socket.cancel_read = true;
-    if (m_state.timers.throttle.out.wait_expire) {
-      m_state.timers.throttle.out.cancel_expire = true;
-      m_timers.throttle.out.cancel();
-    }
-    if (m_state.socket.wait_write)
-      wait_socket = m_state.socket.cancel_write = true;
-    if (m_state.socket.wait_shutdown)
-      wait_socket = m_state.socket.cancel_shutdown = true;
-    if (wait_socket) {
-      ec_t ec;
-      connection_basic::socket_.next_layer().cancel(ec);
-    }
-  }
-
-  template<typename T>
-  void connection<T>::cancel_handler()
-  {
-    if (m_state.protocol.released || m_state.protocol.wait_release)
-      return;
-    m_state.protocol.wait_release = true;
-    m_state.lock.unlock();
-    m_handler.release_protocol();
-    m_state.lock.lock();
-    m_state.protocol.wait_release = false;
-    m_state.protocol.released = true;
-    if (m_state.status == status_t::INTERRUPTED)
-      on_interrupted();
-    else if (m_state.status == status_t::TERMINATING)
-      on_terminating();
-  }
-
-  template<typename T>
-  void connection<T>::interrupt()
-  {
-    if (m_state.status != status_t::RUNNING)
-      return;
-    m_state.status = status_t::INTERRUPTED;
-    cancel_timer();
-    cancel_socket();
-    on_interrupted();
-    m_state.condition.notify_all();
-    cancel_handler();
-  }
-
-  template<typename T>
-  void connection<T>::on_interrupted()
-  {
-    assert(m_state.status == status_t::INTERRUPTED);
-    if (m_state.timers.general.wait_expire)
-      return;
-    if (m_state.socket.wait_handshake)
-      return;
-    if (m_state.timers.throttle.in.wait_expire)
-      return;
-    if (m_state.socket.wait_read)
-      return;
-    if (m_state.socket.handle_read)
-      return;
-    if (m_state.timers.throttle.out.wait_expire)
-      return;
-    if (m_state.socket.wait_write)
-      return;
-    if (m_state.socket.wait_shutdown)
-      return;
-    if (m_state.protocol.wait_init)
-      return;
-    if (m_state.protocol.wait_callback)
-      return;
-    if (m_state.protocol.wait_release)
-      return;
-    if (m_state.socket.connected) {
-      if (!m_state.ssl.enabled) {
-        ec_t ec;
-        connection_basic::socket_.next_layer().shutdown(
-          socket_t::shutdown_both,
-          ec
-        );
-        connection_basic::socket_.next_layer().close(ec);
-        m_state.socket.connected = false;
-        m_state.status = status_t::WASTED;
-      }
-      else
-        start_shutdown();
-    }
-    else
-      m_state.status = status_t::WASTED;
-  }
-
-  template<typename T>
-  void connection<T>::terminate()
-  {
-    if (m_state.status != status_t::RUNNING &&
-      m_state.status != status_t::INTERRUPTED
-    )
-      return;
-    m_state.status = status_t::TERMINATING;
-    cancel_timer();
-    cancel_socket();
-    on_terminating();
-    m_state.condition.notify_all();
-    cancel_handler();
-  }
-
-  template<typename T>
-  void connection<T>::on_terminating()
-  {
-    assert(m_state.status == status_t::TERMINATING);
-    if (m_state.timers.general.wait_expire)
-      return;
-    if (m_state.socket.wait_handshake)
-      return;
-    if (m_state.timers.throttle.in.wait_expire)
-      return;
-    if (m_state.socket.wait_read)
-      return;
-    if (m_state.socket.handle_read)
-      return;
-    if (m_state.timers.throttle.out.wait_expire)
-      return;
-    if (m_state.socket.wait_write)
-      return;
-    if (m_state.socket.wait_shutdown)
-      return;
-    if (m_state.protocol.wait_init)
-      return;
-    if (m_state.protocol.wait_callback)
-      return;
-    if (m_state.protocol.wait_release)
-      return;
-    if (m_state.socket.connected) {
-      ec_t ec;
-      connection_basic::socket_.next_layer().shutdown(
-        socket_t::shutdown_both,
-        ec
-      );
-      connection_basic::socket_.next_layer().close(ec);
-      m_state.socket.connected = false;
-    }
-    m_state.status = status_t::WASTED;
-  }
-
-  template<typename T>
-  bool connection<T>::send(epee::byte_slice message)
-  {
-    std::lock_guard<std::mutex> guard(m_state.lock);
-    if (m_state.status != status_t::RUNNING || m_state.socket.wait_handshake)
-      return false;
-    auto wait_consume = [this] {
-      auto random_delay = []{
-        using engine = std::mt19937;
-        std::random_device dev;
-        std::seed_seq::result_type rand[
-          engine::state_size  // Use complete bit space
-        ]{};
-        std::generate_n(rand, engine::state_size, std::ref(dev));
-        std::seed_seq seed(rand, rand + engine::state_size);
-        engine rng(seed);
-        return std::chrono::milliseconds(
-          std::uniform_int_distribution<>(5000, 6000)(rng)
-        );
-      };
-      if (m_state.data.write.queue.size() <= ABSTRACT_SERVER_SEND_QUE_MAX_COUNT)
-        return true;
-      m_state.data.write.wait_consume = true;
-      bool success = m_state.condition.wait_for(
-        m_state.lock,
-        random_delay(),
-        [this]{
-          return (
-            m_state.status != status_t::RUNNING ||
-            m_state.data.write.queue.size() <=
-              ABSTRACT_SERVER_SEND_QUE_MAX_COUNT
-          );
-        }
-      );
-      m_state.data.write.wait_consume = false;
-      if (!success) {
-        terminate();
-        return false;
-      }
-      else
-        return m_state.status == status_t::RUNNING;
-    };
-    auto wait_sender = [this] {
-      m_state.condition.wait(
-        m_state.lock,
-        [this] {
-          return (
-            m_state.status != status_t::RUNNING ||
-            !m_state.data.write.wait_consume
-          );
-        }
-      );
-      return m_state.status == status_t::RUNNING;
-    };
-    if (!wait_sender())
-      return false;
-    constexpr size_t CHUNK_SIZE = 32 * 1024;
-    if (m_connection_type == e_connection_type_RPC ||
-      message.size() <= 2 * CHUNK_SIZE
-    ) {
-      if (!wait_consume())
-        return false;
-      m_state.data.write.queue.emplace_front(std::move(message));
-      start_write();
-    }
-    else {
-      while (!message.empty()) {
-        if (!wait_consume())
-          return false;
-        m_state.data.write.queue.emplace_front(
-          message.take_slice(CHUNK_SIZE)
-        );
-        start_write();
-      }
-    }
-    m_state.condition.notify_all();
+    lock.unlock();
+    m_protocol_handler.release_protocol();
     return true;
   }
-
-  template<typename T>
-  bool connection<T>::start_internal(
-    bool is_income,
-    bool is_multithreaded,
-    boost::optional<network_address> real_remote
-  )
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::close()
   {
-    std::unique_lock<std::mutex> guard(m_state.lock);
-    if (m_state.status != status_t::TERMINATED)
+    TRY_ENTRY();
+    auto self = safe_shared_from_this();
+    if(!self)
       return false;
-    if (!real_remote) {
-      ec_t ec;
-      auto endpoint = connection_basic::socket_.next_layer().remote_endpoint(
-        ec
-      );
-      if (ec.value())
-        return false;
-      real_remote = (
-        endpoint.address().is_v6() ?
-        network_address{
-          ipv6_network_address{endpoint.address().to_v6(), endpoint.port()}
-        } :
-        network_address{
-          ipv4_network_address{
-            uint32_t{
-              boost::asio::detail::socket_ops::host_to_network_long(
-                endpoint.address().to_v4().to_uint()
-              )
-            },
-            endpoint.port()
-          }
-        }
-      );
+    m_timer.cancel();
+    size_t send_que_size = 0;
+    {
+      std::lock_guard lock{m_send_que_lock};
+      send_que_size = m_send_que.size();
     }
-    auto *filter = static_cast<shared_state&>(
-      connection_basic::get_state()
-    ).pfilter;
-    if (filter && !filter->is_remote_host_allowed(*real_remote))
-      return false;
-    ec_t ec;
-    #if !defined(_WIN32) || !defined(__i686)
-    connection_basic::socket_.next_layer().set_option(
-      boost::asio::detail::socket_option::integer<IPPROTO_IP, IP_TOS>{
-        connection_basic::get_tos_flag()
-      },
-      ec
-    );
-    if (ec.value())
-      return false;
-    #endif
-    connection_basic::socket_.next_layer().set_option(
-      boost::asio::ip::tcp::no_delay{false},
-      ec
-    );
-    if (ec.value())
-      return false;
-    connection_basic::m_is_multithreaded = is_multithreaded;
-    m_conn_context.set_details(
-      boost::uuids::random_generator()(),
-      *real_remote,
-      is_income,
-      connection_basic::m_ssl_support == ssl_support_t::e_ssl_support_enabled
-    );
-    m_host = real_remote->host_str();
-    try { host_count(1); } catch(...) { /* ignore */ }
-    m_local = real_remote->is_loopback() || real_remote->is_local();
-    m_state.ssl.enabled = (
-      connection_basic::m_ssl_support != ssl_support_t::e_ssl_support_disabled
-    );
-    m_state.ssl.forced = (
-      connection_basic::m_ssl_support == ssl_support_t::e_ssl_support_enabled
-    );
-    m_state.socket.connected = true;
-    m_state.status = status_t::RUNNING;
-    start_timer(
-      std::chrono::milliseconds(
-        m_local ? NEW_CONNECTION_TIMEOUT_LOCAL : NEW_CONNECTION_TIMEOUT_REMOTE
-      )
-    );
-    m_state.protocol.wait_init = true;
-    guard.unlock();
-    m_handler.after_init_connection();
-    guard.lock();
-    m_state.protocol.wait_init = false;
-    m_state.protocol.initialized = true;
-    if (m_state.status == status_t::INTERRUPTED)
-      on_interrupted();
-    else if (m_state.status == status_t::TERMINATING)
-      on_terminating();
-    else if (!is_income || !m_state.ssl.enabled)
-      start_read();
-    else
-      start_handshake();
+    m_want_close_connection = true;
+    if(!send_que_size)
+    {
+      shutdown();
+    }
+
+    return true;
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::close", false);
+  }
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::send_done()
+  {
+    if (m_ready_to_close)
+      return close();
+    m_ready_to_close = true;
     return true;
   }
-
-  template<typename T>
-  connection<T>::connection(
-    io_context_t &io_context,
-    std::shared_ptr<shared_state> shared_state,
-    t_connection_type connection_type,
-    ssl_support_t ssl_support
-  ):
-    connection(
-      io_context,
-      socket_t{io_context},
-      std::move(shared_state),
-      connection_type,
-      ssl_support
-    )
-  {
-  }
-
-  template<typename T>
-  connection<T>::connection(
-    io_context_t &io_context,
-    socket_t &&socket,
-    std::shared_ptr<shared_state> shared_state,
-    t_connection_type connection_type,
-    ssl_support_t ssl_support
-  ):
-    connection_basic(io_context, std::move(socket), shared_state, ssl_support),
-    m_handler(this, *shared_state, m_conn_context),
-    m_connection_type(connection_type),
-    m_io_context{io_context},
-    m_strand{m_io_context},
-    m_timers{m_io_context}
-  {
-  }
-
-  template<typename T>
-  connection<T>::~connection() noexcept(false)
-  {
-    std::lock_guard<std::mutex> guard(m_state.lock);
-    assert(m_state.status == status_t::TERMINATED ||
-      m_state.status == status_t::WASTED ||
-      m_io_context.stopped()
-    );
-    if (m_state.status != status_t::WASTED)
-      return;
-    try { host_count(-1); } catch (...) { /* ignore */ }
-  }
-
-  template<typename T>
-  bool connection<T>::start(
-    bool is_income,
-    bool is_multithreaded
-  )
-  {
-    return start_internal(is_income, is_multithreaded, {});
-  }
-
-  template<typename T>
-  bool connection<T>::start(
-    bool is_income,
-    bool is_multithreaded,
-    network_address real_remote
-  )
-  {
-    return start_internal(is_income, is_multithreaded, real_remote);
-  }
-
-  template<typename T>
-  void connection<T>::save_dbg_log()
-  {
-    std::lock_guard<std::mutex> guard(m_state.lock);
-    std::string address;
-    std::string port;
-    ec_t ec;
-    auto endpoint = connection_basic::socket().remote_endpoint(ec);
-    if (ec.value()) {
-      address = "<not connected>";
-      port = "<not connected>";
-    }
-    else {
-      address = endpoint.address().to_string();
-      port = std::to_string(endpoint.port());
-    }
-    MDEBUG(
-      " connection type " << std::to_string(m_connection_type) <<
-      " " << connection_basic::socket().local_endpoint().address().to_string() <<
-      ":" << connection_basic::socket().local_endpoint().port() <<
-      " <--> " << m_conn_context.m_remote_address.str() <<
-      " (via " << address << ":" << port << ")"
-    );
-  }
-
-  template<typename T>
-  bool connection<T>::speed_limit_is_enabled() const
-  {
-    return m_connection_type != e_connection_type_RPC;
-  }
-
-  template<typename T>
-  bool connection<T>::cancel()
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::cancel()
   {
     return close();
   }
-
-  template<typename T>
-  bool connection<T>::do_send(byte_slice message)
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  void connection<t_protocol_handler>::handle_write(const boost::system::error_code& e, size_t cb)
   {
-    return send(std::move(message));
-  }
+    TRY_ENTRY();
 
-  template<typename T>
-  bool connection<T>::send_done()
-  {
-    return true;
-  }
-
-  template<typename T>
-  bool connection<T>::close()
-  {
-    std::lock_guard<std::mutex> guard(m_state.lock);
-    if (m_state.status != status_t::RUNNING)
-      return false;
-    terminate();
-    return true;
-  }
-
-  template<typename T>
-  bool connection<T>::call_run_once_service_io()
-  {
-    if(connection_basic::m_is_multithreaded) {
-      if (!m_io_context.poll_one())
-        misc_utils::sleep_no_w(1);
+    if (e)
+    {
+      shutdown();
+      return;
     }
-    else {
-      if (!m_io_context.run_one())
-        return false;
+    logger_handle_net_write(cb);
+
+                // The single sleeping that is needed for correctly handling "out" speed throttling
+		if (speed_limit_is_enabled()) {
+			sleep_before_packet(cb, 1, 1);
+		}
+
+    bool do_shutdown = false;
+    std::unique_lock lock{m_send_que_lock};
+    if(m_send_que.empty())
+    {
+      return;
     }
-    return true;
-  }
 
-  template<typename T>
-  bool connection<T>::request_callback()
-  {
-    std::lock_guard<std::mutex> guard(m_state.lock);
-    if (m_state.status != status_t::RUNNING)
-      return false;
-    auto self = connection<T>::shared_from_this();
-    ++m_state.protocol.wait_callback;
-    boost::asio::post(connection_basic::strand_, [this, self]{
-      m_handler.handle_qued_callback();
-      std::lock_guard<std::mutex> guard(m_state.lock);
-      --m_state.protocol.wait_callback;
-      if (m_state.status == status_t::INTERRUPTED)
-        on_interrupted();
-      else if (m_state.status == status_t::TERMINATING)
-        on_terminating();
-    });
-    return true;
-  }
-
-  template<typename T>
-  typename connection<T>::io_context_t &connection<T>::get_io_context()
-  {
-    return m_io_context;
-  }
-
-  template<typename T>
-  bool connection<T>::add_ref()
-  {
-    try {
-      auto self = connection<T>::shared_from_this();
-      std::lock_guard<std::mutex> guard(m_state.lock);
-      this->self = std::move(self);
-      ++m_state.protocol.reference_counter;
-      return true;
+    m_send_que.pop_front();
+    if(m_send_que.empty())
+    {
+      if(m_want_close_connection)
+      {
+        do_shutdown = true;
+      }
     }
-    catch (std::bad_weak_ptr &exception) {
-      return false;
+    else
+    {
+      //have more data to send
+		  reset_timer(get_default_timeout(), false);
+		  auto size_now = m_send_que.front().size();
+		  if (speed_limit_is_enabled())
+	      do_send_handler_write_from_queue(e, m_send_que.front().size() , m_send_que.size()); // (((H)))
+		  CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), void(), "Unexpected queue size");
+		  async_write(boost::asio::buffer(m_send_que.front().data(), size_now),
+        strand_.wrap(
+          std::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+			  )
+      );
     }
+    lock.unlock();
+
+    if(do_shutdown)
+    {
+      shutdown();
+    }
+    CATCH_ENTRY_L0("connection<t_protocol_handler>::handle_write", void());
   }
 
-  template<typename T>
-  bool connection<T>::release()
+  //---------------------------------------------------------------------------------
+  template<class t_protocol_handler>
+  void connection<t_protocol_handler>::setRpcStation()
   {
-    connection_ptr self;
-    std::lock_guard<std::mutex> guard(m_state.lock);
-    if (!(--m_state.protocol.reference_counter))
-      self = std::move(this->self);
-    return true;
-  }
-
-  template<typename T>
-  void connection<T>::setRpcStation()
-  {
-    std::lock_guard<std::mutex> guard(m_state.lock);
     m_connection_type = e_connection_type_RPC;
+    MDEBUG("set m_connection_type = RPC ");
   }
+
+
+  template<class t_protocol_handler>
+  bool connection<t_protocol_handler>::speed_limit_is_enabled() const {
+		return m_connection_type != e_connection_type_RPC ;
+	}
+
+  /************************************************************************/
+  /*                                                                      */
+  /************************************************************************/
 
   template<class t_protocol_handler>
   boosted_tcp_server<t_protocol_handler>::boosted_tcp_server( t_connection_type connection_type ) :
     m_state(std::make_shared<typename connection<t_protocol_handler>::shared_state>()),
-    m_io_context_local_instance(new worker()),
-    io_context_(m_io_context_local_instance->io_context),
-    acceptor_(io_context_),
-    acceptor_ipv6(io_context_),
+    m_io_service_local_instance(new worker()),
+    io_service_(m_io_service_local_instance->io_service),
+    acceptor_(io_service_),
+    acceptor_ipv6(io_service_),
     default_remote(),
-    m_stop_signal_sent(false), m_port(0),
+    m_stop_signal_sent(false), m_port(0), 
     m_threads_count(0),
     m_thread_index(0),
 		m_connection_type( connection_type ),
@@ -1142,11 +884,11 @@ namespace net_utils
   }
 
   template<class t_protocol_handler>
-  boosted_tcp_server<t_protocol_handler>::boosted_tcp_server(boost::asio::io_context& extarnal_io_context, t_connection_type connection_type) :
+  boosted_tcp_server<t_protocol_handler>::boosted_tcp_server(boost::asio::io_service& extarnal_io_service, t_connection_type connection_type) :
     m_state(std::make_shared<typename connection<t_protocol_handler>::shared_state>()),
-    io_context_(extarnal_io_context),
-    acceptor_(io_context_),
-    acceptor_ipv6(io_context_),
+    io_service_(extarnal_io_service),
+    acceptor_(io_service_),
+    acceptor_ipv6(io_service_),
     default_remote(),
     m_stop_signal_sent(false), m_port(0),
     m_threads_count(0),
@@ -1162,12 +904,12 @@ namespace net_utils
   template<class t_protocol_handler>
   boosted_tcp_server<t_protocol_handler>::~boosted_tcp_server()
   {
-    this->send_stop_signal();
-    timed_wait_server_stop(10000);
+    send_stop_signal();
+    server_stop();
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  void boosted_tcp_server<t_protocol_handler>::create_server_type_map()
+  void boosted_tcp_server<t_protocol_handler>::create_server_type_map() 
   {
 		server_type_map["NET"] = e_connection_type_NET;
 		server_type_map["RPC"] = e_connection_type_RPC;
@@ -1194,13 +936,11 @@ namespace net_utils
     std::string ipv4_failed = "";
     std::string ipv6_failed = "";
 
-    boost::asio::ip::tcp::resolver resolver(io_context_);
+    boost::asio::ip::tcp::resolver resolver(io_service_);
 
     try
     {
-      const auto results = resolver.resolve(
-        address, boost::lexical_cast<std::string>(port), boost::asio::ip::tcp::resolver::canonical_name
-      );
+      const auto results = resolver.resolve(address, boost::lexical_cast<std::string>(port), boost::asio::ip::tcp::resolver::canonical_name);
       acceptor_.open(results.begin()->endpoint().protocol());
 #if !defined(_WIN32)
       acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
@@ -1210,7 +950,7 @@ namespace net_utils
       boost::asio::ip::tcp::endpoint binded_endpoint = acceptor_.local_endpoint();
       m_port = binded_endpoint.port();
       MDEBUG("start accept (IPv4)");
-      new_connection_.reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, m_state->ssl_options().support));
+      new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, m_state->ssl_options().support));
       acceptor_.async_accept(new_connection_->socket(),
         boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept_ipv4, this,
         boost::asio::placeholders::error));
@@ -1235,9 +975,7 @@ namespace net_utils
       {
         if (port_ipv6 == 0) port_ipv6 = port; // default arg means bind to same port as ipv4
 
-        const auto results = resolver.resolve(
-          address_ipv6, boost::lexical_cast<std::string>(port_ipv6), boost::asio::ip::tcp::resolver::canonical_name
-        );
+        const auto results = resolver.resolve(address_ipv6, boost::lexical_cast<std::string>(port_ipv6), boost::asio::ip::tcp::resolver::canonical_name);
 
         acceptor_ipv6.open(results.begin()->endpoint().protocol());
 #if !defined(_WIN32)
@@ -1249,7 +987,7 @@ namespace net_utils
         boost::asio::ip::tcp::endpoint binded_endpoint = acceptor_ipv6.local_endpoint();
         m_port_ipv6 = binded_endpoint.port();
         MDEBUG("start accept (IPv6)");
-        new_connection_ipv6.reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, m_state->ssl_options().support));
+        new_connection_ipv6.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, m_state->ssl_options().support));
         acceptor_ipv6.async_accept(new_connection_ipv6->socket(),
           boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept_ipv6, this,
           boost::asio::placeholders::error));
@@ -1309,26 +1047,24 @@ namespace net_utils
     TRY_ENTRY();
     const uint32_t local_thr_index = m_thread_index++; // atomically increment, getting value before increment
     std::string thread_name = std::string("[") + m_thread_name_prefix;
-    thread_name += boost::to_string(local_thr_index) + "]";
+    thread_name += std::to_string(local_thr_index) + "]";
     MLOG_SET_THREAD_NAME(thread_name);
-    //   _fact("Thread name: " << m_thread_name_prefix);
     while(!m_stop_signal_sent)
     {
       try
       {
-        io_context_.run();
+        io_service_.run();
         return true;
       }
       catch(const std::exception& ex)
       {
-        _erro("Exception at server worker thread, what=" << ex.what());
+        MERROR("Exception at server worker thread, what=" << ex.what());
       }
       catch(...)
       {
-        _erro("Exception at server worker thread, unknown execption");
+        MERROR("Exception at server worker thread, unknown execption");
       }
     }
-    //_info("Worker thread finished");
     return true;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::worker_thread", false);
   }
@@ -1338,7 +1074,7 @@ namespace net_utils
   {
     m_thread_name_prefix = prefix_name;
 		auto it = server_type_map.find(m_thread_name_prefix);
-		if (it==server_type_map.end()) throw std::runtime_error("Unknown prefix/server type:" + std::string(prefix_name));
+		if (it == server_type_map.end()) throw std::runtime_error("Unknown prefix/server type:" + std::string(prefix_name));
     auto connection_type = it->second; // the value of type
     MINFO("Set server type to: " << connection_type << " from name: " << m_thread_name_prefix << ", prefix_name = " << prefix_name);
   }
@@ -1351,51 +1087,54 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::run_server(size_t threads_count, bool wait, const boost::thread::attributes& attrs)
+  bool boosted_tcp_server<t_protocol_handler>::run_server(size_t threads_count, bool wait)
   {
     TRY_ENTRY();
     m_threads_count = threads_count;
-    m_main_thread_id = boost::this_thread::get_id();
+    m_main_thread_id = std::this_thread::get_id();
     MLOG_SET_THREAD_NAME("[SRV_MAIN]");
     while(!m_stop_signal_sent)
     {
-      // Create a pool of threads to run all of the io_contexts.
-      CRITICAL_REGION_BEGIN(m_threads_lock);
-      for (std::size_t i = 0; i < threads_count; ++i)
+      // Create a pool of threads to run all of the io_services.
       {
-        boost::shared_ptr<boost::thread> thread(new boost::thread(attrs, boost::bind(&boosted_tcp_server<t_protocol_handler>::worker_thread, this)));
-        m_threads.push_back(thread);
-        MDEBUG("Run server thread name: " << m_thread_name_prefix);
+        std::lock_guard lock{m_threads_lock};
+        for (std::size_t i = 0; i < threads_count; ++i)
+        {
+#ifdef __APPLE__
+          m_threads.emplace_back(THREAD_STACK_SIZE, [this] { worker_thread(); });
+#else
+          m_threads.emplace_back(0, [this] { worker_thread(); });
+#endif
+          MDEBUG("Run server thread name: " << m_thread_name_prefix);
+        }
       }
-      CRITICAL_REGION_END();
       // Wait for all threads in the pool to exit.
       if (wait)
       {
 		    MDEBUG("JOINING all threads");
-		    for (std::size_t i = 0; i < m_threads.size(); ++i) {
-          m_threads[i]->join();
-        }
+		    for (auto &th : m_threads)
+		      th.join();
 		    MDEBUG("JOINING all threads - almost");
         m_threads.clear();
         MDEBUG("JOINING all threads - DONE");
 
-      } 
+      }
       else {
-		_dbg1("Reiniting OK.");
+		    MDEBUG("Reiniting OK.");
         return true;
       }
 
       if(wait && !m_stop_signal_sent)
       {
         //some problems with the listening socket ?..
-        _dbg1("Net service stopped without stop request, restarting...");
+        MDEBUG("Net service stopped without stop request, restarting...");
         if(!this->init_server(m_port, m_address, m_port_ipv6, m_address_ipv6, m_use_ipv6, m_require_ipv4))
         {
-          _dbg1("Reiniting service failed, exit.");
+          MDEBUG("Reiniting service failed, exit.");
           return false;
         }else
         {
-          _dbg1("Reiniting OK.");
+          MDEBUG("Reiniting OK.");
         }
       }
     }
@@ -1407,33 +1146,25 @@ namespace net_utils
   bool boosted_tcp_server<t_protocol_handler>::is_thread_worker()
   {
     TRY_ENTRY();
-    CRITICAL_REGION_LOCAL(m_threads_lock);
-    for (auto &thp : m_threads)
-    {
-      if (thp->get_id() == boost::this_thread::get_id())
+    std::lock_guard lock{m_threads_lock};
+    for (auto &th : m_threads)
+      if (th.get_id() == std::this_thread::get_id())
         return true;
-    }
-    if(m_threads_count == 1 && boost::this_thread::get_id() == m_main_thread_id)
+    if(m_threads_count == 1 && std::this_thread::get_id() == m_main_thread_id)
       return true;
     return false;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::is_thread_worker", false);
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  bool boosted_tcp_server<t_protocol_handler>::timed_wait_server_stop(uint64_t wait_mseconds)
+  bool boosted_tcp_server<t_protocol_handler>::server_stop()
   {
     TRY_ENTRY();
-    boost::chrono::milliseconds ms(wait_mseconds);
-    for (std::size_t i = 0; i < m_threads.size(); ++i)
-    {
-      if (m_threads[i]->joinable() && !m_threads[i]->try_join_for(ms))
-      {
-        MDEBUG("Interrupting thread " << m_threads[i]->native_handle());
-        m_threads[i]->interrupt();
-      }
-    }
+    for (auto &th : m_threads)
+      if (th.joinable())
+        th.join();
     return true;
-    CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::timed_wait_server_stop", false);
+    CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::server_stop", false);
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
@@ -1443,14 +1174,13 @@ namespace net_utils
     typename connection<t_protocol_handler>::shared_state *state = static_cast<typename connection<t_protocol_handler>::shared_state*>(m_state.get());
     state->stop_signal_sent = true;
     TRY_ENTRY();
-    connections_mutex.lock();
-    for (auto &c: connections_)
     {
-      c->cancel();
+      std::lock_guard lock{connections_mutex};
+      for (auto &c: connections_)
+        c->cancel();
+      connections_.clear();
     }
-    connections_.clear();
-    connections_mutex.unlock();
-    io_context_.stop();
+    io_service_.stop();
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::send_stop_signal()", void());
   }
   //---------------------------------------------------------------------------------
@@ -1498,7 +1228,7 @@ namespace net_utils
         (*current_new_connection)->setRpcStation(); // hopefully this is not needed actually
       }
       connection_ptr conn(std::move((*current_new_connection)));
-      (*current_new_connection).reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, conn->get_ssl_support()));
+      (*current_new_connection).reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, conn->get_ssl_support()));
       current_acceptor->async_accept((*current_new_connection)->socket(),
         boost::bind(accept_function_pointer, this,
         boost::asio::placeholders::error));
@@ -1534,9 +1264,9 @@ namespace net_utils
 
     // error path, if e or exception
     assert(m_state != nullptr); // always set in constructor
-    _erro("Some problems at accept: " << e.message() << ", connections_count = " << m_state->sock_count);
-    misc_utils::sleep_no_w(100);
-    (*current_new_connection).reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, (*current_new_connection)->get_ssl_support()));
+    MERROR("Some problems at accept: " << e.message() << ", connections_count = " << m_state->sock_count);
+    std::this_thread::sleep_for(100ms);
+    (*current_new_connection).reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, (*current_new_connection)->get_ssl_support()));
     current_acceptor->async_accept((*current_new_connection)->socket(),
       boost::bind(accept_function_pointer, this,
       boost::asio::placeholders::error));
@@ -1545,9 +1275,9 @@ namespace net_utils
   template<class t_protocol_handler>
   bool boosted_tcp_server<t_protocol_handler>::add_connection(t_connection_context& out, boost::asio::ip::tcp::socket&& sock, network_address real_remote, epee::net_utils::ssl_support_t ssl_support)
   {
-    if(std::addressof(get_io_context()) == std::addressof(sock.get_executor().context()))
+    if(std::addressof(get_io_service()) == std::addressof(GET_IO_SERVICE(sock)))
     {
-      connection_ptr conn(new connection<t_protocol_handler>(io_context_, std::move(sock), m_state, m_connection_type, ssl_support));
+      connection_ptr conn(new connection<t_protocol_handler>(std::move(sock), m_state, m_connection_type, ssl_support));
       if(conn->start(false, 1 < m_threads_count, std::move(real_remote)))
       {
         conn->get_context(out);
@@ -1557,7 +1287,7 @@ namespace net_utils
     }
     else
     {
-	MWARNING(out << " was not added, socket/io_context mismatch");
+	MWARNING(out << " was not added, socket/io_service mismatch");
     }
     return false;
   }
@@ -1592,33 +1322,35 @@ namespace net_utils
     struct local_async_context
     {
       boost::system::error_code ec;
-      boost::mutex connect_mut;
-      boost::condition_variable cond;
+      std::mutex connect_mut;
+      std::condition_variable cond;
     };
 
-    boost::shared_ptr<local_async_context> local_shared_context(new local_async_context());
+    std::shared_ptr<local_async_context> local_shared_context(new local_async_context());
     local_shared_context->ec = boost::asio::error::would_block;
-    boost::unique_lock<boost::mutex> lock(local_shared_context->connect_mut);
-    auto connect_callback = [](boost::system::error_code ec_, boost::shared_ptr<local_async_context> shared_context)
+    std::unique_lock lock{local_shared_context->connect_mut};
+    auto connect_callback = [](boost::system::error_code ec_, std::shared_ptr<local_async_context> shared_context)
     {
-      shared_context->connect_mut.lock(); shared_context->ec = ec_; shared_context->cond.notify_one(); shared_context->connect_mut.unlock();
+      std::lock_guard lock{shared_context->connect_mut};
+      shared_context->ec = ec_;
+      shared_context->cond.notify_one();
     };
 
-    sock_.async_connect(remote_endpoint, boost::bind<void>(connect_callback, boost::placeholders::_1, local_shared_context));
+    sock_.async_connect(remote_endpoint, std::bind<void>(connect_callback, std::placeholders::_1, local_shared_context));
     while(local_shared_context->ec == boost::asio::error::would_block)
     {
-      bool r = local_shared_context->cond.timed_wait(lock, boost::get_system_time() + boost::posix_time::milliseconds(conn_timeout));
+      auto wait_stat = local_shared_context->cond.wait_for(lock, std::chrono::milliseconds{conn_timeout});
       if (m_stop_signal_sent)
       {
         if (sock_.is_open())
           sock_.close();
         return CONNECT_FAILURE;
       }
-      if(local_shared_context->ec == boost::asio::error::would_block && !r)
+      if(local_shared_context->ec == boost::asio::error::would_block && wait_stat == std::cv_status::timeout)
       {
         //timeout
         sock_.close();
-        _dbg3("Failed to connect to " << adr << ":" << port << ", because of timeout (" << conn_timeout << ")");
+        MTRACE("Failed to connect to " << adr << ":" << port << ", because of timeout (" << conn_timeout << ")");
         return CONNECT_FAILURE;
       }
     }
@@ -1626,13 +1358,13 @@ namespace net_utils
 
     if (ec || !sock_.is_open())
     {
-      _dbg3("Some problems at connect, message: " << ec.message());
+      MTRACE("Some problems at connect, message: " << ec.message());
       if (sock_.is_open())
         sock_.close();
       return CONNECT_FAILURE;
     }
 
-    _dbg3("Connected success to " << adr << ':' << port);
+    MTRACE("Connected success to " << adr << ':' << port);
 
     const ssl_support_t ssl_support = new_connection_l->get_ssl_support();
     if (ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_enabled || ssl_support == epee::net_utils::ssl_support_t::e_ssl_support_autodetect)
@@ -1665,26 +1397,25 @@ namespace net_utils
   {
     TRY_ENTRY();
 
-    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, ssl_support) );
-    connections_mutex.lock();
-    connections_.insert(new_connection_l);
-    MDEBUG("connections_ size now " << connections_.size());
-    connections_mutex.unlock();
-    epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ CRITICAL_REGION_LOCAL(connections_mutex); connections_.erase(new_connection_l); });
-    boost::asio::ip::tcp::socket&  sock_ = new_connection_l->socket();
+    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support) );
+    {
+      std::lock_guard lock{connections_mutex};
+      connections_.insert(new_connection_l);
+      MDEBUG("connections_ size now " << connections_.size());
+    }
+    epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ std::lock_guard lock{connections_mutex}; connections_.erase(new_connection_l); });
+    boost::asio::ip::tcp::socket& sock_ = new_connection_l->socket();
 
     bool try_ipv6 = false;
 
-    boost::asio::ip::tcp::resolver resolver(io_context_);
+    boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::results_type results{};
     boost::system::error_code resolve_error;
 
     try
     {
       //resolving ipv4 address as ipv6 throws, catch here and move on
-      results = resolver.resolve(
-        boost::asio::ip::tcp::v4(), adr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error
-      );
+      results = resolver.resolve(boost::asio::ip::tcp::v4(), adr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error);
     }
     catch (const boost::system::system_error& e)
     {
@@ -1706,7 +1437,7 @@ namespace net_utils
     {
       if (!m_use_ipv6)
       {
-        _erro("Failed to resolve " << adr);
+        MERROR("Failed to resolve " << adr);
         return false;
       }
       else
@@ -1722,13 +1453,11 @@ namespace net_utils
 
     if (try_ipv6)
     {
-      results = resolver.resolve(
-        boost::asio::ip::tcp::v6(), adr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error
-      );
+      results = resolver.resolve(boost::asio::ip::tcp::v6(), adr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error);
 
       if(results.empty())
       {
-        _erro("Failed to resolve " << adr);
+        MERROR("Failed to resolve " << adr);
         return false;
       }
       else
@@ -1767,9 +1496,10 @@ namespace net_utils
     }
 
     // start adds the connection to the config object's list, so we don't need to have it locally anymore
-    connections_mutex.lock();
-    connections_.erase(new_connection_l);
-    connections_mutex.unlock();
+    {
+      std::lock_guard lock{connections_mutex};
+      connections_.erase(new_connection_l);
+    }
     bool r = new_connection_l->start(false, 1 < m_threads_count);
     if (r)
     {
@@ -1778,7 +1508,7 @@ namespace net_utils
     else
     {
       assert(m_state != nullptr); // always set in constructor
-      _erro("[sock " << new_connection_l->socket().native_handle() << "] Failed to start connection, connections_count = " << m_state->sock_count);
+      MERROR("[sock " << new_connection_l->socket().native_handle() << "] Failed to start connection, connections_count = " << m_state->sock_count);
     }
 
     new_connection_l->save_dbg_log();
@@ -1792,26 +1522,25 @@ namespace net_utils
   bool boosted_tcp_server<t_protocol_handler>::connect_async(const std::string& adr, const std::string& port, uint32_t conn_timeout, const t_callback &cb, const std::string& bind_ip, epee::net_utils::ssl_support_t ssl_support)
   {
     TRY_ENTRY();
-    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, ssl_support) );
-    connections_mutex.lock();
-    connections_.insert(new_connection_l);
-    MDEBUG("connections_ size now " << connections_.size());
-    connections_mutex.unlock();
-    epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ CRITICAL_REGION_LOCAL(connections_mutex); connections_.erase(new_connection_l); });
+    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support) );
+    {
+      std::lock_guard lock{connections_mutex};
+      connections_.insert(new_connection_l);
+      MDEBUG("connections_ size now " << connections_.size());
+    }
+    epee::misc_utils::auto_scope_leave_caller scope_exit_handler = epee::misc_utils::create_scope_leave_handler([&](){ std::lock_guard lock{connections_mutex}; connections_.erase(new_connection_l); });
     boost::asio::ip::tcp::socket&  sock_ = new_connection_l->socket();
 
     bool try_ipv6 = false;
 
-    boost::asio::ip::tcp::resolver resolver(io_context_);
+    boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::results_type results{};
     boost::system::error_code resolve_error;
 
     try
     {
       //resolving ipv4 address as ipv6 throws, catch here and move on
-      results = resolver.resolve(
-        boost::asio::ip::tcp::v4(), adr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error
-      );
+      results = resolver.resolve(boost::asio::ip::tcp::v4(), adr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error);
     }
     catch (const boost::system::system_error& e)
     {
@@ -1831,7 +1560,7 @@ namespace net_utils
     {
       if (!try_ipv6)
       {
-        _erro("Failed to resolve " << adr);
+        MERROR("Failed to resolve " << adr);
         return false;
       }
       else
@@ -1842,13 +1571,11 @@ namespace net_utils
 
     if (try_ipv6)
     {
-      results = resolver.resolve(
-        boost::asio::ip::tcp::v6(), adr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error
-      );
+      results = resolver.resolve(boost::asio::ip::tcp::v6(), adr, port, boost::asio::ip::tcp::resolver::canonical_name, resolve_error);
 
       if(results.empty())
       {
-        _erro("Failed to resolve " << adr);
+        MERROR("Failed to resolve " << adr);
         return false;
       }
     }
@@ -1870,14 +1597,14 @@ namespace net_utils
       }
     }
 
-    boost::shared_ptr<boost::asio::deadline_timer> sh_deadline(new boost::asio::deadline_timer(io_context_));
+    std::shared_ptr<boost::asio::steady_timer> sh_deadline(new boost::asio::steady_timer(io_service_));
     //start deadline
-    sh_deadline->expires_from_now(boost::posix_time::milliseconds(conn_timeout));
+    sh_deadline->expires_after(std::chrono::milliseconds(conn_timeout));
     sh_deadline->async_wait([=](const boost::system::error_code& error)
       {
           if(error != boost::asio::error::operation_aborted)
           {
-            _dbg3("Failed to connect to " << adr << ':' << port << ", because of timeout (" << conn_timeout << ")");
+            MTRACE("Failed to connect to " << adr << ':' << port << ", because of timeout (" << conn_timeout << ")");
             new_connection_l->socket().close();
           }
       });
@@ -1894,13 +1621,14 @@ namespace net_utils
             cb(conn_context, boost::asio::error::operation_aborted);//this mean that deadline timer already queued callback with cancel operation, rare situation
           }else
           {
-            _dbg3("[sock " << new_connection_l->socket().native_handle() << "] Connected success to " << adr << ':' << port <<
+            MTRACE("[sock " << new_connection_l->socket().native_handle() << "] Connected success to " << adr << ':' << port <<
               " from " << lep.address().to_string() << ':' << lep.port());
 
             // start adds the connection to the config object's list, so we don't need to have it locally anymore
-            connections_mutex.lock();
-            connections_.erase(new_connection_l);
-            connections_mutex.unlock();
+            {
+              std::lock_guard lock{connections_mutex};
+              connections_.erase(new_connection_l);
+            }
             bool r = new_connection_l->start(false, 1 < m_threads_count);
             if (r)
             {
@@ -1909,13 +1637,13 @@ namespace net_utils
             }
             else
             {
-              _dbg3("[sock " << new_connection_l->socket().native_handle() << "] Failed to start connection to " << adr << ':' << port);
+              MTRACE("[sock " << new_connection_l->socket().native_handle() << "] Failed to start connection to " << adr << ':' << port);
               cb(conn_context, boost::asio::error::fault);
             }
           }
         }else
         {
-          _dbg3("[sock " << new_connection_l->socket().native_handle() << "] Failed to connect to " << adr << ':' << port <<
+          MTRACE("[sock " << new_connection_l->socket().native_handle() << "] Failed to connect to " << adr << ':' << port <<
             " from " << lep.address().to_string() << ':' << lep.port() << ": " << ec_.message() << ':' << ec_.value());
           cb(conn_context, ec_);
         }

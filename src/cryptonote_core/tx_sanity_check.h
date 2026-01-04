@@ -27,11 +27,12 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "cryptonote_basic/blobdatatype.h"
+#include <string>
+#include <cstdint>
 
 namespace cryptonote
 {
   class Blockchain;
 
-  bool tx_sanity_check(Blockchain &blockchain, const cryptonote::blobdata &tx_blob);
+  bool tx_sanity_check(Blockchain &blockchain, const std::string &tx_blob);
 }

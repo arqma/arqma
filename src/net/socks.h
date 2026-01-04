@@ -35,12 +35,16 @@
 #include <boost/asio/strand.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/type_traits/integral_constant.hpp>
-#include <boost/utility/string_ref.hpp>
+#include <string_view>
 #include <memory>
 #include <utility>
 
 #include "net/fwd.h"
 #include "span.h"
+
+namespace boost::asio {
+  using io_service = io_context;
+}
 
 namespace epee
 {
@@ -94,7 +98,7 @@ namespace socks
     class client
     {
         boost::asio::ip::tcp::socket proxy_;
-        boost::asio::strand<boost::asio::ip::tcp::socket::executor_type> strand_;
+        boost::asio::io_service::strand strand_;
         std::uint16_t buffer_size_;
         std::uint8_t buffer_[1024];
         socks::version ver_;
@@ -153,7 +157,7 @@ namespace socks
         bool set_connect_command(const epee::net_utils::ipv4_network_address& address);
 
         //! Try to set `domain` + `port` as remote connection request.
-        bool set_connect_command(boost::string_ref domain, std::uint16_t port);
+        bool set_connect_command(std::string_view domain, std::uint16_t port);
 
         //! Try to set `address` as remote Tor hidden service connection request.
         bool set_connect_command(const net::tor_address& address);
@@ -162,7 +166,7 @@ namespace socks
         bool set_connect_command(const net::i2p_address& address);
 
         //! Try to set `domain` as remote DNS A record lookup request.
-        bool set_resolve_command(boost::string_ref domain);
+        bool set_resolve_command(std::string_view domain);
 
         /*!
             Asynchronously connect to `proxy_address` then issue command in

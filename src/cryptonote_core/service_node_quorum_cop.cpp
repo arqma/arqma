@@ -271,7 +271,7 @@ namespace service_nodes
             {
               auto worker_states = m_core.get_service_node_list_state(quorum->workers);
               auto worker_it = worker_states.begin();
-              CRITICAL_REGION_LOCAL(m_lock);
+              std::unique_lock lock{m_lock};
               int good = 0, total = 0;
               for (size_t node_index = 0; node_index < quorum->workers.size(); ++worker_it, ++node_index)
               {
@@ -474,7 +474,7 @@ namespace service_nodes
       state_change_tx.tx_type = cryptonote::txtype::state_change;
 
       cryptonote::tx_verification_context tvc{};
-      cryptonote::blobdata const tx_blob = cryptonote::tx_to_blob(state_change_tx);
+      std::string const tx_blob = cryptonote::tx_to_blob(state_change_tx);
 
       bool result = core.handle_incoming_tx(tx_blob, tvc, cryptonote::tx_pool_options::new_tx());
       if (!result || tvc.m_verification_failed)
@@ -497,7 +497,7 @@ namespace service_nodes
   {
     if (votes.size() < CHECKPOINT_MIN_VOTES)
     {
-      LOG_PRINT_L2("Don't have enough votes yet to submit a checkpoint: have " << votes.size() << " of " << CHECKPOINT_MIN_VOTES << " required");
+      LOG_PRINT_L2("Don't have enough votes yet to submit a checkpoint for height: " << vote.block_height << ", have " << votes.size() << " of " << CHECKPOINT_MIN_VOTES << " votes required");
       return true;
     }
 

@@ -35,12 +35,10 @@
 
 #include "crypto/crypto.h"
 #include "cryptonote_basic/cryptonote_basic.h"
-#include "cryptonote_basic/blobdatatype.h"
 #include "cryptonote_basic/tx_extra.h"
 
 #include "string_tools.h"
 #include "common/periodic_task.h"
-#include "syncobj.h"
 
 #include <boost/serialization/base_object.hpp>
 
@@ -193,7 +191,7 @@ namespace service_nodes
     };
     std::vector<checkpoint_pool_entry> m_checkpoint_pool;
 
-    mutable epee::critical_section m_lock;
+    mutable std::recursive_mutex m_lock;
   };
 }; // namespace service_nodes
 

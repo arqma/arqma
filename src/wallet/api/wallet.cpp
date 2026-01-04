@@ -281,7 +281,7 @@ bool Wallet::keyValid(const std::string &secret_key_string, const std::string &a
       return false;
   }
 
-  cryptonote::blobdata key_data;
+  std::string key_data;
   if(!epee::string_tools::parse_hexstr_to_binbuff(secret_key_string, key_data) || key_data.size() != sizeof(crypto::secret_key))
   {
       error = tr("Failed to parse key");
@@ -375,7 +375,7 @@ WalletImpl::WalletImpl(NetworkType nettype, uint64_t kdf_rounds)
 
     m_refreshIntervalMillis = DEFAULT_REFRESH_INTERVAL_MILLIS;
 
-    m_refreshThread = boost::thread([this] () { this->refreshThreadFunc(); });
+    m_refreshThread = std::thread([this] () { this->refreshThreadFunc(); });
 }
 
 WalletImpl::~WalletImpl()
@@ -527,7 +527,7 @@ bool WalletImpl::recoverFromKeysWithPassword(const std::string &path,
     crypto::secret_key spendkey;
     bool has_spendkey = false;
     if (!spendkey_string.empty()) {
-        cryptonote::blobdata spendkey_data;
+        std::string spendkey_data;
         if(!epee::string_tools::parse_hexstr_to_binbuff(spendkey_string, spendkey_data) || spendkey_data.size() != sizeof(crypto::secret_key))
         {
             setStatusError(tr("failed to parse secret spend key"));
@@ -554,7 +554,7 @@ bool WalletImpl::recoverFromKeysWithPassword(const std::string &path,
     }
     if(has_viewkey)
     {
-      cryptonote::blobdata viewkey_data;
+      std::string viewkey_data;
       if(!epee::string_tools::parse_hexstr_to_binbuff(viewkey_string, viewkey_data) || viewkey_data.size() != sizeof(crypto::secret_key))
       {
         setStatusError(tr("failed to parse secret view key"));
@@ -746,18 +746,18 @@ void WalletImpl::setSeedLanguage(const std::string &arg)
 
 int WalletImpl::status() const
 {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     return m_status;
 }
 
 std::string WalletImpl::errorString() const
 {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     return m_errorString;
 }
 
 void WalletImpl::statusWithErrorString(int& status, std::string& errorString) const {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     status = m_status;
     errorString = m_errorString;
 }
@@ -1570,7 +1570,7 @@ void WalletImpl::setListener(WalletListener *l)
 
 bool WalletImpl::setUserNote(const std::string &txid, const std::string &note)
 {
-    cryptonote::blobdata txid_data;
+    std::string txid_data;
     if(!epee::string_tools::parse_hexstr_to_binbuff(txid, txid_data) || txid_data.size() != sizeof(crypto::hash))
       return false;
     const crypto::hash htxid = *reinterpret_cast<const crypto::hash*>(txid_data.data());
@@ -1581,7 +1581,7 @@ bool WalletImpl::setUserNote(const std::string &txid, const std::string &note)
 
 std::string WalletImpl::getUserNote(const std::string &txid) const
 {
-    cryptonote::blobdata txid_data;
+    std::string txid_data;
     if(!epee::string_tools::parse_hexstr_to_binbuff(txid, txid_data) || txid_data.size() != sizeof(crypto::hash))
       return "";
     const crypto::hash htxid = *reinterpret_cast<const crypto::hash*>(txid_data.data());
@@ -1848,7 +1848,7 @@ bool WalletImpl::verifyMessageWithPublicKey(const std::string &message, const st
 {
     clearStatus();
 
-    cryptonote::blobdata pkeyData;
+    std::string pkeyData;
     if(!epee::string_tools::parse_hexstr_to_binbuff(publicKey, pkeyData) || pkeyData.size() != sizeof(crypto::public_key))
     {
         m_status = Status_Error;
@@ -1907,7 +1907,7 @@ bool WalletImpl::watchOnly() const
 
 void WalletImpl::clearStatus() const
 {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     m_status = Status_Ok;
     m_errorString.clear();
 }
@@ -1924,7 +1924,7 @@ void WalletImpl::setStatusCritical(const std::string& message) const
 
 void WalletImpl::setStatus(int status, const std::string& message) const
 {
-    boost::lock_guard<boost::mutex> l(m_statusMutex);
+    std::lock_guard l{m_statusMutex};
     m_status = status;
     m_errorString = message;
 }
@@ -1934,7 +1934,7 @@ void WalletImpl::refreshThreadFunc()
     LOG_PRINT_L3(__FUNCTION__ << ": starting refresh thread");
 
     while (true) {
-        boost::mutex::scoped_lock lock(m_refreshMutex);
+        std::unique_lock lock{m_refreshMutex};
         if (m_refreshThreadDone) {
             break;
         }
@@ -1942,8 +1942,8 @@ void WalletImpl::refreshThreadFunc()
         // if auto refresh enabled, we wait for the "m_refreshIntervalSeconds" interval.
         // if not - we wait forever
         if (m_refreshIntervalMillis > 0) {
-            boost::posix_time::milliseconds wait_for_ms(m_refreshIntervalMillis.load());
-            m_refreshCV.timed_wait(lock, wait_for_ms);
+            std::chrono::milliseconds wait_for_ms{m_refreshIntervalMillis.load()};
+            m_refreshCV.wait_for:(lock, wait_for_ms);
         } else {
             m_refreshCV.wait(lock);
         }
@@ -1964,7 +1964,7 @@ void WalletImpl::doRefresh()
 {
     bool rescan = m_refreshShouldRescan.exchange(false);
     // synchronizing async and sync refresh calls
-    boost::lock_guard<boost::mutex> guard(m_refreshMutex2);
+    std::lock_guard guard{m_refreshMutex2};
     do try {
         LOG_PRINT_L3(__FUNCTION__ << ": doRefresh, rescan = "<<rescan);
         if (daemonSynced()) {

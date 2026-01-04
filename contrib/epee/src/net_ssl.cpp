@@ -26,18 +26,24 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <string.h>
+#include <cstring>
 #include <thread>
 #include <boost/asio/post.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/asio/strand.hpp>
+#include <condition_variable>
 #include <boost/cerrno.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/strand.hpp>
-#include <condition_variable>
 #include <boost/lambda/lambda.hpp>
+extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/pem.h>
+#include <openssl/evp.h>
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#include <openssl/rsa.h>
+#endif
+}
 #include "misc_log_ex.h"
 #include "net/net_helper.h"
 #include "net/net_ssl.h"
@@ -137,6 +143,50 @@ namespace net_utils
 bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
 {
   MGINFO("Generating SSL certificate");
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
+  if (!ctx)
+  {
+    MERROR("Failed to create EVP_PKEY_CTX");
+    return false;
+  }
+
+  if (EVP_PKEY_keygen_init(ctx) <= 0)
+  {
+    MERROR("Failed to initialize key generation");
+    EVP_PKEY_CTX_free(ctx);
+    return false;
+  }
+
+  if (EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 4096) <= 0)
+  {
+    MERROR("Failed to set RSA key size");
+    EVP_PKEY_CTX_free(ctx);
+    return false;
+  }
+
+  pkey = EVP_PKEY_new();
+  if (!pkey)
+  {
+    MERROR("Failed to create new private key");
+    EVP_PKEY_CTX_free(ctx);
+    return false;
+  }
+
+  openssl_pkey pkey_deleter{pkey};
+
+  if (EVP_PKEY_keygen(ctx, &pkey) <= 0)
+  {
+    MERROR("Error generating RSA private key");
+    EVP_PKEY_CTX_free(ctx);
+    return false;
+  }
+
+  EVP_PKEY_CTX_free(ctx);
+  (void)pkey_deleter.release();
+
+#else
   pkey = EVP_PKEY_new();
   if (!pkey)
   {
@@ -175,6 +225,7 @@ bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
 
   // the RSA key is now managed by the EVP_PKEY structure
   (void)rsa.release();
+#endif
 
   cert = X509_new();
   if (!cert)
@@ -308,8 +359,13 @@ boost::asio::ssl::context ssl_options_t::create_context() const
   ssl_context.set_options(boost::asio::ssl::context::no_tlsv1);
   ssl_context.set_options(boost::asio::ssl::context::no_tlsv1_1);
 
-  // only allow a select handful of tls v1.3 and v1.2 ciphers to be used
-  SSL_CTX_set_cipher_list(ssl_context.native_handle(), "ECDHE-ECDSA-CHACHA20-POLY1305-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256");
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+  if (SSL_CTX_set_ciphersuites(ssl_context.native_handle(), "TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256") == 0)
+  {
+    MERROR("Failed to set TLS 1.3 cipher suites");
+  }
+#endif
+  SSL_CTX_set_cipher_list(ssl_context.native_handle(), "EECDH+CHACHA20:EECDH+AES");
 
   // set options on the SSL context for added security
   SSL_CTX *ctx = ssl_context.native_handle();
@@ -331,7 +387,9 @@ boost::asio::ssl::context ssl_options_t::create_context() const
 #ifdef SSL_OP_CIPHER_SERVER_PREFERENCE
   SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
 #endif
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_CTX_set_ecdh_auto(ctx, 1);
+#endif
 
   switch (verification)
   {
@@ -393,13 +451,13 @@ void ssl_authentication_t::use_ssl_certificate(boost::asio::ssl::context &ssl_co
   ssl_context.use_certificate_chain_file(certificate_path);
 }
 
-bool is_ssl(const unsigned char *data, size_t len)
+bool is_ssl(std::string_view data)
 {
-  if (len < get_ssl_magic_size())
+  if (data.size() < get_ssl_magic_size())
     return false;
 
   // https://security.stackexchange.com/questions/34780/checking-client-hello-for-https-classification
-  MDEBUG("SSL detection buffer, " << len << " bytes: "
+  MDEBUG("SSL detection buffer, " << data.size() << " bytes: "
     << (unsigned)(unsigned char)data[0] << " " << (unsigned)(unsigned char)data[1] << " "
     << (unsigned)(unsigned char)data[2] << " " << (unsigned)(unsigned char)data[3] << " "
     << (unsigned)(unsigned char)data[4] << " " << (unsigned)(unsigned char)data[5] << " "
@@ -413,12 +471,16 @@ bool is_ssl(const unsigned char *data, size_t len)
   return false;
 }
 
-bool ssl_options_t::has_strong_verification(boost::string_ref host) const noexcept
+static bool ends_with(std::string_view str, std::string_view suffix) {
+  return str.size() >= suffix.size() && str.substr(str.size() - suffix.size()) == suffix;
+}
+
+bool ssl_options_t::has_strong_verification(std::string_view host) const noexcept
 {
   // onion and i2p addresses contain information about the server cert
   // which both authenticates and encrypts
-  if (host.ends_with(".onion") || host.ends_with(".i2p"))
-	return true;
+  if (ends_with(host, ".onion"sv) || ends_with(host, ".i2p"sv))
+    return true;
   switch (verification)
   {
 	default:
@@ -470,7 +532,7 @@ bool ssl_options_t::has_fingerprint(boost::asio::ssl::verify_context &ctx) const
   return false;
 }
 
-void ssl_options_t::configure(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, const std::string& host) const
+bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, boost::asio::const_buffer buffer, const std::string& host, std::chrono::milliseconds timeout) const
 {
   socket.next_layer().set_option(boost::asio::ip::tcp::no_delay(true));
 
@@ -507,98 +569,27 @@ void ssl_options_t::configure(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
       return true;
     });
   }
-}
 
-bool ssl_options_t::handshake(
-  boost::asio::io_context& io_context,
-  boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket,
-  boost::asio::ssl::stream_base::handshake_type type,
-  boost::asio::const_buffer buffer,
-  const std::string& host,
-  std::chrono::milliseconds timeout) const
-{
-  configure(socket, type, host);
-
-  auto start_handshake = [&]{
-    using ec_t = boost::system::error_code;
-    using timer_t = boost::asio::steady_timer;
-    using strand_t = boost::asio::io_context::strand;
-    using socket_t = boost::asio::ip::tcp::socket;
-
-    if (io_context.stopped())
-      io_context.restart();
-    strand_t strand(io_context);
-    timer_t deadline(io_context, timeout);
-
-    struct state_t {
-      std::mutex lock;
-      std::condition_variable_any condition;
-      ec_t result;
-      bool wait_timer;
-      bool wait_handshake;
-      bool cancel_timer;
-      bool cancel_handshake;
-    };
-    state_t state{};
-
-    state.wait_timer = true;
-    auto on_timer = [&](const ec_t &ec){
-      std::lock_guard<std::mutex> guard(state.lock);
-      state.wait_timer = false;
-      state.condition.notify_all();
-      if (!state.cancel_timer) {
-        state.cancel_handshake = true;
-        ec_t ec;
-        socket.next_layer().cancel(ec);
-      }
-    };
-
-    state.wait_handshake = true;
-    auto on_handshake = [&](const ec_t &ec, size_t bytes_transferred){
-      std::lock_guard<std::mutex> guard(state.lock);
-      state.wait_handshake = false;
-      state.condition.notify_all();
-      state.result = ec;
-      if (!state.cancel_handshake) {
-        state.cancel_timer = true;
-        deadline.cancel();
-      }
-    };
-
-    deadline.async_wait(on_timer);
-    boost::asio::post(
-      strand,
-      [&]{
-        socket.async_handshake(
-          type,
-          boost::asio::buffer(buffer),
-          strand.wrap(on_handshake)
-        );
-      }
-    );
-
-    while (!io_context.stopped())
+  auto& io_service = GET_IO_SERVICE(socket);
+  boost::asio::steady_timer deadline(io_service, timeout);
+  deadline.async_wait([&socket](const boost::system::error_code& error) {
+    if (error != boost::asio::error::operation_aborted)
     {
-      io_context.poll_one();
-      std::lock_guard<std::mutex> guard(state.lock);
-      state.condition.wait_for(
-        state.lock,
-        std::chrono::milliseconds(30),
-        [&]{
-          return !state.wait_timer && !state.wait_handshake;
-        }
-      );
-      if (!state.wait_timer && !state.wait_handshake)
-        break;
+      socket.next_layer().close();
     }
-    if (state.result.value()) {
-      ec_t ec;
-      socket.next_layer().shutdown(socket_t::shutdown_both, ec);
-      socket.next_layer().close(ec);
-    }
-    return state.result;
-  };
-  const auto ec = start_handshake();
+  });
+
+  boost::system::error_code ec = boost::asio::error::would_block;
+  socket.async_handshake(type, boost::asio::buffer(buffer), boost::lambda::var(ec) = boost::lambda::_1);
+  if (io_service.stopped())
+  {
+    io_service.restart();
+  }
+  while (ec == boost::asio::error::would_block && !io_service.stopped())
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    io_service.poll_one();
+  }
 
   if (ec)
   {
@@ -609,7 +600,7 @@ bool ssl_options_t::handshake(
   return true;
 }
 
-bool ssl_support_from_string(ssl_support_t &ssl, boost::string_ref s)
+bool ssl_support_from_string(ssl_support_t &ssl, std::string_view s)
 {
   if (s == "enabled")
     ssl = epee::net_utils::ssl_support_t::e_ssl_support_enabled;

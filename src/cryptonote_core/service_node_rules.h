@@ -29,11 +29,11 @@ namespace service_nodes
   constexpr size_t STATE_CHANGE_MIN_NODES_TO_TEST                  = 50;
   constexpr uint64_t VOTE_LIFETIME                                 = BLOCKS_EXPECTED_IN_HOURS(2);
 
-  constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 7;
+  constexpr size_t STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE          = 4;
   constexpr size_t STATE_CHANGE_QUORUM_SIZE                        = 10;
   constexpr int MIN_TIME_IN_S_BEFORE_VOTING                        = UPTIME_PROOF_MAX_TIME_IN_SECONDS;
   constexpr size_t CHECKPOINT_QUORUM_SIZE                          = 20;
-  constexpr size_t CHECKPOINT_MIN_VOTES                            = 13;
+  constexpr size_t CHECKPOINT_MIN_VOTES                            = 5;
 
   static_assert(STATE_CHANGE_MIN_VOTES_TO_CHANGE_STATE <= STATE_CHANGE_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
   static_assert(CHECKPOINT_MIN_VOTES <= CHECKPOINT_QUORUM_SIZE, "The number of votes required to kick can't exceed the actual quorum size, otherwise we never kick.");
@@ -78,6 +78,7 @@ namespace service_nodes
   };
 
   constexpr proof_version MIN_UPTIME_PROOF_VERSIONS[] = {
+    //{cryptonote::network_version_18, {9,0,0}},
     {cryptonote::network_version_17, {8,0,0}},
     {cryptonote::network_version_16, {7,2,0}},
   };

@@ -29,21 +29,6 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(UNBOUND libunbound)
-
-message(STATUS "Using in-tree miniupnpc")
-add_subdirectory(miniupnp/miniupnpc)
-if(MSVC)
-  target_compile_options(libminiupnpc-static PRIVATE -wd4244 -wd4267)
-else()
-  target_compile_options(libminiupnpc-static PRIVATE -Wno-undef -Wno-unused-result -Wno-unused-value)
-endif()
-if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-  target_compile_definitions(libminiupnpc-static PRIVATE _NETBSD_SOURCE)
-endif()
-target_link_libraries(miniupnpc INTERFACE libminiupnpc-static)
-
 add_subdirectory(easylogging++)
 add_subdirectory(qrcodegen)
 add_subdirectory(randomarq EXCLUDE_FROM_ALL)

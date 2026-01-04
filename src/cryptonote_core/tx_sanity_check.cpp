@@ -40,7 +40,7 @@
 namespace cryptonote
 {
 
-bool tx_sanity_check(Blockchain &blockchain, const cryptonote::blobdata &tx_blob)
+bool tx_sanity_check(Blockchain &blockchain, const std::string &tx_blob)
 {
   cryptonote::transaction tx;
 

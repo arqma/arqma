@@ -75,7 +75,7 @@ namespace cryptonote
     uint64_t fee,
     const account_public_address &miner_address,
     transaction& tx,
-    const blobdata& extra_nonce = blobdata(),
+    const std::string& extra_nonce = std::string(),
     uint8_t hard_fork_version = {},
     const arqma_miner_tx_context &miner_context = {}
   );
@@ -212,7 +212,7 @@ namespace cryptonote
   bool generate_genesis_block(block& bl);
 
   class Blockchain;
-  bool get_block_longhash(const Blockchain *pb, const blobdata& bd, crypto::hash& res, const uint64_t height, const int major_version, const crypto::hash *seed_hash, const int miners = 0);
+  bool get_block_longhash(const Blockchain *pb, const std::string& bd, crypto::hash& res, const uint64_t height, const int major_version, const crypto::hash *seed_hash, const int miners = 0);
   bool get_block_longhash(const Blockchain *pb, const block& b, crypto::hash& res, const uint64_t height, const crypto::hash *seed_hash = nullptr, const int miners = 0);
   crypto::hash get_block_longhash(const Blockchain *pb, const block& b, const uint64_t height, const crypto::hash *seed_hash = nullptr, const int miners = 0);
   void get_altblock_longhash(const block& b, crypto::hash& res, const crypto::hash& seed_hash);

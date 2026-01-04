@@ -35,6 +35,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "int-util.h"
 #include "hash-ops.h"
@@ -1089,7 +1090,7 @@ STATIC INLINE void* aligned_malloc(size_t size, size_t align)
 #ifdef _MSC_VER
     result = _aligned_malloc(size, align);
 #else
-    if (posix_memalign(&result, align, size)) result = NULL;
+    if (posix_memalign(&result, align, size)) reuslt = NULL;
 #endif
     return result;
 }
@@ -1102,6 +1103,7 @@ STATIC INLINE void aligned_free(void *ptr)
     free(ptr);
 #endif
 }
+
 #endif /* FORCE_USE_HEAP */
 
 STATIC INLINE void xor_blocks(uint8_t* a, const uint8_t* b)

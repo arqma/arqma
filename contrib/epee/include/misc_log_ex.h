@@ -30,6 +30,7 @@
 
 #ifdef __cplusplus
 
+#include <sstream>
 #include <string>
 
 #include "easylogging++.h"
@@ -38,11 +39,17 @@
 #define ARQMA_DEFAULT_LOG_CATEGORY "default"
 
 #define MAX_LOG_FILE_SIZE 104850000 // 100 MB - 7600 bytes
-#define MAX_LOG_FILES 50
+#define MAX_LOG_FILES 10
+
+#define LOG_TO_STRING(x) \
+  std::stringstream ss; \
+  ss << x; \
+  const std::string str = ss.str();
 
 #define MCLOG_TYPE(level, cat, color, type, x) do { \
     if (el::Loggers::allowed(level, cat)) { \
-      el::base::Writer(level, color, __FILE__, __LINE__, ELPP_FUNC, type).construct(cat) << x; \
+      LOG_TO_STRING(x); \
+      el::base::Writer(level, color, __FILE__, __LINE__, ELPP_FUNC, type).construct(cat) << str; \
     } \
   } while (0)
 
@@ -91,7 +98,8 @@
   do { \
     if (el::Loggers::allowed(level, cat)) { \
       init; \
-      el::base::Writer(level, color, __FILE__, __LINE__, ELPP_FUNC, type).construct(cat) << x; \
+      LOG_TO_STRING(x); \
+      el::base::Writer(level, color, __FILE__, __LINE__, ELPP_FUNC, type).construct(cat) << str; \
     } \
   } while(0)
 #define MIDEBUG(init, x) IFLOG(el::Level::Debug, ARQMA_DEFAULT_LOG_CATEGORY, el::Color::Default, el::base::DispatchAction::NormalLog, init, x)
@@ -103,16 +111,6 @@
 #define LOG_PRINT_L2(x) MDEBUG(x)
 #define LOG_PRINT_L3(x) MTRACE(x)
 #define LOG_PRINT_L4(x) MTRACE(x)
-
-#define _dbg3(x) MTRACE(x)
-#define _dbg2(x) MDEBUG(x)
-#define _dbg1(x) MDEBUG(x)
-#define _info(x) MINFO(x)
-#define _note(x) MDEBUG(x)
-#define _fact(x) MDEBUG(x)
-#define _mark(x) MDEBUG(x)
-#define _warn(x) MWARNING(x)
-#define _erro(x) MERROR(x)
 
 #define MLOG_SET_THREAD_NAME(x) el::Helpers::setThreadName(x)
 

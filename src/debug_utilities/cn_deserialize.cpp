@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
     output = &std::cout;
   }
 
-  cryptonote::blobdata blob;
+  std::string blob;
   if (!epee::string_tools::parse_hexstr_to_binbuff(input, blob))
   {
     std::cerr << "Invalid hex input" << std::endl;

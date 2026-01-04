@@ -175,20 +175,6 @@ bool t_command_parser_executor::save_blockchain(const std::vector<std::string>& 
   return m_executor.save_blockchain();
 }
 
-bool t_command_parser_executor::show_hash_rate(const std::vector<std::string>& args)
-{
-  if (!args.empty()) return false;
-
-  return m_executor.show_hash_rate();
-}
-
-bool t_command_parser_executor::hide_hash_rate(const std::vector<std::string>& args)
-{
-  if (!args.empty()) return false;
-
-  return m_executor.hide_hash_rate();
-}
-
 bool t_command_parser_executor::show_difficulty(const std::vector<std::string>& args)
 {
   if (!args.empty()) return false;
@@ -612,7 +598,7 @@ bool t_command_parser_executor::out_peers(const std::vector<std::string>& args)
   }
 
   catch(const std::exception& ex) {
-    _erro("stoi exception");
+    MERROR("stoi exception");
     return false;
   }
 
@@ -633,7 +619,7 @@ bool t_command_parser_executor::in_peers(const std::vector<std::string>& args)
   }
 
   catch(const std::exception& ex) {
-    _erro("stoi exception");
+    MERROR("stoi exception");
     return false;
   }
 

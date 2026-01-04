@@ -29,7 +29,6 @@
 
 #include "node_rpc_proxy.h"
 #include "storages/http_abstract_invoke.h"
-#include <boost/thread.hpp>
 
 using namespace epee;
 

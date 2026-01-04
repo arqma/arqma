@@ -28,6 +28,7 @@
 
 #include "zmq_server.h"
 
+
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "daemon.zmq"
 
@@ -51,7 +52,7 @@ ZmqServer::~ZmqServer()
 
 void ZmqServer::serve()
 {
-  while (1)
+  while(1)
   {
     try
     {
@@ -77,14 +78,13 @@ void ZmqServer::serve()
 
       }
     }
-//    catch (const boost::thread_interrupted& e)
-//    {
-//      MDEBUG("ZMQ Server thread interrupted.");
-//    }
+    catch (const boost::thread_interrupted& e)
+    {
+      MDEBUG("ZMQ Server thread interrupted.");
+    }
     catch (const zmq::error_t& e)
     {
-      if (zmq_errno() != ETERM)
-        MERROR(std::string("ZMQ error: ") + e.what());
+      MERROR(std::string("ZMQ error: ") + e.what());
     }
     boost::this_thread::interruption_point();
   }
@@ -101,6 +101,7 @@ bool ZmqServer::addTCPSocket(std::string address, std::string port)
   try
   {
     std::string addr_prefix("tcp://");
+
     rep_socket.reset(new zmq::socket_t(context, ZMQ_REP));
     rep_socket->setsockopt(ZMQ_RCVTIMEO, &DEFAULT_RPC_RECV_TIMEOUT_MS, sizeof(DEFAULT_RPC_RECV_TIMEOUT_MS));
 
@@ -108,6 +109,7 @@ bool ZmqServer::addTCPSocket(std::string address, std::string port)
       address = "*";
     if (port.empty())
       port = "*";
+
     std::string bind_address = addr_prefix + address + std::string(":") + port;
     rep_socket->bind(bind_address.c_str());
   }
@@ -131,9 +133,7 @@ void ZmqServer::stop()
     return;
 
   stop_signal = true;
-
   run_thread.interrupt();
-//  context.close();
   run_thread.join();
 
   running = false;
