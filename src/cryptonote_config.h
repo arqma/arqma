@@ -387,7 +387,7 @@ namespace cryptonote
     network_version_15,
     network_version_16,
     network_version_17,
-//    network_verwion_18,
+    network_verwion_18,
 
     network_version_count,
   };
