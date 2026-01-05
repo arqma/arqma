@@ -98,12 +98,13 @@ namespace net_utils
       bool stop_signal_sent;
     };
 
-    explicit connection( boost::asio::io_service& io_service,
+    explicit connection( boost::asio::io_context& io_context,
                          std::shared_ptr<shared_state> state,
                          t_connection_type connection_type,
                          epee::net_utils::ssl_support_t ssl_support);
 
-    explicit connection( boost::asio::ip::tcp::socket&& sock,
+    explicit connection( boost::asio::io_context& io_context,
+                         boost::asio::ip::tcp::socket&& sock,
                          std::shared_ptr<shared_state> state,
                          t_connection_type connection_type,
                          epee::net_utils::ssl_support_t ssl_support);
@@ -133,7 +134,7 @@ namespace net_utils
     virtual bool close();
     virtual bool call_run_once_service_io();
     virtual bool request_callback();
-    virtual boost::asio::io_service& get_io_service();
+    virtual boost::asio::io_context& get_io_context();
     virtual bool add_ref();
     virtual bool release();
     //------------------------------------------------------
@@ -157,6 +158,7 @@ namespace net_utils
     std::array<char, 16384> buffer_;
     size_t buffer_ssl_init_fill;
 
+    boost::asio::io_context &m_io_context;
     t_connection_context context;
     t_protocol_handler m_protocol_handler;
 
@@ -203,7 +205,7 @@ namespace net_utils
     // serve up files from the given directory.
 
     boosted_tcp_server(t_connection_type connection_type);
-    explicit boosted_tcp_server(boost::asio::io_service& external_io_service, t_connection_type connection_type);
+    explicit boosted_tcp_server(boost::asio::io_context& external_io_context, t_connection_type connection_type);
     ~boosted_tcp_server();
 
     std::map<std::string, t_connection_type> server_type_map;
@@ -275,12 +277,12 @@ namespace net_utils
       return connections_count;
     }
 
-    boost::asio::io_service& get_io_service() { return io_service_; }
+    boost::asio::io_context& get_io_context() { return io_context_; }
 
     template <class Callback>
     struct idle_callback_context
     {
-      idle_callback_context(boost::asio::io_service& io_service, Callback h, std::chrono::milliseconds period)
+      idle_callback_context(boost::asio::io_context& io_service, Callback h, std::chrono::milliseconds period)
         : m_timer{io_service}
         , m_handler{std::move(h)}
         , m_period{period}
@@ -299,7 +301,7 @@ namespace net_utils
     template<class t_handler>
     bool add_idle_handler(t_handler callback, std::chrono::milliseconds timeout)
     {
-      auto ptr = std::make_shared<idle_callback_context<t_handler>>(io_service_, std::move(callback), timeout);
+      auto ptr = std::make_shared<idle_callback_context<t_handler>>(io_context_, std::move(callback), timeout);
       //needed call handler here ?...
       ptr->m_timer.expires_after(ptr->m_period);
       ptr->m_timer.async_wait([this, ptr] (const boost::system::error_code&) { global_timer_handler<t_handler>(ptr); });
@@ -317,9 +319,9 @@ namespace net_utils
     }
 
     template<class t_handler>
-    bool async_call(t_handler t_callback)
+    bool async_call(t_handler&& t_callback)
     {
-      boost::asio::post(io_service_, std::move(t_callback), std::allocator<void>{});
+      boost::asio::post(io_context_, std::forward<t_handler>(t_callback));
       return true;
     }
 
@@ -337,14 +339,14 @@ namespace net_utils
     struct worker
     {
       worker()
-        : io_service(), work(io_service.get_executor())
+        : io_context(), work(io_context.get_executor())
       {}
 
-      boost::asio::io_service io_service;
-      boost::asio::executor_work_guard<decltype(io_service.get_executor())> work;
+      boost::asio::io_context io_context;
+      boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work;
     };
-    std::unique_ptr<worker> m_io_service_local_instance;
-    boost::asio::io_service& io_service_;
+    std::unique_ptr<worker> m_io_context_local_instance;
+    boost::asio::io_context& io_context_;
 
     // Acceptor used to listen for incoming connections.
     boost::asio::ip::tcp::acceptor acceptor_;

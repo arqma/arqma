@@ -69,7 +69,7 @@ namespace nodetool
   node_server<t_payload_net_handler>::~node_server()
   {
     // tcp server uses io_context in destructor, and every zone uses
-    // io_service from public zone.
+    // io_context from public zone.
     for (auto current = m_network_zones.begin(); current != m_network_zones.end(); /* below */)
     {
       if (current->first != epee::net_utils::zone::public_)
@@ -355,7 +355,7 @@ namespace nodetool
     m_use_ipv6 = command_line::get_arg(vm, arg_p2p_use_ipv6);
     m_require_ipv4 = !command_line::get_arg(vm, arg_p2p_ignore_ipv4);
     public_zone.m_notifier = cryptonote::levin::notify{
-      public_zone.m_net_server.get_io_service(), public_zone.m_net_server.get_config_shared(), {}, epee::net_utils::zone::public_
+      public_zone.m_net_server.get_io_context(), public_zone.m_net_server.get_config_shared(), {}, epee::net_utils::zone::public_
     };
 
     if (command_line::has_arg(vm, arg_p2p_add_peer))
@@ -498,7 +498,7 @@ namespace nodetool
       }
 
       zone.m_notifier = cryptonote::levin::notify{
-        zone.m_net_server.get_io_service(), zone.m_net_server.get_config_shared(), std::move(this_noise), proxy.zone
+        zone.m_net_server.get_io_context(), zone.m_net_server.get_config_shared(), std::move(this_noise), proxy.zone
       };
     }
 
@@ -573,7 +573,7 @@ namespace nodetool
     MINFO("Resolving node address: host=" << host << ", port=" << port);
 
     boost::system::error_code ec;
-    io_service io_srv;
+    io_context io_srv;
     ip::tcp::resolver resolver(io_srv);
     const auto results = resolver.resolve(host, port, boost::asio::ip::tcp::resolver::canonical_name, ec);
     CHECK_AND_ASSERT_MES(!ec && !results.empty(), false, "Failed to resolve host name '" << host << "': " << ec.message() << ':' << ec.value());
@@ -738,7 +738,7 @@ namespace nodetool
       return zone_->second;
 
     network_zone& public_zone = m_network_zones[epee::net_utils::zone::public_];
-    return m_network_zones.emplace_hint(zone_, std::piecewise_construct, std::make_tuple(zone), std::tie(public_zone.m_net_server.get_io_service()))->second;
+    return m_network_zones.emplace_hint(zone_, std::piecewise_construct, std::make_tuple(zone), std::tie(public_zone.m_net_server.get_io_context()))->second;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -812,7 +812,7 @@ namespace nodetool
 
     //configure self
 
-    public_zone.m_net_server.set_threads_prefix("P2P"); // all zones use these threads/asio::io_service
+    public_zone.m_net_server.set_threads_prefix("P2P"); // all zones use these threads/asio::io_context
 
     // from here onwards, it's online stuff
     if (m_offline)
@@ -2662,7 +2662,7 @@ namespace nodetool
   boost::optional<p2p_connection_context_t<typename t_payload_net_handler::connection_context>>
   node_server<t_payload_net_handler>::socks_connect(network_zone& zone, const epee::net_utils::network_address& remote, epee::net_utils::ssl_support_t ssl_support)
   {
-    auto result = socks_connect_internal(zone.m_net_server.get_stop_signal(), zone.m_net_server.get_io_service(), zone.m_proxy_address, remote);
+    auto result = socks_connect_internal(zone.m_net_server.get_stop_signal(), zone.m_net_server.get_io_context(), zone.m_proxy_address, remote);
     if (result) // if no error
     {
       p2p_connection_context context{};

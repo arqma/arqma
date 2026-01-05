@@ -532,7 +532,12 @@ bool ssl_options_t::has_fingerprint(boost::asio::ssl::verify_context &ctx) const
   return false;
 }
 
-bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket, boost::asio::ssl::stream_base::handshake_type type, boost::asio::const_buffer buffer, const std::string& host, std::chrono::milliseconds timeout) const
+bool ssl_options_t::handshake(boost::asio::io_context& io_context,
+                              boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket,
+                              boost::asio::ssl::stream_base::handshake_type type,
+                              boost::asio::const_buffer buffer,
+                              const std::string& host,
+                              std::chrono::milliseconds timeout) const
 {
   socket.next_layer().set_option(boost::asio::ip::tcp::no_delay(true));
 
@@ -570,8 +575,7 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
     });
   }
 
-  auto& io_service = GET_IO_SERVICE(socket);
-  boost::asio::steady_timer deadline(io_service, timeout);
+  boost::asio::steady_timer deadline(io_context, timeout);
   deadline.async_wait([&socket](const boost::system::error_code& error) {
     if (error != boost::asio::error::operation_aborted)
     {
@@ -581,14 +585,14 @@ bool ssl_options_t::handshake(boost::asio::ssl::stream<boost::asio::ip::tcp::soc
 
   boost::system::error_code ec = boost::asio::error::would_block;
   socket.async_handshake(type, boost::asio::buffer(buffer), boost::lambda::var(ec) = boost::lambda::_1);
-  if (io_service.stopped())
+  if (io_context.stopped())
   {
-    io_service.restart();
+    io_context.restart();
   }
-  while (ec == boost::asio::error::would_block && !io_service.stopped())
+  while (ec == boost::asio::error::would_block && !io_context.stopped())
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(30));
-    io_service.poll_one();
+    io_context.poll_one();
   }
 
   if (ec)
