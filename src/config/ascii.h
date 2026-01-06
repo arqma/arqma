@@ -1,4 +1,4 @@
-// Copyright (c)2020-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c)2020, ArqTras
 // Portions of this software are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
 // All rights reserved.

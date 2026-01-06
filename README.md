@@ -1,6 +1,6 @@
 ## Arqma Network
 
-Copyright (c) 2018-2025, The Arqma Network    
+Copyright (c) 2018 - 2026, The Arqma Network    
 Copyright (c) 2014-2018, The Monero Project  
 Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
