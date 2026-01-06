@@ -1787,10 +1787,12 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
   {
     bool soft_fork_checkpoint = (b.major_version < cryptonote::network_version_17 && service_node_checkpoint);
     {
-    if (!soft_fork_checkpoint)
-      MERROR_VER("Block with id: " << id << std::endl << " can NOT be accepted for alternative chain, block_height: "
-                 << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
-      bvc.m_verification_failed = true;
+      if (!soft_fork_checkpoint)
+      {
+        MERROR_VER("Block with id: " << id << std::endl << " can NOT be accepted for alternative chain, block_height: "
+                   << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
+        bvc.m_verification_failed = true;
+      }
       return false;
     }
   }
