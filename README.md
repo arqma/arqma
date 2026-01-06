@@ -103,8 +103,8 @@ library archives (`.a`).
 | pkg-config   | any           | NO       | `pkg-config`       | `base-devel` | `pkgconf`         | NO       |                |
 | Boost        | 1.66          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | 1.1.1         | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
-| libzmq       | 4.3.2         | NO       | `libzmq3-dev`      | `zeromq`     | `cppzmq-devel`    | NO       | ZeroMQ library |
-| libsodium    | 1.0.18        | NO       | `libsodium-dev`    | ?            | `libsodium-devel` | NO       | Cryptography   |
+| libzmq       | 4.3.2         | NO       | `libzmq3-dev`[2]   | `zeromq`[3]  | `cppzmq-devel`    | NO       | ZeroMQ library |
+| libsodium    | 1.0.18        | NO       | `libsodium-dev`[2] | `libsodium`[3] | `libsodium-devel` | NO       | Cryptography   |
 | libunwind    | any           | NO       | `libunwind8-dev`   | `libunwind`  | `libunwind-devel` | YES      | Stack traces   |
 | liblzma      | any           | NO       | `liblzma-dev`      | `xz`         | `xz-devel`        | YES      | For libunwind  |
 | libreadline  | 8.0           | NO       | `libreadline-dev`  | `readline`   | `readline-devel`  | YES      | Input editing  |
@@ -124,9 +124,18 @@ build the library binary manually. This can be done with the following command:
 
 `sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/`
 
+[2] On Ubuntu 24.04 (Noble), system packages provide: `libzmq3-dev` (ZeroMQ 4.3.5-1build2) and `libsodium-dev` (libsodium 1.0.18+), both meeting minimum requirements.
+
+[3] On macOS (Homebrew), install with `brew install zeromq libsodium`. Homebrew provides: `zeromq` (4.3.5_2) and `libsodium` (1.0.20+), both meeting minimum requirements. The project uses bundled cppzmq headers from `external/cppzmq/` to ensure consistent API access.
+
 Debian / Ubuntu one liner for all dependencies
 
 `sudo apt update && sudo apt install --yes git build-essential curl cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev qttools5-dev-tools doxygen graphviz libudev-dev libusb-1.0-0-dev libhidapi-dev xsltproc gperf autoconf automake libtool-bin`
+
+**Platform-specific package versions:**
+- **Ubuntu 24.04 (Noble):** `libzmq3-dev` provides ZeroMQ 4.3.5-1build2, `libsodium-dev` provides libsodium 1.0.18+, both meet minimum requirements (>= 4.3.2 and >= 1.0.18 respectively).
+- **macOS (Homebrew):** `zeromq` provides ZeroMQ 4.3.5_2, `libsodium` provides libsodium 1.0.20+, both meet minimum requirements.
+- **cppzmq:** The project uses bundled headers from `external/cppzmq/` (latest from GitHub) to ensure consistent API access across all platforms, regardless of system package versions.
 
 ### Cloning the repository
 
@@ -148,6 +157,11 @@ invokes cmake commands as needed.
 #### On Linux and OS X
 
 * Install the dependencies
+
+**Platform-specific notes:**
+- **Ubuntu 24.04 (Noble):** System packages provide ZeroMQ 4.3.5-1build2 and libsodium 1.0.18+, which meet all requirements.
+- **macOS (Homebrew):** Install with `brew install zeromq libsodium`. Homebrew provides ZeroMQ 4.3.5_2 and libsodium 1.0.20+, which meet all requirements.
+- **cppzmq:** The project uses bundled headers from `external/cppzmq/` (latest from GitHub) to ensure consistent API access regardless of system package versions.
 
 * Change to the root of the source code directory and build:
 
