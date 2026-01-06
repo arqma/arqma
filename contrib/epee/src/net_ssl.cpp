@@ -42,7 +42,6 @@ extern "C" {
 #include <openssl/evp.h>
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
 #include <openssl/rsa.h>
-#include <openssl/ec.h>
 #endif
 }
 #include "misc_log_ex.h"
@@ -82,7 +81,6 @@ namespace
   };
   using openssl_pkey = std::unique_ptr<EVP_PKEY, openssl_pkey_free>;
 
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
   struct openssl_rsa_free
   {
     void operator()(RSA* ptr) const noexcept
@@ -91,7 +89,6 @@ namespace
     }
   };
   using openssl_rsa = std::unique_ptr<RSA, openssl_rsa_free>;
-#endif
 
   struct openssl_bignum_free
   {
@@ -102,7 +99,6 @@ namespace
   };
   using openssl_bignum = std::unique_ptr<BIGNUM, openssl_bignum_free>;
 
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
   struct openssl_ec_key_free
   {
     void operator()(EC_KEY* ptr) const noexcept
@@ -120,7 +116,6 @@ namespace
     }
   };
   using openssl_group = std::unique_ptr<EC_GROUP, openssl_group_free>;
-#endif
 
   boost::system::error_code load_ca_file(boost::asio::ssl::context& ctx, const std::string& path)
   {
@@ -222,21 +217,11 @@ bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
     return false;
   }
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-  // OpenSSL 3.0+ uses set1 instead of assign
-  if (EVP_PKEY_set1_RSA(pkey, rsa.get()) <= 0)
-  {
-    MERROR("Error assigning RSA private key");
-    return false;
-  }
-#else
-  // OpenSSL 1.1.1 uses assign
   if (EVP_PKEY_assign_RSA(pkey, rsa.get()) <= 0)
   {
     MERROR("Error assigning RSA private key");
     return false;
   }
-#endif
 
   // the RSA key is now managed by the EVP_PKEY structure
   (void)rsa.release();
@@ -273,51 +258,6 @@ bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert)
 bool create_ec_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert, int type)
 {
   MGINFO("Generating SSL Certificate");
-
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-  // OpenSSL 3.0+ modern API - compatible with Ubuntu 22.04+, macOS, Windows with OpenSSL 3.x
-  EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr);
-  if (!ctx)
-  {
-    MERROR("Failed to create EVP_PKEY_CTX for EC key");
-    return false;
-  }
-
-  if (EVP_PKEY_keygen_init(ctx) <= 0)
-  {
-    MERROR("Failed to initialize EC key generation");
-    EVP_PKEY_CTX_free(ctx);
-    return false;
-  }
-
-  // Set EC curve by NID for OpenSSL 3.0+
-  if (EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx, type) <= 0)
-  {
-    MERROR("Failed to set EC curve");
-    EVP_PKEY_CTX_free(ctx);
-    return false;
-  }
-
-  pkey = nullptr;
-  if (EVP_PKEY_keygen(ctx, &pkey) <= 0)
-  {
-    MERROR("Error generating EC private key");
-    EVP_PKEY_CTX_free(ctx);
-    return false;
-  }
-
-  EVP_PKEY_CTX_free(ctx);
-
-  if (!pkey)
-  {
-    MERROR("Failed to generate EC private key");
-    return false;
-  }
-
-  openssl_pkey pkey_deleter{pkey};
-
-#else
-  // OpenSSL 1.1.1 fallback - compatible with Windows 10/11 with OpenSSL 1.1.1
   pkey = EVP_PKEY_new();
   if(!pkey)
   {
@@ -367,7 +307,6 @@ bool create_ec_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert, int type)
 
   // the key is now managed by the EVP_PKEY structure
   (void)ec_key.release();
-#endif
 
   cert = X509_new();
   if (!cert)
