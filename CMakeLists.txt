@@ -711,8 +711,12 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   if(ARM)
     set(WARNINGS "${WARNINGS} -Wno-error=inline-asm")
   endif()
+  # Suppress Clang-specific warnings
+  set(WARNINGS "${WARNINGS} -Wno-unknown-warning-option -Wno-deprecated-declarations")
 else()
   set(WARNINGS "${WARNINGS} -Wlogical-op -Wno-error=maybe-uninitialized -Wno-error=cpp")
+  # Suppress GCC-specific warnings
+  set(WARNINGS "${WARNINGS} -Wno-deprecated-declarations -Wno-stringop-overflow -Wno-maybe-uninitialized -Wno-uninitialized -Wno-sign-compare")
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.5))
   set(WARNINGS "${WARNINGS} -Wno-string-compare -Wno-unused-but-set-variable")
@@ -737,7 +741,19 @@ if(ARM7)
   set(WARNINGS "${WARNINGS} -Wno-psabi -Wno-maybe-uninitialized")
 endif()
 set(C_WARNINGS "-Waggregate-return -Wnested-externs -Wold-style-definition -Wstrict-prototypes")
+# Suppress additional C warnings
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(C_WARNINGS "${C_WARNINGS} -Wno-deprecated-declarations")
+else()
+  set(C_WARNINGS "${C_WARNINGS} -Wno-deprecated-declarations -Wno-stringop-overflow -Wno-maybe-uninitialized")
+endif()
 set(CXX_WARNINGS "-Wno-reorder -Wno-missing-field-initializers")
+# Suppress additional C++ warnings
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(CXX_WARNINGS "${CXX_WARNINGS} -Wno-deprecated-declarations -Wno-implicit-fallthrough -Wno-misleading-indentation")
+else()
+  set(CXX_WARNINGS "${CXX_WARNINGS} -Wno-deprecated-declarations -Wno-stringop-overflow -Wno-maybe-uninitialized -Wno-uninitialized -Wno-sign-compare -Wno-implicit-fallthrough -Wno-misleading-indentation")
+endif()
 
 arqma_enable_coverage()
 # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that
