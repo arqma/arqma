@@ -379,6 +379,50 @@ namespace
     return r;
   }
 
+  static constexpr std::string_view SFFD_ARG_NAME{"subtractfeefrom="};
+
+  bool parse_subtract_fee_from_outputs(
+    const std::string& arg,
+    tools::wallet2::unique_index_container& subtract_fee_from_outputs,
+    bool& subtract_fee_from_all,
+    bool& matches)
+  {
+    matches = false;
+    std::string_view psf{arg};
+    if (psf.size() < SFFD_ARG_NAME.size() || psf.compare(0, SFFD_ARG_NAME.size(), SFFD_ARG_NAME) != 0)
+      return true;
+    matches = true;
+
+    const char* arg_end = arg.data() + arg.size();
+    for (const char* p = arg.data() + SFFD_ARG_NAME.size(); p < arg_end;)
+    {
+      const char* new_p = nullptr;
+      const unsigned long dest_index = strtoul(p, const_cast<char**>(&new_p), 10);
+      if (dest_index == 0 && new_p == p)
+      {
+        if (0 != strncmp(p, "all", 3))
+        {
+          fail_msg_writer() << tr("Failed to parse subtractfeefrom list");
+          return false;
+        }
+        subtract_fee_from_all = true;
+        break;
+      }
+      else if (dest_index > std::numeric_limits<uint32_t>::max())
+      {
+        fail_msg_writer() << tr("Destination index is too large") << ": " << dest_index;
+        return false;
+      }
+      else
+      {
+        subtract_fee_from_outputs.insert(dest_index);
+        p = new_p + 1;
+      }
+    }
+
+    return true;
+  }
+
   void handle_transfer_exception(const std::exception_ptr &e, bool trusted_daemon)
   {
     bool warn_of_possible_attack = !trusted_daemon;
@@ -5167,6 +5211,26 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     local_args.pop_back();
   }
 
+  tools::wallet2::unique_index_container subtract_fee_from_outputs;
+  bool subtract_fee_from_all = false;
+  for (auto it = local_args.begin(); it < local_args.end();)
+  {
+    bool matches = false;
+    if (!parse_subtract_fee_from_outputs(*it, subtract_fee_from_outputs, subtract_fee_from_all, matches))
+    {
+      return false;
+    }
+    else if (matches)
+    {
+      it = local_args.erase(it);
+      break;
+    }
+    else
+    {
+      ++it;
+    }
+  }
+
   vector<cryptonote::address_parse_info> dsts_info;
   vector<cryptonote::tx_destination_entry> dsts;
   for (size_t i = 0; i < local_args.size(); )
@@ -5265,6 +5329,13 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     dsts.push_back(de);
   }
 
+  if (subtract_fee_from_all)
+  {
+    subtract_fee_from_outputs.clear();
+    for (decltype(subtract_fee_from_outputs)::value_type i = 0; i < dsts.size(); ++i)
+      subtract_fee_from_outputs.insert(i);
+  }
+
   SCOPED_WALLET_UNLOCK();
 
   try
@@ -5292,7 +5363,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     }
 
     arqma_construct_tx_params tx_params = tools::wallet2::construct_params(*hard_fork_version, txtype::standard);
-    ptx_vector = m_wallet->create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, tx_params);
+    ptx_vector = m_wallet->create_transactions_2(dsts, config::tx_settings::tx_mixin, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices, tx_params, subtract_fee_from_outputs);
 
     if (ptx_vector.empty())
     {

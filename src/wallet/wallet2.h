@@ -539,6 +539,7 @@ private:
 
     typedef std::vector<transfer_details> transfer_container;
     typedef std::unordered_multimap<crypto::hash, payment_details> payment_container;
+    typedef std::set<uint32_t> unique_index_container;
 
     struct multisig_sig
     {
@@ -931,7 +932,7 @@ private:
 
     std::vector<wallet2::pending_tx> create_transactions_2(std::vector<cryptonote::tx_destination_entry> dsts, const size_t fake_outs_count, const uint64_t unlock_time,
                                                            uint32_t priority, const std::vector<uint8_t>& extra, uint32_t subaddr_account, std::set<uint32_t> subaddr_indices,
-                                                           cryptonote::arqma_construct_tx_params &tx_params);
+                                                           cryptonote::arqma_construct_tx_params &tx_params, const unique_index_container& subtract_fee_from_outputs = {});
 
     std::vector<wallet2::pending_tx> create_transactions_all(uint64_t below, const cryptonote::account_public_address &address, bool is_subaddress, const size_t outputs,
                                                              const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra,
@@ -946,7 +947,7 @@ private:
                                                               const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra,
                                                               cryptonote::txtype tx_type = cryptonote::txtype::standard);
 
-    bool sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, std::vector<cryptonote::tx_destination_entry> dsts) const;
+    bool sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, const std::vector<cryptonote::tx_destination_entry>& dsts, const unique_index_container& subtract_fee_from_outputs = {}) const;
     bool parse_multisig_tx_from_str(std::string multisig_tx_st, multisig_tx_set &exported_txs) const;
     bool load_multisig_tx(std::string blob, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
     bool load_multisig_tx_from_file(const std::string &filename, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
