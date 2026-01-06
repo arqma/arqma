@@ -63,6 +63,10 @@ endif()
 
 set_property(SOURCE memwipe.c PROPERTY C_STANDARD 11)
 
+# Suppress OpenSSL deprecated function warnings in net_ssl.cpp
+# These functions are deprecated in OpenSSL 3.0 but still functional and required for compatibility
+set_source_files_properties(net_ssl.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
+
 # Build and install libepee if we're building for GUI
 if(BUILD_GUI_DEPS)
   if(IOS)
