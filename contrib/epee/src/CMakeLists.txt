@@ -65,12 +65,12 @@ set_property(SOURCE memwipe.c PROPERTY C_STANDARD 11)
 
 # Suppress OpenSSL deprecated function warnings in net_ssl.cpp
 # These functions are deprecated in OpenSSL 3.0 but still functional and required for compatibility
-set_source_files_properties(net_ssl.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
+set_source_files_properties(net_ssl.cpp PROPERTIES COMPILE_OPTIONS "-Wno-deprecated-declarations")
 
 # Suppress unknown warning group for memwipe.c (Clang doesn't recognize -Wstringop-overflow)
 # This is safe as the pragma is intended for GCC compatibility
 if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set_source_files_properties(memwipe.c PROPERTIES COMPILE_FLAGS "-Wno-unknown-warning-option")
+  set_source_files_properties(memwipe.c PROPERTIES COMPILE_OPTIONS "-Wno-unknown-warning-option")
 endif()
 
 # Build and install libepee if we're building for GUI

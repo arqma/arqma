@@ -74,7 +74,7 @@ target_link_libraries(cncrypto
 # Suppress array-bounds warnings in tree-hash.c (GCC-specific false positives)
 # This is safe as the code correctly handles dynamic memory allocation
 if(CMAKE_C_COMPILER_ID MATCHES "GNU")
-  set_source_files_properties(tree-hash.c PROPERTIES COMPILE_FLAGS "-Wno-array-bounds")
+  set_source_files_properties(tree-hash.c PROPERTIES COMPILE_OPTIONS "-Wno-array-bounds")
 endif()
 
 # Because of the way Qt works on android with JNI, the code does not live in the main android thread
