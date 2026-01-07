@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -387,7 +387,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 
   // create general purpose async service queue
 
-  m_async_work_idle = std::make_unique<work_type>(m_async_service.get_executor());
+  m_async_work_idle = std::make_unique<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(m_async_service.get_executor());
   m_async_thread = std::thread{[this] { m_async_service.run(); }};
 
 #if defined(PER_BLOCK_CHECKPOINT)
@@ -1787,10 +1787,12 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
   {
     bool soft_fork_checkpoint = (b.major_version < cryptonote::network_version_17 && service_node_checkpoint);
     {
-    if (!soft_fork_checkpoint)
-      MERROR_VER("Block with id: " << id << std::endl << " can NOT be accepted for alternative chain, block_height: "
-                 << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
-      bvc.m_verification_failed = true;
+      if (!soft_fork_checkpoint)
+      {
+        MERROR_VER("Block with id: " << id << std::endl << " can NOT be accepted for alternative chain, block_height: "
+                   << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
+        bvc.m_verification_failed = true;
+      }
       return false;
     }
   }
@@ -4471,7 +4473,7 @@ bool Blockchain::cleanup_handle_incoming_blocks(bool force_sync)
       {
         m_sync_counter = 0;
         m_bytes_to_sync = 0;
-        m_async_service.get_executor().dispatch([this] { return store_blockchain(); }, std::allocator<void>{});
+        boost::asio::dispatch(m_async_service, [this] { return store_blockchain(); });
       }
       else if(m_db_sync_mode == db_sync)
       {

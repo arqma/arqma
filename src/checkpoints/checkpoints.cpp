@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -303,7 +303,7 @@ namespace cryptonote
     return result;
   }
   //---------------------------------------------------------------------------
-  bool checkpoints::init(network_type nettype, struct BlockchainDB *db)
+  bool checkpoints::init(network_type nettype, BlockchainDB *db)
   {
     *this = {};
     m_db = db;

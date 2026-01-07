@@ -2,7 +2,7 @@
 #include <assert.h>
 
 /* Exponential base 2 function.
-   Copyright (c) 2018-2022, The Arqma Network
+   Copyright (c) 2018 - 2026, The Arqma Network
    Copyright (C) 2012-2018 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify

@@ -4,12 +4,26 @@ namespace epee
 {
 namespace net_utils
 {
+  namespace
+  {
+    struct new_connection
+    {
+      std::promise<boost::asio::ip::tcp::socket> result_;
+      boost::asio::ip::tcp::socket socket_;
+
+      template<typename T>
+      explicit new_connection(T&& executor)
+        : result_(), socket_(std::forward<T>(executor))
+      {}
+    };
+  }
+
 	std::future<boost::asio::ip::tcp::socket>
 	direct_connect::operator()(const std::string& addr, const std::string& port, boost::asio::steady_timer& timeout) const
 	{
 		// Get a list of endpoints corresponding to the server name.
 		//////////////////////////////////////////////////////////////////////////
-		boost::asio::ip::tcp::resolver resolver(GET_IO_SERVICE(timeout));
+		boost::asio::ip::tcp::resolver resolver(ARQMA_GET_EXECUTOR(timeout));
 
 		bool try_ipv6 = false;
 		boost::asio::ip::tcp::resolver::results_type results{};
@@ -46,17 +60,7 @@ namespace net_utils
 		    throw boost::system::system_error{boost::asio::error::fault, "Failed to resolve " + addr};
 		}
 
-		struct new_connection
-		{
-			std::promise<boost::asio::ip::tcp::socket> result_;
-			boost::asio::ip::tcp::socket socket_;
-
-			explicit new_connection(boost::asio::io_service& io_service)
-			  : result_(), socket_(io_service)
-			{}
-		};
-
-		const auto shared = std::make_shared<new_connection>(GET_IO_SERVICE(timeout));
+		const auto shared = std::make_shared<new_connection>(ARQMA_GET_EXECUTOR(timeout));
 		timeout.async_wait([shared] (boost::system::error_code error)
 		{
 			if (error != boost::system::errc::operation_canceled && shared && shared->socket_.is_open())
