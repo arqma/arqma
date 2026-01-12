@@ -817,24 +817,26 @@ bool simple_wallet::print_fee_info(const std::vector<std::string> &args/* = std:
     return true;
   }
 
-  const bool per_byte = m_wallet->use_fork_rules(HF_VERSION_PER_BYTE_FEE);
-  const uint64_t base_fee = m_wallet->get_base_fee();
-  const char *base = per_byte ? "byte" : "kB";
-  const uint64_t typical_size = per_byte ? 2500 : 13;
-  const uint64_t size_granularity = per_byte ? 1 : 1024;
-  message_writer() << (boost::format(tr("Current fee is %s %s per %s")) % print_money(base_fee) % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % base).str();
+  const auto base_fee = m_wallet->get_base_fees();
+  const uint64_t typical_size = 2500, typical_outs = 2;
+  message_writer() << (boost::format(tr("Current fee is %s %s per byte + %s %s per output")) % print_money(base_fee.first) % cryptonote::get_unit(cryptonote::get_default_decimal_point())
+                                        % print_money(base_fee.second) % cryptonote::get_unit(cryptonote::get_default_decimal_point())).str();
 
   std::vector<uint64_t> fees;
+  std::ostringstream typical_fees;
   for (uint32_t priority = 1; priority <= 4; ++priority)
   {
-    uint64_t mult = m_wallet->get_fee_multiplier(priority);
-    fees.push_back(base_fee * typical_size * mult);
+    uint64_t pct = m_wallet->get_fee_percent(priority);
+    uint64_t typical_fee = (base_fee.first * typical_size + base_fee.second * typical_outs) * pct / 100;
+    fees.push_back(typical_fee);
+    if (priority > 1)
+      typical_fees << ", ";
+    typical_fees << print_money(typical_fee) << " (" << tools::allowed_priority_strings[priority] << ")";
   }
   std::vector<std::pair<uint64_t, uint64_t>> blocks;
   try
   {
-    uint64_t base_size = typical_size * size_granularity;
-    blocks = m_wallet->estimate_backlog(base_size, base_size + size_granularity - 1, fees);
+    blocks = m_wallet->estimate_backlog(typical_size, typical_size, fees);
   }
   catch (const std::exception& e)
   {
@@ -5146,7 +5148,6 @@ bool simple_wallet::confirm_and_send_tx(std::vector<cryptonote::address_parse_in
 //----------------------------------------------------------------------------------------------------
 bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::string> &args_)
 {
-//  "transfer [index=<N1>[,<N2>,...]] [<priority>] <address> <amount> [<payment_id>]"
   if (!try_connect_to_daemon())
     return true;
 

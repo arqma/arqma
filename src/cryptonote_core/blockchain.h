@@ -593,7 +593,7 @@ namespace cryptonote
      *
      * @return the fee
      */
-    static uint64_t get_dynamic_base_fee(uint64_t block_reward, size_t median_block_weight, uint8_t version);
+    static byte_and_output_fees get_dynamic_base_fee(uint64_t block_reward, size_t median_block_weight, uint8_t version);
 
     /**
      * @brief get dynamic per kB or byte fee estimate for the next few blocks
@@ -608,7 +608,7 @@ namespace cryptonote
      *
      * @return the fee estimate
      */
-    uint64_t get_dynamic_base_fee_estimate(uint64_t grace_blocks) const;
+    byte_and_output_fees get_dynamic_base_fee_estimate(uint64_t grace_blocks) const;
 
     /**
      * @brief validate a transaction's fee
@@ -622,7 +622,7 @@ namespace cryptonote
      *
      * @return true if the fee is enough, false otherwise
      */
-    bool check_fee(const transaction& tx, size_t tx_weight, uint64_t fee) const;
+    bool check_fee(const transaction& tx, size_t tx_weight, size_t tx_outs, uint64_t fee, uint64_t burned, const tx_pool_options &opts) const;
 
     /**
      * @brief check that a transaction's outputs conform to current standards

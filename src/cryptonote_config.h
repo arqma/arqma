@@ -55,7 +55,7 @@ using namespace std::literals;
 
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define M_SUPPLY_ADJUST                                 ((uint64_t)25000000000000000)
+#define MONEY_SUPPLY_ADJUSTED                           ((uint64_t)75000000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
@@ -77,6 +77,7 @@ using namespace std::literals;
 #define DYNAMIC_FEE_PER_BYTE_BASE_FEE_V13               ((uint64_t)(DYNAMIC_FEE_PER_KB_BASE_FEE_V5) * 50 / 1000)
 #define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)1500)
 #define HF_16_DYNAMIC_REFERENCE_FEE                     ((uint64_t)13944)
+#define HF_19_OUTPUT_FEE                                ((uint64_t)90000)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
@@ -174,14 +175,16 @@ constexpr auto P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT     = 5s;
 #define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
 #define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
 
-#define HF_VERSION_MIN_MIXIN_10                         13
+#define HF_VERSION_MIN_MIXIN_10                         cryptonote::network_version_13
 
-#define HF_VERSION_LOWER_FEE                            10
-#define HF_VERSION_PER_BYTE_FEE                         13
-#define HF_FORBID_BORROMEAN                             13
-#define HF_VERSION_LONG_TERM_BLOCK_WEIGHT               14
+#define HF_VERSION_LOWER_FEE                            cryptonote::network_version_10
+#define HF_VERSION_PER_BYTE_FEE                         cryptonote::network_version_13
+#define HF_FORBID_BORROMEAN                             cryptonote::network_version_13
+#define HF_VERSION_LONG_TERM_BLOCK_WEIGHT               cryptonote::network_version_14
 
-#define HF_VERSION_SERVICE_NODES                        16
+#define HF_VERSION_SERVICE_NODES                        cryptonote::network_version_16
+#define HF_VERSION_PER_OUTPUT_FEE                       cryptonote::network_version_19
+#define HF_VERSION_BURN                                 cryotonote::network_version_19
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
@@ -306,7 +309,7 @@ namespace config
     static const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
     static const uint8_t min_output_age = 20;
     static const uint64_t HF16_BL_REWARD = 20 * ARQMA;
-    const uint64_t sync_height = 1764340;
+    const uint64_t sync_height = 1860000;
   }
 
   namespace tx_settings
@@ -388,6 +391,7 @@ namespace cryptonote
     network_version_16,
     network_version_17,
     network_version_18,
+    network_version_19,
 
     network_version_count,
   };

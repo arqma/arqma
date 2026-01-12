@@ -486,6 +486,18 @@ namespace cryptonote
     if(tx.version <= txversion::v2)
       tx.unlock_time = unlock_time; //height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
 
+    if (tx_params.burn_percent)
+    {
+      LOG_ERROR("Cannot construct tx: internal error: burn MUST be done in the wallet");
+      return false;
+    }
+
+    if (tx_params.burn_fixed && tx_params.hard_fork_version <= cryptonote::network_version_19)
+    {
+      LOG_ERROR("Cannot construct tx. burn can not be specified before HardFork 19");
+      return false;
+    }
+
     tx.extra = extra;
     crypto::public_key txkey_pub;
 
@@ -893,6 +905,21 @@ namespace cryptonote
       // fee
       if (!use_simple_rct && amount_in > amount_out)
         outamounts.push_back(amount_in - amount_out);
+
+      if (tx_params.burn_fixed)
+      {
+        if (amount_in < amount_out + tx_params.burn_fixed)
+        {
+          LOG_ERROR("Invalid burn amount");
+          return false;
+        }
+        remove_field_from_tx_extra(tx.extra, typeid(tx_extra_burn));
+        if (!add_burned_amount_to_tx_extra(tx.extra, tx_params.burn_fixed))
+        {
+          LOG_ERROR("failed to add burn amount to tx extra");
+          return false;
+        }
+      }
 
       // zero out all amounts to mask rct outputs, real amounts are now encrypted
       for (size_t i = 0; i < tx.vin.size(); ++i)

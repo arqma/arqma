@@ -2133,7 +2133,8 @@ bool t_rpc_command_executor::print_blockchain_dynamic_stats(uint64_t nblocks)
   }
 
   tools::msg_writer() << "Height: " << ires.height << ", diff " << ires.difficulty << ", cum. diff " << ires.cumulative_difficulty
-      << ", target " << ires.target << " sec" << ", dyn fee " << cryptonote::print_money(feres.fee) << "/" << (hfres.enabled ? "byte" : "kB");
+      << ", target " << ires.target << " sec" << ", dyn fee " << cryptonote::print_money(feres.fee_per_byte) << "/" << (hfres.enabled ? "byte" : "kB")
+      << " + " << cryptonote::print_money(feres.fee_per_output) << "/out";
 
   if (nblocks > 0)
   {

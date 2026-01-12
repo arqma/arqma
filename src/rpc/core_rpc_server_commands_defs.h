@@ -94,8 +94,8 @@ namespace cryptonote
 // whether they can talk to a given daemon without having to know in
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
-#define CORE_RPC_VERSION_MAJOR 4
-#define CORE_RPC_VERSION_MINOR 4
+#define CORE_RPC_VERSION_MAJOR 5
+#define CORE_RPC_VERSION_MINOR 0
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -2079,13 +2079,15 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     struct response_t
     {
       std::string status;
-      uint64_t fee;
+      uint64_t fee_per_byte;
+      uint64_t fee_per_output;
       uint64_t quantization_mask;
       bool untrusted;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
-        KV_SERIALIZE(fee)
+        KV_SERIALIZE(fee_per_byte)
+        KV_SERIALIZE(fee_per_output)
         KV_SERIALIZE_OPT(quantization_mask, (uint64_t)1)
         KV_SERIALIZE(untrusted)
       END_KV_SERIALIZE_MAP()
@@ -2943,9 +2945,11 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     struct response_t
     {
       uint64_t staking_requirement;
+      uint64_t height;
       std::string status;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(staking_requirement)
+        KV_SERIALIZE(height)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };

@@ -457,6 +457,8 @@ namespace cryptonote
     }
   };
 
+  using byte_and_output_fees = std::pair<uint64_t, uint64_t>;
+
   constexpr txversion transaction_prefix::get_min_version_for_hf(uint8_t hard_fork_version)
   {
     if (hard_fork_version < 14)
