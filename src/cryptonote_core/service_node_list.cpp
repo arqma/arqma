@@ -38,6 +38,7 @@ extern "C" {
 #include <sodium.h>
 }
 
+#include "ringct/rctTypes.h"
 #include "ringct/rctSigs.h"
 #include "wallet/wallet2.h"
 #include "cryptonote_tx_utils.h"
@@ -442,6 +443,7 @@ namespace service_nodes
         case rct::RCTTypeSimple:
         case rct::RCTTypeBulletproof:
         case rct::RCTTypeBulletproof2:
+        case rct::RCTTypeCLSAG:
           money_transferred = rct::decodeRctSimple(tx.rct_signatures, rct::sk2rct(scalar1), i, mask, hwdev);
           break;
         case rct::RCTTypeFull:

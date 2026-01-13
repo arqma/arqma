@@ -85,6 +85,24 @@ namespace hw {
         void log();
     };
 
+    class SecHMAC {
+    public:
+        uint32_t  sec[32];
+        uint32_t  hmac[32];
+
+        SecHMAC(const uint8_t s[32], const uint8_t m[32]);
+
+    };
+
+    class HMACmap {
+    public:
+        std::vector<SecHMAC>  hmacs;
+
+        void find_mac(const uint8_t sec[32], uint8_t hmac[32]) ;
+        void add_mac(const uint8_t sec[32], const uint8_t hmac[32]) ;
+        void clear() ;
+    };
+
     #define BUFFER_SEND_SIZE 262
     #define BUFFER_RECV_SIZE 262
 
@@ -110,14 +128,21 @@ namespace hw {
         int  set_command_header(unsigned char ins, unsigned char p1 = 0x00, unsigned char p2 = 0x00);
         int  set_command_header_noopt(unsigned char ins, unsigned char p1 = 0x00, unsigned char p2 = 0x00);
         void send_simple(unsigned char ins, unsigned char p1 = 0x00);
+        void send_secret(const unsigned char sec[32], int &offset);
+        void receive_secret(unsigned char sec[32], int &offset);
 
         // hw running mode
         device_mode mode;
+        bool tx_in_progress;
+
         // map public destination key to ephemeral destination key
         Keymap key_map;
         bool  add_output_key_mapping(const crypto::public_key &Aout, const crypto::public_key &Bout, const bool is_subaddress, const bool is_change,
                                      const bool need_additional, const size_t real_output_index,
                                      const rct::key &amount_key,  const crypto::public_key &out_eph_public_key);
+        //hmac for some encrypted value
+        HMACmap hmac_map;
+
         // To speed up blockchain parsing the view key maybe handle here.
         crypto::secret_key viewkey;
         bool has_view_key;
@@ -222,6 +247,10 @@ namespace hw {
         bool  mlsag_prepare(rct::key &a, rct::key &aG) override;
         bool  mlsag_hash(const rct::keyV &long_message, rct::key &c) override;
         bool  mlsag_sign( const rct::key &c, const rct::keyV &xx, const rct::keyV &alpha, const size_t rows, const size_t dsRows, rct::keyV &ss) override;
+
+        bool clsag_prepare(const rct::key &p, const rct::key &z, rct::key &I, rct::key &D, const rct::key &H, rct::key &a, rct::key &aG, rct::key &aH) override;
+        bool clsag_hash(const rct::keyV &data, rct::key &hash) override;
+        bool clsag_sign(const rct::key &c, const rct::key &a, const rct::key &p, const rct::key &z, const rct::key &mu_P, const rct::key &mu_C, rct::key &s) override;
 
         bool  close_tx(void) override;
 
