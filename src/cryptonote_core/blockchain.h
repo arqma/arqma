@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -36,10 +36,6 @@
 #if BOOST_VERSION >= 107400
 #include <boost/serialization/library_version_type.hpp>
 #endif
-
-namespace boost::asio {
-  using io_service = io_context;
-}
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/version.hpp>
@@ -597,7 +593,7 @@ namespace cryptonote
      *
      * @return the fee
      */
-    static uint64_t get_dynamic_base_fee(uint64_t block_reward, size_t median_block_weight, uint8_t version);
+    static byte_and_output_fees get_dynamic_base_fee(uint64_t block_reward, size_t median_block_weight, uint8_t version);
 
     /**
      * @brief get dynamic per kB or byte fee estimate for the next few blocks
@@ -612,7 +608,7 @@ namespace cryptonote
      *
      * @return the fee estimate
      */
-    uint64_t get_dynamic_base_fee_estimate(uint64_t grace_blocks) const;
+    byte_and_output_fees get_dynamic_base_fee_estimate(uint64_t grace_blocks) const;
 
     /**
      * @brief validate a transaction's fee
@@ -626,7 +622,7 @@ namespace cryptonote
      *
      * @return true if the fee is enough, false otherwise
      */
-    bool check_fee(const transaction& tx, size_t tx_weight, uint64_t fee) const;
+    bool check_fee(const transaction& tx, size_t tx_weight, size_t tx_outs, uint64_t fee, uint64_t burned, const tx_pool_options &opts) const;
 
     /**
      * @brief check that a transaction's outputs conform to current standards
@@ -1056,10 +1052,9 @@ namespace cryptonote
     crypto::hash m_difficulty_for_next_block_top_hash;
     difficulty_type m_difficulty_for_next_block;
 
-    boost::asio::io_service m_async_service;
+    boost::asio::io_context m_async_service;
     std::thread m_async_thread;
-    using work_type = boost::asio::executor_work_guard<decltype(m_async_service.get_executor())>;
-    std::unique_ptr<work_type> m_async_work_idle;
+    std::unique_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> m_async_work_idle;
 
     // some invalid blocks
     std::set<crypto::hash> m_invalid_blocks;

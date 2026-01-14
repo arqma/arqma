@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -86,7 +86,9 @@ namespace tools
     //         tx_sum_overflow
     //         tx_too_big
     //         tx_amount_too_low
+    //         zero_amount
     //         zero_destination
+    //         subtract_fee_from_bad_index
     //       wallet_rpc_error *
     //         daemon_busy
     //         no_connection_to_daemon
@@ -776,10 +778,27 @@ namespace tools
         :  transfer_error(std::move(loc), "ARQ Amount is too low") { }
     };
     //----------------------------------------------------------------------------------------------------
+    struct zero_amount: public transfer_error
+    {
+      explicit zero_amount(std::string&& loc)
+        : transfer_error(std::move(loc), "destination amount is zero")
+      {
+      }
+    };
+    //----------------------------------------------------------------------------------------------------
     struct zero_destination : public transfer_error
     {
       explicit zero_destination(std::string&& loc)
         : transfer_error(std::move(loc), "destination amount is zero")
+      {
+      }
+    };
+    //----------------------------------------------------------------------------------------------------
+    struct subtract_fee_from_bad_index : public transfer_error
+    {
+      explicit subtract_fee_from_bad_index(std::string&& loc, long bad_index)
+        : transfer_error(std::move(loc),
+          "subtractfeefrom: bad index: " + std::to_string(bad_index) + " (indexes are 0-based)")
       {
       }
     };

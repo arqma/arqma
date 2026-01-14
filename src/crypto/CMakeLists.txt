@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2018 - 2026, The Arqma Network
 # Copyright (c) 2014-2020, The Monero Project
 #
 # All rights reserved.
@@ -70,6 +70,12 @@ target_link_libraries(cncrypto
     sodium
   PRIVATE
     ${EXTRA_LIBRARIES})
+
+# Suppress array-bounds warnings in tree-hash.c (GCC-specific false positives)
+# This is safe as the code correctly handles dynamic memory allocation
+if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+  set_source_files_properties(tree-hash.c PROPERTIES COMPILE_OPTIONS "-Wno-array-bounds")
+endif()
 
 # Because of the way Qt works on android with JNI, the code does not live in the main android thread
 # So this code runs with a 1 MB default stack size.

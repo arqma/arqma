@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2016-2018, The Monero Project
 //
 // All rights reserved.
@@ -439,7 +439,8 @@ BEGIN_RPC_MESSAGE_CLASS(GetFeeEstimate);
     RPC_MESSAGE_MEMBER(uint64_t, num_grace_blocks);
   END_RPC_MESSAGE_REQUEST;
   BEGIN_RPC_MESSAGE_RESPONSE;
-    RPC_MESSAGE_MEMBER(uint64_t, estimated_base_fee);
+    RPC_MESSAGE_MEMBER(uint64_t, estimated_base_fee_per_byte);
+    RPC_MESSAGE_MEMBER(uint64_t, estimated_base_fee_per_output);
     RPC_MESSAGE_MEMBER(uint64_t, fee_mask);
     RPC_MESSAGE_MEMBER(uint32_t, size_scale);
     RPC_MESSAGE_MEMBER(uint8_t, hard_fork_version);

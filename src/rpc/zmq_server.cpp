@@ -34,7 +34,6 @@
 
 namespace cryptonote
 {
-
 namespace rpc
 {
 
@@ -103,7 +102,7 @@ bool ZmqServer::addTCPSocket(std::string address, std::string port)
     std::string addr_prefix("tcp://");
 
     rep_socket.reset(new zmq::socket_t(context, ZMQ_REP));
-    rep_socket->setsockopt(ZMQ_RCVTIMEO, &DEFAULT_RPC_RECV_TIMEOUT_MS, sizeof(DEFAULT_RPC_RECV_TIMEOUT_MS));
+    rep_socket->set(zmq::sockopt::rcvtimeo, DEFAULT_RPC_RECV_TIMEOUT_MS);
 
     if (address.empty())
       address = "*";

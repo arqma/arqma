@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2019, The Monero Project
 //
 // All rights reserved.
@@ -75,7 +75,7 @@ namespace socks
             std::promise<boost::asio::ip::tcp::socket> result{};
             out = result.get_future();
             const auto proxy = net::socks::make_connect_client(
-                boost::asio::ip::tcp::socket{GET_IO_SERVICE(timeout)}, net::socks::version::v4a, future_socket{std::move(result)}
+                boost::asio::ip::tcp::socket{ARQMA_GET_EXECUTOR(timeout)}, net::socks::version::v4a, future_socket{std::move(result)}
             );
 
             if (epee::string_tools::get_ip_int32_from_string(ip_address, remote_host))
