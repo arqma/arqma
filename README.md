@@ -418,13 +418,25 @@ By default, in either dynamically or statically linked builds, binaries target t
 ### Cross Compiling
 
 You can also cross-compile Arqma static binaries on Linux for Windows and macOS with the `depends` system.
-* `make depends target=x86_64-linux-gnu` for 64-bit linux binaries.
-* `make depends target=x86_64-w64-mingw32` for 64-bit windows binaries. Requires: g++-mingw-w64-x86-64
-* `make depends target=x86_64-apple-darwin` for macOS-x64 binaries. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools
-* `make depends target=arm64-apple-darwin` for macOS-arm64 Apple Silicon. Requires: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools
-* `make depends target=arm-linux-gnueabihf` for armv7 binaries. Requires: g++-arm-linux-gnueabihf
-* `make depends target=aarch64-linux-gnu` for armv8 binaries. Requires: g++-aarch64-linux-gnu
-* `make depends-noaes target=aarch64-linux-gnu` for Raspberry Pi systems. Requires: g++-aarch64-linux-gnu
+
+* ```make depends target=x86_64-linux-gnu``` for 64-bit linux binaries.
+* ```make depends target=x86_64-w64-mingw32``` for 64-bit windows binaries.
+  * Requires: `g++-mingw-w64-x86-64`
+  * You also need to run:
+    ```shell
+    update-alternatives --set x86_64-w64-mingw32-g++ $(which x86_64-w64-mingw32-g++-posix) && \
+    update-alternatives --set x86_64-w64-mingw32-gcc $(which x86_64-w64-mingw32-gcc-posix)
+    ```
+* ```make depends target=x86_64-apple-darwin``` for Intel macOS binaries.
+  * Requires: `cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools`
+* ```make depends target=arm64-apple-darwin``` for Apple Silicon macOS binaries.
+  * Requires: `cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools libtinfo5 curl bsdmainutils python3-dev python3-setuptools`
+* ```make depends target=arm-linux-gnueabihf``` for armv7 binaries.
+  * Requires: `g++-arm-linux-gnueabihf`
+* ```make depends target=aarch64-linux-gnu``` for armv8 binaries.
+  * Requires: `g++-aarch64-linux-gnu`
+* ```make depends-noaes target=aarch64-linux-gnu``` for Raspberry Pi systems.
+  * Requires: `g++-aarch64-linux-gnu`
 
 Using `depends` might also be easier to compile Arqma on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distribution (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as stated above.
 
