@@ -296,7 +296,7 @@ namespace config
       } }; // Bender's daydream
     std::string const GOV_WALLET_ADDRESS = "as3DH2He8go7QzsiWc2PK4by2XdQZmUTF8Bv2bKY3egmRH9zPAF3iwWFteTPYaob4m5GuCNTLHFgtVdA6nbuP3Gp1x4Fvjv5G";
     std::string const DEV_WALLET_ADDRESS = "as1gAmaQQZMDy8SQzeqQSxGJJJpinLxSpgALxxZEDyNL6QB6hREvXzoVDi9LrFGJVu1x33toQVe9hWeXdhsjnkg7199GtodQy";
-    std::string const NET_WALLET_ADDRESS = "";
+    std::string const NET_WALLET_ADDRESS = "as1u1cXxqXRgkRTiYp6ymQ6AymVM4qcogP5R3MVogLabGMfqWvcKB2GQMqjcBaLbjMaCMmeWGbJ8hQEzi7S97xa51NUz3NwNs";
   }
 
   namespace blockchain_settings
@@ -366,15 +366,11 @@ namespace arqma
 
   const char *const stagenet_core_nodes[] =
   {
-    "node5.arqma.com", //Malbit
     "node1.arqma.com", //ArqTras
-    "node6.arqma.com", //Malbit US
     "node2.arqma.com", //ArqTras
-    "node7.arqma.com", //Malbit Contabo
     "node3.arqma.com", //ArqTras
     "node4.arqma.com", //ArqTras
-    "node8.arqma.com", //Malbit Asia
-    "it-support.mal-bit.com"
+    "212.47.71.121"
   };
 }
 
