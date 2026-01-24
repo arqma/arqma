@@ -366,11 +366,8 @@ namespace arqma
 
   const char *const stagenet_core_nodes[] =
   {
-    "node1.arqma.com", //ArqTras
-    "node2.arqma.com", //ArqTras
-    "node3.arqma.com", //ArqTras
-    "node4.arqma.com", //ArqTras
-    "212.47.71.121"
+    "46.170.66.186",
+    "161.97.102.172"
   };
 }
 
