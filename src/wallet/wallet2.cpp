@@ -7185,7 +7185,7 @@ arqma_construct_tx_params wallet2::construct_params(uint8_t hard_fork_version, t
   if (hard_fork_version >= cryptonote::network_version_19)
   {
     tx_params.burn_fixed = 0;
-    tx_params.burn_percent = 100;
+    tx_params.burn_percent = 0;
   }
 
   return tx_params;
