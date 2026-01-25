@@ -910,7 +910,8 @@ namespace wallet_rpc
     cryptonote::subaddress_index subaddr_index;
     std::string key_image;
     bool unlocked;
-
+    uint64_t block_height;
+    
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(amount)
       KV_SERIALIZE(spent)
@@ -919,6 +920,7 @@ namespace wallet_rpc
       KV_SERIALIZE(subaddr_index)
       KV_SERIALIZE(key_image)
       KV_SERIALIZE(unlocked)
+      KV_SERIALIZE(block_height)
     END_KV_SERIALIZE_MAP()
   };
 
