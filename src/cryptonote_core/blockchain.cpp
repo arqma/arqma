@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -387,7 +387,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
 
   // create general purpose async service queue
 
-  m_async_work_idle = std::make_unique<work_type>(m_async_service.get_executor());
+  m_async_work_idle = std::make_unique<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(m_async_service.get_executor());
   m_async_thread = std::thread{[this] { m_async_service.run(); }};
 
 #if defined(PER_BLOCK_CHECKPOINT)
@@ -1418,8 +1418,6 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
 
   seed_hash = crypto::null_hash;
 
-  //m_tx_pool.lock();
-  //const auto txpool_unlocker = epee::misc_utils::create_scope_leave_handler([&]() { m_tx_pool.unlock(); });
   auto lock = tools::unique_locks(m_tx_pool, *this);
   if (m_btc_valid && !from_block) {
     // The pool cookie is atomic. The lack of locking is OK, as if it changes
@@ -1787,10 +1785,12 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
   {
     bool soft_fork_checkpoint = (b.major_version < cryptonote::network_version_17 && service_node_checkpoint);
     {
-    if (!soft_fork_checkpoint)
-      MERROR_VER("Block with id: " << id << std::endl << " can NOT be accepted for alternative chain, block_height: "
-                 << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
-      bvc.m_verification_failed = true;
+      if (!soft_fork_checkpoint)
+      {
+        MERROR_VER("Block with id: " << id << std::endl << " can NOT be accepted for alternative chain, block_height: "
+                   << block_height << std::endl << " blockchain height: " << get_current_blockchain_height());
+        bvc.m_verification_failed = true;
+      }
       return false;
     }
   }
@@ -2864,6 +2864,32 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
     }
   }
 
+  if (hf_version < HF_VERSION_CLSAG)
+  {
+    if (tx.version >= txversion::v3 && tx.is_transfer())
+    {
+      if (tx.rct_signatures.type == rct::RCTTypeCLSAG)
+      {
+        MERROR_VER("Ringcr type " << (unsigned)rct::RCTTypeCLSAG << " is not allowed before " << HF_VERSION_CLSAG);
+        tvc.m_invalid_output = true;
+        return false;
+      }
+    }
+  }
+
+  if (hf_version > HF_VERSION_CLSAG)
+  {
+    if (tx.version >= txversion::v3 && tx.is_transfer())
+    {
+      if (tx.rct_signatures.type <= rct::RCTTypeBulletproof2)
+      {
+        MERROR_VER("Ringct type " << (unsigned)tx.rct_signatures.type << " is not allowed from " << (HF_VERSION_CLSAG + 1));
+        tvc.m_invalid_output = true;
+        return false;
+      }
+    }
+  }
+
   return true;
 }
 //------------------------------------------------------------------
@@ -2905,7 +2931,7 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
       }
     }
   }
-  else if(rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeSimpleBulletproof || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeBulletproof2)
+  else if(rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeSimpleBulletproof || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeBulletproof2 || rv.type == rct::RCTTypeCLSAG)
   {
     CHECK_AND_ASSERT_MES(!pubkeys.empty() && !pubkeys[0].empty(), false, "empty pubkeys");
     rv.mixRing.resize(pubkeys.size());
@@ -2916,6 +2942,14 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
       {
         rv.mixRing[n].push_back(pubkeys[n][m]);
       }
+    }
+  }
+  else if (rv.type == rct::RCTTypeCLSAG)
+  {
+    CHECK_AND_ASSERT_MES(rv.p.CLSAGs.size() == tx.vin.size(), false, "Bad CLSAGs size");
+    for (size_t n = 0; n < tx.vin.size(); ++n)
+    {
+      rv.p.CLSAGs[n].I = rct::ki2rct(boost::get<txin_to_key>(tx.vin[n]).k_image);
     }
   }
   else
@@ -2938,6 +2972,14 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
     {
       rv.p.MGs[n].II.resize(1);
       rv.p.MGs[n].II[0] = rct::ki2rct(boost::get<txin_to_key>(tx.vin[n]).k_image);
+    }
+  }
+  else if (rv.type == rct::RCTTypeCLSAG)
+  {
+    CHECK_AND_ASSERT_MES(rv.p.CLSAGs.size() == tx.vin.size(), false, "Bad CLSAGs size");
+    for (size_t n = 0; n < tx.vin.size(); ++n)
+    {
+      rv.p.CLSAGs[n].I = rct::ki2rct(boost::get<txin_to_key>(tx.vin[n]).k_image);
     }
   }
   else
@@ -3181,6 +3223,7 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
       case rct::RCTTypeSimpleBulletproof:
       case rct::RCTTypeBulletproof:
       case rct::RCTTypeBulletproof2:
+      case rct::RCTTypeCLSAG:
       {
         // check all this, either reconstructed (so should really pass), or not
         {
@@ -3216,14 +3259,20 @@ bool Blockchain::check_tx_inputs(transaction &tx, tx_verification_context &tvc, 
           }
         }
 
-        if (rv.p.MGs.size() != tx.vin.size())
+        const size_t n_sigs = rv.type == rct::RCTTypeCLSAG ? rv.p.CLSAGs.size() : rv.p.MGs.size();
+        if (n_sigs != tx.vin.size())
         {
           MERROR_VER("Failed to check ringct signatures: mismatched MGs/vin sizes");
           return false;
         }
         for (size_t n = 0; n < tx.vin.size(); ++n)
         {
-          if (rv.p.MGs[n].II.empty() || memcmp(&boost::get<txin_to_key>(tx.vin[n]).k_image, &rv.p.MGs[n].II[0], 32))
+          bool error;
+          if (rv.type == rct::RCTTypeCLSAG)
+            error = memcmp(&boost::get<txin_to_key>(tx.vin[n]).k_image, &rv.p.CLSAGs[n].I, 32);
+          else
+            error = rv.p.MGs[n].II.empty() || memcmp(&boost::get<txin_to_key>(tx.vin[n]).k_image, &rv.p.MGs[n].II[0], 32);
+          if (error)
           {
             MERROR_VER("Failed to check ringct signatures: mismatched key image");
             return false;
@@ -3427,12 +3476,13 @@ void Blockchain::check_ring_signature(const crypto::hash &tx_prefix_hash, const 
   result = crypto::check_ring_signature(tx_prefix_hash, key_image, p_output_keys, sig.data()) ? 1 : 0;
 }
 //------------------------------------------------------------------
-uint64_t Blockchain::get_dynamic_base_fee(uint64_t block_reward, size_t median_block_weight, uint8_t version)
+byte_and_output_fees Blockchain::get_dynamic_base_fee(uint64_t block_reward, size_t median_block_weight, uint8_t version)
 {
   const uint64_t min_block_weight = get_min_block_weight(version);
   if (median_block_weight < min_block_weight)
     median_block_weight = min_block_weight;
-  uint64_t hi, lo;
+  byte_and_output_fees fees{0, 0};
+  uint64_t hi, &lo = fees.first;
 
   if (version >= HF_VERSION_PER_BYTE_FEE)
   {
@@ -3442,7 +3492,11 @@ uint64_t Blockchain::get_dynamic_base_fee(uint64_t block_reward, size_t median_b
     div128_32(hi, lo, median_block_weight, &hi, &lo);
     assert(hi == 0);
     lo /= 5;
-    return lo;
+
+    if (version >= network_version_19)
+      fees.second = HF_19_OUTPUT_FEE;
+
+    return fees;
   }
 
   constexpr uint64_t fee_base = DYNAMIC_FEE_PER_BYTE_BASE_FEE_V13;
@@ -3462,11 +3516,12 @@ uint64_t Blockchain::get_dynamic_base_fee(uint64_t block_reward, size_t median_b
   uint64_t qlo = (lo + mask - 1) / mask * mask;
   MDEBUG("lo " << print_money(lo) << ", qlo " << print_money(qlo) << ", mask " << mask);
 
-  return qlo;
+  fees.first = qlo;
+  return fees;
 }
 
 //------------------------------------------------------------------
-bool Blockchain::check_fee(const transaction& tx, size_t tx_weight, uint64_t fee) const
+bool Blockchain::check_fee(const transaction& tx, size_t tx_weight, size_t tx_outs, uint64_t fee, uint64_t burned, const tx_pool_options &opts) const
 {
   const uint8_t version = get_current_hard_fork_version();
 
@@ -3484,33 +3539,51 @@ bool Blockchain::check_fee(const transaction& tx, size_t tx_weight, uint64_t fee
   if(version >= HF_VERSION_PER_BYTE_FEE)
   {
     const bool use_long_term_median_in_fee = version >= HF_VERSION_LONG_TERM_BLOCK_WEIGHT;
-    uint64_t fee_per_byte = get_dynamic_base_fee(base_reward, use_long_term_median_in_fee ? std::min<uint64_t>(median, m_long_term_effective_median_block_weight) : median, version);
-    MDEBUG("Using " << print_money(fee_per_byte) << "/byte fee");
-    needed_fee = tx_weight * fee_per_byte;
+    auto fees = get_dynamic_base_fee(base_reward, use_long_term_median_in_fee ? std::min<uint64_t>(median, m_long_term_effective_median_block_weight) : median, version);
+    MDEBUG("Using " << print_money(fees.first) << "/byte + " << print_money(fees.second) << "/out fee");
+    needed_fee = tx_weight * fees.first + tx_outs * fees.second;
     // quantize fee up to 8 decimals
     const uint64_t mask = get_fee_quantization_mask();
     needed_fee = (needed_fee + mask - 1) / mask * mask;
   }
   else
   {
-    uint64_t fee_per_kb = get_dynamic_base_fee(base_reward, median, version) * 60 / 100;
-    MDEBUG("Using " << print_money(fee_per_kb) << "/kB fee");
+    auto fees = get_dynamic_base_fee(base_reward, median, version);
+    assert(fees.second == 0);
+    MDEBUG("Using " << print_money(fees.first) << "/kB fee");
 
     needed_fee = tx_weight / 1024;
     needed_fee += (tx_weight % 1024) ? 1 : 0;
-    needed_fee *= fee_per_kb;
+    needed_fee *= (fees.first * 60 / 100);
   }
 
-  if (fee < needed_fee - needed_fee / 50) // keep a little 2% buffer on acceptance - no integer overflow
+  uint64_t required_percent = std::max(opts.fee_percent, uint64_t{100});
+
+  needed_fee -= needed_fee / 50;
+
+  uint64_t base_miner_fee = needed_fee;
+  needed_fee = needed_fee * required_percent / 100;
+
+  if (fee < needed_fee)
   {
     MERROR_VER("transaction fee is not enough: " << print_money(fee) << ", minimum fee: " << print_money(needed_fee));
     return false;
+  }
+
+  if (opts.burn_fixed || opts.burn_percent)
+  {
+    uint64_t need_burned = opts.burn_fixed + base_miner_fee * opts.burn_percent / 100;
+    if (burned < need_burned)
+    {
+      MERROR_VER("transaction burned fee is not enough: " << print_money(burned) << ", minimum fee: " << print_money(need_burned));
+      return false;
+    }
   }
   return true;
 }
 
 //------------------------------------------------------------------
-uint64_t Blockchain::get_dynamic_base_fee_estimate(uint64_t grace_blocks) const
+byte_and_output_fees Blockchain::get_dynamic_base_fee_estimate(uint64_t grace_blocks) const
 {
   const uint8_t hard_fork_version = get_current_hard_fork_version();
   const uint64_t db_height = m_db->height();
@@ -3539,9 +3612,9 @@ uint64_t Blockchain::get_dynamic_base_fee_estimate(uint64_t grace_blocks) const
   }
 
   const bool use_long_term_median_in_fee = hard_fork_version >= HF_VERSION_LONG_TERM_BLOCK_WEIGHT;
-  uint64_t fee = get_dynamic_base_fee(base_reward, use_long_term_median_in_fee ? m_long_term_effective_median_block_weight : median, hard_fork_version);
+  auto fee = get_dynamic_base_fee(base_reward, use_long_term_median_in_fee ? m_long_term_effective_median_block_weight : median, hard_fork_version);
   const bool per_byte = hard_fork_version < HF_VERSION_PER_BYTE_FEE;
-  MDEBUG("Estimating " << grace_blocks << "-block fee at " << print_money(fee) << "/" << (per_byte ? "byte" : "kB"));
+  MDEBUG("Estimating " << grace_blocks << "-block fee at " << print_money(fee.first) << "/" << (per_byte ? "byte" : "kB") << " + " << print_money(fee.second) << "/out");
   return fee;
 }
 
@@ -4046,7 +4119,7 @@ bool Blockchain::handle_block_to_main_chain(const block& bl, const crypto::hash&
   // coins will eventually exceed MONEY_SUPPLY and overflow a uint64. To prevent overflow, cap already_generated_coins
   // at MONEY_SUPPLY. already_generated_coins is only used to compute the block subsidy and MONEY_SUPPLY yields a
   // subsidy of 0 under the base formula and therefore the minimum subsidy >0 in the tail state.
-  uint64_t m_supply = m_hardfork->get_current_version() < cryptonote::network_version_16 ? MONEY_SUPPLY : MONEY_SUPPLY + M_SUPPLY_ADJUST;
+  uint64_t m_supply = m_hardfork->get_current_version() < cryptonote::network_version_16 ? MONEY_SUPPLY : MONEY_SUPPLY_ADJUSTED;
   already_generated_coins = base_reward < (m_supply - already_generated_coins) ? already_generated_coins + base_reward : m_supply;
 
   if(blockchain_height)
@@ -4471,7 +4544,7 @@ bool Blockchain::cleanup_handle_incoming_blocks(bool force_sync)
       {
         m_sync_counter = 0;
         m_bytes_to_sync = 0;
-        m_async_service.get_executor().dispatch([this] { return store_blockchain(); }, std::allocator<void>{});
+        boost::asio::dispatch(m_async_service, [this] { return store_blockchain(); });
       }
       else if(m_db_sync_mode == db_sync)
       {

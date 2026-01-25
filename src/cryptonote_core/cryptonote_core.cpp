@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -1056,6 +1056,7 @@ namespace cryptonote
           break;
         case rct::RCTTypeBulletproof:
         case rct::RCTTypeBulletproof2:
+        case rct::RCTTypeCLSAG:
           if(!is_canonical_bulletproof_layout(rv.p.bulletproofs))
           {
             MERROR_VER("Bulletproof does not have canonical form");
@@ -1082,7 +1083,7 @@ namespace cryptonote
       {
         if(!tx_info[n].result || tx_info[n].already_have)
           continue;
-        if(tx_info[n].tx.rct_signatures.type != rct::RCTTypeBulletproof && tx_info[n].tx.rct_signatures.type != rct::RCTTypeBulletproof2)
+        if(tx_info[n].tx.rct_signatures.type != rct::RCTTypeBulletproof && tx_info[n].tx.rct_signatures.type != rct::RCTTypeBulletproof2 && tx_info[n].tx.rct_signatures.type != rct::RCTTypeCLSAG)
           continue;
         if(assumed_bad || !rct::verRctSemanticsSimple(tx_info[n].tx.rct_signatures))
         {
@@ -1353,7 +1354,7 @@ namespace cryptonote
       uint64_t tx_fee_amount = 0;
       for(const auto& tx: txs)
       {
-        tx_fee_amount += get_tx_fee(tx);
+        tx_fee_amount += get_tx_miner_fee(tx, b.major_version >= network_version_19);
       }
 
       emission_amount += coinbase_amount - tx_fee_amount;

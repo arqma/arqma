@@ -1,5 +1,5 @@
 # ARQMA
-Copyright (c) 2018-2022, The Arqma Project
+Copyright (c) 2018 - 2026, The Arqma Project
 Copyright (c) 2014-2018, The Monero Project
 
 ## Crypto Ops Builder

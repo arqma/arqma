@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -486,6 +486,18 @@ namespace cryptonote
     if(tx.version <= txversion::v2)
       tx.unlock_time = unlock_time; //height + arqma::ARQMA_BLOCK_UNLOCK_CONFIRMATIONS;
 
+    if (tx_params.burn_percent)
+    {
+      LOG_ERROR("Cannot construct tx: internal error: burn MUST be done in the wallet");
+      return false;
+    }
+
+    if (tx_params.burn_fixed && tx_params.hard_fork_version <= cryptonote::network_version_19)
+    {
+      LOG_ERROR("Cannot construct tx. burn can not be specified before HardFork 19");
+      return false;
+    }
+
     tx.extra = extra;
     crypto::public_key txkey_pub;
 
@@ -894,6 +906,21 @@ namespace cryptonote
       if (!use_simple_rct && amount_in > amount_out)
         outamounts.push_back(amount_in - amount_out);
 
+      if (tx_params.burn_fixed)
+      {
+        if (amount_in < amount_out + tx_params.burn_fixed)
+        {
+          LOG_ERROR("Invalid burn amount");
+          return false;
+        }
+        remove_field_from_tx_extra(tx.extra, typeid(tx_extra_burn));
+        if (!add_burned_amount_to_tx_extra(tx.extra, tx_params.burn_fixed))
+        {
+          LOG_ERROR("failed to add burn amount to tx extra");
+          return false;
+        }
+      }
+
       // zero out all amounts to mask rct outputs, real amounts are now encrypted
       for (size_t i = 0; i < tx.vin.size(); ++i)
       {
@@ -928,23 +955,27 @@ namespace cryptonote
   {
     hw::device &hwdev = sender_account_keys.get_device();
     hwdev.open_tx(tx_key);
+    try {
+      // figure out if we need to make additional tx pubkeys
+      size_t num_stdaddresses = 0;
+      size_t num_subaddresses = 0;
+      account_public_address single_dest_subaddress;
+      classify_addresses(destinations, change_addr, num_stdaddresses, num_subaddresses, single_dest_subaddress);
+      bool need_additional_txkeys = num_subaddresses > 0 && (num_stdaddresses > 0 || num_subaddresses > 1);
+      if (need_additional_txkeys)
+      {
+        additional_tx_keys.clear();
+        for(size_t i = 0; i < destinations.size(); ++i)
+          additional_tx_keys.push_back(keypair::generate(sender_account_keys.get_device()).sec);
+      }
 
-    // figure out if we need to make additional tx pubkeys
-    size_t num_stdaddresses = 0;
-    size_t num_subaddresses = 0;
-    account_public_address single_dest_subaddress;
-    classify_addresses(destinations, change_addr, num_stdaddresses, num_subaddresses, single_dest_subaddress);
-    bool need_additional_txkeys = num_subaddresses > 0 && (num_stdaddresses > 0 || num_subaddresses > 1);
-    if (need_additional_txkeys)
-    {
-      additional_tx_keys.clear();
-      for(size_t i = 0; i < destinations.size(); ++i)
-        additional_tx_keys.push_back(keypair::generate(sender_account_keys.get_device()).sec);
+      bool r = construct_tx_with_tx_key(sender_account_keys, subaddresses, sources, destinations, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, rct_config, msout, true/*shuffle_outs*/, tx_params);
+      hwdev.close_tx();
+      return r;
+    } catch(...) {
+      hwdev.close_tx();
+      throw;
     }
-
-    bool r = construct_tx_with_tx_key(sender_account_keys, subaddresses, sources, destinations, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, rct_config, msout, true/*shuffle_outs*/, tx_params);
-    hwdev.close_tx();
-    return r;
   }
   //---------------------------------------------------------------
   bool construct_tx(const account_keys& sender_account_keys, std::vector<tx_source_entry> &sources, const std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const arqma_construct_tx_params &tx_params)
@@ -957,7 +988,7 @@ namespace cryptonote
 
      rct::RCTConfig rct_config = {};
      rct_config.range_proof_type = (tx_params.hard_fork_version < 8) ? rct::RangeProofBorromean : (tx_params.hard_fork_version < 13) ? rct::RangeProofMultiOutputBulletproof : rct::RangeProofPaddedBulletproof;
-     rct_config.bp_version = (tx_params.hard_fork_version >= 16) ? 2 : (tx_params.hard_fork_version >= 13) ? 1 : 0;
+     rct_config.bp_version = (tx_params.hard_fork_version >= 19) ? 3 : (tx_params.hard_fork_version >= 16) ? 2 : 1;
 
      return construct_tx_and_get_tx_key(sender_account_keys, subaddresses, sources, destinations_copy, change_addr, extra, tx, unlock_time, tx_key, additional_tx_keys, rct_config, NULL, tx_params);
   }

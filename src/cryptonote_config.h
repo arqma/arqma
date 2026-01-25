@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -55,7 +55,7 @@ using namespace std::literals;
 
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)50000000000000000)
-#define M_SUPPLY_ADJUST                                 ((uint64_t)25000000000000000)
+#define MONEY_SUPPLY_ADJUSTED                           ((uint64_t)75000000000000000)
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (22)
 #define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)300000000)
 
@@ -77,6 +77,7 @@ using namespace std::literals;
 #define DYNAMIC_FEE_PER_BYTE_BASE_FEE_V13               ((uint64_t)(DYNAMIC_FEE_PER_KB_BASE_FEE_V5) * 50 / 1000)
 #define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)1500)
 #define HF_16_DYNAMIC_REFERENCE_FEE                     ((uint64_t)13944)
+#define HF_19_OUTPUT_FEE                                ((uint64_t)90000)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
@@ -174,14 +175,17 @@ constexpr auto P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT     = 5s;
 #define CRYPTONOTE_BLOCKCHAINDATA_LOCK_FILENAME         "lock.mdb"
 #define P2P_NET_DATA_FILENAME                           "p2pstate.bin"
 
-#define HF_VERSION_MIN_MIXIN_10                         13
+#define HF_VERSION_MIN_MIXIN_10                         cryptonote::network_version_13
 
-#define HF_VERSION_LOWER_FEE                            10
-#define HF_VERSION_PER_BYTE_FEE                         13
-#define HF_FORBID_BORROMEAN                             13
-#define HF_VERSION_LONG_TERM_BLOCK_WEIGHT               14
+#define HF_VERSION_LOWER_FEE                            cryptonote::network_version_10
+#define HF_VERSION_PER_BYTE_FEE                         cryptonote::network_version_13
+#define HF_FORBID_BORROMEAN                             cryptonote::network_version_13
+#define HF_VERSION_LONG_TERM_BLOCK_WEIGHT               cryptonote::network_version_14
 
-#define HF_VERSION_SERVICE_NODES                        16
+#define HF_VERSION_SERVICE_NODES                        cryptonote::network_version_16
+#define HF_VERSION_PER_OUTPUT_FEE                       cryptonote::network_version_19
+#define HF_VERSION_BURN                                 cryptonote::network_version_19
+#define HF_VERSION_CLSAG                                cryptonote::network_version_19
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
@@ -241,6 +245,9 @@ namespace config
   const unsigned char HASH_KEY_WALLET_CACHE = 0x8d;
   const unsigned char HASH_KEY_MEMORY = 'k';
   const unsigned char HASH_KEY_MULTISIG[] = {'M', 'u', 'l', 't', 'i', 's', 'i', 'g', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+  const unsigned char HASH_KEY_CLSAG_ROUND[] = "CLSAG_round";
+  const unsigned char HASH_KEY_CLSAG_AGG_0[] = "CLSAG_agg_0";
+  const unsigned char HASH_KEY_CLSAG_AGG_1[] = "CLSAG_agg_1";
 
   const uint64_t CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0x2cca; // Wallet prefix: ar... // decimal prefix: 11466
   const uint64_t CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0x116bc7; // Wallet prefix: aRi... // decimal prefix: 1141703
@@ -289,7 +296,7 @@ namespace config
       } }; // Bender's daydream
     std::string const GOV_WALLET_ADDRESS = "as3DH2He8go7QzsiWc2PK4by2XdQZmUTF8Bv2bKY3egmRH9zPAF3iwWFteTPYaob4m5GuCNTLHFgtVdA6nbuP3Gp1x4Fvjv5G";
     std::string const DEV_WALLET_ADDRESS = "as1gAmaQQZMDy8SQzeqQSxGJJJpinLxSpgALxxZEDyNL6QB6hREvXzoVDi9LrFGJVu1x33toQVe9hWeXdhsjnkg7199GtodQy";
-    std::string const NET_WALLET_ADDRESS = "";
+    std::string const NET_WALLET_ADDRESS = "as1u1cXxqXRgkRTiYp6ymQ6AymVM4qcogP5R3MVogLabGMfqWvcKB2GQMqjcBaLbjMaCMmeWGbJ8hQEzi7S97xa51NUz3NwNs";
   }
 
   namespace blockchain_settings
@@ -306,7 +313,7 @@ namespace config
     static const uint8_t ARQMA_BLOCK_UNLOCK_CONFIRMATIONS = 18; // How many blocks mined are needed to unlock block_reward.
     static const uint8_t min_output_age = 20;
     static const uint64_t HF16_BL_REWARD = 20 * ARQMA;
-    const uint64_t sync_height = 1764340;
+    const uint64_t sync_height = 1860000;
   }
 
   namespace tx_settings
@@ -359,15 +366,8 @@ namespace arqma
 
   const char *const stagenet_core_nodes[] =
   {
-    "node5.arqma.com", //Malbit
-    "node1.arqma.com", //ArqTras
-    "node6.arqma.com", //Malbit US
-    "node2.arqma.com", //ArqTras
-    "node7.arqma.com", //Malbit Contabo
-    "node3.arqma.com", //ArqTras
-    "node4.arqma.com", //ArqTras
-    "node8.arqma.com", //Malbit Asia
-    "it-support.mal-bit.com"
+    "46.170.66.186",
+    "161.97.102.172"
   };
 }
 
@@ -388,6 +388,7 @@ namespace cryptonote
     network_version_16,
     network_version_17,
     network_version_18,
+    network_version_19,
 
     network_version_count,
   };
