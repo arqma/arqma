@@ -80,11 +80,12 @@ namespace net_utils
   /*                                                                      */
   /************************************************************************/
   template<class t_protocol_handler>
-  connection<t_protocol_handler>::connection( boost::asio::io_service& io_service,
+  connection<t_protocol_handler>::connection( boost::asio::io_context &io_context,
                                               std::shared_ptr<shared_state> state,
 		                                          t_connection_type connection_type,
 		                                          ssl_support_t ssl_support)
-	  : connection( boost::asio::ip::tcp::socket{io_service},
+	  : connection( io_context,
+	    boost::asio::ip::tcp::socket{io_context},
 	    std::move(state),
 	    connection_type,
 	    ssl_support)
@@ -92,17 +93,19 @@ namespace net_utils
   }
 
   template<class t_protocol_handler>
-  connection<t_protocol_handler>::connection( boost::asio::ip::tcp::socket&& sock,
+  connection<t_protocol_handler>::connection( boost::asio::io_context &io_context,
+                                              boost::asio::ip::tcp::socket&& sock,
                                               std::shared_ptr<shared_state> state,
 		                                          t_connection_type connection_type,
 		                                          ssl_support_t ssl_support)
-		: connection_basic(std::move(sock), state, ssl_support),
+		: connection_basic(io_context, std::move(sock), state, ssl_support),
 		  m_protocol_handler(this, check_and_get(state), context),
+		  m_io_context{io_context},
 		  buffer_ssl_init_fill(0),
 		  m_connection_type( connection_type ),
 		  m_throttle_speed_in("speed_in", "throttle_speed_in"),
 		  m_throttle_speed_out("speed_out", "throttle_speed_out"),
-		  m_timer(GET_IO_SERVICE(socket_)),
+		  m_timer(m_io_context),
 		  m_local(false),
 		  m_ready_to_close(false)
   {
@@ -196,13 +199,13 @@ namespace net_utils
     buffer_ssl_init_fill = 0;
     if (is_income && m_ssl_support != epee::net_utils::ssl_support_t::e_ssl_support_disabled)
       socket().async_receive(boost::asio::buffer(buffer_),
-        strand_.wrap(
+        boost::asio::bind_executor(strand_,
           boost::bind(&connection<t_protocol_handler>::handle_receive, self,
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred)));
     else
       async_read_some(boost::asio::buffer(buffer_),
-        strand_.wrap(
+        boost::asio::bind_executor(strand_,
           boost::bind(&connection<t_protocol_handler>::handle_read, self,
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred)));
@@ -232,15 +235,15 @@ namespace net_utils
     if(!self)
       return false;
 
-    strand_.post(std::bind(&connection<t_protocol_handler>::call_back_starter, self), std::allocator<void>{});
+    boost::asio::post(strand_, std::bind(&connection<t_protocol_handler>::call_back_starter, self));
     CATCH_ENTRY_L0("connection<t_protocol_handler>::request_callback()", false);
     return true;
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  boost::asio::io_service& connection<t_protocol_handler>::get_io_service()
+  boost::asio::io_context& connection<t_protocol_handler>::get_io_context()
   {
-    return GET_IO_SERVICE(socket());
+    return m_io_context;
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
@@ -265,7 +268,7 @@ namespace net_utils
   bool connection<t_protocol_handler>::release()
   {
     TRY_ENTRY();
-    std::shared_ptr<connection<t_protocol_handler> >  back_connection_copy;
+    std::shared_ptr<connection<t_protocol_handler>> back_connection_copy;
     std::lock_guard lock{m_self_refs_lock};
     CHECK_AND_ASSERT_MES(m_reference_count, false, "[sock " << socket().native_handle() << "] m_reference_count already at 0 at connection<t_protocol_handler>::release() call");
     // is this the last reference?
@@ -370,7 +373,7 @@ namespace net_utils
       {
         reset_timer(get_timeout_from_bytes_read(bytes_transferred), false);
         async_read_some(boost::asio::buffer(buffer_),
-          strand_.wrap(
+          boost::asio::bind_executor(strand_,
             boost::bind(&connection<t_protocol_handler>::handle_read, connection<t_protocol_handler>::shared_from_this(),
               boost::asio::placeholders::error,
               boost::asio::placeholders::bytes_transferred)));
@@ -419,7 +422,7 @@ namespace net_utils
     if (buffer_ssl_init_fill < get_ssl_magic_size())
     {
       socket().async_receive(boost::asio::buffer(buffer_.data() + buffer_ssl_init_fill, buffer_.size() - buffer_ssl_init_fill),
-        strand_.wrap(
+        boost::asio::bind_executor(strand_,
           boost::bind(&connection<t_protocol_handler>::handle_receive, connection<t_protocol_handler>::shared_from_this(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred)));
@@ -467,7 +470,7 @@ namespace net_utils
     }
 
     async_read_some(boost::asio::buffer(buffer_),
-      strand_.wrap(
+      boost::asio::bind_executor(strand_,
         boost::bind(&connection<t_protocol_handler>::handle_read, connection<t_protocol_handler>::shared_from_this(),
           boost::asio::placeholders::error,
           boost::asio::placeholders::bytes_transferred)));
@@ -486,7 +489,7 @@ namespace net_utils
     if(!m_is_multithreaded)
     {
       //single thread model, we can wait in blocked call
-      size_t cnt = GET_IO_SERVICE(socket()).run_one();
+      size_t cnt = m_io_context.run_one();
       if(!cnt)//service is going to quit
         return false;
     }
@@ -497,7 +500,7 @@ namespace net_utils
       //if no handlers were called
       //TODO: Maybe we need to have have critical section + event + callback to upper protocol to
       //ask it inside(!) critical region if we still able to go in event wait...
-      size_t cnt = GET_IO_SERVICE(socket()).poll_one();
+      size_t cnt = m_io_context.poll_one();
       if(!cnt)
         std::this_thread::sleep_for(1ms);
     }
@@ -592,8 +595,7 @@ namespace net_utils
     while (m_send_que.size() > ABSTRACT_SERVER_SEND_QUE_MAX_COUNT)
     {
         retry++;
-
-        using engine           = std::mt19937;
+        using engine = std::mt19937;
         static bool initialized = false;
         static engine rng;
         if (!initialized)
@@ -643,7 +645,7 @@ namespace net_utils
         CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), false, "Unexpected queue size");
         reset_timer(get_default_timeout(), false);
         async_write(boost::asio::buffer(m_send_que.front().data(), size_now),
-          strand_.wrap(
+          boost::asio::bind_executor(strand_,
             std::bind(&connection<t_protocol_handler>::handle_write, self, std::placeholders::_1, std::placeholders::_2)
           )
         );
@@ -803,7 +805,6 @@ namespace net_utils
     }
     logger_handle_net_write(cb);
 
-                // The single sleeping that is needed for correctly handling "out" speed throttling
 		if (speed_limit_is_enabled()) {
 			sleep_before_packet(cb, 1, 1);
 		}
@@ -832,7 +833,7 @@ namespace net_utils
 	      do_send_handler_write_from_queue(e, m_send_que.front().size() , m_send_que.size()); // (((H)))
 		  CHECK_AND_ASSERT_MES( size_now == m_send_que.front().size(), void(), "Unexpected queue size");
 		  async_write(boost::asio::buffer(m_send_que.front().data(), size_now),
-        strand_.wrap(
+        boost::asio::bind_executor(strand_,
           std::bind(&connection<t_protocol_handler>::handle_write, connection<t_protocol_handler>::shared_from_this(), std::placeholders::_1, std::placeholders::_2)
 			  )
       );
@@ -867,12 +868,12 @@ namespace net_utils
   template<class t_protocol_handler>
   boosted_tcp_server<t_protocol_handler>::boosted_tcp_server( t_connection_type connection_type ) :
     m_state(std::make_shared<typename connection<t_protocol_handler>::shared_state>()),
-    m_io_service_local_instance(new worker()),
-    io_service_(m_io_service_local_instance->io_service),
-    acceptor_(io_service_),
-    acceptor_ipv6(io_service_),
+    m_io_context_local_instance(new worker()),
+    io_context_(m_io_context_local_instance->io_context),
+    acceptor_(io_context_),
+    acceptor_ipv6(io_context_),
     default_remote(),
-    m_stop_signal_sent(false), m_port(0), 
+    m_stop_signal_sent(false), m_port(0),
     m_threads_count(0),
     m_thread_index(0),
 		m_connection_type( connection_type ),
@@ -884,11 +885,11 @@ namespace net_utils
   }
 
   template<class t_protocol_handler>
-  boosted_tcp_server<t_protocol_handler>::boosted_tcp_server(boost::asio::io_service& extarnal_io_service, t_connection_type connection_type) :
+  boosted_tcp_server<t_protocol_handler>::boosted_tcp_server(boost::asio::io_context& extarnal_io_context, t_connection_type connection_type) :
     m_state(std::make_shared<typename connection<t_protocol_handler>::shared_state>()),
-    io_service_(extarnal_io_service),
-    acceptor_(io_service_),
-    acceptor_ipv6(io_service_),
+    io_context_(extarnal_io_context),
+    acceptor_(io_context_),
+    acceptor_ipv6(io_context_),
     default_remote(),
     m_stop_signal_sent(false), m_port(0),
     m_threads_count(0),
@@ -909,7 +910,7 @@ namespace net_utils
   }
   //---------------------------------------------------------------------------------
   template<class t_protocol_handler>
-  void boosted_tcp_server<t_protocol_handler>::create_server_type_map() 
+  void boosted_tcp_server<t_protocol_handler>::create_server_type_map()
   {
 		server_type_map["NET"] = e_connection_type_NET;
 		server_type_map["RPC"] = e_connection_type_RPC;
@@ -936,7 +937,7 @@ namespace net_utils
     std::string ipv4_failed = "";
     std::string ipv6_failed = "";
 
-    boost::asio::ip::tcp::resolver resolver(io_service_);
+    boost::asio::ip::tcp::resolver resolver(io_context_);
 
     try
     {
@@ -950,7 +951,7 @@ namespace net_utils
       boost::asio::ip::tcp::endpoint binded_endpoint = acceptor_.local_endpoint();
       m_port = binded_endpoint.port();
       MDEBUG("start accept (IPv4)");
-      new_connection_.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, m_state->ssl_options().support));
+      new_connection_.reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, m_state->ssl_options().support));
       acceptor_.async_accept(new_connection_->socket(),
         boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept_ipv4, this,
         boost::asio::placeholders::error));
@@ -987,7 +988,7 @@ namespace net_utils
         boost::asio::ip::tcp::endpoint binded_endpoint = acceptor_ipv6.local_endpoint();
         m_port_ipv6 = binded_endpoint.port();
         MDEBUG("start accept (IPv6)");
-        new_connection_ipv6.reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, m_state->ssl_options().support));
+        new_connection_ipv6.reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, m_state->ssl_options().support));
         acceptor_ipv6.async_accept(new_connection_ipv6->socket(),
           boost::bind(&boosted_tcp_server<t_protocol_handler>::handle_accept_ipv6, this,
           boost::asio::placeholders::error));
@@ -1053,7 +1054,7 @@ namespace net_utils
     {
       try
       {
-        io_service_.run();
+        io_context_.run();
         return true;
       }
       catch(const std::exception& ex)
@@ -1180,7 +1181,7 @@ namespace net_utils
         c->cancel();
       connections_.clear();
     }
-    io_service_.stop();
+    io_context_.stop();
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::send_stop_signal()", void());
   }
   //---------------------------------------------------------------------------------
@@ -1228,7 +1229,7 @@ namespace net_utils
         (*current_new_connection)->setRpcStation(); // hopefully this is not needed actually
       }
       connection_ptr conn(std::move((*current_new_connection)));
-      (*current_new_connection).reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, conn->get_ssl_support()));
+      (*current_new_connection).reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, conn->get_ssl_support()));
       current_acceptor->async_accept((*current_new_connection)->socket(),
         boost::bind(accept_function_pointer, this,
         boost::asio::placeholders::error));
@@ -1266,7 +1267,7 @@ namespace net_utils
     assert(m_state != nullptr); // always set in constructor
     MERROR("Some problems at accept: " << e.message() << ", connections_count = " << m_state->sock_count);
     std::this_thread::sleep_for(100ms);
-    (*current_new_connection).reset(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, (*current_new_connection)->get_ssl_support()));
+    (*current_new_connection).reset(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, (*current_new_connection)->get_ssl_support()));
     current_acceptor->async_accept((*current_new_connection)->socket(),
       boost::bind(accept_function_pointer, this,
       boost::asio::placeholders::error));
@@ -1275,9 +1276,9 @@ namespace net_utils
   template<class t_protocol_handler>
   bool boosted_tcp_server<t_protocol_handler>::add_connection(t_connection_context& out, boost::asio::ip::tcp::socket&& sock, network_address real_remote, epee::net_utils::ssl_support_t ssl_support)
   {
-    if(std::addressof(get_io_service()) == std::addressof(GET_IO_SERVICE(sock)))
+    if(std::addressof(get_io_context()) == std::addressof(sock.get_executor().context()))
     {
-      connection_ptr conn(new connection<t_protocol_handler>(std::move(sock), m_state, m_connection_type, ssl_support));
+      connection_ptr conn(new connection<t_protocol_handler>(io_context_, std::move(sock), m_state, m_connection_type, ssl_support));
       if(conn->start(false, 1 < m_threads_count, std::move(real_remote)))
       {
         conn->get_context(out);
@@ -1287,7 +1288,7 @@ namespace net_utils
     }
     else
     {
-	MWARNING(out << " was not added, socket/io_service mismatch");
+      MWARNING(out << " was not added, socket/io_context mismatch");
     }
     return false;
   }
@@ -1397,7 +1398,7 @@ namespace net_utils
   {
     TRY_ENTRY();
 
-    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support) );
+    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, ssl_support) );
     {
       std::lock_guard lock{connections_mutex};
       connections_.insert(new_connection_l);
@@ -1408,7 +1409,7 @@ namespace net_utils
 
     bool try_ipv6 = false;
 
-    boost::asio::ip::tcp::resolver resolver(io_service_);
+    boost::asio::ip::tcp::resolver resolver(io_context_);
     boost::asio::ip::tcp::resolver::results_type results{};
     boost::system::error_code resolve_error;
 
@@ -1522,7 +1523,7 @@ namespace net_utils
   bool boosted_tcp_server<t_protocol_handler>::connect_async(const std::string& adr, const std::string& port, uint32_t conn_timeout, const t_callback &cb, const std::string& bind_ip, epee::net_utils::ssl_support_t ssl_support)
   {
     TRY_ENTRY();
-    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_service_, m_state, m_connection_type, ssl_support) );
+    connection_ptr new_connection_l(new connection<t_protocol_handler>(io_context_, m_state, m_connection_type, ssl_support) );
     {
       std::lock_guard lock{connections_mutex};
       connections_.insert(new_connection_l);
@@ -1533,7 +1534,7 @@ namespace net_utils
 
     bool try_ipv6 = false;
 
-    boost::asio::ip::tcp::resolver resolver(io_service_);
+    boost::asio::ip::tcp::resolver resolver(io_context_);
     boost::asio::ip::tcp::resolver::results_type results{};
     boost::system::error_code resolve_error;
 
@@ -1597,7 +1598,7 @@ namespace net_utils
       }
     }
 
-    std::shared_ptr<boost::asio::steady_timer> sh_deadline(new boost::asio::steady_timer(io_service_));
+    std::shared_ptr<boost::asio::steady_timer> sh_deadline(new boost::asio::steady_timer(io_context_));
     //start deadline
     sh_deadline->expires_after(std::chrono::milliseconds(conn_timeout));
     sh_deadline->async_wait([=](const boost::system::error_code& error)
@@ -1651,6 +1652,6 @@ namespace net_utils
     return true;
     CATCH_ENTRY_L0("boosted_tcp_server<t_protocol_handler>::connect_async", false);
   }
-  
+
 } // namespace
 } // namespace

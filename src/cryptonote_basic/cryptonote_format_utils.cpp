@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -152,7 +152,7 @@ namespace cryptonote
       if(!base_only)
       {
         const bool bulletproof = rct::is_rct_bulletproof(rv.type);
-        if((bulletproof && rv.type == rct::RCTTypeBulletproof) || (bulletproof && rv.type == rct::RCTTypeBulletproof2))
+        if((bulletproof && rv.type == rct::RCTTypeBulletproof) || (bulletproof && rv.type == rct::RCTTypeBulletproof2) || (bulletproof && rv.type == rct::RCTTypeCLSAG))
         {
           if(rv.p.bulletproofs.size() != 1)
           {
@@ -420,7 +420,7 @@ namespace cryptonote
   {
     CHECK_AND_ASSERT_MES(tx.pruned, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support non pruned txes");
     CHECK_AND_ASSERT_MES(tx.version >= txversion::v2, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support v1 txes");
-    CHECK_AND_ASSERT_MES(tx.rct_signatures.type >= rct::RCTTypeBulletproof2, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support older range proof types");
+    CHECK_AND_ASSERT_MES(tx.rct_signatures.type >= rct::RCTTypeBulletproof2 || tx.rct_signatures.type == rct::RCTTypeCLSAG, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support older range proof types");
     CHECK_AND_ASSERT_MES(!tx.vin.empty(), std::numeric_limits<uint64_t>::max(), "empty vin");
     CHECK_AND_ASSERT_MES(tx.vin[0].type() == typeid(cryptonote::txin_to_key), std::numeric_limits<uint64_t>::max(), "empty vin");
 
@@ -441,9 +441,12 @@ namespace cryptonote
     extra = 32 * (9 + 2 * nrl) + 2;
     weight += extra;
 
-    // calculate deterministic MLSAG data size
+    // calculate deterministic CLSAG/MLSAG data size
     const size_t ring_size = boost::get<cryptonote::txin_to_key>(tx.vin[0]).key_offsets.size();
-    extra = tx.vin.size() * (ring_size * (1 + 1) * 32 + 32 /* cc */);
+    if (tx.rct_signatures.type == rct::RCTTypeCLSAG)
+      extra = tx.vin.size() * (ring_size + 2) * 32;
+    else
+      extra = tx.vin.size() * (ring_size * (1 + 1) * 32 + 32 /* cc */);
     weight += extra;
 
     // calculate deterministic pseudoOuts size
@@ -475,32 +478,36 @@ namespace cryptonote
     return get_transaction_weight(tx, blob_size);
   }
   //---------------------------------------------------------------
-  bool get_tx_fee(const transaction& tx, uint64_t & fee)
+  bool get_tx_miner_fee(const transaction& tx, uint64_t &fee, bool burning_enabled, uint64_t *burned)
   {
+    if (burned)
+      *burned = 0;
     if(tx.version >= txversion::v2)
     {
       fee = tx.rct_signatures.txnFee;
+      if (burning_enabled)
+      {
+        uint64_t fee_burned = get_burned_amount_from_tx_extra(tx.extra);
+        fee -= std::min(fee, fee_burned);
+        if (burned)
+          *burned = fee_burned;
+      }
       return true;
     }
-    uint64_t amount_in = 0;
-    uint64_t amount_out = 0;
-    for(auto& in: tx.vin)
-    {
-      CHECK_AND_ASSERT_MES(in.type() == typeid(txin_to_key), 0, "unexpected type id in transaction");
-      amount_in += boost::get<txin_to_key>(in).amount;
-    }
-    for(auto& o: tx.vout)
-      amount_out += o.amount;
+    uint64_t amount_in;
+    if (!get_inputs_money_amount(tx, amount_in))
+      return false;
+    uint64_t amount_out = get_outs_money_amount(tx);
 
     CHECK_AND_ASSERT_MES(amount_in >= amount_out, false, "transaction spend (" <<amount_in << ") more than it has (" << amount_out << ")");
     fee = amount_in - amount_out;
     return true;
   }
   //---------------------------------------------------------------
-  uint64_t get_tx_fee(const transaction& tx)
+  uint64_t get_tx_miner_fee(const transaction& tx, bool burning_enabled)
   {
     uint64_t r = 0;
-    if(!get_tx_fee(tx, r))
+    if(!get_tx_miner_fee(tx, r, burning_enabled))
       return 0;
     return r;
   }
@@ -593,25 +600,27 @@ namespace cryptonote
     binary_archive<true> nar(oss);
 
     // sort by:
-    if(!pick<tx_extra_pub_key>                              (nar, tx_extra_fields, TX_EXTRA_TAG_PUBKEY)) return false;
-    if(!pick<tx_extra_service_node_winner>                  (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_WINNER)) return false;
-    if(!pick<tx_extra_additional_pub_keys>                  (nar, tx_extra_fields, TX_EXTRA_TAG_ADDITIONAL_PUBKEYS)) return false;
-    if(!pick<tx_extra_nonce>                                (nar, tx_extra_fields, TX_EXTRA_NONCE)) return false;
+    if (!pick<tx_extra_pub_key>                              (nar, tx_extra_fields, TX_EXTRA_TAG_PUBKEY)) return false;
+    if (!pick<tx_extra_service_node_winner>                  (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_WINNER)) return false;
+    if (!pick<tx_extra_additional_pub_keys>                  (nar, tx_extra_fields, TX_EXTRA_TAG_ADDITIONAL_PUBKEYS)) return false;
+    if (!pick<tx_extra_nonce>                                (nar, tx_extra_fields, TX_EXTRA_NONCE)) return false;
 
-    if(!pick<tx_extra_service_node_register>                (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_REGISTER)) return false;
-    if(!pick<tx_extra_service_node_state_change>            (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_STATE_CHANGE)) return false;
-    if(!pick<tx_extra_service_node_contributor>             (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_CONTRIBUTOR)) return false;
-    if(!pick<tx_extra_service_node_pubkey>                  (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_PUBKEY)) return false;
-    if(!pick<tx_extra_tx_secret_key>                        (nar, tx_extra_fields, TX_EXTRA_TAG_TX_SECRET_KEY)) return false;
-    if(!pick<tx_extra_tx_key_image_proofs>                  (nar, tx_extra_fields, TX_EXTRA_TAG_TX_KEY_IMAGE_PROOFS)) return false;
-    if(!pick<tx_extra_tx_key_image_unlock>                  (nar, tx_extra_fields, TX_EXTRA_TAG_TX_KEY_IMAGE_UNLOCK)) return false;
+    if (!pick<tx_extra_service_node_register>                (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_REGISTER)) return false;
+    if (!pick<tx_extra_service_node_state_change>            (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_STATE_CHANGE)) return false;
+    if (!pick<tx_extra_service_node_contributor>             (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_CONTRIBUTOR)) return false;
+    if (!pick<tx_extra_service_node_pubkey>                  (nar, tx_extra_fields, TX_EXTRA_TAG_SERVICE_NODE_PUBKEY)) return false;
+    if (!pick<tx_extra_tx_secret_key>                        (nar, tx_extra_fields, TX_EXTRA_TAG_TX_SECRET_KEY)) return false;
+    if (!pick<tx_extra_tx_key_image_proofs>                  (nar, tx_extra_fields, TX_EXTRA_TAG_TX_KEY_IMAGE_PROOFS)) return false;
+    if (!pick<tx_extra_tx_key_image_unlock>                  (nar, tx_extra_fields, TX_EXTRA_TAG_TX_KEY_IMAGE_UNLOCK)) return false;
 
-    if(!pick<tx_extra_merge_mining_tag>                     (nar, tx_extra_fields, TX_EXTRA_MERGE_MINING_TAG)) return false;
-    if(!pick<tx_extra_mysterious_minergate>                 (nar, tx_extra_fields, TX_EXTRA_MYSTERIOUS_MINERGATE_TAG)) return false;
-    if(!pick<tx_extra_padding>                              (nar, tx_extra_fields, TX_EXTRA_TAG_PADDING)) return false;
+    if (!pick<tx_extra_burn>                                 (nar, tx_extra_fields, TX_EXTRA_TAG_BURN)) return false;
+
+    if (!pick<tx_extra_merge_mining_tag>                     (nar, tx_extra_fields, TX_EXTRA_MERGE_MINING_TAG)) return false;
+    if (!pick<tx_extra_mysterious_minergate>                 (nar, tx_extra_fields, TX_EXTRA_MYSTERIOUS_MINERGATE_TAG)) return false;
+    if (!pick<tx_extra_padding>                              (nar, tx_extra_fields, TX_EXTRA_TAG_PADDING)) return false;
 
     // if not empty, someone added a new type and did not add a case above
-    if(!tx_extra_fields.empty())
+    if (!tx_extra_fields.empty())
     {
       MERROR("tx_extra_fields not empty after sorting, someone forgot to add a case above");
       return false;
@@ -944,6 +953,25 @@ namespace cryptonote
       return false;
     payment_id = *reinterpret_cast<const crypto::hash8*>(extra_nonce.data() + 1);
     return true;
+  }
+  //---------------------------------------------------------------
+  uint64_t get_burned_amount_from_tx_extra(const std::vector<uint8_t>& tx_extra)
+  {
+    std::vector<tx_extra_field> tx_extra_fields;
+    parse_tx_extra(tx_extra, tx_extra_fields);
+
+    tx_extra_burn burn;
+    if (find_tx_extra_field_by_type(tx_extra_fields, burn))
+      return burn.amount;
+    return 0;
+  }
+  //---------------------------------------------------------------
+  bool add_burned_amount_to_tx_extra(std::vector<uint8_t>& tx_extra, uint64_t burn)
+  {
+    tx_extra_field field = tx_extra_burn{burn};
+    bool result = add_tx_extra_field_to_tx_extra(tx_extra, field);
+    CHECK_AND_NO_ASSERT_MES_L1(result, false, "failed to serialize tx_extra burn amount");
+    return result;
   }
   //---------------------------------------------------------------
   bool get_inputs_money_amount(const transaction& tx, uint64_t& money)

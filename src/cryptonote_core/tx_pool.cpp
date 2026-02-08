@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -223,7 +223,7 @@ namespace cryptonote
       return false;
     }
 
-    if (hard_fork_version >= 16 && tx.version < txversion::v3)
+    if (hard_fork_version >= network_version_16 && tx.version < txversion::v3)
     {
       LOG_PRINT_L1("Wrong Transaction Version");
       tvc.m_verification_failed = true;
@@ -231,42 +231,15 @@ namespace cryptonote
       return false;
     }
 
-    // fee per kilobyte, size rounded up.
-    uint64_t fee;
+    uint64_t fee, burned;
 
-    if(tx.version == txversion::v1)
+    if (!get_tx_miner_fee(tx, fee, hard_fork_version >= network_version_19, &burned))
     {
-      uint64_t inputs_amount = 0;
-      if(!get_inputs_money_amount(tx, inputs_amount))
-      {
-        tvc.m_verification_failed = true;
-        return false;
-      }
-
-      uint64_t outputs_amount = get_outs_money_amount(tx);
-      if(outputs_amount > inputs_amount)
-      {
-        LOG_PRINT_L1("transaction use more money than it has: use " << print_money(outputs_amount) << ", have " << print_money(inputs_amount));
-        tvc.m_verification_failed = true;
-        tvc.m_overspend = true;
-        return false;
-      }
-      else if(outputs_amount == inputs_amount)
-      {
-        LOG_PRINT_L1("transaction fee is zero: outputs_amount == inputs_amount, rejecting.");
-        tvc.m_verification_failed = true;
-        tvc.m_fee_too_low = true;
-        return false;
-      }
-
-      fee = inputs_amount - outputs_amount;
-    }
-    else
-    {
-      fee = tx.rct_signatures.txnFee;
+      tvc.m_verification_failed = true;
+      tvc.m_fee_too_low = true;
     }
 
-    if(!opts.kept_by_block && tx.is_transfer() && !m_blockchain.check_fee(tx, tx_weight, fee))
+    if(!opts.kept_by_block && tx.is_transfer() && !m_blockchain.check_fee(tx, tx_weight, tx.vout.size(), fee, burned, opts))
     {
       tvc.m_verification_failed = true;
       tvc.m_fee_too_low = true;

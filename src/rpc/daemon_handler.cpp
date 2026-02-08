@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2017-2018, The Monero Project
 //
 // All rights reserved.
@@ -998,7 +998,9 @@ namespace rpc
   void DaemonHandler::handle(const GetFeeEstimate::Request& req, GetFeeEstimate::Response& res)
   {
     res.hard_fork_version = m_core.get_blockchain_storage().get_current_hard_fork_version();
-    res.estimated_base_fee = m_core.get_blockchain_storage().get_dynamic_base_fee_estimate(req.num_grace_blocks);
+    auto fees = m_core.get_blockchain_storage().get_dynamic_base_fee_estimate(req.num_grace_blocks);
+    res.estimated_base_fee_per_byte = fees.first;
+    res.estimated_base_fee_per_output = fees.second;
 
     if (res.hard_fork_version < HF_VERSION_PER_BYTE_FEE)
     {

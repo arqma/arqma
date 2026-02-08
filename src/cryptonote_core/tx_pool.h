@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -77,6 +77,9 @@ namespace cryptonote
     bool kept_by_block = false;
     bool relayed = false;
     bool do_not_relay = false;
+    uint64_t fee_percent = 100;
+    uint64_t burn_fixed = 0;
+    uint64_t burn_percent = 0;
 
     static tx_pool_options from_block() { tx_pool_options o; o.kept_by_block = true; o.relayed = true; return o; }
     static tx_pool_options from_peer() { tx_pool_options o; o.relayed = true; return o; }

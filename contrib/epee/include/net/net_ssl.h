@@ -116,6 +116,7 @@ class ssl_options_t
     boost::asio::ssl::context create_context() const;
 
     bool handshake(
+      boost::asio::io_context& io_context,
       boost::asio::ssl::stream<boost::asio::ip::tcp::socket> &socket,
       boost::asio::ssl::stream_base::handshake_type type,
       boost::asio::const_buffer buffer = {},

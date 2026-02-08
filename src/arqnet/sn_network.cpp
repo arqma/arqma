@@ -302,7 +302,7 @@ zmq::socket_t &SNNetwork::get_control_socket() {
     std::lock_guard<std::mutex> lock{local_control_mutex};
     zmq::socket_t foo{context, zmq::socket_type::dealer};
     auto control = std::make_shared<zmq::socket_t>(context, zmq::socket_type::dealer);
-    control->setsockopt<int>(ZMQ_LINGER, 0);
+    control->set(zmq::sockopt::linger, 0);
     control->connect(SN_ADDR_COMMAND);
     thread_control_sockets.push_back(control);
     control_sockets.emplace(object_id, control);
@@ -384,7 +384,7 @@ void SNNetwork::spawn_worker(std::string id) {
 void SNNetwork::worker_thread(std::string worker_id) {
     zmq::socket_t sock{context, zmq::socket_type::dealer};
 #if ZMQ_VERSION >= ZMQ_MAKE_VERSION (4, 3, 0)
-    sock.setsockopt(ZMQ_ROUTING_ID, worker_id.data(), worker_id.size());
+    sock.set(zmq::sockopt::routing_id, worker_id);
 #else
     sock.setsockopt(ZMQ_IDENTITY, worker_id.data(), worker_id.size());
 #endif
@@ -417,7 +417,7 @@ void SNNetwork::worker_thread(std::string worker_id) {
                 if (control == "QUIT") {
                     SN_LOG(debug, "worker " << worker_id << " shutting down");
                     detail::send_control(sock, "QUITTING");
-                    sock.setsockopt<int>(ZMQ_LINGER, 1000);
+                    sock.set(zmq::sockopt::linger, 1000);
                     sock.close();
                     return;
                 } else {
@@ -494,7 +494,7 @@ void SNNetwork::proxy_quit() {
     SN_LOG(debug, "Received quit command, shutting down proxy thread");
 
     assert(worker_threads.empty());
-    command.setsockopt<int>(ZMQ_LINGER, 0);
+    command.set(zmq::sockopt::linger, 0);
     command.close();
     {
         std::lock_guard<std::mutex> lock{local_control_mutex};
@@ -504,11 +504,11 @@ void SNNetwork::proxy_quit() {
     workers.close();
     if (listener)
     {
-      listener->setsockopt(ZMQ_LINGER, CLOSE_LINGER);
+      listener->set(zmq::sockopt::linger, CLOSE_LINGER);
       listener.reset();
     }
     for (auto &r : remotes)
-        r.second.setsockopt(ZMQ_LINGER, CLOSE_LINGER);
+        r.second.set(zmq::sockopt::linger, CLOSE_LINGER);
     remotes.clear();
     peers.clear();
 
@@ -576,13 +576,13 @@ SNNetwork::proxy_connect(const std::string &remote, const std::string &connect_h
 
   SN_LOG(debug, as_hex(pubkey) << " connecting to " << addr << " to reach " << as_hex(remote));
   zmq::socket_t socket{context, zmq::socket_type::dealer};
-  socket.setsockopt(ZMQ_CURVE_SERVERKEY, remote.data(), remote.size());
-  socket.setsockopt(ZMQ_CURVE_PUBLICKEY, pubkey.data(), pubkey.size());
-  socket.setsockopt(ZMQ_CURVE_SECRETKEY, privkey.data(), privkey.size());
-  socket.setsockopt(ZMQ_HANDSHAKE_IVL, SN_HANDSHAKE_TIME);
-  socket.setsockopt<int64_t>(ZMQ_MAXMSGSIZE, SN_ZMQ_MAX_MSG_SIZE);
+  socket.set(zmq::sockopt::curve_serverkey, zmq::buffer(remote));
+  socket.set(zmq::sockopt::curve_publickey, zmq::buffer(pubkey));
+  socket.set(zmq::sockopt::curve_secretkey, zmq::buffer(privkey));
+  socket.set(zmq::sockopt::handshake_ivl, SN_HANDSHAKE_TIME);
+  socket.set(zmq::sockopt::maxmsgsize, static_cast<int64_t>(SN_ZMQ_MAX_MSG_SIZE));
 #if ZMQ_VERSION >= ZMQ_MAKE_VERSION (4, 3, 0)
-  socket.setsockopt(ZMQ_ROUTING_ID, pubkey.data(), pubkey.size());
+  socket.set(zmq::sockopt::routing_id, zmq::buffer(pubkey));
 #else
   socket.setsockopt(ZMQ_IDENTITY, pubkey.data(), pubkey.size());
 #endif
@@ -722,7 +722,7 @@ auto SNNetwork::proxy_close_outgoing(decltype(peers)::iterator it) -> decltype(i
 
   if (info.outgoing >= 0)
   {
-    remotes[info.outgoing].second.setsockopt<int>(ZMQ_LINGER, CLOSE_LINGER);
+    remotes[info.outgoing].second.set(zmq::sockopt::linger, CLOSE_LINGER);
     pollitems.erase(pollitems.begin() + poll_remote_offset + info.outgoing);
     remotes.erase(remotes.begin() + info.outgoing);
     assert(remotes.size() == pollitems.size() + poll_remote_offset);
@@ -775,10 +775,10 @@ void SNNetwork::proxy_expire_idle_peers()
 
 void SNNetwork::proxy_loop(const std::vector<std::string> &bind) {
     zmq::socket_t zap_auth{context, zmq::socket_type::rep};
-    zap_auth.setsockopt<int>(ZMQ_LINGER, 0);
+    zap_auth.set(zmq::sockopt::linger, 0);
     zap_auth.bind(ZMQ_ADDR_ZAP);
 
-    workers.setsockopt<int>(ZMQ_ROUTER_MANDATORY, 1);
+    workers.set(zmq::sockopt::router_mandatory, true);
     workers.bind(SN_ADDR_WORKERS);
 
     spawn_worker("w1");
@@ -792,13 +792,13 @@ void SNNetwork::proxy_loop(const std::vector<std::string> &bind) {
     if (listener)
     {
       auto &l = *listener;
-      l.setsockopt(ZMQ_ZAP_DOMAIN, AUTH_DOMAIN_SN, sizeof(AUTH_DOMAIN_SN)-1);
-      l.setsockopt<int>(ZMQ_CURVE_SERVER, 1);
-      l.setsockopt(ZMQ_CURVE_PUBLICKEY, pubkey.data(), pubkey.size());
-      l.setsockopt(ZMQ_CURVE_SECRETKEY, privkey.data(), privkey.size());
-      l.setsockopt<int64_t>(ZMQ_MAXMSGSIZE, SN_ZMQ_MAX_MSG_SIZE);
-      l.setsockopt<int>(ZMQ_ROUTER_HANDOVER, 1);
-      l.setsockopt<int>(ZMQ_ROUTER_MANDATORY, 1);
+      l.set(zmq::sockopt::zap_domain, AUTH_DOMAIN_SN);
+      l.set(zmq::sockopt::curve_server, true);
+      l.set(zmq::sockopt::curve_publickey, zmq::buffer(pubkey));
+      l.set(zmq::sockopt::curve_secretkey, zmq::buffer(privkey));
+      l.set(zmq::sockopt::maxmsgsize, static_cast<int64_t>(SN_ZMQ_MAX_MSG_SIZE));
+      l.set(zmq::sockopt::router_handover, true);
+      l.set(zmq::sockopt::router_mandatory, true);
 
       for (const auto &b : bind)
       {

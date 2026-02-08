@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -539,6 +539,7 @@ private:
 
     typedef std::vector<transfer_details> transfer_container;
     typedef std::unordered_multimap<crypto::hash, payment_details> payment_container;
+    typedef std::set<uint32_t> unique_index_container;
 
     struct multisig_sig
     {
@@ -634,9 +635,10 @@ private:
     struct address_book_row
     {
       cryptonote::account_public_address m_address;
-      crypto::hash m_payment_id;
+      crypto::hash8 m_payment_id;
       std::string m_description;
       bool m_is_subaddress;
+      bool m_has_payment_id;
     };
 
     struct reserve_proof_entry
@@ -931,7 +933,7 @@ private:
 
     std::vector<wallet2::pending_tx> create_transactions_2(std::vector<cryptonote::tx_destination_entry> dsts, const size_t fake_outs_count, const uint64_t unlock_time,
                                                            uint32_t priority, const std::vector<uint8_t>& extra, uint32_t subaddr_account, std::set<uint32_t> subaddr_indices,
-                                                           cryptonote::arqma_construct_tx_params &tx_params);
+                                                           cryptonote::arqma_construct_tx_params &tx_params, const unique_index_container& subtract_fee_from_outputs = {});
 
     std::vector<wallet2::pending_tx> create_transactions_all(uint64_t below, const cryptonote::account_public_address &address, bool is_subaddress, const size_t outputs,
                                                              const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra,
@@ -946,7 +948,7 @@ private:
                                                               const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra,
                                                               cryptonote::txtype tx_type = cryptonote::txtype::standard);
 
-    bool sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, std::vector<cryptonote::tx_destination_entry> dsts) const;
+    bool sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, const std::vector<cryptonote::tx_destination_entry>& dsts, const unique_index_container& subtract_fee_from_outputs = {}) const;
     bool parse_multisig_tx_from_str(std::string multisig_tx_st, multisig_tx_set &exported_txs) const;
     bool load_multisig_tx(std::string blob, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
     bool load_multisig_tx_from_file(const std::string &filename, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
@@ -1205,7 +1207,8 @@ private:
     * \brief GUI Address book get/store
     */
     std::vector<address_book_row> get_address_book() const { return m_address_book; }
-    bool add_address_book_row(const cryptonote::account_public_address &address, const crypto::hash &payment_id, const std::string &description, bool is_subaddress);
+    bool add_address_book_row(const cryptonote::account_public_address &address, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress);
+    bool set_address_book_row(size_t row_id, const cryptonote::account_public_address &address, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress);
     bool delete_address_book_row(std::size_t row_id);
 
     uint64_t get_num_rct_outputs();
@@ -1318,8 +1321,8 @@ private:
     std::vector<std::pair<uint64_t, uint64_t>> estimate_backlog(const std::vector<std::pair<double, double>> &fee_levels);
     std::vector<std::pair<uint64_t, uint64_t>> estimate_backlog(uint64_t min_tx_weight, uint64_t max_tx_weight, const std::vector<uint64_t> &fees);
 
-    uint64_t get_fee_multiplier(uint32_t priority, int fee_algorithm = -1);
-    uint64_t get_base_fee();
+    uint64_t get_fee_percent(uint32_t priority, int fee_algorithm = -1);
+    cryptonote::byte_and_output_fees get_base_fees() const;
     uint64_t get_fee_quantization_mask();
     uint64_t get_min_ring_size();
     uint64_t get_max_ring_size();
@@ -1524,7 +1527,7 @@ private:
     void parse_block_round(const std::string &blob, cryptonote::block &bl, crypto::hash &bl_id, bool &error) const;
     uint64_t get_upper_transaction_weight_limit() const;
     std::vector<uint64_t> get_unspent_amounts_vector(bool strict) const;
-    uint64_t get_dynamic_base_fee_estimate();
+    cryptonote::byte_and_output_fees get_dynamic_base_fee_estimate() const;
     float get_output_relatedness(const transfer_details &td0, const transfer_details &td1) const;
     std::vector<size_t> pick_preferred_rct_inputs(uint64_t needed_money, uint32_t subaddr_account, const std::set<uint32_t> &subaddr_indices) const;
     void set_spent(size_t idx, uint64_t height);
@@ -1677,7 +1680,7 @@ BOOST_CLASS_VERSION(tools::wallet2::payment_details, 4)
 BOOST_CLASS_VERSION(tools::wallet2::pool_payment_details, 1)
 BOOST_CLASS_VERSION(tools::wallet2::unconfirmed_transfer_details, 8)
 BOOST_CLASS_VERSION(tools::wallet2::confirmed_transfer_details, 7)
-BOOST_CLASS_VERSION(tools::wallet2::address_book_row, 17)
+BOOST_CLASS_VERSION(tools::wallet2::address_book_row, 18)
 BOOST_CLASS_VERSION(tools::wallet2::reserve_proof_entry, 0)
 BOOST_CLASS_VERSION(tools::wallet2::unsigned_tx_set, 0)
 BOOST_CLASS_VERSION(tools::wallet2::signed_tx_set, 0)
@@ -1893,7 +1896,26 @@ namespace boost
     inline void serialize(Archive& a, tools::wallet2::address_book_row& x, const boost::serialization::version_type ver)
     {
       a & x.m_address;
-      a & x.m_payment_id;
+      if (ver < 18)
+      {
+        crypto::hash payment_id;
+        a & payment_id;
+        x.m_has_payment_id = !(payment_id == crypto::null_hash);
+        if (x.m_has_payment_id)
+        {
+          bool is_long = false;
+          for (int i = 8; i < 32; ++i)
+            is_long |= payment_id.data[i];
+          if (is_long)
+          {
+            MWARNING("Long payment ID ignored on address book load");
+            x.m_payment_id = crypto::null_hash8;
+            x.m_has_payment_id = false;
+          }
+          else
+            memcpy(x.m_payment_id.data, payment_id.data, 8);
+        }
+      }
       a & x.m_description;
       if (ver < 17)
       {
@@ -1901,6 +1923,11 @@ namespace boost
         return;
       }
       a & x.m_is_subaddress;
+      if (ver < 18)
+        return;
+      a & x.m_has_payment_id;
+      if (x.m_has_payment_id)
+        a & x.m_payment_id;
     }
 
     template <class Archive>

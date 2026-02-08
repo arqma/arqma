@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -128,6 +128,7 @@ namespace tools
         MAP_JON_RPC_WE("parse_uri",                      on_parse_uri,                      wallet_rpc::COMMAND_RPC_PARSE_URI)
         MAP_JON_RPC_WE("get_address_book",               on_get_address_book,               wallet_rpc::COMMAND_RPC_GET_ADDRESS_BOOK_ENTRY)
         MAP_JON_RPC_WE("add_address_book",               on_add_address_book,               wallet_rpc::COMMAND_RPC_ADD_ADDRESS_BOOK_ENTRY)
+        MAP_JON_RPC_WE("edit_address_book",              on_edit_address_book,              wallet_rpc::COMMAND_RPC_EDIT_ADDRESS_BOOK_ENTRY)
         MAP_JON_RPC_WE("delete_address_book",            on_delete_address_book,            wallet_rpc::COMMAND_RPC_DELETE_ADDRESS_BOOK_ENTRY)
         MAP_JON_RPC_WE("refresh",                        on_refresh,                        wallet_rpc::COMMAND_RPC_REFRESH)
         MAP_JON_RPC_WE("auto_refresh",                   on_auto_refresh,                   wallet_rpc::COMMAND_RPC_AUTO_REFRESH)
@@ -218,6 +219,7 @@ namespace tools
       bool on_parse_uri(const wallet_rpc::COMMAND_RPC_PARSE_URI::request& req, wallet_rpc::COMMAND_RPC_PARSE_URI::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
       bool on_get_address_book(const wallet_rpc::COMMAND_RPC_GET_ADDRESS_BOOK_ENTRY::request& req, wallet_rpc::COMMAND_RPC_GET_ADDRESS_BOOK_ENTRY::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
       bool on_add_address_book(const wallet_rpc::COMMAND_RPC_ADD_ADDRESS_BOOK_ENTRY::request& req, wallet_rpc::COMMAND_RPC_ADD_ADDRESS_BOOK_ENTRY::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
+      bool on_edit_address_book(const wallet_rpc::COMMAND_RPC_EDIT_ADDRESS_BOOK_ENTRY::request& req, wallet_rpc::COMMAND_RPC_EDIT_ADDRESS_BOOK_ENTRY::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
       bool on_delete_address_book(const wallet_rpc::COMMAND_RPC_DELETE_ADDRESS_BOOK_ENTRY::request& req, wallet_rpc::COMMAND_RPC_DELETE_ADDRESS_BOOK_ENTRY::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
       bool on_refresh(const wallet_rpc::COMMAND_RPC_REFRESH::request& req, wallet_rpc::COMMAND_RPC_REFRESH::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
       bool on_auto_refresh(const wallet_rpc::COMMAND_RPC_AUTO_REFRESH::request& req, wallet_rpc::COMMAND_RPC_AUTO_REFRESH::response& res, epee::json_rpc::error& er, const connection_context *ctx = NULL);
@@ -257,9 +259,9 @@ namespace tools
       bool not_open(epee::json_rpc::error& er);
       void handle_rpc_exception(const std::exception_ptr& e, epee::json_rpc::error& er, int default_error_code);
 
-      template<typename Ts, typename Tu>
+      template<typename Ts, typename Tu, typename Ta>
       bool fill_response(std::vector<tools::wallet2::pending_tx> &ptx_vector,
-          bool get_tx_key, Ts& tx_key, Tu &amount, Tu &fee, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
+          bool get_tx_key, Ts& tx_key, Tu &amount, Ta &amounts_by_dest, Tu &fee, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
           Ts &tx_hash, bool get_tx_hex, Ts &tx_blob, bool get_tx_metadata, Ts &tx_metadata, epee::json_rpc::error &er);
 
       bool validate_transfer(const std::list<transfer_destination>& destinations, const std::string& payment_id, std::vector<cryptonote::tx_destination_entry>& dsts, std::vector<uint8_t>& extra, bool at_least_one_destination, epee::json_rpc::error& er);

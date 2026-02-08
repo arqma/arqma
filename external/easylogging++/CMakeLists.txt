@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2018 - 2026, The Arqma Network
 # Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
@@ -64,3 +64,7 @@ if (BUILD_GUI_DEPS)
         LIBRARY DESTINATION ${lib_folder})
 endif()
 set_property(TARGET easylogging APPEND PROPERTY COMPILE_FLAGS "${flags}")
+# Suppress stringop-overflow warnings in easylogging++ (GCC-specific false positives)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  target_compile_options(easylogging PRIVATE -Wno-stringop-overflow)
+endif()

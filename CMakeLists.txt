@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2022, The Arqma Network
+# Copyright (c) 2018 - 2026, The Arqma Network
 # Copyright (c) 2014-2018, The Monero Project
 #
 # All rights reserved.
@@ -711,11 +711,23 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   if(ARM)
     set(WARNINGS "${WARNINGS} -Wno-error=inline-asm")
   endif()
+  # Suppress Clang-specific warnings (macOS)
+  set(WARNINGS "${WARNINGS} -Wno-unknown-warning-option -Wno-deprecated-declarations")
+  # Clang may also show stringop-overflow warnings, suppress them
+  set(WARNINGS "${WARNINGS} -Wno-stringop-overflow")
+  # Suppress unused variable warnings (Clang on macOS)
+  set(WARNINGS "${WARNINGS} -Wno-unused-but-set-variable -Wno-unused-private-field -Wno-vla")
 else()
   set(WARNINGS "${WARNINGS} -Wlogical-op -Wno-error=maybe-uninitialized -Wno-error=cpp")
+  # Suppress GCC-specific warnings (Ubuntu/Linux)
+  set(WARNINGS "${WARNINGS} -Wno-deprecated-declarations -Wno-stringop-overflow -Wno-array-bounds -Wno-maybe-uninitialized -Wno-uninitialized -Wno-sign-compare")
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.5))
-  set(WARNINGS "${WARNINGS} -Wno-string-compare -Wno-unused-but-set-variable -Wno-unused-private-field")
+  set(WARNINGS "${WARNINGS} -Wno-string-compare -Wno-unused-but-set-variable")
+  # -Wno-unused-private-field is Clang-specific, not supported by GCC
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(WARNINGS "${WARNINGS} -Wno-unused-private-field")
+  endif()
 endif()
 if(MINGW)
   set(WARNINGS "${WARNINGS} -Wno-error=unused-value -Wno-error=unused-but-set-variable")
@@ -733,7 +745,21 @@ if(ARM7)
   set(WARNINGS "${WARNINGS} -Wno-psabi -Wno-maybe-uninitialized")
 endif()
 set(C_WARNINGS "-Waggregate-return -Wnested-externs -Wold-style-definition -Wstrict-prototypes")
+# Suppress additional C warnings
+if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(C_WARNINGS "${C_WARNINGS} -Wno-deprecated-declarations -Wno-vla")
+else()
+  # GCC-specific C warnings suppression (Ubuntu/Linux)
+  set(C_WARNINGS "${C_WARNINGS} -Wno-deprecated-declarations -Wno-stringop-overflow -Wno-array-bounds -Wno-maybe-uninitialized")
+endif()
 set(CXX_WARNINGS "-Wno-reorder -Wno-missing-field-initializers")
+# Suppress additional C++ warnings
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(CXX_WARNINGS "${CXX_WARNINGS} -Wno-deprecated-declarations -Wno-implicit-fallthrough -Wno-misleading-indentation")
+else()
+  # GCC-specific C++ warnings suppression (Ubuntu/Linux)
+  set(CXX_WARNINGS "${CXX_WARNINGS} -Wno-deprecated-declarations -Wno-stringop-overflow -Wno-array-bounds -Wno-maybe-uninitialized -Wno-uninitialized -Wno-sign-compare -Wno-implicit-fallthrough -Wno-misleading-indentation")
+endif()
 
 arqma_enable_coverage()
 # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that

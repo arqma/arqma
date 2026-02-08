@@ -48,14 +48,11 @@
   #define MAKE_IP( a1, a2, a3, a4 )	(a1|(a2<<8)|(a3<<16)|(((uint32_t)a4)<<24))
 #endif
 
-namespace boost::asio {
-  using io_service = io_context;
-}
 
 #if BOOST_VERSION >= 107000
-  #define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
+  #define ARQMA_GET_EXECUTOR(type) type.get_executor()
 #else
-  #define GET_IO_SERVICE(s) ((s).get_io_service())
+  #define ARQMA_GET_EXECUTOR(type) type.get_io_context()
 #endif
 
 namespace net
@@ -436,7 +433,7 @@ namespace net_utils
     virtual bool send_done() = 0;
     virtual bool call_run_once_service_io() = 0;
     virtual bool request_callback() = 0;
-    virtual boost::asio::io_service& get_io_service() = 0;
+    virtual boost::asio::io_context& get_io_context() = 0;
     virtual bool add_ref() = 0;
     virtual bool release() = 0;
   protected:

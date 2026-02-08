@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2016, Monero Research Labs
 //
 // Author: Shen Noether <shen.noether@gmx.com>
@@ -498,6 +498,24 @@ namespace rct {
         ge_p2 rv;
         ge_double_scalarmult_precomp_vartime2(&rv, a.bytes, A, b.bytes, B);
         ge_tobytes(aAbB.bytes, &rv);
+    }
+
+    // addKeys_aGbBcC
+    // computes aG + bB + cC
+    // G is the fixed basepoint and B,C require precomputation
+    void addKeys_aGbBcC(key &aGbBcC, const key &a, const key &b, const ge_dsmp B, const key &c, const ge_dsmp C) {
+        ge_p2 rv;
+        ge_triple_scalarmult_base_vartime(&rv, a.bytes, b.bytes, B, c.bytes, C);
+        ge_tobytes(aGbBcC.bytes, &rv);
+    }
+
+    // addKeys_aAbBcC
+    // computes aA + bB + cC
+    // A,B,C require precomputation
+    void addKeys_aAbBcC(key &aAbBcC, const key &a, const ge_dsmp A, const key &b, const ge_dsmp B, const key &c, const ge_dsmp C) {
+        ge_p2 rv;
+        ge_triple_scalarmult_precomp_vartime(&rv, a.bytes, A, b.bytes, B, c.bytes, C);
+        ge_tobytes(aAbBcC.bytes, &rv);
     }
 
 

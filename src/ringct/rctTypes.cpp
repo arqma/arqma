@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2016, Monero Research Labs
 //
 // Author: Shen Noether <shen.noether@gmx.com>
@@ -197,6 +197,7 @@ namespace rct {
             case RCTTypeSimpleBulletproof:
             case RCTTypeBulletproof:
             case RCTTypeBulletproof2:
+            case RCTTypeCLSAG:
                 return true;
             default:
                 return false;
@@ -211,6 +212,7 @@ namespace rct {
             case RCTTypeFullBulletproof:
             case RCTTypeBulletproof:
             case RCTTypeBulletproof2:
+            case RCTTypeCLSAG:
                 return true;
             default:
                 return false;

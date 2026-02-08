@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Project
+// Copyright (c) 2018 - 2026, The Arqma Project
 // Copyright (c) 2018, The Monero Project
 //
 // All rights reserved.
@@ -196,7 +196,7 @@ namespace socks
                 else if (bytes < self.buffer().size())
                     self.done(socks::error::bad_write, std::move(self_));
                 else
-                    boost::asio::async_read(self.proxy_, get_buffer(self), self.strand_.wrap(completed{std::move(self_)}));
+                    boost::asio::async_read(self.proxy_, get_buffer(self), boost::asio::bind_executor(self.strand_, completed{std::move(self_)}));
             }
         }
     };
@@ -218,13 +218,13 @@ namespace socks
                 if (error)
                     self.done(error, std::move(self_));
                 else
-                    boost::asio::async_write(self.proxy_, get_buffer(self), self.strand_.wrap(read{std::move(self_)}));
+                    boost::asio::async_write(self.proxy_, get_buffer(self), boost::asio::bind_executor(self.strand_, read{std::move(self_)}));
             }
         }
     };
 
     client::client(stream_type::socket&& proxy, socks::version ver)
-      : proxy_(std::move(proxy)), strand_(GET_IO_SERVICE(proxy_)), buffer_size_(0), buffer_(), ver_(ver)
+      : proxy_(std::move(proxy)), strand_(proxy_.get_executor()), buffer_size_(0), buffer_(), ver_(ver)
     {}
 
     client::~client() {}
@@ -299,7 +299,7 @@ namespace socks
         if (self && !self->buffer().empty())
         {
             client& alias = *self;
-            alias.proxy_.async_connect(proxy_address, alias.strand_.wrap(write{std::move(self)}));
+            alias.proxy_.async_connect(proxy_address, boost::asio::bind_executor(alias.strand_, write{std::move(self)}));
             return true;
         }
         return false;
@@ -310,7 +310,7 @@ namespace socks
         if (self && !self->buffer().empty())
         {
             client& alias = *self;
-            boost::asio::async_write(alias.proxy_, write::get_buffer(alias), alias.strand_.wrap(read{std::move(self)}));
+            boost::asio::async_write(alias.proxy_, write::get_buffer(alias), boost::asio::bind_executor(alias.strand_, read{std::move(self)}));
             return true;
         }
         return false;
@@ -321,14 +321,14 @@ namespace socks
         if (self_ && error != boost::system::errc::operation_canceled)
         {
             const std::shared_ptr<client> self = std::move(self_);
-            self->strand_.dispatch([self] ()
+            boost::asio::dispatch(self->strand_, [self] ()
             {
                 if (self && self->proxy_.is_open())
                 {
                     self->proxy_.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                     self->proxy_.close();
                 }
-            }, std::allocator<void>{});
+            });
         }
     }
 } // socks

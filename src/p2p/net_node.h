@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022, The Arqma Network
+// Copyright (c) 2018 - 2026, The Arqma Network
 // Copyright (c) 2014-2018, The Monero Project
 //
 // All rights reserved.
@@ -62,10 +62,6 @@
 PUSH_WARNINGS
 DISABLE_VS_WARNINGS(4355)
 
-namespace boost::asio {
-  using io_service = io_context;
-}
-
 using namespace std::literals;
 
 namespace nodetool
@@ -110,7 +106,7 @@ namespace nodetool
 
   // hides boost::future and chrono stuff from mondo template file
   boost::optional<boost::asio::ip::tcp::socket>
-  socks_connect_internal(const std::atomic<bool>& stop_signal, boost::asio::io_service& service, const boost::asio::ip::tcp::endpoint& proxy, const epee::net_utils::network_address& remote);
+  socks_connect_internal(const std::atomic<bool>& stop_signal, boost::asio::io_context& service, const boost::asio::ip::tcp::endpoint& proxy, const epee::net_utils::network_address& remote);
 
 
   template<class base_type>
@@ -184,7 +180,7 @@ namespace nodetool
         set_config_defaults();
       }
 
-      network_zone(boost::asio::io_service& public_service)
+      network_zone(boost::asio::io_context& public_service)
         : m_connect(nullptr),
           m_net_server(public_service, epee::net_utils::e_connection_type_P2P),
           m_seed_nodes(),
