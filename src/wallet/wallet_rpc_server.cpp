@@ -65,6 +65,7 @@ namespace
 {
   using namespace std::literals;
   constexpr auto DEFAULT_AUTO_REFRESH_PERIOD = 20s;
+  constexpr uint64_t REFRESH_BLOCKS_CHUNK_SIZE = 256;
 
   const command_line::arg_descriptor<std::string, true> arg_rpc_bind_port = {"rpc-bind-port", "Sets bind port for server"};
   const command_line::arg_descriptor<bool> arg_disable_rpc_login = {"disable-rpc-login", "Disable HTTP authentication for RPC connections served by this process"};
@@ -99,7 +100,8 @@ namespace tools
   //------------------------------------------------------------------------------------------------------------------------------
   wallet_rpc_server::~wallet_rpc_server()
   {
-    stop();
+    if (m_wallet)
+      delete m_wallet;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   void wallet_rpc_server::set_wallet(wallet2 *cr)
@@ -117,13 +119,15 @@ namespace tools
       const auto now = std::chrono::steady_clock::now();
       if (now < m_last_auto_refresh_time + m_auto_refresh_period)
         return true;
-
+      uint64_t blocks_fetched = 0;
       try {
-        if (m_wallet) m_wallet->refresh(m_wallet->is_trusted_daemon());
+        bool received_money = false;
+        if (m_wallet) m_wallet->refresh(m_wallet->is_trusted_daemon(), 0, blocks_fetched, received_money, REFRESH_BLOCKS_CHUNK_SIZE);
       } catch (const std::exception& ex) {
         LOG_ERROR("Exception at while refreshing, what=" << ex.what());
       }
-      m_last_auto_refresh_time = now;
+      if (blocks_fetched < REFRESH_BLOCKS_CHUNK_SIZE)
+        m_last_auto_refresh_time = now;
       return true;
     }, 1s);
     m_net_server.add_idle_handler([this](){
@@ -144,6 +148,7 @@ namespace tools
     if (m_wallet)
     {
       m_wallet->store();
+      m_wallet->deinit();
       delete m_wallet;
       m_wallet = NULL;
     }
@@ -644,10 +649,11 @@ namespace tools
   static std::string ptx_to_string(const tools::wallet2::pending_tx &ptx)
   {
     std::ostringstream oss;
-    boost::archive::portable_binary_oarchive ar(oss);
+    binary_archive<true> ar(oss);
     try
     {
-      ar << ptx;
+      if (!::serialization::serialize(ar, const_cast<tools::wallet2::pending_tx&>(ptx)))
+        return "";
     }
     catch (...)
     {
@@ -1374,14 +1380,31 @@ namespace tools
       return false;
     }
 
+    bool loaded = false;
     tools::wallet2::pending_tx ptx;
+
     try
     {
       std::istringstream iss(blob);
-      boost::archive::portable_binary_iarchive ar(iss);
-      ar >> ptx;
+      binary_archive<false> ar(iss);
+      if (::serialization::serialize(ar, ptx))
+        loaded = true;
     }
-    catch (...)
+    catch(...) { }
+
+    if (!loaded && !m_restricted)
+    {
+      try
+      {
+        std::istringstream iss(blob);
+        boost::archive::portable_binary_iarchive ar(iss);
+        ar >> ptx;
+        loaded = true;
+      }
+      catch (...) {}
+    }
+
+    if (!loaded)
     {
       er.code = WALLET_RPC_ERROR_CODE_BAD_TX_METADATA;
       er.message = "Failed to parse tx metadata.";
@@ -1681,6 +1704,10 @@ namespace tools
       {
         if (req.account_index != td.m_subaddr_index.major || (!req.subaddr_indices.empty() && req.subaddr_indices.count(td.m_subaddr_index.minor) == 0))
           continue;
+
+        bool unlocked = false;
+        try { unlocked = m_wallet->is_transfer_unlocked(td); } catch (...) {}
+
         wallet_rpc::transfer_details rpc_transfers;
         rpc_transfers.amount       = td.amount();
         rpc_transfers.spent        = td.m_spent;
@@ -1689,7 +1716,7 @@ namespace tools
         rpc_transfers.subaddr_index = {td.m_subaddr_index.major, td.m_subaddr_index.minor};
         rpc_transfers.key_image    = td.m_key_image_known ? epee::string_tools::pod_to_hex(td.m_key_image) : "";
         rpc_transfers.block_height = td.m_block_height;
-        rpc_transfers.unlocked     = m_wallet->is_transfer_unlocked(td);
+        rpc_transfers.unlocked     = unlocked;
         res.transfers.push_back(rpc_transfers);
       }
     }
@@ -2422,7 +2449,7 @@ namespace tools
 
     try
     {
-      res.outputs_data_hex = epee::string_tools::buff_to_hex_nodelimer(m_wallet->export_outputs_to_str());
+      res.outputs_data_hex = epee::string_tools::buff_to_hex_nodelimer(m_wallet->export_outputs_to_str(req.all));
     }
     catch (const std::exception& e)
     {
@@ -2475,7 +2502,7 @@ namespace tools
     if (!m_wallet) return not_open(er);
     try
     {
-      std::pair<size_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> ski = m_wallet->export_key_images(req.all);
+      std::pair<uint64_t, std::vector<std::pair<crypto::key_image, crypto::signature>>> ski = m_wallet->export_key_images(req.all);
       res.offset = ski.first;
       res.signed_key_images.resize(ski.second.size());
       for (size_t n = 0; n < ski.second.size(); ++n)
@@ -3271,20 +3298,6 @@ namespace tools
       return false;
     }
 
-    if (m_wallet && req.autosave_current)
-    {
-      try
-      {
-        if (!wallet_file.empty())
-          m_wallet->store();
-      }
-      catch (const std::exception& e)
-      {
-        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
-        return false;
-      }
-    }
-
     try
     {
       if (!req.spendkey.empty())
@@ -3333,7 +3346,19 @@ namespace tools
     }
 
     if (m_wallet)
+    {
+      try
+      {
+        if (!wallet_file.empty())
+          m_wallet->store();
+      }
+      catch (const std::exception &e)
+      {
+        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
+        return false;
+      }
       delete m_wallet;
+    }
     m_wallet = wal.release();
     res.address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
     return true;
@@ -3396,18 +3421,6 @@ namespace tools
       {
         er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
         er.message = "Electrum-style word list failed verification";
-        return false;
-      }
-    }
-    if (m_wallet && req.autosave_current)
-    {
-      try
-      {
-        m_wallet->store();
-      }
-      catch (const std::exception& e)
-      {
-        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
         return false;
       }
     }
@@ -3521,7 +3534,18 @@ namespace tools
     }
 
     if (m_wallet)
+    {
+      try
+      {
+        m_wallet->store();
+      }
+      catch (const std::exception &e)
+      {
+        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
+        return false;
+      }
       delete m_wallet;
+    }
     m_wallet = wal.release();
     res.address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
     res.info = "Wallet has been restored successfully.";

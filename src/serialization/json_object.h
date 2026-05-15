@@ -297,6 +297,9 @@ void fromJsonValue(const rapidjson::Value& val, rct::boroSig& sig);
 void toJsonValue(rapidjson::Writer<rapidjson::StringBuffer>& dest, const rct::mgSig& sig);
 void fromJsonValue(const rapidjson::Value& val, rct::mgSig& sig);
 
+void toJsonValue(rapidjson::Writer<rapidjson::StringBuffer>& dest, const rct::clsag& sig);
+void fromJsonValue(const rapidjson::Value& val, rct::clsag& sig);
+
 void toJsonValue(rapidjson::Writer<rapidjson::StringBuffer>& dest, const cryptonote::rpc::BlockTemplateInfo& info);
 void fromJsonValue(const rapidjson::Value& val, cryptonote::rpc::BlockTemplateInfo& info);
 

@@ -1421,7 +1421,7 @@ namespace rct {
         try
         {
           if (semantics) {
-            tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+            tools::threadpool& tpool = tools::threadpool::getInstance();
             tools::threadpool::waiter waiter(tpool);
             std::deque<bool> results(bulletproof ? rv.p.bulletproofs.size() : rv.outPk.size(), false);
             DP("range proofs verified?");
@@ -1484,7 +1484,7 @@ namespace rct {
       {
         PERF_TIMER(verRctSemanticsSimple_old);
 
-        tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+        tools::threadpool& tpool = tools::threadpool::getInstance();
         tools::threadpool::waiter waiter(tpool);
         std::deque<bool> results;
         std::vector<const Bulletproof*> proofs;
@@ -1592,7 +1592,7 @@ namespace rct {
       {
         PERF_TIMER(verRctSemanticsSimple);
 
-        tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+        tools::threadpool& tpool = tools::threadpool::getInstance();
         tools::threadpool::waiter waiter(tpool);
         std::deque<bool> results;
         std::vector<const Bulletproof*> proofs;
@@ -1722,7 +1722,7 @@ namespace rct {
         const size_t threads = std::max(rv.outPk.size(), rv.mixRing.size());
 
         std::deque<bool> results(threads);
-        tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+        tools::threadpool& tpool = tools::threadpool::getInstance();
         tools::threadpool::waiter waiter(tpool);
 
         const keyV &pseudoOuts = bulletproof ? rv.p.pseudoOuts : rv.pseudoOuts;

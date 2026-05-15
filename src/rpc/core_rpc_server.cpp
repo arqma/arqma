@@ -326,6 +326,8 @@ namespace cryptonote
       m_core.get_blockchain_top(last_block_height, last_block_hash);
       if (last_block_hash == req.block_ids.front())
       {
+        res.start_height = 0;
+        res.current_height = m_core.get_current_blockchain_height();
         res.status = CORE_RPC_STATUS_OK;
         return true;
       }

@@ -1047,6 +1047,7 @@ void toJsonValue(rapidjson::Writer<rapidjson::StringBuffer>& dest, const rct::rc
     INSERT_INTO_JSON_OBJECT(dest, range_proofs, sig.p.rangeSigs);
     INSERT_INTO_JSON_OBJECT(dest, bulletproofs, sig.p.bulletproofs);
     INSERT_INTO_JSON_OBJECT(dest, mlsags, sig.p.MGs);
+    INSERT_INTO_JSON_OBJECT(dest, clsags, sig.p.CLSAGs);
     INSERT_INTO_JSON_OBJECT(dest, pseudo_outs, sig.get_pseudo_outs());
 
     dest.EndObject();
@@ -1081,6 +1082,7 @@ void fromJsonValue(const rapidjson::Value& val, rct::rctSig& sig)
     GET_FROM_JSON_OBJECT(prunable, sig.p.rangeSigs, range_proofs);
     GET_FROM_JSON_OBJECT(prunable, sig.p.bulletproofs, bulletproofs);
     GET_FROM_JSON_OBJECT(prunable, sig.p.MGs, mlsags);
+    GET_FROM_JSON_OBJECT(prunable, sig.p.CLSAGs, clsags);
     GET_FROM_JSON_OBJECT(prunable, pseudo_outs, pseudo_outs);
 
     sig.get_pseudo_outs() = std::move(pseudo_outs);
@@ -1258,6 +1260,28 @@ void fromJsonValue(const rapidjson::Value& val, rct::mgSig& sig)
   GET_FROM_JSON_OBJECT(val, sig.cc, cc);
 }
 
+void toJsonValue(rapidjson::Writer<rapidjson::StringBuffer>& dest, const rct::clsag& sig)
+{
+  dest.StartObject();
+
+  INSERT_INTO_JSON_OBJECT(dest, s, sig.s);
+  INSERT_INTO_JSON_OBJECT(dest, c1, sig.c1);
+  INSERT_INTO_JSON_OBJECT(dest, D, sig.D);
+
+  dest.EndObject();
+}
+
+void fromJsonValue(const rapidjson::Value& val, rct::clsag& sig)
+{
+  if (!val.IsObject())
+  {
+    throw WRONG_TYPE("key64 (rct::key[64])");
+  }
+
+  GET_FROM_JSON_OBJECT(val, sig.s, s);
+  GET_FROM_JSON_OBJECT(val, sig.c1, c1);
+  GET_FROM_JSON_OBJECT(val, sig.D, D);
+}
 
 void toJsonValue(rapidjson::Writer<rapidjson::StringBuffer>& dest, const cryptonote::rpc::BlockTemplateInfo& info)
 {

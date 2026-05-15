@@ -382,18 +382,26 @@ namespace cryptonote
     context.m_remote_blockchain_height = hshd.current_height;
     context.m_pruning_seed = hshd.pruning_seed;
 
+    uint64_t curr_height = m_core.get_current_blockchain_height();
+
+    uint64_t target = m_core.get_target_blockchain_height();
+    if (target == 0)
+      target = curr_height;
+
+    if (m_core.have_block(hshd.top_id))
+    {
+      context.m_state = cryptonote_connection_context::state_normal;
+      if (is_initial && hshd.current_height >= target && target == curr_height)
+        on_connection_synchronized();
+      return true;
+    }
+
     // No chain synchronization over hidden networks (tor, i2p, etc.)
     if(context.m_remote_address.get_zone() != epee::net_utils::zone::public_)
     {
       context.m_state = cryptonote_connection_context::state_normal;
       return true;
     }
-
-    auto curr_height = m_core.get_current_blockchain_height();
-
-    uint64_t target = m_core.get_target_blockchain_height();
-    if (target == 0)
-      target = curr_height;
 
     if (hshd.current_height > target)
     {
@@ -430,21 +438,12 @@ namespace cryptonote
     }
     MINFO(context << "Remote blockchain height: " << hshd.current_height << ", id: " << hshd.top_id);
 
-    if (m_core.have_block(hshd.top_id))
-    {
-      context.m_state = cryptonote_connection_context::state_normal;
-      if(is_initial && target == curr_height)
-        on_connection_synchronized();
-    }
-    else
-    {
-      context.m_state = cryptonote_connection_context::state_synchronizing;
-      //let the socket to send response to handshake, but request callback, to let send request data after response
-      LOG_PRINT_CCONTEXT_L2("requesting callback");
-      ++context.m_callback_request_count;
-      m_p2p->request_callback(context);
-      MLOG_PEER_STATE("requesting callback");
-    }
+    context.m_state = cryptonote_connection_context::state_synchronizing;
+    //let the socket to send response to handshake, but request callback, to let send request data after response
+    LOG_PRINT_CCONTEXT_L2("requesting callback");
+    ++context.m_callback_request_count;
+    m_p2p->request_callback(context);
+    MLOG_PEER_STATE("requesting callback");
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------

@@ -1099,7 +1099,7 @@ namespace cryptonote
   {
     std::vector<tx_verification_batch_info> tx_info(tx_blobs.size());
 
-    tools::threadpool& tpool = tools::threadpool::getInstanceForCompute();
+    tools::threadpool& tpool = tools::threadpool::getInstance();
     tools::threadpool::waiter waiter(tpool);
     for (size_t i = 0; i < tx_blobs.size(); i++)
     {
