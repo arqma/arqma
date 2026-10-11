@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 namespace epee
@@ -110,3 +111,9 @@ namespace misc_utils
 
 }
 }
+
+/// Compatibility helper removed from modern epee; restores zero-initialization
+/// for legacy call sites of the form AUTO_VAL_INIT(Type()).
+#ifndef AUTO_VAL_INIT
+#define AUTO_VAL_INIT(x) std::decay_t<decltype(x)>{}
+#endif

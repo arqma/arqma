@@ -69,6 +69,7 @@ extern "C" {
 #include "net/local_ip.h"
 #include <boost/filesystem.hpp>
 #include "cryptonote_protocol/arqnet.h"
+#include "pulse.h"
 
 #include "config/ascii.h"
 
@@ -265,7 +266,7 @@ namespace cryptonote
               m_nettype(UNDEFINED),
               m_update_available(false),
               m_last_storage_server_ping(0),
-              /*m_last_arqnet_ping(0),*/
+              m_last_arqnet_ping(0),
               m_pad_transactions(false)
   {
     m_checkpoints_updating.clear();
@@ -1771,21 +1772,19 @@ namespace cryptonote
           return;
         }
 
-/*
-        uint8_t hard_fork_version = get_blockchain_storage().get_current_hard_fork_version();
-        if (!check_external_ping(m_last_arqnet_ping, ARQNET_PING_LIFETIME, "Arq-Net"))
-        {
-          if (hard_fork_version >= cryptonote::network_version_17)
-          {
-            MGINFO_RED("Failed to submit uptime proof: have not heard from the Arq-Net recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon");
-            return;
-          }
-          else
-          {
-            MGINFO_RED("Have not heard from the Arq-Net recently.\n Make sure that it is running!. It is required to run alongside with the Arqma daemon after Hard Fork 17");
-          }
-        }
-*/
+        // Arq-Net reachability is recorded via RPC (arqnet_ping) for operator
+        // visibility, but is not yet a hard requirement for uptime proofs.
+        // Re-enable the gate once operator tooling and release notes are ready.
+        //
+        // uint8_t hard_fork_version = get_blockchain_storage().get_current_hard_fork_version();
+        // if (!check_external_ping(m_last_arqnet_ping, ARQNET_PING_LIFETIME, "Arq-Net"))
+        // {
+        //   if (hard_fork_version >= cryptonote::network_version_17)
+        //   {
+        //     MGINFO_RED("Failed to submit uptime proof: have not heard from Arq-Net recently.");
+        //     return;
+        //   }
+        // }
         submit_uptime_proof();
       });
     }
@@ -1794,6 +1793,31 @@ namespace cryptonote
       // reset the interval so that we're ready when we register.
       m_check_uptime_proof_interval.reset();
     }
+  }
+  //-----------------------------------------------------------------------------------------------
+  void core::do_pulse_round_call()
+  {
+    if (m_offline || !m_service_node_keys)
+      return;
+    const uint8_t hf = m_blockchain_storage.get_current_hard_fork_version();
+    if (!service_nodes::pulse::hybrid_sn_permitted(hf))
+      return;
+    if (!is_service_node(m_service_node_keys->pub, true))
+      return;
+    const uint64_t height = get_current_blockchain_height();
+    const uint64_t target = get_target_blockchain_height();
+    if (target > height + 1)
+      return;
+    if (height == 0)
+      return;
+    uint64_t parent_ts = 0;
+    const uint64_t db_height = m_blockchain_storage.get_db().height();
+    if (db_height > 0)
+      parent_ts = m_blockchain_storage.get_db().get_block_timestamp(db_height - 1);
+    const uint8_t rnd = service_nodes::pulse::round_from_timestamps(parent_ts, static_cast<uint64_t>(time(nullptr)));
+    const auto active = m_service_node_list.get_active_service_node_pubkeys();
+    service_nodes::pulse::participate_round(height, get_tail_id(), rnd, m_service_node_keys->pub,
+                                            m_service_node_keys->key, active);
   }
   //-----------------------------------------------------------------------------------------------
   // messages moved to ascii.h
@@ -1817,6 +1841,7 @@ namespace cryptonote
     m_check_disk_space_interval.do_call([this] { return check_disk_space(); });
     m_blockchain_pruning_interval.do_call([this] { return update_blockchain_pruning(); });
     m_sn_proof_cleanup_interval.do_call([&snl=m_service_node_list] { snl.cleanup_proofs(); return true; });
+    m_pulse_round_interval.do_call([this] { do_pulse_round_call(); return true; });
 
     time_t const lifetime = time(nullptr) - get_start_time();
     if(m_service_node_keys && lifetime > UPTIME_PROOF_INITIAL_DELAY_SECONDS)

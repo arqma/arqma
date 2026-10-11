@@ -90,6 +90,12 @@ public:
 
   bool print_quorum_state(uint64_t start_height, uint64_t end_height);
 
+  bool print_pulse();
+
+  bool print_blink();
+
+  bool print_storage();
+
   bool set_log_level(int8_t level);
 
   bool set_log_categories(const std::string &categories);

@@ -39,6 +39,7 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/system/error_code.hpp>
+#include <openssl/evp.h>
 
 #define SSL_FINGERPRINT_SIZE 32
 
@@ -129,7 +130,6 @@ class ssl_options_t
   bool is_ssl(std::string_view data);
   bool ssl_support_from_string(ssl_support_t &ssl, std::string_view s);
 
-	bool create_ec_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
 	bool create_rsa_ssl_certificate(EVP_PKEY *&pkey, X509 *&cert);
 
 	boost::system::error_code store_ssl_keys(boost::asio::ssl::context& ssl, const boost::filesystem::path& base);

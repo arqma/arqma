@@ -202,7 +202,7 @@ namespace cryptonote
     network_type m_nettype = UNDEFINED;
     uint64_t m_last_cull_height = 0;
     uint64_t m_immutable_height = 0;
-    BlockchainDB *m_db;
+    BlockchainDB *m_db = nullptr;
   };
 
 }

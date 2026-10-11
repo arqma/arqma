@@ -69,7 +69,7 @@ namespace service_nodes
   constexpr uint64_t VOTE_OR_TX_VERIFY_HEIGHT_BUFFER                = 5;
 
   constexpr std::array<int, 3> MIN_STORAGE_SERVER_VERSION{{1, 0, 0}};
-//  constexpr std::array<int, 3> MIN_ARQNET_VERSION{{1, 0, 0}};
+  constexpr std::array<int, 3> MIN_ARQNET_VERSION{{1, 0, 0}};
 
   struct proof_version
   {
@@ -111,6 +111,15 @@ namespace service_nodes
   }
 
   static_assert(STAKING_SHARE_PARTS != UINT64_MAX, "UINT64_MAX is used as the invalid value for failing to calculate min_node_contribution");
+
+  // Convert via a non-constant local so Clang does not warn on STAKING_SHARE_PARTS → double
+  // (-Wimplicit-const-int-float-conversion); the constant exceeds the exact mantissa of double.
+  inline double staking_portions_to_percent(uint64_t portions)
+  {
+    const uint64_t parts = STAKING_SHARE_PARTS;
+    return static_cast<double>(portions) * 100.0 / static_cast<double>(parts);
+  }
+
   uint64_t get_min_node_contribution(uint64_t staking_requirement, uint64_t total_reserved, size_t num_contributions);
   uint64_t get_min_node_contribution_in_portions(uint64_t staking_requirement, uint64_t total_reserved, size_t num_contributions);
 

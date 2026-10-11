@@ -238,6 +238,9 @@ namespace cryptonote
     add_tx_pub_key_to_extra(tx, gov_key.pub);
 
     add_service_node_winner_to_tx_extra(tx.extra, service_node_key);
+    if (miner_tx_context.pulse_round &&
+        !add_pulse_round_to_tx_extra(tx.extra, *miner_tx_context.pulse_round))
+      return false;
 
     txin_gen in;
     in.height = height;
@@ -461,6 +464,11 @@ namespace cryptonote
     return addr.m_view_public_key;
   }
   //--------------------------------------------------------------
+  bool burn_allowed_at_hf(uint8_t hard_fork_version) noexcept
+  {
+    return hard_fork_version >= cryptonote::network_version_19;
+  }
+  //--------------------------------------------------------------
   bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr, const std::vector<uint8_t> &extra, transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const rct::RCTConfig &rct_config, rct::multisig_out *msout, bool shuffle_outs, arqma_construct_tx_params const &tx_params)
   {
     hw::device &hwdev = sender_account_keys.get_device();
@@ -492,7 +500,7 @@ namespace cryptonote
       return false;
     }
 
-    if (tx_params.burn_fixed && tx_params.hard_fork_version <= cryptonote::network_version_19)
+    if (tx_params.burn_fixed && !burn_allowed_at_hf(tx_params.hard_fork_version))
     {
       LOG_ERROR("Cannot construct tx. burn can not be specified before HardFork 19");
       return false;

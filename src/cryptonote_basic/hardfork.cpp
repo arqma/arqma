@@ -71,7 +71,13 @@ static constexpr HardFork::Params mainnet_hard_forks[] =
   { network_version_16, 1731480, 0, 1749313836 },
   { network_version_17, 1760751, 0, 1754410575 },
   { network_version_18, 1863160, 0, 1768160647 },
-  { network_version_19, 1886030, 0, 1771099200 }
+  { network_version_19, 1886030, 0, 1771099200 },
+  // HF20 at 4_000_000: consensus stays v19 until then (full wire compatibility).
+  // Estimated time from HF19 at DIFFICULTY_TARGET_V16 (120s): 1771099200 + (4000000-1886030)*120.
+  { network_version_20, MAINNET_HARD_FORK_20_HEIGHT, 0, 2024775600 },
+  // HF21 at 5_000_000: exclusive Pulse SN + native mesh. Hybrid window is 4M–5M.
+  // Estimated time from HF20 at 120s/block: 2024775600 + 1000000*120.
+  { network_version_21, MAINNET_HARD_FORK_21_HEIGHT, 0, 2144775600 }
 };
 
 static constexpr HardFork::Params testnet_hard_forks[] =
@@ -88,7 +94,11 @@ static constexpr HardFork::Params testnet_hard_forks[] =
   { network_version_15,    800, 0, 1566598080 },
   { network_version_16,    900, 0, 1566598280 },
   { network_version_17,   1000, 0, 1566598281 },
-  { network_version_18,   1100, 0, 1566598282 }
+  { network_version_18,   1100, 0, 1566598282 },
+  { network_version_19,   1200, 0, 1566598283 },
+  // HF20 earlier on testnet than mainnet (mainnet: MAINNET_HARD_FORK_20_HEIGHT).
+  { network_version_20,   1300, 0, 1566598284 },
+  { network_version_21,   1400, 0, 1566598285 }
 };
 
 static constexpr HardFork::Params stagenet_hard_forks[] =
@@ -106,7 +116,10 @@ static constexpr HardFork::Params stagenet_hard_forks[] =
   { network_version_16,    160, 0, 1570414510 },
   { network_version_17,    180, 0, 1570414511 },
   { network_version_18,    200, 0, 1570414512 },
-  { network_version_19,    220, 0, 1570414513 }
+  { network_version_19,    220, 0, 1570414513 },
+  // HF20 earlier on stagenet for native Arq-Net mesh soak.
+  { network_version_20,    240, 0, 1570414514 },
+  { network_version_21,    260, 0, 1570414515 }
 };
 
 uint64_t HardFork::get_hardcoded_hard_fork_height(network_type nettype, cryptonote::network_version version)

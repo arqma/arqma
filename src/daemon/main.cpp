@@ -143,6 +143,11 @@ int main(int argc, char const * argv[])
       command_line::add_arg(core_settings, daemon_args::arg_zmq_rpc_bind_ip);
       command_line::add_arg(core_settings, daemon_args::arg_zmq_rpc_bind_port);
       command_line::add_arg(core_settings, daemon_args::arg_zmq_rpc_enabled);
+      command_line::add_arg(core_settings, daemon_args::arg_arqnet_backend);
+      command_line::add_arg(core_settings, daemon_args::arg_arqnet_allow_experimental);
+      command_line::add_arg(core_settings, daemon_args::arg_arqnet_mesh_shadow);
+      command_line::add_arg(core_settings, daemon_args::arg_arq_router);
+      command_line::add_arg(core_settings, daemon_args::arg_storage_client_url);
 
       daemonizer::init_options(hidden_options, visible_options);
       daemonize::t_executor::init_options(core_settings);

@@ -720,7 +720,7 @@ namespace net_utils
         ms += cur;
     }
     m_timer.expires_after(ms);
-    m_timer.async_wait([=](const boost::system::error_code& ec)
+    m_timer.async_wait([self](const boost::system::error_code& ec)
     {
       if(ec == boost::asio::error::operation_aborted)
         return;
@@ -1601,7 +1601,7 @@ namespace net_utils
     std::shared_ptr<boost::asio::steady_timer> sh_deadline(new boost::asio::steady_timer(io_context_));
     //start deadline
     sh_deadline->expires_after(std::chrono::milliseconds(conn_timeout));
-    sh_deadline->async_wait([=](const boost::system::error_code& error)
+    sh_deadline->async_wait([sh_deadline, new_connection_l, adr, port, conn_timeout](const boost::system::error_code& error)
       {
           if(error != boost::asio::error::operation_aborted)
           {
@@ -1610,7 +1610,7 @@ namespace net_utils
           }
       });
     //start async connect
-    sock_.async_connect(remote_endpoint, [=](const boost::system::error_code& ec_)
+    sock_.async_connect(remote_endpoint, [=, this](const boost::system::error_code& ec_)
       {
         t_connection_context conn_context{};
         boost::system::error_code ignored_ec;

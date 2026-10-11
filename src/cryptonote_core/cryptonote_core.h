@@ -793,8 +793,8 @@ namespace cryptonote
       */
      bool set_storage_server_peer_reachable(crypto::public_key const &pubkey, bool value);
 
-     /// Time point at which the storage server last pinged us
-     std::atomic<time_t> m_last_storage_server_ping; //, m_last_arqnet_ping;
+     /// Time point at which the storage server / Arq-Net last pinged us
+     std::atomic<time_t> m_last_storage_server_ping, m_last_arqnet_ping;
 
      bool relay_txpool_transactions();
 
@@ -894,6 +894,9 @@ namespace cryptonote
       */
      void do_uptime_proof_call();
 
+     /// Hybrid Pulse: SN in the current wait-window quorum signs and gossips a vote.
+     void do_pulse_round_call();
+
      bool m_test_drop_download = true; //!< whether or not to drop incoming blocks (for testing)
 
      uint64_t m_test_drop_download_height = 0; //!< height under which to drop incoming blocks, if doing so
@@ -922,6 +925,7 @@ namespace cryptonote
      tools::periodic_task m_check_disk_space_interval{10min}; //!< interval for checking for disk space
      tools::periodic_task m_blockchain_pruning_interval{5h}; //!< interval for incremental blockchain pruning
      tools::periodic_task m_check_uptime_proof_interval{std::chrono::seconds{UPTIME_PROOF_TIMER_SECONDS}}; //!< interval for submitting uptime proof
+     tools::periodic_task m_pulse_round_interval{5s, false}; //!< Pulse wait-window participation (hybrid; PoW stays)
      tools::periodic_task m_service_node_vote_relayer{2min, false};
      tools::periodic_task m_sn_proof_cleanup_interval{1h, false};
      tools::periodic_task m_systemd_notify_interval{10s};

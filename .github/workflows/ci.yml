@@ -1,0 +1,164 @@
+name: ci
+
+on:
+  push:
+    branches: [master, upgrade, develop]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: ${{ matrix.os }}-unit-${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            build_type: Release
+          - os: ubuntu-24.04
+            build_type: Debug
+          - os: macos-14
+            build_type: Release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake pkg-config ccache ninja-build \
+            libboost-all-dev libssl-dev libzmq3-dev libunbound-dev \
+            libsodium-dev libreadline-dev libhidapi-dev libusb-1.0-0-dev \
+            libprotobuf-dev protobuf-compiler libgtest-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install cmake ninja ccache pkg-config boost openssl@3 \
+            zeromq unbound libsodium readline hidapi protobuf googletest
+
+      - name: ccache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ccache
+            ~/Library/Caches/ccache
+          key: ccache-unit-${{ matrix.os }}-${{ matrix.build_type }}-${{ github.sha }}
+          restore-keys: ccache-unit-${{ matrix.os }}-${{ matrix.build_type }}-
+
+      - name: Configure
+        shell: bash
+        run: |
+          ccache --max-size=2G || true
+          EXTRA=()
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            EXTRA+=(-DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)")
+            EXTRA+=(-DCMAKE_PREFIX_PATH="$(brew --prefix)")
+          fi
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DBUILD_TESTS=ON \
+            -DBUILD_INTEGRATION_TESTS=OFF \
+            -DUSE_CCACHE=ON \
+            "${EXTRA[@]}"
+
+      - name: Build unit_tests
+        run: cmake --build build --parallel --target unit_tests hash-target-tests
+
+      - name: Unit tests
+        run: |
+          cd build
+          ctest --output-on-failure -R 'unit_tests|hash-target' --timeout 1200
+
+  # Windows (and cross macOS/Linux) binaries: see workflow ci/gh-actions/depends
+  # (build-depends-windows-x64 / macOS / linux via contrib/depends).
+  # This job asserts the depends workflow file stays present so the matrix gate
+  # is not silently dropped from the tree.
+  windows-depends-gate:
+    name: windows-x64-depends-gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify depends Windows toolchain entry
+        run: |
+          test -f .github/workflows/depends.yml
+          grep -q 'build-depends-windows-x64' .github/workflows/depends.yml
+          grep -q 'x86_64-w64-mingw32' .github/workflows/depends.yml
+          echo "Windows x64 depends matrix entry present (ci/gh-actions/depends)."
+
+  format-check:
+    name: linux-format-check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: clang-format dry run
+        shell: bash
+        run: |
+          shopt -s nullglob globstar
+          mapfile -d '' files < <(find src/arqmq src/arq_storage src/arq_messaging src/arq_router src/arq_blink \
+            -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -print0)
+          files+=(src/rpc/rpc_validation.h src/rpc/rpc_validation.cpp src/rpc/rpc_auth.h)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No matching source files for format check"
+            exit 0
+          fi
+
+          clang-format --dry-run --Werror "${files[@]}"
+
+  sanitize:
+    name: linux-asan-ubsan
+    runs-on: ubuntu-24.04
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake pkg-config ccache ninja-build \
+            libboost-all-dev libssl-dev libzmq3-dev libunbound-dev \
+            libsodium-dev libreadline-dev libhidapi-dev libusb-1.0-0-dev \
+            libprotobuf-dev protobuf-compiler libgtest-dev
+
+      - name: Configure (sanitizers)
+        run: |
+          cmake -S . -B build-san -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTS=ON \
+            -DBUILD_INTEGRATION_TESTS=OFF \
+            -DSANITIZE=ON \
+            -DUSE_CCACHE=ON
+
+      - name: Build unit_tests
+        run: cmake --build build-san --parallel --target unit_tests
+
+      - name: Unit tests under sanitizers
+        run: |
+          cd build-san
+          ctest --output-on-failure -R unit_tests --timeout 1800

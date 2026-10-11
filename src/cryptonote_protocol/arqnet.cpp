@@ -1,10 +1,19 @@
 #include "arqnet.h"
 #include "cryptonote_core/cryptonote_core.h"
+#include "cryptonote_core/pulse.h"
 #include "cryptonote_core/service_node_voting.h"
 #include "cryptonote_core/service_node_rules.h"
 #include "cryptonote_core/tx_pool.h"
+#include "arq_blink/blink.h"
 #include "arqnet/sn_network.h"
 #include "arqnet/conn_matrix.h"
+#include "arqmq/command_registry.hpp"
+#include "arqmq/mesh_bridge.hpp"
+#include "arqmq/socket_stack.hpp"
+#include "arqmq/arqmq.h"
+#include "arqnet_auth.h"
+
+#include <chrono>
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
 #define ARQMA_DEFAULT_LOG_CATEGORY "arqnet"
@@ -16,6 +25,19 @@ namespace {
 using namespace service_nodes;
 using namespace std::string_literals;
 using namespace std::chrono_literals;
+
+size_t approx_payload_bytes(const std::vector<bt_value> &data)
+{
+  size_t bytes = 0;
+  for (const auto &part : data)
+  {
+    if (const auto *s = boost::get<std::string>(&part))
+      bytes += s->size();
+    else
+      bytes += 256; // bound non-string bt parts
+  }
+  return bytes;
+}
 
 struct SNNWrapper {
   SNNetwork snn;
@@ -31,6 +53,14 @@ struct SNNWrapper {
     return *reinterpret_cast<SNNWrapper*>(obj);
   }
 };
+
+SNNWrapper *g_pulse_snw = nullptr;
+
+void install_native_mesh_inbound_handlers(arqmq::SocketStack &stack, SNNWrapper &snw);
+quorum_vote_t deserialize_vote(const bt_value &v);
+bool try_decode_obligation_vote(std::string_view payload, quorum_vote_t *out) noexcept;
+bool try_decode_pulse_vote(std::string_view payload, service_nodes::pulse::RelayVote &out) noexcept;
+bool try_decode_blink_vote(std::string_view payload, arq_blink::RelayVote &out) noexcept;
 
 template <typename T>
 std::string get_data_as_string(const T &key)
@@ -117,13 +147,18 @@ void *new_snnwrapper(cryptonote::core &core, const std::string &bind)
   {
     auto x25519_pubkey = x25519_from_string(x25519_pubkey_str);
     auto pubkey = sn_list.get_pubkey_from_x25519(x25519_pubkey);
-    if (pubkey)
+    const auto decision = decide_incoming_curve_peer_from_pubkey_size(static_cast<bool>(pubkey),
+                                                                     x25519_pubkey_str.size());
+    if (decision == IncomingCurveDecision::ServiceNode)
     {
       MINFO("Accepting incoming SN connection authentication from ip/x25519/pubkey: " << ip << "/" << x25519_pubkey << "/" << pubkey);
       return SNNetwork::allow::service_node;
     }
 
-    return SNNetwork::allow::client;
+    // Quorum traffic is service-node only. Unknown Curve25519 identities must be
+    // rejected to avoid an open ZMQ listener surface for DoS / command spam.
+    MWARNING("Rejecting incoming Arq-Net connection from non-SN x25519 " << x25519_pubkey << " @ " << ip);
+    return SNNetwork::allow::denied;
   };
   SNNWrapper *obj;
   if (!keys)
@@ -139,6 +174,58 @@ void *new_snnwrapper(cryptonote::core &core, const std::string &bind)
   }
 
   obj->snn.data = obj;
+  g_pulse_snw = obj;
+
+  // Dual-run coexistence: dedicated SocketStack (if --arqnet-backend=arqmq) stays
+  // attached for native ACL/framing checks, while peer Curve/ZMQ mesh remains
+  // this SNNetwork instance for full wire compatibility.
+  arqmq::attach_compatible_mesh_mirrors_if_active();
+  if (auto *stack = arqmq::active_socket_stack(); stack && keys)
+  {
+    // Shadow CURVE identity for opt-in dual-write. Live arqnet port stays on
+    // SNNetwork; SocketStack binds live_bind + k_mesh_shadow_port_offset when
+    // --arqnet-mesh-shadow is enabled.
+    arqmq::configure_mesh_shadow(
+        *stack, get_data_as_string(keys->pub_x25519), get_data_as_string(keys->key_x25519.data),
+        [&sn_list = core.get_service_node_list()](const std::string & /*ip*/, const std::string &x25519_pubkey_str) {
+          auto x25519_pubkey = x25519_from_string(x25519_pubkey_str);
+          auto pubkey = sn_list.get_pubkey_from_x25519(x25519_pubkey);
+          const auto decision =
+              decide_incoming_curve_peer_from_pubkey_size(static_cast<bool>(pubkey), x25519_pubkey_str.size());
+          return decision == IncomingCurveDecision::ServiceNode ? arqmq::CurvePeerAllow::ServiceNode
+                                                                : arqmq::CurvePeerAllow::Denied;
+        });
+    // Soak inbound uses the same decoder the stage-4 native handler will run.
+    arqmq::set_vote_ob_payload_validator([](std::string_view payload) {
+      return try_decode_obligation_vote(payload, nullptr);
+    });
+    arqmq::set_pulse_rnd_payload_validator([](std::string_view payload) {
+      service_nodes::pulse::RelayVote vote{};
+      return try_decode_pulse_vote(payload, vote);
+    });
+    arqmq::set_blink_tx_payload_validator([](std::string_view payload) {
+      arq_blink::RelayVote vote{};
+      return try_decode_blink_vote(payload, vote);
+    });
+    if (arqmq::native_mesh_shadow_relay_enabled() || arqmq::native_mesh_ready())
+    {
+      if (const auto ec = arqmq::start_mesh_shadow_listener(*stack, bind))
+        MWARNING("Arq-Net mesh shadow CURVE bind failed on "
+                 << arqmq::endpoint_with_port_offset(bind, arqmq::k_mesh_shadow_port_offset) << ": " << ec.message());
+      else
+        MINFO("Arq-Net mesh CURVE listening on " << arqmq::native_mesh_shadow_endpoint()
+              << (arqmq::native_mesh_ready()
+                      ? " (native mesh primary; SNNetwork retained for rollback)"
+                      : " (shadow dual-write; live mesh remains SNNetwork @ " + bind + ")"));
+    }
+    install_native_mesh_inbound_handlers(*stack, *obj);
+  }
+  if (arqmq::native_transport_active())
+  {
+    MINFO("Arq-Net dual-run active: native transport=" << arqmq::transport_name()
+          << ", peer mesh=" << arqmq::mesh_transport_name()
+          << " (compatibility mode)");
+  }
 
   return obj;
 }
@@ -147,6 +234,8 @@ void delete_snnwrapper(void *&obj)
 {
   auto *snn = reinterpret_cast<SNNWrapper *>(obj);
   MINFO("Shutting down arqnet listener");
+  if (g_pulse_snw == snn)
+    g_pulse_snw = nullptr;
   delete snn;
   obj = nullptr;
 }
@@ -179,7 +268,7 @@ public:
 
   template <typename QuorumIt>
   peer_info(SNNWrapper &snw, quorum_type q_type, QuorumIt qbegin, QuorumIt qend, bool opportunistic = true, std::unordered_set<crypto::public_key> exclude = {})
-    : snn{snw.snn}
+    : snn{snw.snn}, core{snw.core}
   {
     auto keys = snw.core.get_service_node_keys();
     assert(keys);
@@ -221,6 +310,7 @@ public:
 
 private:
   SNNetwork &snn;
+  cryptonote::core &core;
 
   bool add_peer(const crypto::public_key &pubkey, bool strong = true)
   {
@@ -307,13 +397,37 @@ private:
   template<size_t N, size_t... I>
   void relay_to_peers_impl(const std::string &cmd, std::array<send_option::serialized, N> relay_data, std::index_sequence<I...>)
   {
+    const uint8_t hf = core.get_blockchain_storage().get_current_hard_fork_version();
+    // Native is primary only when HF20+, stage ≥4, and this node has a CURVE stack.
+    // Default `--arqnet-backend=legacy-arqnet` keeps SNNetwork so votes are not dropped.
+    const bool native_primary = arqmq::native_mesh_live_at(hf);
+
     for (auto &peer : peers)
     {
-      MTRACE("Relaying " << cmd << " to peer " << as_hex(peer.first) << (peer.second.empty() ? " (if connected)"s : " @ " + peer.second));
+      MTRACE("Relaying " << cmd << " to peer " << as_hex(peer.first) << (peer.second.empty() ? " (if connected)"s : " @ " + peer.second)
+             << (native_primary ? " [native-mesh]" : " [snnetwork]"));
+
+      if (native_primary)
+      {
+        // HF20 hybrid / HF21 exclusive: SocketStack is primary when CURVE is up.
+        if constexpr (N >= 1)
+          arqmq::primary_mesh_send_to_peer(peer.first, cmd, relay_data[0].data, peer.second);
+        continue;
+      }
+
+      if (arqmq::hf_requires_native_mesh_exclusive(hf))
+        MWARNING("HF21 exclusive mesh requested but this node has no CURVE SocketStack; "
+                 "falling back to SNNetwork so votes are not dropped. Pass --arqnet-backend=arqmq.");
+
       if (peer.second.empty())
         snn.send(peer.first, cmd, relay_data[I]..., send_option::optional{});
       else
         snn.send(peer.first, cmd, relay_data[I]..., send_option::hint{peer.second});
+
+      // Live SNNetwork relay accounted for soak parity vs opt-in SocketStack dual-write.
+      arqmq::note_live_mesh_relay(cmd);
+      if constexpr (N >= 1)
+        arqmq::shadow_send_to_peer(peer.first, cmd, relay_data[0].data, peer.second);
     }
   }
 
@@ -365,6 +479,27 @@ quorum_vote_t deserialize_vote(const bt_value &v)
   }
 
   return vote;
+}
+
+bool try_decode_obligation_vote(std::string_view payload, quorum_vote_t *out) noexcept
+{
+  try
+  {
+    if (payload.empty())
+      return false;
+    bt_value decoded;
+    bt_deserialize(payload.data(), payload.size(), decoded);
+    auto vote = deserialize_vote(decoded);
+    if (vote.type != quorum_type::obligations)
+      return false;
+    if (out)
+      *out = vote;
+    return true;
+  }
+  catch (...)
+  {
+    return false;
+  }
 }
 
 void relay_obligation_votes(void *obj, const std::vector<service_nodes::quorum_vote_t> &votes)
@@ -436,6 +571,13 @@ void relay_obligation_votes(void *obj, const std::vector<service_nodes::quorum_v
 
 void handle_obligation_vote(SNNetwork::message &m, void *self)
 {
+  const auto peer_acl = m.sn ? arqmq::CategoryAcl::ServiceNode : arqmq::CategoryAcl::Denied;
+  if (!arqmq::authorize_request("vote_ob", peer_acl, approx_payload_bytes(m.data), m.data.size()))
+  {
+    MWARNING("Dropping vote_ob from unauthorized peer " << as_hex(m.pubkey));
+    return;
+  }
+
   auto &snw = SNNWrapper::from(self);
 
   MDEBUG("Received a relayed obligation vote from " << as_hex(m.pubkey));
@@ -481,6 +623,256 @@ void handle_obligation_vote(SNNetwork::message &m, void *self)
   }
 }
 
+bool try_decode_pulse_vote(const std::string_view payload, service_nodes::pulse::RelayVote &out) noexcept
+{
+  if (service_nodes::pulse::decode_relay_vote(payload, out))
+    return true;
+  try
+  {
+    if (payload.empty())
+      return false;
+    bt_value decoded;
+    bt_deserialize(payload.data(), payload.size(), decoded);
+    const auto *s = boost::get<std::string>(&decoded);
+    if (!s)
+      return false;
+    return service_nodes::pulse::decode_relay_vote(*s, out);
+  }
+  catch (const std::exception &)
+  {
+    return false;
+  }
+}
+
+bool try_decode_blink_vote(const std::string_view payload, arq_blink::RelayVote &out) noexcept
+{
+  if (arq_blink::decode_relay_vote(payload, out))
+    return true;
+  try
+  {
+    if (payload.empty())
+      return false;
+    bt_value decoded;
+    bt_deserialize(payload.data(), payload.size(), decoded);
+    const auto *s = boost::get<std::string>(&decoded);
+    if (!s)
+      return false;
+    return arq_blink::decode_relay_vote(*s, out);
+  }
+  catch (const std::exception &)
+  {
+    return false;
+  }
+}
+
+void relay_pulse_vote(const service_nodes::pulse::RelayVote &vote)
+{
+  if (!g_pulse_snw || !g_pulse_snw->core.get_service_node_keys())
+    return;
+  const auto active = g_pulse_snw->core.get_service_node_list().get_active_service_node_pubkeys();
+  auto q = std::make_shared<quorum>();
+  q->validators = service_nodes::pulse::quorum_pubkeys(vote.height, active, vote.round);
+  if (q->validators.empty())
+    return;
+  std::string blob;
+  if (!service_nodes::pulse::encode_relay_vote(vote, blob))
+    return;
+  std::shared_ptr<const quorum> cq = std::move(q);
+  // Peer list comes from `cq->validators` (Pulse quorum). `quorum_type` is only
+  // used for Q/Q' trace labels in peer_info.
+  peer_info pinfo{*g_pulse_snw, quorum_type::obligations, cq};
+  if (!pinfo.my_position_count)
+    return;
+  pinfo.relay_to_peers("pulse_rnd", blob);
+}
+
+void relay_blink_vote(const arq_blink::RelayVote &vote)
+{
+  if (!g_pulse_snw || !g_pulse_snw->core.get_service_node_keys())
+    return;
+  const auto active = g_pulse_snw->core.get_service_node_list().get_active_service_node_pubkeys();
+  const auto indices = arq_blink::quorum_indices(vote.height, active.size());
+  if (indices.empty())
+    return;
+  auto q = std::make_shared<quorum>();
+  q->validators.reserve(indices.size());
+  for (const auto i : indices)
+    q->validators.push_back(active[i]);
+  std::string blob;
+  if (!arq_blink::encode_relay_vote(vote, blob))
+    return;
+  std::shared_ptr<const quorum> cq = std::move(q);
+  peer_info pinfo{*g_pulse_snw, quorum_type::obligations, cq};
+  if (!pinfo.my_position_count)
+    return;
+  pinfo.relay_to_peers("blink_tx", blob);
+}
+
+bool apply_pulse_vote(SNNWrapper &snw, const service_nodes::pulse::RelayVote &vote, const bool relay_if_new)
+{
+  const uint8_t hf = snw.core.get_blockchain_storage().get_current_hard_fork_version();
+  if (!service_nodes::pulse::hybrid_sn_permitted(hf))
+    return false;
+  const uint64_t chain_h = snw.core.get_current_blockchain_height();
+  if (vote.height < chain_h)
+    return false;
+  if (vote.height > chain_h + 1)
+    return false;
+  const auto &bc = snw.core.get_blockchain_storage();
+  uint64_t parent_ts = 0;
+  if (bc.get_db().height() > 0)
+    parent_ts = bc.get_db().get_block_timestamp(bc.get_db().height() - 1);
+  const uint64_t now = static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+  const uint8_t now_round = service_nodes::pulse::round_from_timestamps(parent_ts, now);
+  if (vote.round > now_round + 1)
+    return false;
+  if (now_round > 0 && vote.round + 1 < now_round)
+    return false;
+  const auto active = snw.core.get_service_node_list().get_active_service_node_pubkeys();
+  const bool added = service_nodes::pulse::collector().add_vote(
+      vote, service_nodes::pulse::quorum_pubkeys(vote.height, active, vote.round), active.size(), relay_if_new);
+  if (!added)
+    return false;
+  if (vote.payload_hash != crypto::null_hash)
+  {
+    if (const auto *keys = snw.core.get_service_node_keys())
+    {
+      if (snw.core.is_service_node(keys->pub, true))
+        service_nodes::pulse::participate_round(vote.height, vote.prev_id, vote.round, keys->pub, keys->key,
+                                                active, relay_if_new, vote.payload_hash);
+    }
+  }
+  return true;
+}
+
+void handle_pulse_round(SNNetwork::message &m, void *self)
+{
+  const auto peer_acl = m.sn ? arqmq::CategoryAcl::ServiceNode : arqmq::CategoryAcl::Denied;
+  if (!arqmq::authorize_request("pulse_rnd", peer_acl, approx_payload_bytes(m.data), m.data.size()))
+  {
+    MWARNING("Dropping pulse_rnd from unauthorized peer " << as_hex(m.pubkey));
+    return;
+  }
+  if (m.data.size() != 1)
+    return;
+  const auto *blob = boost::get<std::string>(&m.data[0]);
+  if (!blob)
+    return;
+  service_nodes::pulse::RelayVote vote{};
+  if (!service_nodes::pulse::decode_relay_vote(*blob, vote))
+    return;
+  apply_pulse_vote(SNNWrapper::from(self), vote, true);
+}
+
+void handle_blink_tx(SNNetwork::message &m, void * /*self*/)
+{
+  const auto peer_acl = m.sn ? arqmq::CategoryAcl::ServiceNode : arqmq::CategoryAcl::Denied;
+  if (!arqmq::authorize_request("blink_tx", peer_acl, approx_payload_bytes(m.data), m.data.size()))
+  {
+    MWARNING("Dropping blink_tx from unauthorized peer " << as_hex(m.pubkey));
+    return;
+  }
+  if (m.data.size() != 1)
+    return;
+  const auto *blob = boost::get<std::string>(&m.data[0]);
+  if (!blob)
+    return;
+  arq_blink::RelayVote vote{};
+  if (!arq_blink::decode_relay_vote(*blob, vote))
+    return;
+  arq_blink::apply_relay_vote(vote, true);
+}
+
+/// Native-mesh inbound path (SocketStack). Active only after cutover stage ≥4.
+/// Overwrites soak listener handlers; still records inbound parse counters via
+/// `note_inbound_mesh_shadow` (`vote_ob` + `pulse_rnd` + `blink_tx`). SNNetwork stays live.
+void install_native_mesh_inbound_handlers(arqmq::SocketStack &stack, SNNWrapper &snw)
+{
+  if (!arqmq::native_mesh_ready())
+    return;
+
+  stack.register_handler("vote_ob", arqmq::CategoryAcl::ServiceNode, [&snw](const arqmq::InboundRequest &req) {
+    arqmq::note_inbound_mesh_shadow("vote_ob", req.payload);
+    if (!arqmq::authorize_request("vote_ob", req.peer_acl, req.payload.size(), 1))
+    {
+      MWARNING("Dropping native-mesh vote_ob from unauthorized peer "
+               << (req.peer_pubkey.size() == 32 ? as_hex(req.peer_pubkey) : "unknown"));
+      return std::string{};
+    }
+
+    quorum_vote_t vote{};
+    if (!try_decode_obligation_vote(req.payload, &vote))
+    {
+      MWARNING("Native-mesh vote_ob deserialize failed from "
+               << (req.peer_pubkey.size() == 32 ? as_hex(req.peer_pubkey) : "unknown"));
+      return std::string{};
+    }
+    if (vote.block_height > snw.core.get_current_blockchain_height())
+      return std::string{};
+
+    std::vector<quorum_vote_t> vvote;
+    vvote.push_back(vote);
+    cryptonote::vote_verification_context vvc{};
+    snw.core.add_service_node_vote(vote, vvc);
+    if (vvc.m_verification_failed)
+      return std::string{};
+    if (vvc.m_added_to_pool)
+      relay_obligation_votes(&snw, std::move(vvote));
+    return std::string{};
+  });
+
+  stack.register_handler("pulse_rnd", arqmq::CategoryAcl::ServiceNode, [&snw](const arqmq::InboundRequest &req) {
+    arqmq::note_inbound_mesh_shadow("pulse_rnd", req.payload);
+    if (!arqmq::authorize_request("pulse_rnd", req.peer_acl, req.payload.size(), 1))
+    {
+      MWARNING("Dropping native-mesh pulse_rnd from unauthorized peer "
+               << (req.peer_pubkey.size() == 32 ? as_hex(req.peer_pubkey) : "unknown"));
+      return std::string{};
+    }
+    service_nodes::pulse::RelayVote vote{};
+    if (!try_decode_pulse_vote(req.payload, vote))
+      return std::string{};
+    apply_pulse_vote(snw, vote, true);
+    return std::string{};
+  });
+
+  stack.register_handler("blink_tx", arqmq::CategoryAcl::ServiceNode, [](const arqmq::InboundRequest &req) {
+    arqmq::note_inbound_mesh_shadow("blink_tx", req.payload);
+    if (!arqmq::authorize_request("blink_tx", req.peer_acl, req.payload.size(), 1))
+    {
+      MWARNING("Dropping native-mesh blink_tx from unauthorized peer "
+               << (req.peer_pubkey.size() == 32 ? as_hex(req.peer_pubkey) : "unknown"));
+      return std::string{};
+    }
+    arq_blink::RelayVote vote{};
+    if (!try_decode_blink_vote(req.payload, vote))
+      return std::string{};
+    arq_blink::apply_relay_vote(vote, true);
+    return std::string{};
+  });
+
+  stack.register_handler("ping", arqmq::CategoryAcl::Basic, [](const arqmq::InboundRequest &req) {
+    if (!arqmq::authorize_request("ping", req.peer_acl, req.payload.size(), req.payload.empty() ? 0 : 1))
+    {
+      MWARNING("Dropping native-mesh ping from unauthorized peer "
+               << (req.peer_pubkey.size() == 32 ? as_hex(req.peer_pubkey) : "unknown"));
+      return std::string{};
+    }
+    return std::string{"pong"};
+  });
+  stack.register_handler("pong", arqmq::CategoryAcl::Basic, [](const arqmq::InboundRequest &req) {
+    if (!arqmq::authorize_request("pong", req.peer_acl, req.payload.size(), req.payload.empty() ? 0 : 1))
+    {
+      MWARNING("Dropping native-mesh pong from unauthorized peer "
+               << (req.peer_pubkey.size() == 32 ? as_hex(req.peer_pubkey) : "unknown"));
+    }
+    return std::string{};
+  });
+
+  MINFO("Arq-Net native mesh inbound vote_ob/pulse_rnd/blink_tx/ping handlers installed (cutover active)");
+}
+
 template <typename I>
 std::enable_if_t<std::is_integral<I>::value, I> get_or(bt_dict &d, const std::string &key, I fallback)
 {
@@ -495,6 +887,13 @@ std::enable_if_t<std::is_integral<I>::value, I> get_or(bt_dict &d, const std::st
 
 void handle_ping(SNNetwork::message &m, void *)
 {
+  const auto peer_acl = m.sn ? arqmq::CategoryAcl::ServiceNode : arqmq::CategoryAcl::Basic;
+  if (!arqmq::authorize_request("ping", peer_acl, approx_payload_bytes(m.data), m.data.size()))
+  {
+    MWARNING("Dropping ping from unauthorized peer " << as_hex(m.pubkey));
+    return;
+  }
+
   uint64_t tag = 0;
   if (!m.data.empty())
   {
@@ -508,6 +907,13 @@ void handle_ping(SNNetwork::message &m, void *)
 
 void handle_pong(SNNetwork::message &m, void *)
 {
+  const auto peer_acl = m.sn ? arqmq::CategoryAcl::ServiceNode : arqmq::CategoryAcl::Basic;
+  if (!arqmq::authorize_request("pong", peer_acl, approx_payload_bytes(m.data), m.data.size()))
+  {
+    MWARNING("Dropping pong from unauthorized peer " << as_hex(m.pubkey));
+    return;
+  }
+
   MINFO("Received pong from " << (m.sn ? "SN" : "non-SN") << " " << as_hex(m.pubkey));
 }
 
@@ -518,8 +924,13 @@ void init_core_callbacks()
   cryptonote::arqnet_new = new_snnwrapper;
   cryptonote::arqnet_delete = delete_snnwrapper;
   cryptonote::arqnet_relay_obligation_votes = relay_obligation_votes;
+  service_nodes::pulse::set_relay_new_vote(relay_pulse_vote);
+  arq_blink::set_wire_connected(true);
+  arq_blink::set_relay_new_vote(relay_blink_vote);
 
   SNNetwork::register_command("vote_ob", SNNetwork::command_type::quorum, handle_obligation_vote);
+  SNNetwork::register_command("pulse_rnd", SNNetwork::command_type::quorum, handle_pulse_round);
+  SNNetwork::register_command("blink_tx", SNNetwork::command_type::quorum, handle_blink_tx);
   SNNetwork::register_command("ping", SNNetwork::command_type::public_, handle_ping);
   SNNetwork::register_command("pong", SNNetwork::command_type::public_, handle_pong);
 }

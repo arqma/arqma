@@ -1,0 +1,16 @@
+---
+description: Keep the Arqma end-user path simple; hide operator knobs behind defaults.
+alwaysApply: true
+---
+
+# End-user simplicity
+
+The end user does not want complicated solutions. Keep the product unified.
+
+- Default messenger path is `gen` / `send <hex> hello` / `inbox` / `open`. No required `--url`, `--router`, `--snode`, `--key`, or hop lists.
+- `gen` saves identity under `~/.arqma/msg/identity`. `inbox` and `open` use it. `send bob=<hex>` remembers the name in `~/.arqma/msg/contacts`.
+- `utils/arqma-stack` starts storage + router and writes one env file; `arqma-msg` reads it.
+- Extra hops, swarm announce, replica URLs, and TTL are operator knobs. Do not put them in the first-line examples.
+- Storage and router stay separate PIDs from `arqmad`, but that is an operator fact — not something the messenger user should assemble.
+- Prefer one default behavior over new flags. Do not split UX across more binaries.
+- Do not flip Pulse stage 3 or default `--arqnet-backend`.

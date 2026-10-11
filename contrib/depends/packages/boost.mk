@@ -11,7 +11,7 @@ $(package)_config_opts+=--layout=tagged --build-type=complete --user-config=user
 $(package)_config_opts+=threading=multi link=static -sNO_BZIP2=1 -sNO_ZLIB=1
 $(package)_config_opts_linux=target-os=linux threadapi=pthread runtime-link=static
 $(package)_config_opts_android=threadapi=pthread runtime-link=static target-os=android
-$(package)_config_opts_darwin=--toolset=darwin runtime-link=static target-os=darwin
+$(package)_config_opts_darwin=runtime-link=static target-os=darwin
 $(package)_config_opts_mingw32=binary-format=pe target-os=windows threadapi=win32 runtime-link=static
 $(package)_config_opts_x86_64=architecture=x86 address-model=64
 $(package)_config_opts_aarch64=address-model=64
@@ -21,8 +21,6 @@ else
 $(package)_toolset_$(host_os)=gcc
 endif
 $(package)_archiver_$(host_os)=$($(package)_ar)
-$(package)_toolset_darwin=darwin
-$(package)_archiver_darwin=$($(package)_libtool)
 $(package)_config_libraries_$(host_os)="chrono,filesystem,program_options,system,thread,test,date_time,regex,serialization"
 $(package)_config_libraries_mingw32="chrono,filesystem,program_options,system,thread,test,date_time,regex,serialization,locale"
 $(package)_cxxflags=-std=c++17

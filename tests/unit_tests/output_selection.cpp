@@ -31,6 +31,7 @@
 
 #include "gtest/gtest.h"
 
+#include "misc_language.h"
 #include "wallet/wallet2.h"
 #include <string>
 

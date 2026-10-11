@@ -121,6 +121,8 @@ namespace cryptonote
   //---------------------------------------------------------------------------
   bool checkpoints::get_checkpoint(uint64_t height, checkpoint_t &checkpoint) const
   {
+    if (!m_db)
+      return false;
     try
     {
       auto guard = db_rtxn_guard(m_db);
@@ -158,6 +160,8 @@ namespace cryptonote
   //---------------------------------------------------------------------------
   bool checkpoints::update_checkpoint(checkpoint_t const &checkpoint)
   {
+    if (!m_db)
+      return false;
     bool result = true;
     bool batch_started = false;
     try
@@ -273,6 +277,11 @@ namespace cryptonote
     if(0 == block_height)
       return false;
 
+    // Unit tests and pre-init callers: without a DB there are no stored
+    // checkpoints, so every non-genesis alternative tip is allowed.
+    if (!m_db)
+      return true;
+
     {
       std::vector<checkpoint_t> const first_checkpoint = m_db->get_checkpoints_range(0, blockchain_height, 1);
       if (first_checkpoint.empty() || blockchain_height < first_checkpoint[0].height)
@@ -296,6 +305,8 @@ namespace cryptonote
   uint64_t checkpoints::get_max_height() const
   {
     uint64_t result = 0;
+    if (!m_db)
+      return result;
     checkpoint_t top_checkpoint;
     if(m_db->get_top_checkpoint(top_checkpoint))
       result = top_checkpoint.height;

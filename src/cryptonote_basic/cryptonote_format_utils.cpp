@@ -614,6 +614,7 @@ namespace cryptonote
     if (!pick<tx_extra_tx_key_image_unlock>                  (nar, tx_extra_fields, TX_EXTRA_TAG_TX_KEY_IMAGE_UNLOCK)) return false;
 
     if (!pick<tx_extra_burn>                                 (nar, tx_extra_fields, TX_EXTRA_TAG_BURN)) return false;
+    if (!pick<tx_extra_pulse_round>                          (nar, tx_extra_fields, TX_EXTRA_TAG_PULSE)) return false;
 
     if (!pick<tx_extra_merge_mining_tag>                     (nar, tx_extra_fields, TX_EXTRA_MERGE_MINING_TAG)) return false;
     if (!pick<tx_extra_mysterious_minergate>                 (nar, tx_extra_fields, TX_EXTRA_MYSTERIOUS_MINERGATE_TAG)) return false;
@@ -972,6 +973,22 @@ namespace cryptonote
     bool result = add_tx_extra_field_to_tx_extra(tx_extra, field);
     CHECK_AND_NO_ASSERT_MES_L1(result, false, "failed to serialize tx_extra burn amount");
     return result;
+  }
+  //---------------------------------------------------------------
+  bool add_pulse_round_to_tx_extra(std::vector<uint8_t>& tx_extra, const tx_extra_pulse_round& pulse)
+  {
+    tx_extra_field field = pulse;
+    bool result = add_tx_extra_field_to_tx_extra(tx_extra, field);
+    CHECK_AND_ASSERT_MES(result, false, "failed to serialize tx extra pulse round");
+    return true;
+  }
+  //---------------------------------------------------------------
+  bool get_pulse_round_from_tx_extra(const std::vector<uint8_t>& tx_extra, tx_extra_pulse_round& pulse)
+  {
+    std::vector<tx_extra_field> tx_extra_fields;
+    if (!parse_tx_extra(tx_extra, tx_extra_fields))
+      return false;
+    return find_tx_extra_field_by_type(tx_extra_fields, pulse);
   }
   //---------------------------------------------------------------
   bool get_inputs_money_amount(const transaction& tx, uint64_t& money)

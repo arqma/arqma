@@ -760,6 +760,10 @@ namespace nodetool
       memcpy(&m_network_id, &::config::NETWORK_ID, 16);
     }
 
+    MINFO("P2P NETWORK_ID seed=" << ARQMA_NET_ID_SEED
+          << (ARQMA_NET_ID_DIRTY ? " (dirty: uncommitted changes isolate this build)" : " (clean commit)"));
+    MINFO("P2P NETWORK_ID=" << m_network_id);
+
     m_config_folder = command_line::get_arg(vm, cryptonote::arg_data_dir);
     network_zone& public_zone = m_network_zones.at(epee::net_utils::zone::public_);
 
@@ -1881,6 +1885,13 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::sanitize_peerlist(std::vector<peerlist_entry>& local_peerlist)
   {
+    if (local_peerlist.size() > P2P_MAX_PEERS_IN_HANDSHAKE)
+    {
+      MWARNING("Peerlist oversized (" << local_peerlist.size() << " > " << P2P_MAX_PEERS_IN_HANDSHAKE
+                                      << "); truncating");
+      local_peerlist.resize(P2P_MAX_PEERS_IN_HANDSHAKE);
+    }
+
     for(size_t i = 0; i < local_peerlist.size(); ++i)
     {
       bool ignore = false;
@@ -2146,7 +2157,7 @@ namespace nodetool
       network_zone& zone = m_network_zones.at(address.get_zone());
 
       bool inv_call_res = epee::net_utils::async_invoke_remote_command2<COMMAND_PING::response>(ping_context, COMMAND_PING::ID, req, zone.m_net_server.get_config_object(),
-        [=](int code, const COMMAND_PING::response& rsp, p2p_connection_context& context)
+        [=, this](int code, const COMMAND_PING::response& rsp, p2p_connection_context& context)
       {
         if(code <= 0)
         {

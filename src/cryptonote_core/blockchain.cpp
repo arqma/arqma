@@ -61,6 +61,7 @@
 #include "common/notify.h"
 #include "service_node_voting.h"
 #include "service_node_list.h"
+#include "pulse.h"
 #include "common/varint.h"
 #include "common/pruning.h"
 #include "common/lock.h"
@@ -1246,6 +1247,37 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
       return false;
   }
 
+  if (service_nodes::pulse::hybrid_sn_permitted(hard_fork_version))
+  {
+    cryptonote::tx_extra_pulse_round pulse{};
+    if (cryptonote::get_pulse_round_from_tx_extra(b.miner_tx.extra, pulse))
+    {
+      uint64_t parent_ts = 0;
+      cryptonote::block parent{};
+      if (get_block_by_hash(b.prev_id, parent))
+        parent_ts = parent.timestamp;
+      if (!service_nodes::pulse::extra_round_matches_timestamps(parent_ts, b.timestamp, pulse.round))
+      {
+        MERROR("Pulse extra round " << static_cast<unsigned>(pulse.round)
+                                    << " does not match parent→block wait-window at height " << height);
+        return false;
+      }
+      if (b.miner_tx.vout.empty() || b.miner_tx.vout[0].target.type() != typeid(txout_to_key))
+      {
+        MERROR("Pulse extra present but miner vout[0] is missing at height " << height);
+        return false;
+      }
+      const auto miner_out = boost::get<txout_to_key>(b.miner_tx.vout[0].target).key;
+      const crypto::hash payload =
+          service_nodes::pulse::miner_payload_hash(b.timestamp, b.tx_hashes, miner_out);
+      if (pulse.payload_hash != payload)
+      {
+        MERROR("Pulse extra payload does not match miner template at height " << height);
+        return false;
+      }
+    }
+  }
+
   if(hard_fork_version >= 16)
   {
     size_t vout_end = b.miner_tx.vout.size();
@@ -1425,15 +1457,41 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
     // this would be the case anyway if we'd lock, and the change happened
     // just after the block template was created
     if (!memcmp(&miner_address, &m_btc_address, sizeof(cryptonote::account_public_address)) && m_btc_nonce == ex_nonce && m_btc_pool_cookie == m_tx_pool.cookie() && m_btc.prev_id == get_tail_id()) {
-      MDEBUG("Using cached template");
-      m_btc.timestamp = time(NULL); // update timestamp unconditionally
-      b = m_btc;
-      diffic = m_btc_difficulty;
-      height = m_btc_height;
-      expected_reward = m_btc_expected_reward;
-      seed_height = m_btc_seed_height;
-      seed_hash = m_btc_seed_hash;
-      return true;
+      bool pulse_cache_ok = true;
+      if (service_nodes::pulse::hybrid_sn_permitted(m_btc.major_version))
+      {
+        uint64_t parent_ts = 0;
+        if (m_db->height() > 0)
+          parent_ts = m_db->get_block_timestamp(m_db->height() - 1);
+        const uint8_t rnd = service_nodes::pulse::round_from_timestamps(parent_ts, static_cast<uint64_t>(time(NULL)));
+        cryptonote::tx_extra_pulse_round cached_pulse{};
+        const bool has_pulse = cryptonote::get_pulse_round_from_tx_extra(m_btc.miner_tx.extra, cached_pulse);
+        cryptonote::tx_extra_pulse_round live{};
+        const bool have_majority = service_nodes::pulse::collector().snapshot(live) && live.height == m_btc_height &&
+                                   live.round == rnd;
+        if (have_majority)
+        {
+          pulse_cache_ok = has_pulse && cached_pulse.round == live.round &&
+                           cached_pulse.payload_hash == live.payload_hash &&
+                           cached_pulse.votes.size() == live.votes.size();
+          for (size_t i = 0; pulse_cache_ok && i < live.votes.size(); ++i)
+            pulse_cache_ok = cached_pulse.votes[i].validator_index == live.votes[i].validator_index;
+        }
+        else
+          pulse_cache_ok = !has_pulse;
+      }
+      if (pulse_cache_ok)
+      {
+        MDEBUG("Using cached template");
+        m_btc.timestamp = time(NULL); // update timestamp unconditionally
+        b = m_btc;
+        diffic = m_btc_difficulty;
+        height = m_btc_height;
+        expected_reward = m_btc_expected_reward;
+        seed_height = m_btc_seed_height;
+        seed_hash = m_btc_seed_hash;
+        return true;
+      }
     }
     MDEBUG("Not using cached template: address " << (!memcmp(&miner_address, &m_btc_address, sizeof(cryptonote::account_public_address))) << ", nonce " << (m_btc_nonce == ex_nonce) << ", cookie " << (m_btc_pool_cookie == m_tx_pool.cookie()) << ", from_block " << (!from_block));
     invalidate_block_template_cache();
@@ -1574,6 +1632,29 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
   //make blocks coin-base tx looks close to real coinbase tx to get truthful blob weight
   uint8_t hard_fork_version = b.major_version;
   arqma_miner_tx_context miner_tx_context(m_nettype, m_service_node_list.get_block_winner());
+  if (service_nodes::pulse::hybrid_sn_permitted(hard_fork_version))
+  {
+    uint64_t parent_ts = 0;
+    if (from_block)
+    {
+      cryptonote::block prev_block;
+      if (get_block_by_hash(*from_block, prev_block))
+        parent_ts = prev_block.timestamp;
+    }
+    else if (m_db->height() > 0)
+    {
+      parent_ts = m_db->get_block_timestamp(m_db->height() - 1);
+    }
+    const uint8_t rnd = service_nodes::pulse::round_from_timestamps(parent_ts, b.timestamp);
+    const auto active = m_service_node_list.get_active_service_node_pubkeys();
+    const uint32_t lead = static_cast<uint32_t>(service_nodes::pulse::leader_index(height, active.size(), rnd));
+    auto &collector = service_nodes::pulse::collector();
+    collector.prepare(height, b.prev_id, rnd, lead);
+    if (const auto *keys = m_service_node_list.get_my_service_node_keys())
+    {
+      service_nodes::pulse::participate_round(height, b.prev_id, rnd, keys->pub, keys->key, active);
+    }
+  }
 
   bool r = construct_miner_tx(this, height, median_weight, already_generated_coins, txs_weight, fee, miner_address, b.miner_tx, ex_nonce, hard_fork_version, miner_tx_context);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, first chance");
@@ -1582,6 +1663,29 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
   {
     r = construct_miner_tx(this, height, median_weight, already_generated_coins, cumulative_weight, fee, miner_address, b.miner_tx, ex_nonce, hard_fork_version, miner_tx_context);
     CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, second chance");
+    const size_t extra_before_padding = b.miner_tx.extra.size();
+    cryptonote::tx_extra_pulse_round collected{};
+    bool have_pulse_cert = false;
+    if (service_nodes::pulse::hybrid_sn_permitted(hard_fork_version) && !b.miner_tx.vout.empty() &&
+        b.miner_tx.vout[0].target.type() == typeid(txout_to_key))
+    {
+      const auto miner_out = boost::get<txout_to_key>(b.miner_tx.vout[0].target).key;
+      const crypto::hash payload =
+          service_nodes::pulse::miner_payload_hash(b.timestamp, b.tx_hashes, miner_out);
+      uint64_t parent_ts = 0;
+      cryptonote::block parent{};
+      if (get_block_by_hash(b.prev_id, parent))
+        parent_ts = parent.timestamp;
+      const uint8_t rnd = service_nodes::pulse::round_from_timestamps(parent_ts, b.timestamp);
+      const auto active = m_service_node_list.get_active_service_node_pubkeys();
+      if (const auto *keys = m_service_node_list.get_my_service_node_keys())
+      {
+        service_nodes::pulse::participate_round(height, b.prev_id, rnd, keys->pub, keys->key, active, true,
+                                                payload);
+      }
+      if (service_nodes::pulse::collector().snapshot(collected) && collected.payload_hash == payload)
+        have_pulse_cert = true;
+    }
     size_t coinbase_weight = get_transaction_weight(b.miner_tx);
     if (coinbase_weight > cumulative_weight - txs_weight)
     {
@@ -1609,6 +1713,17 @@ bool Blockchain::create_block_template(block& b, const crypto::hash *from_block,
       }
     }
     CHECK_AND_ASSERT_MES(cumulative_weight == txs_weight + get_transaction_weight(b.miner_tx), false, "unexpected case: cumulative_weight=" << cumulative_weight << " is not equal txs_cumulative_weight=" << txs_weight << " + get_transaction_weight(b.miner_tx)=" << get_transaction_weight(b.miner_tx));
+    if (have_pulse_cert)
+    {
+      if (!service_nodes::pulse::splice_majority_certificate(b.miner_tx.extra, extra_before_padding, collected))
+      {
+        cumulative_weight += service_nodes::pulse::majority_certificate_blob_size();
+        continue;
+      }
+      b.miner_tx.invalidate_hashes();
+      CHECK_AND_ASSERT_MES(cumulative_weight == txs_weight + get_transaction_weight(b.miner_tx), false,
+                           "Pulse splice changed miner-tx weight");
+    }
     if (!from_block)
       cache_block_template(b, miner_address, ex_nonce, diffic, height, expected_reward, seed_height, seed_hash, pool_cookie);
     return true;
@@ -1860,7 +1975,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     {
       get_block_longhash(this, b, proof_of_work, block_height, 0);
     }
-    if(!check_hash(proof_of_work, current_diff))
+    if (service_nodes::pulse::pow_required_for_block(hard_fork_version) && !check_hash(proof_of_work, current_diff))
     {
       MERROR_VER("Block with id: " << id << std::endl << " for alternative chain, does not have enough proof of work: " << proof_of_work << std::endl << " expected difficulty: " << current_diff);
       bvc.m_verification_failed = true;
@@ -3944,7 +4059,7 @@ bool Blockchain::handle_block_to_main_chain(const block& bl, const crypto::hash&
       proof_of_work = get_block_longhash(this, bl, blockchain_height, 0);
 
     // validate proof_of_work versus difficulty target
-    if(!check_hash(proof_of_work, current_diffic))
+    if (service_nodes::pulse::pow_required_for_block(hard_fork_version) && !check_hash(proof_of_work, current_diffic))
     {
       MERROR_VER("Block with id: " << id << std::endl << "does not have enough proof of work: " << proof_of_work << " at height " << blockchain_height << ", unexpected difficulty: " << current_diffic);
       bvc.m_verification_failed = true;

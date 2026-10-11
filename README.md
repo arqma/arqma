@@ -8,10 +8,62 @@ Portions Copyright (c) 2012-2013 The Cryptonote developers.
 
 - Web: [arqma.com](https://arqma.com)
 - Mail: [support@arqma.com](mailto:support@arqma.com)
-- GitHub: [https://github.com/arqma/arqma](https://github.com/arqma/arqma)
+- GitHub: [https://github.com/ArqTras/arqma](https://github.com/ArqTras/arqma)
 - Discord: [https://chat.arqma.com](https://chat.arqma.com)
 - Telegram: [https://telegram.arqma.com](https://telegram.arqma.com)
 - Matrix chat: [#arqma:matrix.org or Internal room ID: !YqTIhVcMbLHivbYegN:matrix.org](https://#arqma:matrix.org)
+- Upgrade docs: [docs/UPGRADE_ROADMAP.md](docs/UPGRADE_ROADMAP.md), [docs/PLATFORM.md](docs/PLATFORM.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/MIGRATION.md](docs/MIGRATION.md)
+
+## Upgrade branch (`upgrade`)
+
+This branch is the production-grade modernization path for Arqma. Primary
+deliverable: **HF20 hybrid service-node window** (mainnet height **4 000 000**)
+then **HF21 exclusive native mesh** (mainnet height **5 000 000**), with Pulse as a
+**hybrid producer**. RandomARQ stays required — Pulse does **not** replace PoW.
+
+| Focus | Status on this branch |
+|-------|------------------------|
+| Consensus / SN | RandomARQ + hybrid Pulse (`pulse_rnd`), HF20/HF21 gates |
+| Arq-Net mesh | Dual-stack (`legacy-arqnet` default; opt-in `arqmq` + soak shadow) |
+| Operator RPC / console | `get_arqnet_status`, `get_pulse_status` / `print_pulse`, `get_blink_status` / `print_blink`, `get_storage_status` / `print_storage` |
+| Companion probes | Optional `arqma-storage`, `arqma-router`, `arqma-msg` (separate PIDs; not Session-class UX) |
+
+**Mainnet locks (do not flip in this release):**
+
+1. Default `--arqnet-backend=legacy-arqnet`
+2. Mainnet `arqmq` needs `--arqnet-allow-experimental`
+3. Pulse stage stays hybrid (PoW required)
+4. Storage / router stay out of the `arqmad` process
+
+**Docs for this branch:**
+
+- [docs/PRODUCT.md](docs/PRODUCT.md) — what ships vs probe-only
+- [docs/OPERATOR_UPGRADE.md](docs/OPERATOR_UPGRADE.md) — operator knobs, HF checklist, how to test
+- [docs/BINARIES.md](docs/BINARIES.md) — launch flags for every binary
+- [docs/UPGRADE_ROADMAP.md](docs/UPGRADE_ROADMAP.md) — milestone map
+- [docs/PLATFORM.md](docs/PLATFORM.md) — Linux / macOS / Windows build matrix
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/MIGRATION.md](docs/MIGRATION.md)
+- [docs/PR_COMPLETENESS_GATE.md](docs/PR_COMPLETENESS_GATE.md) — what this PR claims vs defers
+- PR: [ArqTras/arqma#3](https://github.com/ArqTras/arqma/pull/3)
+
+**Quick verify (Linux/macOS):**
+
+```bash
+git clone --recursive https://github.com/ArqTras/arqma.git
+cd arqma && git checkout upgrade
+cmake -S . -B build/upgrade-release -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTS=ON \
+  -DBUILD_INTEGRATION_TESTS=OFF
+cmake --build build/upgrade-release --parallel \
+  --target unit_tests hash-target-tests daemon simplewallet wallet_rpc_server \
+           arqma_storage arqma_router arqma_msg
+ctest --test-dir build/upgrade-release -R 'unit_tests|hash-target' --output-on-failure
+# Expect: [  PASSED  ] 628 tests.
+```
+
+Binaries land in `build/upgrade-release/bin/`. Full package lists and soak steps:
+[docs/OPERATOR_UPGRADE.md](docs/OPERATOR_UPGRADE.md).
 
 ## Other Arqma related websites
 
@@ -81,7 +133,10 @@ If you want to help out, see [CONTRIBUTING](CONTRIBUTING.md) for a set of guidel
 
 ### IMPORTANT
 
-That build is from the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
+Tagged releases are the stable path for production nodes. The `upgrade` branch
+is the active modernization line (HF20/HF21 + hybrid Pulse + Arq-Net dual-stack);
+prefer it when following [docs/OPERATOR_UPGRADE.md](docs/OPERATOR_UPGRADE.md).
+`master` may lag or differ — do not mix undocumented tip builds with mainnet SNs.
 
 ![Monitored by DiscordHooks](https://img.shields.io/static/v1?label=Monitored%20by&message=DiscordHooks&color=brightgreen&style=for-the-badge)
 
@@ -98,8 +153,8 @@ library archives (`.a`).
 
 | Dep          | Min. version  | Vendored | Debian/Ubuntu pkg  | Arch pkg     | Fedora            | Optional | Purpose        |
 | ------------ | ------------- | -------- | ------------------ | ------------ | ----------------- | -------- | -------------- |
-| GCC          | 7.3.0         | NO       | `build-essential`  | `base-devel` | `gcc`             | NO       |                |
-| CMake        | 3.18          | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
+| GCC / Clang  | GCC 10 / C++20 | NO      | `build-essential`  | `base-devel` | `gcc`             | NO       |                |
+| CMake        | 3.16          | NO       | `cmake`            | `cmake`      | `cmake`           | NO       |                |
 | pkg-config   | any           | NO       | `pkg-config`       | `base-devel` | `pkgconf`         | NO       |                |
 | Boost        | 1.66          | NO       | `libboost-all-dev` | `boost`      | `boost-devel`     | NO       | C++ libraries  |
 | OpenSSL      | 1.1.1         | NO       | `libssl-dev`       | `openssl`    | `openssl-devel`   | NO       | sha256 sum     |
@@ -139,15 +194,22 @@ Debian / Ubuntu one liner for all dependencies
 
 ### Cloning the repository
 
-Clone recursively to pull-in needed submodule(s):
+Clone recursively to pull in needed submodule(s):
 
-`git clone https://github.com/arqma/arqma`
+```bash
+git clone --recursive https://github.com/ArqTras/arqma.git
+cd arqma
+```
 
-If you already have a repo cloned, initialize and update:
+For this modernization line:
 
-`cd arqma && git checkout v10.0.0`
+```bash
+git checkout upgrade
+git submodule update --init --recursive
+```
 
-`git submodule init && git submodule update`
+For a tagged release instead, check out the release tag (see GitHub Releases)
+and run `git submodule update --init --recursive`.
 
 ### Build instructions
 
@@ -163,17 +225,30 @@ invokes cmake commands as needed.
 - **macOS (Homebrew):** Install with `brew install zeromq libsodium`. Homebrew provides ZeroMQ 4.3.5_2 and libsodium 1.0.20+, which meet all requirements.
 - **cppzmq:** The project uses bundled headers from `external/cppzmq/` (latest from GitHub) to ensure consistent API access regardless of system package versions.
 
-* Change to the root of the source code directory and build:
+* Change to the root of the source code directory and build.
+
+  Classic Makefile path:
 
 	`cd arqma && make release`
 
 	*Optional*: If your machine has several cores and enough memory, enable parallel build by running `make -j<number of threads>` instead of `make`. For this to be worthwhile, the machine should have one core and about 2GB of RAM available per thread.
 
-* The resulting executables can be found in `build/release/bin`
+  Recommended `upgrade` verify path (Ninja + curated unit suite):
 
-* Add `PATH="$PATH:$HOME/arqma/build/release/bin"` to `.profile`
+	```bash
+	cmake -S . -B build/upgrade-release -G Ninja \
+	  -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DBUILD_INTEGRATION_TESTS=OFF
+	cmake --build build/upgrade-release --parallel \
+	  --target unit_tests hash-target-tests daemon simplewallet wallet_rpc_server \
+	           arqma_storage arqma_router arqma_msg
+	```
 
-* Run Arqma with `arqmad --detach`
+* The resulting executables can be found in `build/release/bin` (Makefile) or
+  `build/upgrade-release/bin` (CMake Ninja path above).
+
+* Add `PATH="$PATH:$HOME/arqma/build/upgrade-release/bin"` (or `build/release/bin`) to `.profile`
+
+* Run Arqma with `arqmad --detach` (keep `--arqnet-backend=legacy-arqnet` on mainnet SNs)
 
 * **Optional**: build and run the test suite to verify the binaries:
 
@@ -210,10 +285,10 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 	`CONF_SWAPSIZE=1024`
 	`$sudo /etc/init.d/dphys-swapfile start`
 
-* Clone arqma and checkout most recent release version:
+* Clone arqma and check out the `upgrade` branch:
 
-	`git clone https://github.com/arqma/arqma.git`
-	`cd arqma`
+	`git clone --recursive https://github.com/ArqTras/arqma.git`
+	`cd arqma && git checkout upgrade`
 
 * Build:
 
@@ -295,15 +370,15 @@ application.
 
 * Download Arqma with command:
 
-	`git clone https://github.com/arqma/arqma`
+	`git clone --recursive https://github.com/ArqTras/arqma.git`
 
-* Change branch to last Release:
+* Check out the modernization line (or a release tag for production):
 
-	`cd arqma && git checkout v10.0.0`
+	`cd arqma && git checkout upgrade`
 
 * Activate and update submodules:
 
-  `git submodule init && git submodule update`
+  `git submodule update --init --recursive`
 
 * If you are on a 64-bit system, run:
 

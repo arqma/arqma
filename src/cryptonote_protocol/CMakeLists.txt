@@ -32,6 +32,7 @@ set(cryptonote_protocol_sources
   cryptonote_protocol_handler.inl
   levin_notify.cpp
   arqnet.cpp
+  arqnet_auth.cpp
   p2p_net_node_instantiation.cpp)
 
 set(cryptonote_protocol_headers)
@@ -50,5 +51,7 @@ target_link_libraries(cryptonote_protocol
   PUBLIC
     p2p
     arqnet
+    arqmq
+    arq_blink
   PRIVATE
     ${EXTRA_LIBRARIES})

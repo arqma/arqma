@@ -62,7 +62,7 @@ int main(int argc, char** argv)
   ::testing::InitGoogleTest(&argc, argv);
 
   po::options_description desc_options("Command line options");
-  const command_line::arg_descriptor<std::string> arg_data_dir = { "data-dir", "Data files directory", DEFAULT_DATA_DIR };
+  const command_line::arg_descriptor<std::string> arg_data_dir = { "data-dir", "Data files directory", "." };
   command_line::add_arg(desc_options, arg_data_dir);
 
   po::variables_map vm;

@@ -110,7 +110,9 @@ namespace service_nodes
     }
     else
     {
-      portions = (cur_percent / 100.0) * (double)STAKING_SHARE_PARTS;
+      // Non-constant local avoids Clang -Wimplicit-const-int-float-conversion on STAKING_SHARE_PARTS.
+      const uint64_t parts = STAKING_SHARE_PARTS;
+      portions = (cur_percent / 100.0) * static_cast<double>(parts);
     }
 
     return true;

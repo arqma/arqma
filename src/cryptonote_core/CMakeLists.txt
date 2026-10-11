@@ -35,6 +35,7 @@ set(cryptonote_core_sources
   service_node_voting.cpp
   service_node_quorum_cop.cpp
   service_node_swarm.cpp
+  pulse.cpp
   tx_pool.cpp
   tx_sanity_check.cpp
   cryptonote_tx_utils.cpp)

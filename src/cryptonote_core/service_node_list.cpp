@@ -57,6 +57,7 @@ extern "C" {
 #include "service_node_list.h"
 #include "service_node_rules.h"
 #include "service_node_swarm.h"
+#include "pulse.h"
 #include "version.h"
 
 #undef ARQMA_DEFAULT_LOG_CATEGORY
@@ -339,6 +340,23 @@ namespace service_nodes
   {
     std::lock_guard lock(m_sn_mutex);
     m_service_node_keys = keys;
+  }
+  //----------------------------------------------------------------------------
+  const service_node_keys *service_node_list::get_my_service_node_keys() const
+  {
+    std::lock_guard lock(m_sn_mutex);
+    return m_service_node_keys;
+  }
+  //----------------------------------------------------------------------------
+  std::vector<crypto::public_key> service_node_list::get_active_service_node_pubkeys() const
+  {
+    std::lock_guard lock(m_sn_mutex);
+    const auto infos = m_state.active_service_nodes_infos();
+    std::vector<crypto::public_key> out;
+    out.reserve(infos.size());
+    for (const auto &info : infos)
+      out.push_back(info.first);
+    return out;
   }
   //----------------------------------------------------------------------------
   void service_node_list::set_quorum_history_storage(uint64_t hist_size)
@@ -1043,6 +1061,7 @@ namespace service_nodes
     }
 
     store();
+    service_nodes::pulse::collector().discard_below(cryptonote::get_block_height(block) + 1);
     return true;
   }
 
@@ -1329,6 +1348,7 @@ namespace service_nodes
   //----------------------------------------------------------------------------
   void service_node_list::blockchain_detached(uint64_t height, bool)
   {
+    service_nodes::pulse::collector().clear();
     std::lock_guard lock(m_sn_mutex);
 
     uint64_t revert_to_height = height - 1;
@@ -1489,6 +1509,31 @@ namespace service_nodes
       if(boost::get<cryptonote::txout_to_key>(miner_tx.vout[vout_index].target).key != out_eph_public_key)
       {
         MERROR("Invalid service node reward output");
+        return false;
+      }
+    }
+
+    if (service_nodes::pulse::hybrid_sn_permitted(hard_fork_version))
+    {
+      cryptonote::tx_extra_pulse_round pulse{};
+      if (cryptonote::get_pulse_round_from_tx_extra(miner_tx.extra, pulse))
+      {
+        const auto infos = m_state.active_service_nodes_infos();
+        std::vector<crypto::public_key> active;
+        active.reserve(infos.size());
+        for (const auto &info : infos)
+          active.push_back(info.first);
+        const auto quorum_keys = service_nodes::pulse::quorum_pubkeys(height, active, pulse.round);
+        if (!service_nodes::pulse::verify_majority_certificate(pulse, height, prev_id, active.size(), quorum_keys))
+        {
+          MERROR("Pulse round extra on miner tx failed verification at height " << height);
+          return false;
+        }
+      }
+      else if (service_nodes::pulse::pow_replacement_ready() &&
+               service_nodes::pulse::exclusive_sn_required(hard_fork_version))
+      {
+        MERROR("Pulse round extra required on miner tx at exclusive height " << height);
         return false;
       }
     }

@@ -63,6 +63,8 @@ namespace cryptonote
     uint64_t gov = 0;
     uint64_t dev = 0;
     uint64_t net = 0;
+    /// HF20+: optional Pulse round extra (local SN vote until quorum relay exists).
+    boost::optional<tx_extra_pulse_round> pulse_round;
   };
 
   class Blockchain;
@@ -192,6 +194,9 @@ namespace cryptonote
     uint64_t burn_fixed = 0;
     uint64_t burn_percent = 0;
   };
+  //---------------------------------------------------------------
+  bool burn_allowed_at_hf(uint8_t hard_fork_version) noexcept;
+
   //---------------------------------------------------------------
   crypto::public_key get_destination_view_key_pub(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::tx_destination_entry>& change_addr);
   bool construct_tx(const account_keys& sender_account_keys, std::vector<tx_source_entry> &sources, const std::vector<tx_destination_entry>& destinations,

@@ -691,7 +691,7 @@ namespace cryptonote
       uint64_t block_weight_median;
       uint64_t start_time;
       uint64_t last_storage_server_ping;
-//      uint64_t last_arqnet_ping;
+      uint64_t last_arqnet_ping;
       uint64_t free_space;
       bool offline;
       bool untrusted;
@@ -731,7 +731,7 @@ namespace cryptonote
         KV_SERIALIZE_OPT(block_weight_median, (uint64_t)0)
         KV_SERIALIZE(start_time)
         KV_SERIALIZE(last_storage_server_ping)
-//        KV_SERIALIZE(last_arqnet_ping)
+        KV_SERIALIZE(last_arqnet_ping)
         KV_SERIALIZE(free_space)
         KV_SERIALIZE(offline)
         KV_SERIALIZE(untrusted)
@@ -1004,6 +1004,10 @@ namespace cryptonote
       uint64_t long_term_weight;
       std::string miner_tx_hash;
       std::string service_node_winner;
+      bool pulse_certificate = false;
+      uint8_t pulse_round = 0;
+      uint64_t pulse_signature_count = 0;
+      std::string pulse_payload_hash;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(major_version)
@@ -1027,6 +1031,10 @@ namespace cryptonote
         KV_SERIALIZE_OPT(long_term_weight, (uint64_t)0)
         KV_SERIALIZE(miner_tx_hash)
         KV_SERIALIZE(service_node_winner)
+        KV_SERIALIZE_OPT(pulse_certificate, false)
+        KV_SERIALIZE_OPT(pulse_round, (uint8_t)0)
+        KV_SERIALIZE_OPT(pulse_signature_count, (uint64_t)0)
+        KV_SERIALIZE_OPT(pulse_payload_hash, std::string())
       END_KV_SERIALIZE_MAP()
   };
 
@@ -2597,10 +2605,14 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     struct request_t
     {
       std::vector<std::string> service_node_pubkeys;
-      bool include_json;
+      bool include_json = false;
+      uint64_t offset = 0;
+      uint64_t limit = 0;
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(service_node_pubkeys)
         KV_SERIALIZE(include_json);
+        KV_SERIALIZE_OPT(offset, (uint64_t)0)
+        KV_SERIALIZE_OPT(limit, (uint64_t)0)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -2910,7 +2922,6 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
     };
   };
 
-/*
   struct COMMAND_RPC_ARQNET_PING
   {
     struct request
@@ -2929,7 +2940,258 @@ struct COMMAND_RPC_GET_BLOCKS_RANGE
       END_KV_SERIALIZE_MAP()
     };
   };
-*/
+
+  struct COMMAND_RPC_GET_ARQNET_STATUS
+  {
+    struct request_t
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::string backend;
+      bool initialized = false;
+      std::string transport;
+      std::string mesh;
+      bool mesh_shadow = false;
+      std::string mesh_shadow_endpoint;
+      uint64_t mesh_shadow_attempts = 0;
+      uint64_t mesh_shadow_ok = 0;
+      uint64_t mesh_shadow_fail = 0;
+      uint64_t mesh_live_relays = 0;
+      uint64_t mesh_vote_ob_live = 0;
+      uint64_t mesh_vote_ob_shadow_ok = 0;
+      uint64_t mesh_vote_ob_shadow_fail = 0;
+      uint64_t mesh_vote_ob_shadow_in = 0;
+      uint64_t mesh_vote_ob_shadow_parse_ok = 0;
+      uint64_t mesh_vote_ob_shadow_parse_fail = 0;
+      uint64_t mesh_pulse_rnd_live = 0;
+      uint64_t mesh_pulse_rnd_shadow_ok = 0;
+      uint64_t mesh_pulse_rnd_shadow_fail = 0;
+      uint64_t mesh_pulse_rnd_shadow_in = 0;
+      uint64_t mesh_pulse_rnd_shadow_parse_ok = 0;
+      uint64_t mesh_pulse_rnd_shadow_parse_fail = 0;
+      uint64_t mesh_blink_tx_live = 0;
+      uint64_t mesh_blink_tx_shadow_ok = 0;
+      uint64_t mesh_blink_tx_shadow_fail = 0;
+      uint64_t mesh_blink_tx_shadow_in = 0;
+      uint64_t mesh_blink_tx_shadow_parse_ok = 0;
+      uint64_t mesh_blink_tx_shadow_parse_fail = 0;
+      uint32_t mesh_shadow_ok_rate_bps = 0;
+      bool mesh_shadow_parity_sample_ok = false;
+      bool native_mesh_ready = false;
+      bool native_mesh_hf_permits = false;
+      std::string native_mesh_blocker;
+      bool native_mesh_exclusive = false;
+      std::string sn_operating_mode;
+      bool pulse_pow_required = true;
+      std::string pulse_blocker;
+      uint8_t hard_fork_version = 0;
+      uint64_t last_arqnet_ping = 0;
+      std::string status;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(backend)
+        KV_SERIALIZE(initialized)
+        KV_SERIALIZE(transport)
+        KV_SERIALIZE(mesh)
+        KV_SERIALIZE(mesh_shadow)
+        KV_SERIALIZE(mesh_shadow_endpoint)
+        KV_SERIALIZE(mesh_shadow_attempts)
+        KV_SERIALIZE(mesh_shadow_ok)
+        KV_SERIALIZE(mesh_shadow_fail)
+        KV_SERIALIZE(mesh_live_relays)
+        KV_SERIALIZE(mesh_vote_ob_live)
+        KV_SERIALIZE(mesh_vote_ob_shadow_ok)
+        KV_SERIALIZE(mesh_vote_ob_shadow_fail)
+        KV_SERIALIZE(mesh_vote_ob_shadow_in)
+        KV_SERIALIZE(mesh_vote_ob_shadow_parse_ok)
+        KV_SERIALIZE(mesh_vote_ob_shadow_parse_fail)
+        KV_SERIALIZE(mesh_pulse_rnd_live)
+        KV_SERIALIZE(mesh_pulse_rnd_shadow_ok)
+        KV_SERIALIZE(mesh_pulse_rnd_shadow_fail)
+        KV_SERIALIZE(mesh_pulse_rnd_shadow_in)
+        KV_SERIALIZE(mesh_pulse_rnd_shadow_parse_ok)
+        KV_SERIALIZE(mesh_pulse_rnd_shadow_parse_fail)
+        KV_SERIALIZE(mesh_blink_tx_live)
+        KV_SERIALIZE(mesh_blink_tx_shadow_ok)
+        KV_SERIALIZE(mesh_blink_tx_shadow_fail)
+        KV_SERIALIZE(mesh_blink_tx_shadow_in)
+        KV_SERIALIZE(mesh_blink_tx_shadow_parse_ok)
+        KV_SERIALIZE(mesh_blink_tx_shadow_parse_fail)
+        KV_SERIALIZE(mesh_shadow_ok_rate_bps)
+        KV_SERIALIZE(mesh_shadow_parity_sample_ok)
+        KV_SERIALIZE(native_mesh_ready)
+        KV_SERIALIZE(native_mesh_hf_permits)
+        KV_SERIALIZE(native_mesh_blocker)
+        KV_SERIALIZE(native_mesh_exclusive)
+        KV_SERIALIZE(sn_operating_mode)
+        KV_SERIALIZE(pulse_pow_required)
+        KV_SERIALIZE(pulse_blocker)
+        KV_SERIALIZE(hard_fork_version)
+        KV_SERIALIZE(last_arqnet_ping)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_PULSE_STATUS
+  {
+    struct request_t
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      uint8_t hard_fork_version = 0;
+      uint64_t height = 0;
+      uint64_t service_node_count = 0;
+      uint64_t active_service_node_count = 0;
+      std::string sn_operating_mode;
+      bool hybrid_permitted = false;
+      bool exclusive_required = false;
+      bool pow_required = true;
+      bool pow_replacement_ready = false;
+      std::string pulse_blocker;
+      uint64_t leader_index = 0;
+      uint8_t round = 0;
+      uint64_t majority_required = 0;
+      uint64_t signature_count = 0;
+      bool majority_ok = false;
+      bool certificate_ready = false;
+      std::string payload_hash;
+      bool in_quorum = false;
+      bool is_leader = false;
+      bool local_signature_ready = false;
+      std::vector<uint64_t> quorum_indices;
+      std::string status;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(hard_fork_version)
+        KV_SERIALIZE(height)
+        KV_SERIALIZE(service_node_count)
+        KV_SERIALIZE(active_service_node_count)
+        KV_SERIALIZE(sn_operating_mode)
+        KV_SERIALIZE(hybrid_permitted)
+        KV_SERIALIZE(exclusive_required)
+        KV_SERIALIZE(pow_required)
+        KV_SERIALIZE(pow_replacement_ready)
+        KV_SERIALIZE(pulse_blocker)
+        KV_SERIALIZE(leader_index)
+        KV_SERIALIZE(round)
+        KV_SERIALIZE(majority_required)
+        KV_SERIALIZE(signature_count)
+        KV_SERIALIZE(majority_ok)
+        KV_SERIALIZE(certificate_ready)
+        KV_SERIALIZE(payload_hash)
+        KV_SERIALIZE(in_quorum)
+        KV_SERIALIZE(is_leader)
+        KV_SERIALIZE(local_signature_ready)
+        KV_SERIALIZE(quorum_indices)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_STORAGE_STATUS
+  {
+    struct request_t
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      bool client_reachable = false;
+      uint64_t last_storage_server_ping = 0;
+      std::string client_error;
+      uint64_t gossip_interval_sec = 0;
+      uint64_t peer_count = 0;
+      uint64_t snode_count = 0;
+      uint64_t kv_entries = 0;
+      uint64_t gossip_rounds = 0;
+      uint64_t digest_ok = 0;
+      uint64_t sync_ok = 0;
+      uint64_t membership_ok = 0;
+      uint64_t gossip_fail = 0;
+      std::string service;
+      std::string status;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(client_reachable)
+        KV_SERIALIZE(last_storage_server_ping)
+        KV_SERIALIZE(client_error)
+        KV_SERIALIZE(gossip_interval_sec)
+        KV_SERIALIZE(peer_count)
+        KV_SERIALIZE(snode_count)
+        KV_SERIALIZE(kv_entries)
+        KV_SERIALIZE(gossip_rounds)
+        KV_SERIALIZE(digest_ok)
+        KV_SERIALIZE(sync_ok)
+        KV_SERIALIZE(membership_ok)
+        KV_SERIALIZE(gossip_fail)
+        KV_SERIALIZE(service)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_GET_BLINK_STATUS
+  {
+    struct request_t
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      uint64_t height = 0;
+      uint64_t quorum_size = 0;
+      uint64_t majority_required = 0;
+      uint64_t signature_count = 0;
+      bool majority_ok = false;
+      bool replaces_pow = false;
+      bool replaces_pulse = false;
+      bool wire_connected = false;
+      uint64_t mesh_blink_tx_live = 0;
+      uint64_t mesh_blink_tx_shadow_ok = 0;
+      uint64_t mesh_blink_tx_shadow_fail = 0;
+      uint64_t mesh_blink_tx_shadow_in = 0;
+      uint64_t mesh_blink_tx_shadow_parse_ok = 0;
+      uint64_t mesh_blink_tx_shadow_parse_fail = 0;
+      std::string blink_blocker;
+      std::string status;
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(height)
+        KV_SERIALIZE(quorum_size)
+        KV_SERIALIZE(majority_required)
+        KV_SERIALIZE(signature_count)
+        KV_SERIALIZE(majority_ok)
+        KV_SERIALIZE(replaces_pow)
+        KV_SERIALIZE(replaces_pulse)
+        KV_SERIALIZE(wire_connected)
+        KV_SERIALIZE(mesh_blink_tx_live)
+        KV_SERIALIZE(mesh_blink_tx_shadow_ok)
+        KV_SERIALIZE(mesh_blink_tx_shadow_fail)
+        KV_SERIALIZE(mesh_blink_tx_shadow_in)
+        KV_SERIALIZE(mesh_blink_tx_shadow_parse_ok)
+        KV_SERIALIZE(mesh_blink_tx_shadow_parse_fail)
+        KV_SERIALIZE(blink_blocker)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
 
   struct COMMAND_RPC_GET_STAKING_REQUIREMENT
   {

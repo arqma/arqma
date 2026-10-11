@@ -124,6 +124,32 @@ namespace daemon_args
     }
   };
 
+  const command_line::arg_descriptor<std::string> arg_arqnet_backend = {
+    "arqnet-backend"
+  , "Arq-Net messaging backend: legacy-arqnet (default, required for mainnet) or arqmq (experimental; non-mainnet / explicit override)"
+  , "legacy-arqnet"
+  };
+  const command_line::arg_descriptor<bool> arg_arqnet_allow_experimental = {
+    "arqnet-allow-experimental"
+  , "Allow --arqnet-backend=arqmq on mainnet (NOT recommended for production service nodes)"
+  , false
+  };
+  const command_line::arg_descriptor<bool> arg_arqnet_mesh_shadow = {
+    "arqnet-mesh-shadow"
+  , "Opt-in SocketStack dual-write of peer mesh commands (requires --arqnet-backend=arqmq; stagenet/testnet soak; mainnet needs --arqnet-allow-experimental). Live mesh stays SNNetwork."
+  , false
+  };
+  const command_line::arg_descriptor<bool> arg_arq_router = {
+    "arq-router"
+  , "Enable experimental Arq privacy router scaffold (disabled by default)"
+  , false
+  };
+  const command_line::arg_descriptor<std::string> arg_storage_client_url = {
+    "storage-client-url"
+  , "Outbound Storage Server base URL for reachability + get_storage_status / print_storage gossip counters (e.g. http://127.0.0.1:22021)"
+  , ""
+  };
+
 }  // namespace daemon_args
 
 #endif // DAEMON_COMMAND_LINE_ARGS_H

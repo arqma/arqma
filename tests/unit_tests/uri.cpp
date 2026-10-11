@@ -28,190 +28,260 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gtest/gtest.h"
+
+#include "cryptonote_basic/cryptonote_basic_impl.h"
+#include "serialization/binary_utils.h"
+#include "string_tools.h"
 #include "wallet/wallet2.h"
 
-#define TEST_ADDRESS "9tTLtauaEKSj7xoVXytVH32R1pLZBk4VV4mZFGEh4wkXhDWqw1soPyf3fGixf1kni31VznEZkWNEza9d5TvjWwq5PaohYHC"
-#define TEST_INTEGRATED_ADDRESS "A4A1uPj4qaxj7xoVXytVH32R1pLZBk4VV4mZFGEh4wkXhDWqw1soPyf3fGixf1kni31VznEZkWNEza9d5TvjWwq5acaPMJfMbn3ReTsBpp"
-// included payment id: <f612cac0b6cb1cda>
+#include <stdexcept>
 
-#define PARSE_URI(uri, expected) \
-  std::string address, payment_id, recipient_name, description, error; \
-  uint64_t amount; \
-  std::vector<std::string> unknown_parameters; \
-  tools::wallet2 w(cryptonote::TESTNET); \
-  bool ret = w.parse_uri(uri, address, payment_id, amount, description, recipient_name, unknown_parameters, error); \
-  ASSERT_EQ(ret, expected);
+namespace
+{
+  // Same fixture keys as base58 address tests — do not send funds here.
+  const std::string test_serialized_keys(
+      "\xf7\x24\xbc\x5c\x6c\xfb\xb9\xd9\x76\x02\xc3\x00\x42\x3a\x2f\x28"
+      "\x64\x18\x74\x51\x3a\x03\x57\x78\xa0\xc1\x77\x8d\x83\x32\x01\xe9"
+      "\x22\x09\x39\x68\x9e\xdf\x1a\xbd\x5b\xc1\xd0\x31\xf7\x3e\xcd\x6c"
+      "\x99\x3a\xdd\x66\xd6\x80\x88\x70\x45\x6a\xfe\xb8\xe7\xee\xb6\x8d",
+      64);
+
+  cryptonote::account_public_address fixture_address()
+  {
+    cryptonote::account_public_address addr{};
+    if (!serialization::parse_binary(test_serialized_keys, addr))
+      throw std::runtime_error("failed to parse fixture address keys");
+    return addr;
+  }
+
+  std::string test_address()
+  {
+    return cryptonote::get_account_address_as_str(cryptonote::TESTNET, false, fixture_address());
+  }
+
+  std::string test_integrated_address()
+  {
+    crypto::hash8 payment_id{};
+    // included payment id: <f612cac0b6cb1cda>
+    if (!epee::string_tools::hex_to_pod("f612cac0b6cb1cda", payment_id))
+      throw std::runtime_error("failed to parse fixture payment id");
+    return cryptonote::get_account_integrated_address_as_str(cryptonote::TESTNET, fixture_address(), payment_id);
+  }
+
+  void parse_uri(const std::string &uri, bool expected,
+                 std::string *address = nullptr, std::string *payment_id = nullptr,
+                 std::string *recipient_name = nullptr, std::string *description = nullptr,
+                 std::vector<std::string> *unknown_parameters = nullptr)
+  {
+    std::string address_local, payment_id_local, recipient_name_local, description_local, error;
+    uint64_t amount = 0;
+    std::vector<std::string> unknown_local;
+    tools::wallet2 w(cryptonote::TESTNET);
+    const bool ret = w.parse_uri(uri, address_local, payment_id_local, amount, description_local,
+                                 recipient_name_local, unknown_local, error);
+    ASSERT_EQ(expected, ret) << error;
+    if (address)
+      *address = address_local;
+    if (payment_id)
+      *payment_id = payment_id_local;
+    if (recipient_name)
+      *recipient_name = recipient_name_local;
+    if (description)
+      *description = description_local;
+    if (unknown_parameters)
+      *unknown_parameters = unknown_local;
+  }
+}
 
 TEST(uri, empty_string)
 {
-  PARSE_URI("", false);
+  parse_uri("", false);
 }
 
 TEST(uri, no_scheme)
 {
-  PARSE_URI("monero", false);
+  parse_uri("arqma", false);
 }
 
 TEST(uri, bad_scheme)
 {
-  PARSE_URI("http://foo", false);
+  parse_uri("http://foo", false);
 }
 
 TEST(uri, scheme_not_first)
 {
-  PARSE_URI(" monero:", false);
+  parse_uri(" arqma:", false);
 }
 
 TEST(uri, no_body)
 {
-  PARSE_URI("monero:", false);
+  parse_uri("arqma:", false);
 }
 
 TEST(uri, no_address)
 {
-  PARSE_URI("monero:?", false);
+  parse_uri("arqma:?", false);
 }
 
 TEST(uri, bad_address)
 {
-  PARSE_URI("monero:44444", false);
+  parse_uri("arqma:44444", false);
 }
 
 TEST(uri, good_address)
 {
-  PARSE_URI("monero:" TEST_ADDRESS, true);
-  ASSERT_EQ(address, TEST_ADDRESS);
+  const auto addr = test_address();
+  std::string parsed;
+  parse_uri("arqma:" + addr, true, &parsed);
+  ASSERT_EQ(addr, parsed);
 }
 
 TEST(uri, good_integrated_address)
 {
-  PARSE_URI("monero:" TEST_INTEGRATED_ADDRESS, true);
+  parse_uri("arqma:" + test_integrated_address(), true);
 }
 
 TEST(uri, parameter_without_inter)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"&amount=1", false);
+  parse_uri("arqma:" + test_address() + "&amount=1", false);
 }
 
 TEST(uri, parameter_without_equals)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?amount", false);
+  parse_uri("arqma:" + test_address() + "?amount", false);
 }
 
 TEST(uri, parameter_without_value)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_amount=", false);
+  parse_uri("arqma:" + test_address() + "?tx_amount=", false);
 }
 
 TEST(uri, negative_amount)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_amount=-1", false);
+  parse_uri("arqma:" + test_address() + "?tx_amount=-1", false);
 }
 
 TEST(uri, bad_amount)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_amount=alphanumeric", false);
+  parse_uri("arqma:" + test_address() + "?tx_amount=alphanumeric", false);
 }
 
 TEST(uri, duplicate_parameter)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_amount=1&tx_amount=1", false);
+  parse_uri("arqma:" + test_address() + "?tx_amount=1&tx_amount=1", false);
 }
 
 TEST(uri, unknown_parameter)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?unknown=1", true);
-  ASSERT_EQ(unknown_parameters.size(), 1);
-  ASSERT_EQ(unknown_parameters[0], "unknown=1");
+  std::vector<std::string> unknown;
+  parse_uri("arqma:" + test_address() + "?unknown=1", true, nullptr, nullptr, nullptr, nullptr, &unknown);
+  ASSERT_EQ(1u, unknown.size());
+  ASSERT_EQ("unknown=1", unknown[0]);
 }
 
 TEST(uri, unknown_parameters)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_amount=1&unknown=1&tx_description=desc&foo=bar", true);
-  ASSERT_EQ(unknown_parameters.size(), 2);
-  ASSERT_EQ(unknown_parameters[0], "unknown=1");
-  ASSERT_EQ(unknown_parameters[1], "foo=bar");
+  std::vector<std::string> unknown;
+  parse_uri("arqma:" + test_address() + "?tx_amount=1&unknown=1&tx_description=desc&foo=bar", true,
+            nullptr, nullptr, nullptr, nullptr, &unknown);
+  ASSERT_EQ(2u, unknown.size());
+  ASSERT_EQ("unknown=1", unknown[0]);
+  ASSERT_EQ("foo=bar", unknown[1]);
 }
 
 TEST(uri, empty_payment_id)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_payment_id=", false);
+  parse_uri("arqma:" + test_address() + "?tx_payment_id=", false);
 }
 
 TEST(uri, bad_payment_id)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_payment_id=1234567890", false);
+  parse_uri("arqma:" + test_address() + "?tx_payment_id=1234567890", false);
 }
 
 TEST(uri, short_payment_id)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_payment_id=1234567890123456", true);
-  ASSERT_EQ(address, TEST_ADDRESS);
-  ASSERT_EQ(payment_id, "1234567890123456");
+  const auto addr = test_address();
+  std::string parsed_addr, payment_id;
+  parse_uri("arqma:" + addr + "?tx_payment_id=1234567890123456", true, &parsed_addr, &payment_id);
+  ASSERT_EQ(addr, parsed_addr);
+  ASSERT_EQ("1234567890123456", payment_id);
 }
 
 TEST(uri, long_payment_id)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_payment_id=1234567890123456789012345678901234567890123456789012345678901234", true);
-  ASSERT_EQ(address, TEST_ADDRESS);
-  ASSERT_EQ(payment_id, "1234567890123456789012345678901234567890123456789012345678901234");
+  const auto addr = test_address();
+  std::string parsed_addr, payment_id;
+  parse_uri("arqma:" + addr + "?tx_payment_id=1234567890123456789012345678901234567890123456789012345678901234", true,
+            &parsed_addr, &payment_id);
+  ASSERT_EQ(addr, parsed_addr);
+  ASSERT_EQ("1234567890123456789012345678901234567890123456789012345678901234", payment_id);
 }
 
 TEST(uri, payment_id_with_integrated_address)
 {
-  PARSE_URI("monero:" TEST_INTEGRATED_ADDRESS"?tx_payment_id=1234567890123456", false);
+  parse_uri("arqma:" + test_integrated_address() + "?tx_payment_id=1234567890123456", false);
 }
 
 TEST(uri, empty_description)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_description=", true);
-  ASSERT_EQ(description, "");
+  std::string description;
+  parse_uri("arqma:" + test_address() + "?tx_description=", true, nullptr, nullptr, nullptr, &description);
+  ASSERT_EQ("", description);
 }
 
 TEST(uri, empty_recipient_name)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?recipient_name=", true);
-  ASSERT_EQ(recipient_name, "");
+  std::string recipient_name;
+  parse_uri("arqma:" + test_address() + "?recipient_name=", true, nullptr, nullptr, &recipient_name);
+  ASSERT_EQ("", recipient_name);
 }
 
 TEST(uri, non_empty_description)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_description=foo", true);
-  ASSERT_EQ(description, "foo");
+  std::string description;
+  parse_uri("arqma:" + test_address() + "?tx_description=foo", true, nullptr, nullptr, nullptr, &description);
+  ASSERT_EQ("foo", description);
 }
 
 TEST(uri, non_empty_recipient_name)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?recipient_name=foo", true);
-  ASSERT_EQ(recipient_name, "foo");
+  std::string recipient_name;
+  parse_uri("arqma:" + test_address() + "?recipient_name=foo", true, nullptr, nullptr, &recipient_name);
+  ASSERT_EQ("foo", recipient_name);
 }
 
 TEST(uri, url_encoding)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_description=foo%20bar", true);
-  ASSERT_EQ(description, "foo bar");
+  std::string description;
+  parse_uri("arqma:" + test_address() + "?tx_description=foo%20bar", true, nullptr, nullptr, nullptr, &description);
+  ASSERT_EQ("foo bar", description);
 }
 
 TEST(uri, non_alphanumeric_url_encoding)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_description=foo%2x", true);
-  ASSERT_EQ(description, "foo%2x");
+  std::string description;
+  parse_uri("arqma:" + test_address() + "?tx_description=foo%2x", true, nullptr, nullptr, nullptr, &description);
+  ASSERT_EQ("foo%2x", description);
 }
 
 TEST(uri, truncated_url_encoding)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_description=foo%2", true);
-  ASSERT_EQ(description, "foo%2");
+  std::string description;
+  parse_uri("arqma:" + test_address() + "?tx_description=foo%2", true, nullptr, nullptr, nullptr, &description);
+  ASSERT_EQ("foo%2", description);
 }
 
 TEST(uri, percent_without_url_encoding)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_description=foo%", true);
-  ASSERT_EQ(description, "foo%");
+  std::string description;
+  parse_uri("arqma:" + test_address() + "?tx_description=foo%", true, nullptr, nullptr, nullptr, &description);
+  ASSERT_EQ("foo%", description);
 }
 
 TEST(uri, url_encoded_once)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_description=foo%2020", true);
-  ASSERT_EQ(description, "foo 20");
+  std::string description;
+  parse_uri("arqma:" + test_address() + "?tx_description=foo%2020", true, nullptr, nullptr, nullptr, &description);
+  ASSERT_EQ("foo 20", description);
 }

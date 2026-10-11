@@ -36,6 +36,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <stdexcept>
 #include <chrono>
+#include "network_id_generated.h"
 
 using namespace std::literals;
 
@@ -151,6 +152,8 @@ using namespace std::literals;
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000   // 50MB maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
 #define P2P_MAX_PEERS_IN_HANDSHAKE                      250
+/// Pre-handshake Levin budget (matches epee LEVIN_INITIAL_MAX_PACKET_SIZE).
+#define P2P_PREAUTH_PACKET_MAX_SIZE                     (256 * 1024)
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       // 5 seconds
 #define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               20         // seconds
 #define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       // 2 seconds
@@ -163,6 +166,18 @@ constexpr auto P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT     = 5s;
 
 #define P2P_DEFAULT_LIMIT_RATE_UP                       8192       // kbps
 #define P2P_DEFAULT_LIMIT_RATE_DOWN                     32768      // kbps
+
+static constexpr uint32_t P2P_DEFAULT_TOTAL_CONNECTIONS =
+    P2P_DEFAULT_CONNECTIONS_COUNT_OUT + P2P_DEFAULT_CONNECTIONS_COUNT_IN;
+static constexpr uint32_t P2P_DEFAULT_TOTAL_CONNECTIONS_TEST =
+    P2P_DEFAULT_CONNECTIONS_COUNT_TEST_OUT + P2P_DEFAULT_CONNECTIONS_COUNT_TEST_IN;
+static constexpr uint64_t P2P_DEFAULT_LIMIT_RATE_UP_KBPS = P2P_DEFAULT_LIMIT_RATE_UP;
+static constexpr uint64_t P2P_DEFAULT_LIMIT_RATE_DOWN_KBPS = P2P_DEFAULT_LIMIT_RATE_DOWN;
+static constexpr uint64_t P2P_DEFAULT_PACKET_MAX_SIZE_BYTES = P2P_DEFAULT_PACKET_MAX_SIZE;
+static constexpr uint64_t P2P_DEFAULT_PACKET_MAX_SIZE_MB = P2P_DEFAULT_PACKET_MAX_SIZE_BYTES / 1000 / 1000;
+static constexpr uint64_t P2P_DEFAULT_PACKET_MAX_SIZE_HEADROOM_BYTES =
+    P2P_DEFAULT_PACKET_MAX_SIZE_BYTES - CRYPTONOTE_MAX_TX_SIZE;
+static constexpr uint64_t P2P_PREAUTH_PACKET_MAX_SIZE_BYTES = P2P_PREAUTH_PACKET_MAX_SIZE;
 
 #define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)    // 1 day
 #define P2P_IP_BLOCKTIME                                (60*60*24) // 2 days
@@ -186,6 +201,13 @@ constexpr auto P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT     = 5s;
 #define HF_VERSION_PER_OUTPUT_FEE                       cryptonote::network_version_19
 #define HF_VERSION_BURN                                 cryptonote::network_version_19
 #define HF_VERSION_CLSAG                                cryptonote::network_version_19
+/// HF20: permits native Arq-Net mesh cutover after Curve/ZAP peer relay is ready.
+/// Mainnet stays network_version_19 (SNNetwork / legacy backend) until this height.
+#define HF_VERSION_NATIVE_ARQNET_MESH                   cryptonote::network_version_20
+#define MAINNET_HARD_FORK_20_HEIGHT                     4000000ull
+/// HF21: exclusive new-style SN (Pulse + native mesh). Hybrid POSPOW window is HF20→HF21.
+#define HF_VERSION_PULSE_EXCLUSIVE                      cryptonote::network_version_21
+#define MAINNET_HARD_FORK_21_HEIGHT                     5000000ull
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS                8
 
@@ -219,6 +241,14 @@ static constexpr double POISSON_LOG_P_REJECT = -75.0; // Reject reorg if the pro
 static_assert(STAKING_SHARE_PARTS % MAX_NUMBER_OF_CONTRIBUTORS == 0, "Use a multiple of four, so that it divides easily by max number of contributors.");
 static_assert(STAKING_SHARE_PARTS % 2 == 0, "Use a multiple of two, so that it divides easily by two contributors.");
 static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it divides easily by three contributors.");
+static_assert(P2P_DEFAULT_PACKET_MAX_SIZE_BYTES == 50 * 1000 * 1000,
+    "P2P packet ceiling is documented as a 50 MB budget.");
+static_assert(P2P_DEFAULT_PACKET_MAX_SIZE_BYTES > CRYPTONOTE_MAX_TX_SIZE,
+    "P2P packet budget must remain larger than one max-sized transaction.");
+static_assert(P2P_PREAUTH_PACKET_MAX_SIZE_BYTES < P2P_DEFAULT_PACKET_MAX_SIZE_BYTES,
+    "pre-auth packet budget must stay below the full packet ceiling.");
+static_assert(P2P_PREAUTH_PACKET_MAX_SIZE_BYTES == 256 * 1024,
+    "pre-auth packet budget must stay aligned with Levin initial max.");
 
 #ifndef UPTIME_PROOF_BASE_MINUTE
 #define UPTIME_PROOF_BASE_MINUTE                        60
@@ -231,7 +261,7 @@ static_assert(STAKING_SHARE_PARTS % 3 == 0, "Use a multiple of three, so that it
 #define UPTIME_PROOF_MAX_TIME_IN_SECONDS                (UPTIME_PROOF_FREQUENCY_IN_SECONDS * 2 + UPTIME_PROOF_BUFFER_IN_SECONDS)
 
 #define STORAGE_SERVER_PING_LIFETIME                    UPTIME_PROOF_FREQUENCY_IN_SECONDS
-//#define ARQNET_PING_LIFETIME                            UPTIME_PROOF_FREQUENCY_IN_SECONDS
+#define ARQNET_PING_LIFETIME                            UPTIME_PROOF_FREQUENCY_IN_SECONDS
 
 #define DNS_BANLIST_LIFETIME                          (86400 * 8) // 8 days
 
@@ -256,9 +286,10 @@ namespace config
   const uint16_t RPC_DEFAULT_PORT = 19994;
   const uint16_t ZMQ_DEFAULT_PORT = 19995;
   const uint16_t ANET_DEFAULT_PORT = 19996;
-  boost::uuids::uuid const NETWORK_ID = { {
-      0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A
-    } }; // Bender's nightmare
+  // Mainnet NETWORK_ID is the historical fixed UUID (live P2P continuity).
+  // Testnet/stagenet IDs are commit-scoped (dirty tree isolates). See
+  // cmake/GenNetworkId.cmake.
+  boost::uuids::uuid const NETWORK_ID = { { ARQMA_NET_ID_MAINNET_BYTES } };
   std::string const GENESIS_TX = "011201ff00011e026bc5c7db8a664f652d78adb587ac4d759c6757258b64ef9cba3c0354e64fb2e42101abca6a39c561d0897be183eb0143990eba201aa7d2c652ab0555d28bb4b70728";
   uint32_t const GENESIS_NONCE = 19993;
   std::string const GOV_WALLET_ADDRESS = "ar2dJ21SCuNiJndoQBf5ojhbdA7K8B3sREpnWSg4pHedXcwMbvUkYREAapZJMn3cVRj6VqDqDkj9bFoXLJViCmFs2qWkdufHt";
@@ -274,9 +305,7 @@ namespace config
     const uint16_t RPC_DEFAULT_PORT = 29994;
     const uint16_t ZMQ_DEFAULT_PORT = 29995;
     const uint16_t ANET_DEFAULT_PORT = 29996;
-    boost::uuids::uuid const NETWORK_ID = { {
-        0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1B
-      } }; // Bender's daydream
+    boost::uuids::uuid const NETWORK_ID = { { ARQMA_NET_ID_TESTNET_BYTES } };
     std::string const GOV_WALLET_ADDRESS = "atywxUgKyRajPKSRHWDtjyPTaE9thXgyrTpk9RsdkYzCdPYSxtTkW8Jj6xgrNHXLEd22yb7Gdk39DoJpgrLKTe85NP22nsWGY";
     std::string const DEV_WALLET_ADDRESS = "atywfJChhS1XLjfY2pDGUHNo5BcWMM5ZJeFs4pWGs9p7gCbxSguxoyBWLDYasHuY7yHppCWYRbPPMHNVf2EXuzpq2xMZLhQZMW";
     std::string const NET_WALLET_ADDRESS = "";
@@ -291,9 +320,7 @@ namespace config
     const uint16_t RPC_DEFAULT_PORT = 39994;
     const uint16_t ZMQ_DEFAULT_PORT = 39995;
     const uint16_t ANET_DEFAULT_PORT = 39996;
-    boost::uuids::uuid const NETWORK_ID = { {
-        0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1C
-      } }; // Bender's daydream
+    boost::uuids::uuid const NETWORK_ID = { { ARQMA_NET_ID_STAGENET_BYTES } };
     std::string const GOV_WALLET_ADDRESS = "as3DH2He8go7QzsiWc2PK4by2XdQZmUTF8Bv2bKY3egmRH9zPAF3iwWFteTPYaob4m5GuCNTLHFgtVdA6nbuP3Gp1x4Fvjv5G";
     std::string const DEV_WALLET_ADDRESS = "as1gAmaQQZMDy8SQzeqQSxGJJJpinLxSpgALxxZEDyNL6QB6hREvXzoVDi9LrFGJVu1x33toQVe9hWeXdhsjnkg7199GtodQy";
     std::string const NET_WALLET_ADDRESS = "as1u1cXxqXRgkRTiYp6ymQ6AymVM4qcogP5R3MVogLabGMfqWvcKB2GQMqjcBaLbjMaCMmeWGbJ8hQEzi7S97xa51NUz3NwNs";
@@ -389,6 +416,8 @@ namespace cryptonote
     network_version_17,
     network_version_18,
     network_version_19,
+    network_version_20,
+    network_version_21,
 
     network_version_count,
   };

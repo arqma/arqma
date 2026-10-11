@@ -28,7 +28,8 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 set(rpc_base_sources
-  rpc_args.cpp)
+  rpc_args.cpp
+  rpc_validation.cpp)
 
 set(rpc_sources
   core_rpc_server.cpp
@@ -43,7 +44,8 @@ set(daemon_rpc_server_sources
   zmq_server.cpp)
 
 set(rpc_base_headers
-  rpc_args.h)
+  rpc_args.h
+  rpc_validation.h)
 
 set(rpc_headers
   rpc_handler.h)
@@ -109,6 +111,9 @@ target_link_libraries(rpc
     common
     cryptonote_core
     cryptonote_protocol
+    arqmq
+    arq_storage
+    arq_blink
     net
     version
     ${Boost_REGEX_LIBRARY}

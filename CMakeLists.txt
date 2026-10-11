@@ -92,7 +92,7 @@ if(IOS)
   include(CMakeLists_IOS.txt)
 endif()
 
-cmake_minimum_required(VERSION 3.12...3.31)
+cmake_minimum_required(VERSION 3.16...3.31)
 statusinfo("CMake version ${CMAKE_VERSION}")
 
 project(arqma
@@ -125,9 +125,16 @@ enable_language(C ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# UTF-8 literals (u8"...") are widely used as char/string_view in epee and
+# protocol code. C++20 makes them char8_t by default; keep classic behaviour
+# until those call sites are migrated intentionally.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>)
+endif()
 
 function (add_c_flag_if_supported flag var)
   string(REPLACE "-" "_" supported ${flag}_c)
@@ -393,6 +400,8 @@ endif()
 #   set(BSDI TRUE)
 
 include_directories(external/rapidjson/include external/easylogging++ src contrib/epee/include external/cppzmq external)
+# Commit-scoped NETWORK_ID header (cmake/GenNetworkId.cmake -> network_id_generated.h).
+include_directories("${CMAKE_BINARY_DIR}")
 
 if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)

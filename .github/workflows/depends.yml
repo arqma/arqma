@@ -1,6 +1,9 @@
 name: ci/gh-actions/depends
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 env:
   APT_SET_CONF: |
@@ -17,7 +20,7 @@ jobs:
   build-cross:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:20.04
+      image: ubuntu:22.04
       env:
         DEBIAN_FRONTEND: noninteractive
         CCACHE_TEMPDIR: /tmp/.ccache-temp
@@ -39,14 +42,25 @@ jobs:
             host: "x86_64-unknown-linux-gnu"
           - name: "build-depends-macOS-x64"
             host: "x86_64-apple-darwin"
-            packages: "clang"
+            packages: "clang-19 lld-19"
           - name: "build-depends-macOS-arm64"
             host: "arm64-apple-darwin"
-            packages: "clang"
+            packages: "clang-19 lld-19"
     name: ${{ matrix.toolchain.name }}
     steps:
       - name: set apt conf
         run: ${{ env.APT_SET_CONF }}
+      - name: install base apt tools
+        run: apt update; apt -y install ca-certificates curl
+      - name: prepare apple-darwin llvm
+        if: ${{ matrix.toolchain.host == 'x86_64-apple-darwin' || matrix.toolchain.host == 'arm64-apple-darwin' }}
+        run: |
+          cat << EOF >> /etc/apt/sources.list
+          deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main
+          deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main
+          EOF
+          curl https://apt.llvm.org/llvm-snapshot.gpg.key > /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "/usr/lib/llvm-19/bin/" >> $GITHUB_PATH
       - name: install dependencies
         run: apt update; apt -y install build-essential libtool cmake autotools-dev automake pkg-config python3 gperf bsdmainutils curl git ca-certificates unzip ccache ${{ matrix.toolchain.packages }}
       - name: configure git
@@ -65,9 +79,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: contrib/depends/built
-          key: depends-${{ matrix.toolchain.host }}-${{ hashFiles('contrib/depends/packages/*') }}
+          key: depends-${{ matrix.toolchain.host }}-${{ hashFiles('contrib/depends/packages/*','contrib/depends/hosts/*') }}
           restore-keys: |
-            depends-${{ matrix.toolchain.host }}-${{ hashFiles('contrib/depends/packages/*') }}
+            depends-${{ matrix.toolchain.host }}-${{ hashFiles('contrib/depends/packages/*','contrib/depends/hosts/*') }}
             depends-${{ matrix.toolchain.host }}-
       - name: prepare w64-mingw32
         if: ${{ matrix.toolchain.host == 'x86_64-w64-mingw32' }}

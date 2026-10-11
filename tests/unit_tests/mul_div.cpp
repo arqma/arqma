@@ -31,7 +31,7 @@
 
 #include "gtest/gtest.h"
 
-#include "common/int-util.h"
+#include "int-util.h"
 
 namespace
 {

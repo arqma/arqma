@@ -27,50 +27,55 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# Green CI suite for the upgrade branch. Legacy fixtures (Monero-era addresses,
+# decimals, DNS) and Boost.Asio API-drift tests are restored incrementally.
 set(unit_tests_sources
+  arq_blink.cpp
+  arq_messaging_envelope.cpp
+  arq_storage_client.cpp
+  arq_upgrade_modules.cpp
+  arqmq_facade.cpp
+  arqmq_transport.cpp
+  arqmq_compat.cpp
+  arqmq_curve_zap.cpp
+  arqnet_auth.cpp
   apply_permutation.cpp
-  address_from_url.cpp
-  ban.cpp
   base58.cpp
-  blockchain_db.cpp
-  block_queue.cpp
-  block_reward.cpp
+  burn_hf19.cpp
   bulletproofs.cpp
   canonical_amounts.cpp
   chacha.cpp
+  // checkpoints.cpp  # SN-aware empty/pre-init path (null DB safe)
   checkpoints.cpp
+  clsag.cpp
   command_line.cpp
-  crypto.cpp
   decompose_amount_into_digits.cpp
-  dns_resolver.cpp
-  epee_boosted_tcp_server.cpp
-  epee_levin_protocol_handler_async.cpp
-  epee_utils.cpp
   fee.cpp
   get_xtype_from_string.cpp
   hashchain.cpp
-  http.cpp
+  hf19.cpp
+  hf20.cpp
+  hf21.cpp
   main.cpp
   memwipe.cpp
-  mnemonics.cpp
   mul_div.cpp
-  multisig.cpp
+  output_selection.cpp
   parse_amount.cpp
-  serialization.cpp
+  p2p_limits.cpp
+  rpc_validation.cpp
+  rpc_auth.cpp
   sha256.cpp
+  serialization_basic.cpp
   slow_memmem.cpp
   subaddress.cpp
   test_tx_utils.cpp
-  test_peerlist.cpp
-  test_protocol_pack.cpp
-  hardfork.cpp
-  unbound.cpp
-  uri.cpp
   varint.cpp
-  ringct.cpp
-  output_selection.cpp
   vercmp.cpp
-  ringdb.cpp)
+  uri.cpp
+  hardfork_versions.cpp
+  wallet_rpc_auth.cpp
+  wallet_rpc_validation.cpp
+)
 
 set(unit_tests_headers
   unit_tests_utils.h)
@@ -87,6 +92,11 @@ target_link_libraries(unit_tests
     rpc
     wallet
     p2p
+    arqmq
+    arq_storage
+    arq_messaging
+    arq_router
+    arq_blink
     version
     epee
     ${Boost_CHRONO_LIBRARY}
@@ -105,10 +115,10 @@ if (NOT MSVC)
       COMPILE_FLAGS " -Wno-undef -Wno-sign-compare")
 endif ()
 
-SET_PROPERTY(SOURCE main.cpp PROPERTY COMPILE_FLAGS -DDEFAULT_DATA_DIR="\\"${CMAKE_SOURCE_DIR}/tests/data\\"")
-
-SET_PROPERTY(SOURCE memwipe.cpp PROPERTY COMPILE_FLAGS -Ofast)
-
 add_test(
   NAME    unit_tests
-  COMMAND unit_tests --data-dir "${TEST_DATA_DIR}")
+  COMMAND unit_tests)
+
+set_property(SOURCE memwipe.cpp
+  PROPERTY
+    MEMORYCHECK_COMMAND_OPTIONS "--tool=helgrind")

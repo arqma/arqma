@@ -332,6 +332,8 @@ namespace service_nodes
     }
 
     void set_my_service_node_keys(const service_node_keys *keys);
+    const service_node_keys *get_my_service_node_keys() const;
+    std::vector<crypto::public_key> get_active_service_node_pubkeys() const;
     void set_quorum_history_storage(uint64_t hist_size); // 0 = none (default), 1 = unlimited, N = # of blocks
     bool store();
 

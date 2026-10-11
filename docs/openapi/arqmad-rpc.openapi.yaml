@@ -1,0 +1,350 @@
+openapi: 3.0.3
+info:
+  title: Arqmad RPC
+  version: 0.3.0
+  description: >
+    Minimal OpenAPI scaffold for selected Arqma daemon JSON-RPC methods during
+    the upgrade branch modernization work. Ping/status helpers are JSON-RPC
+    methods (`arqnet_ping`, `storage_server_ping`, `get_arqnet_status`,
+    `get_pulse_status`, `get_storage_status`, `get_blink_status`), not REST GET paths.
+    `get_arqnet_status` returns `backend`, `transport`, `mesh` (live peer quorum:
+    `snnetwork` until HF20+ with a CURVE `--arqnet-backend=arqmq` stack; exclusive
+    intent at HF21), soak counters (`mesh_vote_ob_*`, `mesh_pulse_rnd_*, mesh_blink_tx_*`),
+    `sn_operating_mode`, and Pulse PoW gates.
+    `get_pulse_status` reports hybrid/exclusive SN mode, wait-window `round`,
+    leader, quorum, collector signature count, `majority_ok`, and local signature
+    slot. Miner Pulse extra is a majority certificate bound to the miner payload
+    hash; templates attach it before coinbase padding so weight stays locked in.
+    `get_pulse_status` also reports `certificate_ready` and hex `payload_hash`.
+    Daemon `print_pulse` dumps the same fields. Block header RPC adds
+    `pulse_certificate` / `pulse_round` / `pulse_signature_count` / `pulse_payload_hash`
+    when miner extra carries a Pulse certificate.
+    `get_blink_status` / `print_blink` report the in-daemon Blink collector
+    (7 of 10 quorum, `wire_connected`, `mesh_blink_tx_*`). Blink does not
+    replace Pulse or RandomARQ.
+    `get_storage_status` / `print_storage` report optional storage-probe
+    reachability and gossip counters (`gossip_interval_sec`, `peer_count`,
+    `gossip_rounds`, `digest_ok` / `sync_ok` / `membership_ok` / `gossip_fail`).
+    Optional companion processes `arqma-storage` / `arqma-router` live in this
+    repo as operator probes (`docs/PRODUCT.md`); `arqmad` only probes them.
+    Block production is hybrid: RandomARQ stays required
+    (`pulse-pow-replacement-not-ready`; `pow_replacement_ready` stays false).
+    Privileged wallet-rpc methods
+    are documented under the separate `arqma-wallet-rpc` surface; daemon
+    operator methods require unrestricted RPC (see `rpc_auth.h`). Cleartext
+    storage reachability uses an HTTP GET probe after TCP connect; TLS
+    endpoints remain TCP-only until a TLS client is linked.
+servers:
+  - url: http://127.0.0.1:19994
+    description: arqmad JSON-RPC / status helpers
+  - url: http://127.0.0.1:19995
+    description: arqma-wallet-rpc (restricted mode denylist in wallet_rpc_auth.h)
+paths:
+  /json_rpc:
+    post:
+      summary: Call JSON-RPC methods such as get_info or get_service_nodes
+      operationId: jsonRpc
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            examples:
+              getInfo:
+                value:
+                  jsonrpc: "2.0"
+                  id: "0"
+                  method: get_info
+              getServiceNodes:
+                value:
+                  jsonrpc: "2.0"
+                  id: "1"
+                  method: get_service_nodes
+                  params:
+                    include_json: false
+                    offset: 0
+                    limit: 100
+      responses:
+        '200':
+          description: JSON-RPC response envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonRpcResponse'
+components:
+  schemas:
+    JsonRpcRequest:
+      type: object
+      required:
+        - jsonrpc
+        - id
+        - method
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        method:
+          type: string
+          enum:
+            - get_info
+            - get_service_nodes
+            - get_arqnet_status
+            - get_pulse_status
+            - get_storage_status
+            - get_blink_status
+            - arqnet_ping
+            - storage_server_ping
+            - get_block_header_by_hash
+            - get_block_headers_range
+            - start_mining
+            - stop_mining
+            - stop_daemon
+        params:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - $ref: '#/components/schemas/GetServiceNodesParams'
+            - $ref: '#/components/schemas/GetBlockHeadersRangeParams'
+    OperatorMethods:
+      type: object
+      description: >
+        Methods that require Operator/Admin access (`rpc_auth.h`). Denied on
+        restricted public RPC.
+      properties:
+        methods:
+          type: array
+          items:
+            type: string
+          example:
+            - start_mining
+            - stop_mining
+            - stop_daemon
+            - set_bans
+            - flush_txpool
+            - prune_blockchain
+            - get_service_node_key
+            - get_service_node_privkey
+    WalletRpcBatchLimits:
+      type: object
+      description: Soft caps from wallet_rpc_validation.h
+      properties:
+        max_transfer_destinations:
+          type: integer
+          const: 100
+        max_payment_ids_per_request:
+          type: integer
+          const: 100
+        max_address_book_indices_per_request:
+          type: integer
+          const: 1000
+        max_subaddr_indices_per_request:
+          type: integer
+          const: 1000
+    BatchLimits:
+      type: object
+      description: Soft DoS caps enforced by rpc_validation helpers
+      properties:
+        max_tx_hashes_per_request:
+          type: integer
+          const: 100
+        max_key_images_per_request:
+          type: integer
+          const: 1000
+        max_block_heights_per_request:
+          type: integer
+          const: 100
+        max_block_hashes_per_request:
+          type: integer
+          const: 100
+        max_block_headers_range:
+          type: integer
+          const: 1000
+    GetBlockHeadersRangeParams:
+      type: object
+      required: [start_height, end_height]
+      properties:
+        start_height:
+          type: integer
+          format: uint64
+          minimum: 0
+        end_height:
+          type: integer
+          format: uint64
+          minimum: 0
+        fill_pow_hash:
+          type: boolean
+          default: false
+    JsonRpcResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        result:
+          oneOf:
+            - $ref: '#/components/schemas/GetStorageStatusResult'
+            - $ref: '#/components/schemas/GetBlinkStatusResult'
+            - type: object
+              additionalProperties: true
+        error:
+          type: object
+          additionalProperties: true
+
+    GetStorageStatusResult:
+      type: object
+      description: >
+        Result of `get_storage_status` (also printed by daemon `print_storage`).
+        Values come from optional probe `arqma-storage` `GET /status` when reachable.
+      properties:
+        client_reachable:
+          type: boolean
+        last_storage_server_ping:
+          type: integer
+          format: uint64
+        client_error:
+          type: string
+        gossip_interval_sec:
+          type: integer
+          format: uint64
+        peer_count:
+          type: integer
+          format: uint64
+        snode_count:
+          type: integer
+          format: uint64
+        kv_entries:
+          type: integer
+          format: uint64
+        gossip_rounds:
+          type: integer
+          format: uint64
+        digest_ok:
+          type: integer
+          format: uint64
+        sync_ok:
+          type: integer
+          format: uint64
+        membership_ok:
+          type: integer
+          format: uint64
+        gossip_fail:
+          type: integer
+          format: uint64
+        service:
+          type: string
+        status:
+          type: string
+    GetBlinkStatusResult:
+      type: object
+      description: >
+        Result of `get_blink_status` (also printed by daemon `print_blink`).
+        Local Blink collector plus mesh `blink_tx` soak counters. Does not
+        replace Pulse or RandomARQ.
+      properties:
+        height:
+          type: integer
+          format: uint64
+        quorum_size:
+          type: integer
+          format: uint64
+        majority_required:
+          type: integer
+          format: uint64
+        signature_count:
+          type: integer
+          format: uint64
+        majority_ok:
+          type: boolean
+        replaces_pow:
+          type: boolean
+        replaces_pulse:
+          type: boolean
+        wire_connected:
+          type: boolean
+        mesh_blink_tx_live:
+          type: integer
+          format: uint64
+        mesh_blink_tx_shadow_ok:
+          type: integer
+          format: uint64
+        mesh_blink_tx_shadow_fail:
+          type: integer
+          format: uint64
+        mesh_blink_tx_shadow_in:
+          type: integer
+          format: uint64
+        mesh_blink_tx_shadow_parse_ok:
+          type: integer
+          format: uint64
+        mesh_blink_tx_shadow_parse_fail:
+          type: integer
+          format: uint64
+        blink_blocker:
+          type: string
+        status:
+          type: string
+    PingResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        success:
+          type: boolean
+    GetServiceNodesParams:
+      type: object
+      properties:
+        service_node_pubkeys:
+          type: array
+          description: >
+            Optional list of service node public keys to filter against. Each key
+            must be a non-empty 32-byte hex string.
+          items:
+            type: string
+        include_json:
+          type: boolean
+          description: Include the legacy raw JSON blob in `as_json`.
+          default: false
+        offset:
+          type: integer
+          format: uint64
+          description: >
+            Zero-based pagination offset applied after service node filtering.
+          minimum: 0
+          default: 0
+        limit:
+          type: integer
+          format: uint64
+          description: >
+            Optional pagination limit. When omitted or zero, the daemon returns
+            the full filtered result set.
+          minimum: 0
+          default: 0
+    GetServiceNodesResult:
+      type: object
+      properties:
+        service_node_states:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        height:
+          type: integer
+          format: uint64
+        block_hash:
+          type: string
+        as_json:
+          type: string
+        status:
+          type: string

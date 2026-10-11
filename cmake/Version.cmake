@@ -32,10 +32,39 @@ function (write_static_version_header hash)
   configure_file("${CMAKE_SOURCE_DIR}/src/version.cpp.in" "${CMAKE_BINARY_DIR}/version.cpp")
 endfunction ()
 
+function (write_static_network_id_header seed dirty)
+  set(ARQMA_NET_ID_COMMIT "${seed}")
+  set(ARQMA_NET_ID_DIRTY ${dirty})
+  set(ARQMA_NET_ID_DIRTY_HASH "")
+  set(ARQMA_NET_ID_SEED "${seed}")
+  # Mainnet stays on the historical fixed UUID (live P2P continuity).
+  set(ARQMA_NET_ID_MAINNET_BYTES "0x11, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x11, 0xFF, 0xFF, 0xFF, 0x11, 0x11, 0x1A")
+  foreach(_net IN ITEMS testnet stagenet)
+    string(SHA256 _hex "arqma-network-id|${_net}|${seed}")
+    string(TOLOWER "${_hex}" _hex)
+    set(_bytes "")
+    set(_i 0)
+    while(_i LESS 32)
+      math(EXPR _next "${_i} + 2")
+      string(SUBSTRING "${_hex}" ${_i} 2 _b)
+      if(_bytes STREQUAL "")
+        set(_bytes "0x${_b}")
+      else()
+        set(_bytes "${_bytes}, 0x${_b}")
+      endif()
+      set(_i ${_next})
+    endwhile()
+    string(TOUPPER "${_net}" _net_up)
+    set(ARQMA_NET_ID_${_net_up}_BYTES "${_bytes}")
+  endforeach()
+  configure_file("${CMAKE_SOURCE_DIR}/src/network_id_generated.h.in"
+                 "${CMAKE_BINARY_DIR}/network_id_generated.h" @ONLY)
+endfunction ()
 find_package(Git QUIET)
 if ("$Format:$" STREQUAL "")
   # We're in a tarball; use hard-coded variables.
   write_static_version_header("release")
+  write_static_network_id_header("release" 0)
 elseif (GIT_FOUND OR Git_FOUND)
   message(STATUS "Found Git: ${GIT_EXECUTABLE}")
   add_custom_command(
@@ -46,9 +75,33 @@ elseif (GIT_FOUND OR Git_FOUND)
                       "-P" "cmake/GenVersion.cmake"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     DEPENDS           "${CMAKE_SOURCE_DIR}/src/version.cpp.in")
+
+  # Always regenerate NETWORK_ID so dirty working trees cannot reuse a clean ID.
+  add_custom_target(gennetworkid ALL
+    COMMAND "${CMAKE_COMMAND}"
+            "-D" "GIT=${GIT_EXECUTABLE}"
+            "-D" "SRC_DIR=${CMAKE_SOURCE_DIR}"
+            "-D" "TO=${CMAKE_BINARY_DIR}/network_id_generated.h"
+            "-P" "${CMAKE_SOURCE_DIR}/cmake/GenNetworkId.cmake"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Generating NETWORK_ID header (fixed mainnet; commit-scoped test/stage)"
+    SOURCES "${CMAKE_SOURCE_DIR}/src/network_id_generated.h.in"
+            "${CMAKE_SOURCE_DIR}/cmake/GenNetworkId.cmake")
+  # Configure-time seed so the first compilation finds the header.
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}"
+            "-D" "GIT=${GIT_EXECUTABLE}"
+            "-D" "SRC_DIR=${CMAKE_SOURCE_DIR}"
+            "-D" "TO=${CMAKE_BINARY_DIR}/network_id_generated.h"
+            "-P" "${CMAKE_SOURCE_DIR}/cmake/GenNetworkId.cmake"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 else()
   message(STATUS "WARNING: Git was not found!")
   write_static_version_header("unknown")
+  write_static_network_id_header("unknown" 0)
 endif ()
 add_custom_target(genversion ALL
   DEPENDS "${CMAKE_BINARY_DIR}/version.cpp")
+if(TARGET gennetworkid)
+  add_dependencies(genversion gennetworkid)
+endif()

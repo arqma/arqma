@@ -33,6 +33,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <vector>
 
 #include "serialization/serialization.h"
 #include "serialization/binary_archive.h"
@@ -58,6 +59,7 @@
 #define TX_EXTRA_TAG_TX_KEY_IMAGE_PROOFS        0x76
 #define TX_EXTRA_TAG_TX_KEY_IMAGE_UNLOCK        0x77
 #define TX_EXTRA_TAG_BURN                       0x78
+#define TX_EXTRA_TAG_PULSE                      0x79
 
 #define TX_EXTRA_MYSTERIOUS_MINERGATE_TAG       0xDE
 
@@ -349,6 +351,42 @@ namespace cryptonote
     END_SERIALIZE()
   };
 
+  /// Pulse round participation carried on the miner transaction (HF20+).
+  /// `leader_index` is among active service nodes; vote indices are into the
+  /// Pulse quorum (0 = leader). Optional under hybrid PoW (RandomARQ stays required).
+  struct tx_extra_pulse_round
+  {
+    struct vote
+    {
+      vote() = default;
+      vote(crypto::signature const &signature, uint32_t validator_index)
+        : signature(signature), validator_index(validator_index) {}
+      crypto::signature signature;
+      uint32_t validator_index = 0;
+
+      BEGIN_SERIALIZE()
+        VARINT_FIELD(validator_index)
+        FIELD(signature)
+      END_SERIALIZE()
+    };
+
+    uint64_t height = 0;
+    uint8_t round = 0;
+    uint32_t leader_index = 0;
+    /// Hash of (timestamp || tx hashes || miner vout[0] key). Null means round-only
+    /// votes that must not be attached as miner extra.
+    crypto::hash payload_hash{};
+    std::vector<vote> votes;
+
+    BEGIN_SERIALIZE()
+      VARINT_FIELD(height)
+      FIELD(round)
+      VARINT_FIELD(leader_index)
+      FIELD(payload_hash)
+      FIELD(votes)
+    END_SERIALIZE()
+  };
+
   // tx_extra_field format, except tx_extra_padding and tx_extra_pub_key:
   //   varint tag;
   //   varint size;
@@ -367,7 +405,8 @@ namespace cryptonote
                          tx_extra_tx_secret_key,
                          tx_extra_tx_key_image_proofs,
                          tx_extra_tx_key_image_unlock,
-                         tx_extra_burn
+                         tx_extra_burn,
+                         tx_extra_pulse_round
                         > tx_extra_field;
 }
 
@@ -388,3 +427,4 @@ VARIANT_TAG(binary_archive, cryptonote::tx_extra_tx_secret_key,             TX_E
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_tx_key_image_proofs,       TX_EXTRA_TAG_TX_KEY_IMAGE_PROOFS);
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_tx_key_image_unlock,       TX_EXTRA_TAG_TX_KEY_IMAGE_UNLOCK);
 VARIANT_TAG(binary_archive, cryptonote::tx_extra_burn,                      TX_EXTRA_TAG_BURN);
+VARIANT_TAG(binary_archive, cryptonote::tx_extra_pulse_round,               TX_EXTRA_TAG_PULSE);

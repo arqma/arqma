@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arqma Messenger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/ui.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="rail">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="brand-name">Arqma</div>
+          <div class="brand-sub">Messenger</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button type="button" class="nav-item active" data-view="inbox">Inbox</button>
+        <button type="button" class="nav-item" data-view="send">Send</button>
+        <button type="button" class="nav-item" data-view="contacts">Contacts</button>
+        <button type="button" class="nav-item" data-view="status">Status</button>
+      </nav>
+      <div class="rail-foot">
+        <div class="muted" id="identity-short">No identity</div>
+        <button type="button" class="btn ghost" id="btn-gen">Generate identity</button>
+      </div>
+    </aside>
+    <main class="stage">
+      <header class="top">
+        <h1 id="view-title">Inbox</h1>
+        <p class="lede" id="view-lede">Sealed messages waiting in your inbox namespace.</p>
+      </header>
+
+      <section class="panel view" id="view-inbox">
+        <div class="toolbar">
+          <button type="button" class="btn" id="btn-refresh-inbox">Refresh</button>
+          <button type="button" class="btn secondary" id="btn-open-all">Open unread</button>
+        </div>
+        <ul class="list" id="inbox-list"></ul>
+        <pre class="log" id="inbox-log"></pre>
+      </section>
+
+      <section class="panel view hidden" id="view-send">
+        <label class="field">
+          <span>To</span>
+          <input id="send-to" placeholder="name, 64-hex, or name=hex" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Message</span>
+          <textarea id="send-text" rows="5" placeholder="Write a short message"></textarea>
+        </label>
+        <button type="button" class="btn" id="btn-send">Send</button>
+        <pre class="log" id="send-log"></pre>
+      </section>
+
+      <section class="panel view hidden" id="view-contacts">
+        <div class="toolbar">
+          <button type="button" class="btn" id="btn-refresh-contacts">Refresh</button>
+        </div>
+        <div class="row">
+          <label class="field grow">
+            <span>Name</span>
+            <input id="contact-name" placeholder="alice" autocomplete="off" />
+          </label>
+          <label class="field grow">
+            <span>Public key</span>
+            <input id="contact-hex" placeholder="64 hex chars" autocomplete="off" />
+          </label>
+          <button type="button" class="btn" id="btn-save-contact">Save</button>
+        </div>
+        <ul class="list" id="contacts-list"></ul>
+        <pre class="log" id="contacts-log"></pre>
+      </section>
+
+      <section class="panel view hidden" id="view-status">
+        <div class="cards">
+          <article class="card">
+            <h2>Stack</h2>
+            <pre id="status-stack">…</pre>
+          </article>
+          <article class="card">
+            <h2>Identity</h2>
+            <pre id="status-identity">…</pre>
+          </article>
+        </div>
+        <button type="button" class="btn" id="btn-refresh-status">Refresh status</button>
+        <pre class="log" id="status-log"></pre>
+      </section>
+    </main>
+  </div>
+  <script src="/ui.js"></script>
+</body>
+</html>

@@ -17,7 +17,7 @@ packages += gtest
 endif
 
 ifneq ($(build_os), darwin)
-darwin_native_packages := darwin_sdk native_cctools native_libtapi
+darwin_native_packages := darwin_sdk
 endif
 darwin_packages := ncurses readline
 
